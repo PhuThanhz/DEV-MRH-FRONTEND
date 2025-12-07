@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './header.client';
-import Footer from './footer.client';
 import styles from '@/styles/app.module.scss';
 
 const LayoutClient = () => {
@@ -20,7 +19,6 @@ const LayoutClient = () => {
             <div className={styles['content-app']}>
                 <Outlet />
             </div>
-            <Footer />
         </div>
     );
 };

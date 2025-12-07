@@ -1,8 +1,5 @@
 import { useEffect } from 'react';
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
 import LoginPage from 'pages/auth/login';
@@ -14,6 +11,8 @@ import DashboardPage from './pages/admin/dashboard';
 import PermissionPage from './pages/admin/permission';
 import RolePage from './pages/admin/role';
 import UserPage from './pages/admin/UserPage.rtk';
+import SourceGroupPage from './pages/admin/source-group/SourceGroupPage';
+import SourceGroupDetailPage from './pages/admin/source-group/SourceGroupDetailPage';
 import { fetchAccount } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
 import LayoutClient from './components/client/layout/layout.client';
@@ -21,7 +20,6 @@ import { PATHS } from '@/constants/paths';
 
 export default function App() {
   const dispatch = useAppDispatch();
-  const isLoading = useAppSelector(state => state.account.isLoading);
 
   useEffect(() => {
     if (
@@ -82,6 +80,22 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <RolePage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.SOURCE_GROUP,
+          element: (
+            <ProtectedRoute>
+              <SourceGroupPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: `${PATHS.ADMIN.SOURCE_GROUP}/:id`,
+          element: (
+            <ProtectedRoute>
+              <SourceGroupDetailPage />
             </ProtectedRoute>
           ),
         },

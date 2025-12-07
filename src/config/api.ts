@@ -1,6 +1,12 @@
 import type { IBackendRes, IAccount, IUser, IModelPaginate, IGetAccount, IPermission, IRole } from '@/types/backend';
 import axios from 'config/axios-customize';
-
+import type {
+    ISourceGroup,
+    ISourceLink,
+    ICreateGroupReq,
+    IAddLinkReq,
+    IDownloadResponse
+} from '@/types/backend'
 /**
  * 
 Module Auth
@@ -111,3 +117,52 @@ export const callFetchRole = (query: string) => {
 export const callFetchRoleById = (id: string) => {
     return axios.get<IBackendRes<IRole>>(`/api/v1/roles/${id}`);
 }
+
+
+// ============================================================
+// SOURCE GROUP & SOURCE LINK API
+// ============================================================
+/* ========== SOURCE GROUPS ========== */
+export const callCreateSourceGroup = (body: ICreateGroupReq) => {
+    return axios.post<IBackendRes<ISourceGroup>>('/api/v1/source-groups', body);
+};
+
+export const callFetchSourceGroups = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<ISourceGroup>>>(`/api/v1/source-groups?${query}`);
+};
+
+export const callUpdateSourceGroupName = (id: number, newName: string) => {
+    return axios.put<IBackendRes<ISourceGroup>>(`/api/v1/source-groups/${id}`, newName, {
+        headers: { 'Content-Type': 'text/plain' },
+    });
+};
+
+export const callDeleteSourceGroup = (id: number) => {
+    return axios.delete<IBackendRes<null>>(`/api/v1/source-groups/${id}`);
+};
+
+export const callAddLinkToGroup = (groupId: number, body: IAddLinkReq) => {
+    return axios.post<IBackendRes<ISourceGroup>>(`/api/v1/source-groups/${groupId}/links`, body);
+};
+
+export const callDeleteLinkFromGroup = (groupId: number, linkId: number) => {
+    return axios.delete<IBackendRes<ISourceGroup>>(`/api/v1/source-groups/${groupId}/links/${linkId}`);
+};
+
+/* ========== SOURCE LINKS ========== */
+export const callProcessGroupLinks = (groupId: number) => {
+    return axios.post<IBackendRes<{ message: string }>>(`/api/v1/source-links/${groupId}/process`);
+};
+
+export const callFetchLinksByGroup = (groupId: number, query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<ISourceLink>>>(`/api/v1/source-links/group/${groupId}?${query}`);
+};
+
+export const callFetchLinkDetail = (linkId: number) => {
+    return axios.get<IBackendRes<ISourceLink>>(`/api/v1/source-links/${linkId}`);
+};
+
+export const callUpdateLinkCaption = (linkId: number, body: { caption: string }) => {
+    return axios.put<IBackendRes<ISourceLink>>(`/api/v1/source-links/${linkId}/caption`, body);
+};
+

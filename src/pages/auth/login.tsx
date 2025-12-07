@@ -8,7 +8,6 @@ import styles from 'styles/auth.module.scss';
 import { useAppSelector } from '@/redux/hooks';
 
 const LoginPage = () => {
-    const navigate = useNavigate();
     const [isSubmit, setIsSubmit] = useState(false);
     const dispatch = useDispatch();
     const isAuthenticated = useAppSelector(state => state.account.isAuthenticated);
@@ -18,9 +17,7 @@ const LoginPage = () => {
     const callback = params?.get("callback");
 
     useEffect(() => {
-        //đã login => redirect to '/'
         if (isAuthenticated) {
-            // navigate('/');
             window.location.href = '/';
         }
     }, [])

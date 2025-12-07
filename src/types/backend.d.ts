@@ -106,3 +106,57 @@ export interface IRole {
     createdAt?: string;
     updatedAt?: string;
 }
+
+// ===============================
+// SOURCE GROUP & SOURCE LINK
+// ===============================
+export interface ISourceGroup {
+    id: number;
+    name: string;
+    createdAt?: string;
+    updatedAt?: string | null;
+    totalLinks?: number;
+}
+
+export interface ISourceLink {
+    id: number;
+    url: string;
+    name?: string;
+    userId?: string;
+    caption?: string | null;
+    contentGenerated?: string | null;
+    errorMessage?: string | null;
+    status?: "SUCCESS" | "FAILED" | null;
+    type?: "VIDEO" | "IMAGE" | "TEXT" | "UNKNOWN";
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+}
+
+// ===============================
+// REQUEST MODELS
+// ===============================
+export interface ICreateGroupReq {
+    groupName: string;
+}
+
+export interface IAddLinkReq {
+    url: string;
+}
+
+export interface IUpdateCaptionReq {
+    caption: string;
+}
+
+// ===============================
+// RESPONSE MODELS
+// ===============================
+export interface IDownloadResponse {
+    success: boolean;
+    name?: string;
+    userId?: string;
+    caption?: string;
+    folder?: string;
+    error?: string | null;
+}

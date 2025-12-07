@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Menu } from 'antd';
-import { AppstoreOutlined, UserOutlined, ApiOutlined, ExceptionOutlined, BugOutlined } from '@ant-design/icons';
+import {
+    AppstoreOutlined,
+    UserOutlined,
+    ApiOutlined,
+    ExceptionOutlined,
+    BugOutlined,
+    DatabaseOutlined,
+} from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '@/redux/hooks';
 import { ALL_PERMISSIONS } from '@/config/permissions';
@@ -14,49 +21,89 @@ interface IProps {
     setActiveMenu: (val: string) => void;
 }
 
-const SliderAdmin: React.FC<IProps> = ({ collapsed, setCollapsed, activeMenu, setActiveMenu }) => {
-    const permissions = useAppSelector(state => state.account.user.role.permissions);
+const SliderAdmin: React.FC<IProps> = ({
+    collapsed,
+    setCollapsed,
+    activeMenu,
+    setActiveMenu,
+}) => {
+    const permissions = useAppSelector(
+        (state) => state.account.user.role.permissions
+    );
     const [menuItems, setMenuItems] = useState<any[]>([]);
 
     useEffect(() => {
         const ACL_ENABLE = import.meta.env.VITE_ACL_ENABLE;
+
         if (permissions?.length || ACL_ENABLE === 'false') {
-            const viewUser = permissions?.find(item =>
-                item.apiPath === ALL_PERMISSIONS.USERS.GET_PAGINATE.apiPath &&
-                item.method === ALL_PERMISSIONS.USERS.GET_PAGINATE.method
+            // --- kiểm tra từng quyền ---
+            const viewUser = permissions?.find(
+                (item) =>
+                    item.apiPath === ALL_PERMISSIONS.USERS.GET_PAGINATE.apiPath &&
+                    item.method === ALL_PERMISSIONS.USERS.GET_PAGINATE.method
             );
 
-            const viewRole = permissions?.find(item =>
-                item.apiPath === ALL_PERMISSIONS.ROLES.GET_PAGINATE.apiPath &&
-                item.method === ALL_PERMISSIONS.ROLES.GET_PAGINATE.method
+            const viewRole = permissions?.find(
+                (item) =>
+                    item.apiPath === ALL_PERMISSIONS.ROLES.GET_PAGINATE.apiPath &&
+                    item.method === ALL_PERMISSIONS.ROLES.GET_PAGINATE.method
             );
 
-            const viewPermission = permissions?.find(item =>
-                item.apiPath === ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE.apiPath &&
-                item.method === ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE.method
+            const viewPermission = permissions?.find(
+                (item) =>
+                    item.apiPath === ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE.apiPath &&
+                    item.method === ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE.method
             );
 
+            const viewSourceGroup = permissions?.find(
+                (item) =>
+                    item.apiPath === ALL_PERMISSIONS.SOURCE_GROUPS.GET_PAGINATE.apiPath &&
+                    item.method === ALL_PERMISSIONS.SOURCE_GROUPS.GET_PAGINATE.method
+            );
+
+            // --- cấu hình menu đầy đủ ---
             const full = [
                 {
-                    label: <Link to='/admin'>Dashboard</Link>,
+                    label: <Link to="/admin">Dashboard</Link>,
                     key: '/admin',
-                    icon: <AppstoreOutlined />
+                    icon: <AppstoreOutlined />,
                 },
-                ...(viewUser || ACL_ENABLE === 'false' ? [{
-                    label: <Link to='/admin/user'>User</Link>,
-                    key: '/admin/user',
-                    icon: <UserOutlined />
-                }] : []),
-                ...(viewPermission || ACL_ENABLE === 'false' ? [{
-                    label: <Link to='/admin/permission'>Permission</Link>,
-                    key: '/admin/permission',
-                    icon: <ApiOutlined />
-                }] : []),
-                ...(viewRole || ACL_ENABLE === 'false' ? [{
-                    label: <Link to='/admin/role'>Role</Link>,
-                    key: '/admin/role',
-                    icon: <ExceptionOutlined />
-                }] : [])
+                ...(viewUser || ACL_ENABLE === 'false'
+                    ? [
+                        {
+                            label: <Link to="/admin/user">User</Link>,
+                            key: '/admin/user',
+                            icon: <UserOutlined />,
+                        },
+                    ]
+                    : []),
+                ...(viewPermission || ACL_ENABLE === 'false'
+                    ? [
+                        {
+                            label: <Link to="/admin/permission">Permission</Link>,
+                            key: '/admin/permission',
+                            icon: <ApiOutlined />,
+                        },
+                    ]
+                    : []),
+                ...(viewRole || ACL_ENABLE === 'false'
+                    ? [
+                        {
+                            label: <Link to="/admin/role">Role</Link>,
+                            key: '/admin/role',
+                            icon: <ExceptionOutlined />,
+                        },
+                    ]
+                    : []),
+                ...(viewSourceGroup || ACL_ENABLE === 'false'
+                    ? [
+                        {
+                            label: <Link to="/admin/source-group">Source Group</Link>,
+                            key: '/admin/source-group',
+                            icon: <DatabaseOutlined />,
+                        },
+                    ]
+                    : []),
             ];
 
             setMenuItems(full);
@@ -64,8 +111,15 @@ const SliderAdmin: React.FC<IProps> = ({ collapsed, setCollapsed, activeMenu, se
     }, [permissions]);
 
     return (
-        <Sider theme='light' collapsible collapsed={collapsed} onCollapse={setCollapsed}>
-            <div style={{ height: 32, margin: 16, textAlign: 'center' }}>
+        <Sider theme="light" collapsible collapsed={collapsed} onCollapse={setCollapsed}>
+            <div
+                style={{
+                    height: 32,
+                    margin: 16,
+                    textAlign: 'center',
+                    fontWeight: 600,
+                }}
+            >
                 <BugOutlined /> ADMIN
             </div>
             <Menu
