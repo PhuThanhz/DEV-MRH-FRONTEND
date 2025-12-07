@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* file: src/index.css hoặc globals.css */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari và Edge */
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE và Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
