@@ -1,6 +1,6 @@
 import { ModalForm, ProFormText } from "@ant-design/pro-components";
-import { Form, message } from "antd";
-import { callCreateSourceGroup, callUpdateSourceGroupName } from "@/config/api";
+import { message, notification } from "antd";
+import { callCreateGroupInMain, callUpdateSourceGroupName } from "@/config/api";
 import type { ISourceGroup } from "@/types/backend";
 
 interface IProps {
@@ -9,6 +9,7 @@ interface IProps {
     reloadTable: () => void;
     singleGroup: ISourceGroup | null;
     setSingleGroup: (v: ISourceGroup | null) => void;
+    mainId: number;
 }
 
 const ModalSourceGroup = ({
@@ -17,52 +18,62 @@ const ModalSourceGroup = ({
     reloadTable,
     singleGroup,
     setSingleGroup,
+    mainId,
 }: IProps) => {
-    const [form] = Form.useForm();
+    const isEdit = !!singleGroup;
 
     const handleSubmit = async (values: any) => {
-        if (singleGroup?.id) {
-            const res = await callUpdateSourceGroupName(singleGroup.id, values.groupName);
-            if (res.data) {
-                message.success("Cập nhật tên group thành công");
-                reloadTable();
-                handleReset();
+        try {
+            if (isEdit) {
+                // ✅ Cập nhật nhóm con
+                const res = await callUpdateSourceGroupName({
+                    id: singleGroup!.id,
+                    name: values.name,
+                });
+                if (res.data) {
+                    message.success("Cập nhật nhóm con thành công");
+                    reloadTable();
+                    setOpenModal(false);
+                    setSingleGroup(null);
+                }
+            } else {
+                // ✅ Tạo nhóm mới trong nhóm chính
+                const res = await callCreateGroupInMain(mainId, { groupName: values.name });
+                if (res.data) {
+                    message.success("Tạo nhóm con thành công");
+                    reloadTable();
+                    setOpenModal(false);
+                }
             }
-        } else {
-            const res = await callCreateSourceGroup(values);
-            if (res.data) {
-                message.success("Tạo group mới thành công");
-                reloadTable();
-                handleReset();
-            }
+        } catch (err: any) {
+            notification.error({
+                message: "Không thể lưu nhóm con",
+                description: err.message || "Đã xảy ra lỗi khi lưu dữ liệu",
+            });
         }
-    };
-
-    const handleReset = () => {
-        setSingleGroup(null);
-        setOpenModal(false);
-        form.resetFields();
     };
 
     return (
         <ModalForm
-            title={singleGroup ? "Cập nhật Group" : "Tạo mới Group"}
+            title={isEdit ? "Cập nhật Nhóm Con" : "Tạo Nhóm Con"}
             open={openModal}
             modalProps={{
-                onCancel: handleReset,
+                onCancel: () => {
+                    setOpenModal(false);
+                    setSingleGroup(null);
+                },
                 destroyOnClose: true,
                 maskClosable: false,
             }}
-            form={form}
-            initialValues={{
-                groupName: singleGroup?.name || "",
-            }}
             onFinish={handleSubmit}
+            initialValues={{
+                name: singleGroup?.name || "",
+            }}
         >
             <ProFormText
-                name="groupName"
-                label="Tên nhóm"
-                placeholder="Nhập tên group..."
+                name="name"
+                label="Tên Nhóm"
+                placeholder="Nhập tên nhóm..."
                 rules={[{ required: true, message: "Vui lòng nhập tên nhóm" }]}
             />
         </ModalForm>

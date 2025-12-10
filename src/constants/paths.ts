@@ -9,6 +9,9 @@ export const PATHS = {
         USER: "/admin/user",
         ROLE: "/admin/role",
         PERMISSION: "/admin/permission",
+
+        SOURCE_GROUP_MAIN: "/admin/source-group-main",
+
         SOURCE_GROUP: "/admin/source-group",
     },
 

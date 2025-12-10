@@ -1,4 +1,4 @@
-import { Modal, Descriptions, Tag, Typography } from "antd";
+import { Modal, Descriptions, Tag, Typography, Image } from "antd";
 import type { ISourceLink } from "@/types/backend";
 
 const { Paragraph, Text } = Typography;
@@ -12,10 +12,29 @@ interface IProps {
 const ModalViewLink = ({ open, setOpen, link }: IProps) => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
+    // ✅ Lấy đường dẫn file từ backend
     const getFileSrc = () => {
         if (!link?.contentGenerated) return null;
         return `${backendUrl}/storage/threads_video/${link.contentGenerated}`;
     };
+
+    // ✅ Xác định loại file (video / image / other)
+    const getFileType = (fileName?: string) => {
+        if (!fileName) return "unknown";
+        const lower = fileName.toLowerCase();
+        if (lower.endsWith(".mp4")) return "video";
+        if (
+            lower.endsWith(".jpg") ||
+            lower.endsWith(".jpeg") ||
+            lower.endsWith(".png") ||
+            lower.endsWith(".gif") ||
+            lower.endsWith(".webp")
+        )
+            return "image";
+        return "other";
+    };
+
+    const fileType = getFileType(link?.contentGenerated ?? undefined);
 
     return (
         <Modal
@@ -24,7 +43,7 @@ const ModalViewLink = ({ open, setOpen, link }: IProps) => {
             onOk={() => setOpen(false)}
             title="Chi tiết Link"
             centered
-            width={700}
+            width={750}
             footer={null}
         >
             {link ? (
@@ -65,18 +84,32 @@ const ModalViewLink = ({ open, setOpen, link }: IProps) => {
 
                     <Descriptions.Item label="File / Nội dung">
                         {link.contentGenerated ? (
-                            link.contentGenerated.endsWith(".mp4") ? (
-                                <video
-                                    width="100%"
-                                    height={300}
-                                    controls
-                                    src={getFileSrc() || ""}
-                                >
-                                    Trình duyệt không hỗ trợ video
-                                </video>
-                            ) : (
-                                <Text>{getFileSrc()}</Text>
-                            )
+                            <>
+                                {fileType === "video" && (
+                                    <video
+                                        width="100%"
+                                        height={300}
+                                        controls
+                                        src={getFileSrc() || ""}
+                                        style={{ borderRadius: 8 }}
+                                    >
+                                        Trình duyệt không hỗ trợ video
+                                    </video>
+                                )}
+
+                                {fileType === "image" && (
+                                    <Image
+                                        width="100%"
+                                        src={getFileSrc() || ""}
+                                        alt="Ảnh Threads"
+                                        style={{ borderRadius: 8, maxHeight: 400, objectFit: "contain" }}
+                                    />
+                                )}
+
+                                {fileType === "other" && (
+                                    <Text copyable>{getFileSrc()}</Text>
+                                )}
+                            </>
                         ) : (
                             "-"
                         )}

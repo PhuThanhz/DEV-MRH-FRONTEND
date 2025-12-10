@@ -3,9 +3,10 @@ import axios from 'config/axios-customize';
 import type {
     ISourceGroup,
     ISourceLink,
-    ICreateGroupReq,
     IAddLinkReq,
-    IDownloadResponse
+    ReqCreateGroupInMainDTO,
+    IUpdateCaptionReq,
+    ISourceGroupMain
 } from '@/types/backend'
 /**
  * 
@@ -119,21 +120,45 @@ export const callFetchRoleById = (id: string) => {
 }
 
 
+
+
+
+
+
+
+
+
+
 // ============================================================
-// SOURCE GROUP & SOURCE LINK API
+// SOURCE GROUP MAIN API
 // ============================================================
-/* ========== SOURCE GROUPS ========== */
-export const callCreateSourceGroup = (body: ICreateGroupReq) => {
-    return axios.post<IBackendRes<ISourceGroup>>('/api/v1/source-groups', body);
+
+export const callFetchSourceGroupMains = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<ISourceGroupMain>>>(`/api/v1/source-group-mains?${query}`);
+};
+export const callCreateSourceGroupMain = (body: { name: string }) => {
+    return axios.post<IBackendRes<ISourceGroupMain>>(`/api/v1/source-group-mains`, body);
+};
+export const callUpdateSourceGroupMain = (body: { id: number; name: string }) => {
+    return axios.put<IBackendRes<ISourceGroupMain>>(`/api/v1/source-group-mains`, body);
+};
+export const callDeleteSourceGroupMain = (id: number) => {
+    return axios.delete<IBackendRes<null>>(`/api/v1/source-group-mains/${id}`);
+};
+export const callCreateGroupInMain = (mainId: number, body: ReqCreateGroupInMainDTO) => {
+    return axios.post<IBackendRes<ISourceGroup>>(`/api/v1/source-group-mains/${mainId}/groups`, body);
+};
+export const callFetchGroupsByMainId = (mainId: number) => {
+    return axios.get<IBackendRes<ISourceGroup[]>>(`/api/v1/source-group-mains/${mainId}/groups`);
 };
 
-export const callFetchSourceGroups = (query: string) => {
-    return axios.get<IBackendRes<IModelPaginate<ISourceGroup>>>(`/api/v1/source-groups?${query}`);
-};
+// ============================================================
+// SOURCE GROUP API
+// ============================================================
 
-export const callUpdateSourceGroupName = (id: number, newName: string) => {
-    return axios.put<IBackendRes<ISourceGroup>>(`/api/v1/source-groups/${id}`, newName, {
-        headers: { 'Content-Type': 'text/plain' },
+export const callUpdateSourceGroupName = (body: { id: number; name: string }) => {
+    return axios.put<IBackendRes<ISourceGroup>>(`/api/v1/source-groups`, body, {
+        headers: { "Content-Type": "application/json" },
     });
 };
 
@@ -149,7 +174,10 @@ export const callDeleteLinkFromGroup = (groupId: number, linkId: number) => {
     return axios.delete<IBackendRes<ISourceGroup>>(`/api/v1/source-groups/${groupId}/links/${linkId}`);
 };
 
-/* ========== SOURCE LINKS ========== */
+// ============================================================
+// SOURCE LINK API
+// ============================================================
+
 export const callProcessGroupLinks = (groupId: number) => {
     return axios.post<IBackendRes<{ message: string }>>(`/api/v1/source-links/${groupId}/process`);
 };
@@ -162,7 +190,6 @@ export const callFetchLinkDetail = (linkId: number) => {
     return axios.get<IBackendRes<ISourceLink>>(`/api/v1/source-links/${linkId}`);
 };
 
-export const callUpdateLinkCaption = (linkId: number, body: { caption: string }) => {
+export const callUpdateLinkCaption = (linkId: number, body: IUpdateCaptionReq) => {
     return axios.put<IBackendRes<ISourceLink>>(`/api/v1/source-links/${linkId}/caption`, body);
 };
-

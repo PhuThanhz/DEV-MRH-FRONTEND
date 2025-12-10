@@ -107,14 +107,32 @@ export interface IRole {
     updatedAt?: string;
 }
 
+
+
 // ===============================
-// SOURCE GROUP & SOURCE LINK
+// SOURCE MAIN , GROUP & SOURCE LINK
 // ===============================
-export interface ISourceGroup {
+
+/** Đại diện cho nhóm chính (SourceGroupMain) */
+export interface ISourceGroupMain {
     id: number;
     name: string;
     createdAt?: string;
     updatedAt?: string | null;
+    createdBy?: string | null;
+    updatedBy?: string | null;
+    totalGroups?: number;
+}
+
+export interface ISourceGroup {
+    id: number;
+    name: string;
+    mainGroupId?: number;
+    mainGroupName?: string;
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string | null;
+    updatedBy?: string | null;
     totalLinks?: number;
 }
 
@@ -137,7 +155,7 @@ export interface ISourceLink {
 // ===============================
 // REQUEST MODELS
 // ===============================
-export interface ICreateGroupReq {
+export interface ReqCreateGroupInMainDTO {
     groupName: string;
 }
 
@@ -149,14 +167,3 @@ export interface IUpdateCaptionReq {
     caption: string;
 }
 
-// ===============================
-// RESPONSE MODELS
-// ===============================
-export interface IDownloadResponse {
-    success: boolean;
-    name?: string;
-    userId?: string;
-    caption?: string;
-    folder?: string;
-    error?: string | null;
-}

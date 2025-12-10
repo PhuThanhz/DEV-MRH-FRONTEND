@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { Layout, Menu } from 'antd';
+import React, { useEffect, useState } from "react";
+import { Layout, Menu } from "antd";
 import {
     AppstoreOutlined,
     UserOutlined,
     ApiOutlined,
     ExceptionOutlined,
     BugOutlined,
-    DatabaseOutlined,
-} from '@ant-design/icons';
-import { Link } from 'react-router-dom';
-import { useAppSelector } from '@/redux/hooks';
-import { ALL_PERMISSIONS } from '@/config/permissions';
+    FolderOutlined,
+} from "@ant-design/icons";
+import { Link } from "react-router-dom";
+import { useAppSelector } from "@/redux/hooks";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Sider } = Layout;
 
@@ -35,7 +35,7 @@ const SliderAdmin: React.FC<IProps> = ({
     useEffect(() => {
         const ACL_ENABLE = import.meta.env.VITE_ACL_ENABLE;
 
-        if (permissions?.length || ACL_ENABLE === 'false') {
+        if (permissions?.length || ACL_ENABLE === "false") {
             // --- kiểm tra từng quyền ---
             const viewUser = permissions?.find(
                 (item) =>
@@ -55,52 +55,53 @@ const SliderAdmin: React.FC<IProps> = ({
                     item.method === ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE.method
             );
 
-            const viewSourceGroup = permissions?.find(
+            const viewSourceGroupMain = permissions?.find(
                 (item) =>
-                    item.apiPath === ALL_PERMISSIONS.SOURCE_GROUPS.GET_PAGINATE.apiPath &&
-                    item.method === ALL_PERMISSIONS.SOURCE_GROUPS.GET_PAGINATE.method
+                    item.apiPath === ALL_PERMISSIONS.SOURCE_GROUP_MAINS.GET_PAGINATE.apiPath &&
+                    item.method === ALL_PERMISSIONS.SOURCE_GROUP_MAINS.GET_PAGINATE.method
             );
 
             // --- cấu hình menu đầy đủ ---
             const full = [
                 {
                     label: <Link to="/admin">Dashboard</Link>,
-                    key: '/admin',
+                    key: "/admin",
                     icon: <AppstoreOutlined />,
                 },
-                ...(viewUser || ACL_ENABLE === 'false'
+                ...(viewUser || ACL_ENABLE === "false"
                     ? [
                         {
                             label: <Link to="/admin/user">User</Link>,
-                            key: '/admin/user',
+                            key: "/admin/user",
                             icon: <UserOutlined />,
                         },
                     ]
                     : []),
-                ...(viewPermission || ACL_ENABLE === 'false'
+                ...(viewPermission || ACL_ENABLE === "false"
                     ? [
                         {
                             label: <Link to="/admin/permission">Permission</Link>,
-                            key: '/admin/permission',
+                            key: "/admin/permission",
                             icon: <ApiOutlined />,
                         },
                     ]
                     : []),
-                ...(viewRole || ACL_ENABLE === 'false'
+                ...(viewRole || ACL_ENABLE === "false"
                     ? [
                         {
                             label: <Link to="/admin/role">Role</Link>,
-                            key: '/admin/role',
+                            key: "/admin/role",
                             icon: <ExceptionOutlined />,
                         },
                     ]
                     : []),
-                ...(viewSourceGroup || ACL_ENABLE === 'false'
+
+                ...(viewSourceGroupMain || ACL_ENABLE === "false"
                     ? [
                         {
-                            label: <Link to="/admin/source-group">Source Group</Link>,
-                            key: '/admin/source-group',
-                            icon: <DatabaseOutlined />,
+                            label: <Link to="/admin/source-group-main">Source Group Main</Link>,
+                            key: "/admin/source-group-main",
+                            icon: <FolderOutlined />,
                         },
                     ]
                     : []),
@@ -116,7 +117,7 @@ const SliderAdmin: React.FC<IProps> = ({
                 style={{
                     height: 32,
                     margin: 16,
-                    textAlign: 'center',
+                    textAlign: "center",
                     fontWeight: 600,
                 }}
             >

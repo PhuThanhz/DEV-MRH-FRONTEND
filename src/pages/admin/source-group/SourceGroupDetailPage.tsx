@@ -23,6 +23,7 @@ import {
 import dayjs from "dayjs";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ColumnsType } from "antd/es/table";
+import { ModalForm, ProFormTextArea } from "@ant-design/pro-components";
 
 import type { ISourceLink, ISourceGroup } from "@/types/backend";
 import {
@@ -31,7 +32,6 @@ import {
     callProcessGroupLinks,
     callAddLinkToGroup,
 } from "@/config/api";
-import { ModalForm, ProFormText } from "@ant-design/pro-components";
 import ModalUpdateLink from "./modal.update-link";
 import ModalViewLink from "./modal.view-link";
 
@@ -123,14 +123,14 @@ const SourceGroupDetailPage = () => {
     };
 
     // ============================================================
-    // Thêm link mới vào group
+    // Thêm link mới vào group (hỗ trợ dán nhiều link cùng lúc)
     // ============================================================
     const handleAddLink = async (values: any) => {
         if (!id) return;
         try {
             const res = await callAddLinkToGroup(+id, { url: values.url });
             if (res.data) {
-                message.success("Thêm link vào nhóm thành công");
+                message.success("Đã thêm link vào nhóm thành công!");
                 fetchLinks();
                 setOpenAddLink(false);
             }
@@ -302,11 +302,14 @@ const SourceGroupDetailPage = () => {
                 }}
                 onFinish={handleAddLink}
             >
-                <ProFormText
+                <ProFormTextArea
                     name="url"
-                    label="Đường dẫn (URL)"
-                    placeholder="Nhập URL cần thêm..."
-                    rules={[{ required: true, message: "Vui lòng nhập URL hợp lệ" }]}
+                    label="Danh sách Link (URL)"
+                    placeholder={`Dán các link vào đây, mỗi link một dòng...\nVí dụ:\nhttps://threads.net/abc\nhttps://threads.net/xyz`}
+                    rules={[{ required: true, message: "Vui lòng nhập ít nhất 1 URL hợp lệ" }]}
+                    fieldProps={{
+                        autoSize: { minRows: 6, maxRows: 12 },
+                    }}
                 />
             </ModalForm>
 

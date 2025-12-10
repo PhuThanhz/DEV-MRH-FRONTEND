@@ -17,6 +17,7 @@ import { fetchAccount } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
 import LayoutClient from './components/client/layout/layout.client';
 import { PATHS } from '@/constants/paths';
+import SourceGroupMainPage from './pages/admin/source-group-main/SourceGroupMainPage';
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -91,6 +92,15 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+        {
+          path: PATHS.ADMIN.SOURCE_GROUP_MAIN,
+          element: (
+            <ProtectedRoute>
+              <SourceGroupMainPage />
+            </ProtectedRoute>
+          ),
+        },
+
         {
           path: `${PATHS.ADMIN.SOURCE_GROUP}/:id`,
           element: (
