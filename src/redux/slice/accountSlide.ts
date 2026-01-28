@@ -1,38 +1,44 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { callFetchAccount } from '@/config/api';
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { callFetchAccount } from "@/config/api";
 
-// First, create the thunk
-export const fetchAccount = createAsyncThunk(
-    'account/fetchAccount',
-    async () => {
-        const response = await callFetchAccount();
-        return response.data;
-    }
-)
+export const fetchAccount = createAsyncThunk("account/fetchAccount", async () => {
+    const response = await callFetchAccount();
+    return response.data;
+});
+
+
+interface IPermission {
+    id: string;
+    name: string;
+    apiPath: string;
+    method: string;
+    module: string;
+}
+
+interface IRole {
+    id?: string;
+    name?: string;
+    permissions?: IPermission[];
+}
+
+interface IUser {
+    id: string;
+    email: string;
+    name: string;
+    avatar?: string
+    active?: boolean;
+    role: IRole;
+}
 
 interface IState {
     isAuthenticated: boolean;
     isLoading: boolean;
     isRefreshToken: boolean;
     errorRefreshToken: string;
-    user: {
-        id: string;
-        email: string;
-        name: string;
-        role: {
-            id?: string;
-            name?: string;
-            permissions?: {
-                id: string;
-                name: string;
-                apiPath: string;
-                method: string;
-                module: string;
-            }[]
-        }
-    };
+    user: IUser;
     activeMenu: string;
 }
+
 
 const initialState: IState = {
     isAuthenticated: false,
@@ -43,92 +49,101 @@ const initialState: IState = {
         id: "",
         email: "",
         name: "",
+        avatar: "",
+        active: true,
         role: {
             id: "",
             name: "",
             permissions: [],
         },
     },
-
-    activeMenu: 'home'
+    activeMenu: "home",
 };
 
-
-export const accountSlide = createSlice({
-    name: 'account',
+/* ================================
+   Slice
+=================================*/
+export const accountSlice = createSlice({
+    name: "account",
     initialState,
-    // The `reducers` field lets us define reducers and generate associated actions
     reducers: {
-        // Use the PayloadAction type to declare the contents of `action.payload`
         setActiveMenu: (state, action) => {
             state.activeMenu = action.payload;
         },
+
         setUserLoginInfo: (state, action) => {
+            const user = action.payload ?? {};
             state.isAuthenticated = true;
             state.isLoading = false;
-            state.user.id = action?.payload?.id;
-            state.user.email = action.payload.email;
-            state.user.name = action.payload.name;
-            state.user.role = action?.payload?.role;
 
-            if (!action?.payload?.user?.role) state.user.role = {};
-            state.user.role.permissions = action?.payload?.role?.permissions ?? [];
+            state.user.id = user?.id ?? "";
+            state.user.email = user?.email ?? "";
+            state.user.name = user?.name ?? "";
+            state.user.avatar = user?.avatar ?? "";
+            state.user.active = user?.active ?? true;
+
+            state.user.role = user?.role ?? {};
+            state.user.role.permissions = user?.role?.permissions ?? [];
         },
-        setLogoutAction: (state, action) => {
-            localStorage.removeItem('access_token');
+
+        setLogoutAction: (state) => {
+            localStorage.removeItem("access_token");
             state.isAuthenticated = false;
             state.user = {
                 id: "",
                 email: "",
                 name: "",
+                avatar: "",
+                active: true,
                 role: {
                     id: "",
                     name: "",
                     permissions: [],
                 },
-            }
+            };
         },
+
         setRefreshTokenAction: (state, action) => {
             state.isRefreshToken = action.payload?.status ?? false;
             state.errorRefreshToken = action.payload?.message ?? "";
-        }
-
+        },
     },
+
     extraReducers: (builder) => {
-        // Add reducers for additional action types here, and handle loading state as needed
-        builder.addCase(fetchAccount.pending, (state, action) => {
-            if (action.payload) {
+        builder
+            .addCase(fetchAccount.pending, (state) => {
                 state.isAuthenticated = false;
                 state.isLoading = true;
-            }
-        })
+            })
+            .addCase(fetchAccount.fulfilled, (state, action) => {
+                if (action.payload) {
+                    const userData = action.payload?.user ?? action.payload;
 
-        builder.addCase(fetchAccount.fulfilled, (state, action) => {
-            if (action.payload) {
-                state.isAuthenticated = true;
-                state.isLoading = false;
-                state.user.id = action?.payload?.user?.id;
-                state.user.email = action.payload.user?.email;
-                state.user.name = action.payload.user?.name;
-                state.user.role = action?.payload?.user?.role;
-                if (!action?.payload?.user?.role) state.user.role = {};
-                state.user.role.permissions = action?.payload?.user?.role?.permissions ?? [];
-            }
-        })
+                    state.isAuthenticated = true;
+                    state.isLoading = false;
 
-        builder.addCase(fetchAccount.rejected, (state, action) => {
-            if (action.payload) {
+                    state.user.id = userData?.id ?? "";
+                    state.user.email = userData?.email ?? "";
+                    state.user.name = userData?.name ?? "";
+                    state.user.avatar = userData?.avatar ?? "";
+                    state.user.active = userData?.active ?? true;
+
+                    state.user.role = userData?.role ?? {};
+                    state.user.role.permissions = userData?.role?.permissions ?? [];
+                }
+            })
+            .addCase(fetchAccount.rejected, (state) => {
                 state.isAuthenticated = false;
                 state.isLoading = false;
-            }
-        })
-
+            });
     },
-
 });
 
 export const {
-    setActiveMenu, setUserLoginInfo, setLogoutAction, setRefreshTokenAction
-} = accountSlide.actions;
+    setActiveMenu,
+    setUserLoginInfo,
+    setLogoutAction,
+    setRefreshTokenAction,
+} = accountSlice.actions;
 
-export default accountSlide.reducer;
+export default accountSlice.reducer;

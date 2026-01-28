@@ -1,31 +1,28 @@
 import { useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { useAppDispatch } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
 import LoginPage from 'pages/auth/login';
-import RegisterPage from 'pages/auth/register';
-import LayoutAdmin from '@/components/admin/layout/layout.admin';
+import LayoutAdmin from '@/components/layout/admin/layout.admin';
 import ProtectedRoute from 'components/share/protected-route.ts';
 import HomePage from 'pages/home';
 import DashboardPage from './pages/admin/dashboard';
-import PermissionPage from './pages/admin/permission';
-import RolePage from './pages/admin/role';
-import UserPage from './pages/admin/UserPage.rtk';
-import SourceGroupPage from './pages/admin/source-group/SourceGroupPage';
-import SourceGroupDetailPage from './pages/admin/source-group/SourceGroupDetailPage';
+import PermissionPage from './pages/admin/permission/permission';
+import RolePage from './pages/admin/role/role';
+import UserPage from './pages/admin/user/user';
 import { fetchAccount } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
-import LayoutClient from './components/client/layout/layout.client';
+import LayoutClient from './components/layout/client/layout.client';
 import { PATHS } from '@/constants/paths';
-import SourceGroupMainPage from './pages/admin/source-group-main/SourceGroupMainPage';
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 export default function App() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (
-      window.location.pathname === PATHS.LOGIN ||
-      window.location.pathname === PATHS.REGISTER
+      window.location.pathname === PATHS.LOGIN
     ) return;
     dispatch(fetchAccount());
   }, []);
@@ -64,15 +61,20 @@ export default function App() {
           path: PATHS.ADMIN.USER,
           element: (
             <ProtectedRoute>
-              <UserPage />
+              <Access permission={ALL_PERMISSIONS.USERS.GET_PAGINATE}>
+                <UserPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
+
         {
           path: PATHS.ADMIN.PERMISSION,
           element: (
             <ProtectedRoute>
-              <PermissionPage />
+              <Access permission={ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE}>
+                <PermissionPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -80,39 +82,15 @@ export default function App() {
           path: PATHS.ADMIN.ROLE,
           element: (
             <ProtectedRoute>
-              <RolePage />
-            </ProtectedRoute>
-          ),
-        },
-        {
-          path: PATHS.ADMIN.SOURCE_GROUP,
-          element: (
-            <ProtectedRoute>
-              <SourceGroupPage />
-            </ProtectedRoute>
-          ),
-        },
-        {
-          path: PATHS.ADMIN.SOURCE_GROUP_MAIN,
-          element: (
-            <ProtectedRoute>
-              <SourceGroupMainPage />
-            </ProtectedRoute>
-          ),
-        },
-
-        {
-          path: `${PATHS.ADMIN.SOURCE_GROUP}/:id`,
-          element: (
-            <ProtectedRoute>
-              <SourceGroupDetailPage />
+              <Access permission={ALL_PERMISSIONS.ROLES.GET_PAGINATE}>
+                <RolePage />
+              </Access>
             </ProtectedRoute>
           ),
         },
       ],
     },
     { path: PATHS.LOGIN, element: <LoginPage /> },
-    { path: PATHS.REGISTER, element: <RegisterPage /> },
   ]);
 
   return <RouterProvider router={router} />;

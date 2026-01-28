@@ -1,42 +1,32 @@
 import { Navigate } from "react-router-dom";
 import { useAppSelector } from "@/redux/hooks";
-import NotPermitted from "./not-permitted";
-import Loading from "../loading";
+import NotPermitted from "../not-permitted";
+import Loading from "@/components/common/loading/loading";
 
-const RoleBaseRoute = (props: any) => {
-    const user = useAppSelector(state => state.account.user);
-    const userRole = user.role.name;
+const RoleBaseRoute = ({ children }: any) => {
+    const user = useAppSelector((state) => state.account.user);
+    const roleName = user?.role?.name?.toUpperCase() || "";
 
-    if (userRole !== 'NORMAL_USER') {
-        return (<>{props.children}</>)
-    } else {
-        return (<NotPermitted />)
+    const isAdmin = roleName.includes("ADMIN");
+    const isEmployee = roleName === "EMPLOYEE";
+
+    if (!isAdmin && !isEmployee) {
+        return <NotPermitted message="Bạn không có quyền truy cập trang này." />;
     }
-}
 
-const ProtectedRoute = (props: any) => {
-    const isAuthenticated = useAppSelector(state => state.account.isAuthenticated)
-    const isLoading = useAppSelector(state => state.account.isLoading)
+    return <>{children}</>;
+};
 
-    return (
-        <>
-            {isLoading === true ?
-                <Loading />
-                :
-                <>
-                    {isAuthenticated === true ?
-                        <>
-                            <RoleBaseRoute>
-                                {props.children}
-                            </RoleBaseRoute>
-                        </>
-                        :
-                        <Navigate to='/login' replace />
-                    }
-                </>
-            }
-        </>
-    )
-}
+const ProtectedRoute = ({ children }: any) => {
+    const { isAuthenticated, isLoading } = useAppSelector((state) => state.account);
+
+    if (isLoading) return <Loading />;
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return <RoleBaseRoute>{children}</RoleBaseRoute>;
+};
 
 export default ProtectedRoute;

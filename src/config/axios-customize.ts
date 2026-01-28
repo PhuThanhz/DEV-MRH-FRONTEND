@@ -1,96 +1,133 @@
 import type { IBackendRes } from "@/types/backend";
+import axios from "axios";
 import { Mutex } from "async-mutex";
-import axiosClient from "axios";
 import { store } from "@/redux/store";
 import { setRefreshTokenAction } from "@/redux/slice/accountSlide";
 import { notification } from "antd";
+
 interface AccessTokenResponse {
     access_token: string;
 }
 
-/**
- * Creates an initial 'axios' instance with custom settings.
- */
 
-const instance = axiosClient.create({
+const instance = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL as string,
-    withCredentials: true
+    withCredentials: true,
 });
 
 const mutex = new Mutex();
-const NO_RETRY_HEADER = 'x-no-retry';
+const NO_RETRY_HEADER = "x-no-retry";
+
+
+const isAuthEndpoint = (url?: string) => {
+    if (!url) return false;
+    return (
+        url === "/api/v1/auth/login" ||
+        url === "/api/v1/auth/refresh"
+    );
+};
 
 const handleRefreshToken = async (): Promise<string | null> => {
-    return await mutex.runExclusive(async () => {
-        const res = await instance.get<IBackendRes<AccessTokenResponse>>('/api/v1/auth/refresh');
-        if (res && res.data) return res.data.access_token;
-        else return null;
+    return mutex.runExclusive(async () => {
+        try {
+            const res = await instance.post<IBackendRes<AccessTokenResponse>>(
+                "/api/v1/auth/refresh",
+                null, // body rỗng
+                {
+                    headers: {
+                        [NO_RETRY_HEADER]: "true",
+                    },
+                }
+            );
+
+            return res?.data?.access_token ?? null;
+        } catch {
+            return null;
+        }
     });
 };
 
-instance.interceptors.request.use(function (config) {
-    if (typeof window !== "undefined" && window && window.localStorage && window.localStorage.getItem('access_token')) {
-        config.headers.Authorization = 'Bearer ' + window.localStorage.getItem('access_token');
+
+instance.interceptors.request.use((config) => {
+    const accessToken = localStorage.getItem("access_token");
+
+    if (
+        accessToken &&
+        !isAuthEndpoint(config.url) &&
+        !config.headers?.[NO_RETRY_HEADER]
+    ) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
     }
-    if (!config.headers.Accept && config.headers["Content-Type"]) {
+
+    if (!config.headers.Accept) {
         config.headers.Accept = "application/json";
-        config.headers["Content-Type"] = "application/json; charset=utf-8";
     }
+
     return config;
 });
 
-/**
- * Handle all responses. It is possible to add handlers
- * for requests, but it is omitted here for brevity.
- */
+
 instance.interceptors.response.use(
-    (res) => res.data,
+    (res) => {
+        // download file
+        if (res.config.responseType === "blob") {
+            return res;
+        }
+        return res.data;
+    },
     async (error) => {
-        if (error.config && error.response
-            && +error.response.status === 401
-            && error.config.url !== '/api/v1/auth/login'
-            && !error.config.headers[NO_RETRY_HEADER]
+        const originalRequest = error.config;
+
+        if (
+            originalRequest &&
+            error.response?.status === 401 &&
+            !isAuthEndpoint(originalRequest.url) &&
+            !originalRequest.headers?.[NO_RETRY_HEADER]
         ) {
-            const access_token = await handleRefreshToken();
-            error.config.headers[NO_RETRY_HEADER] = 'true'
-            if (access_token) {
-                error.config.headers['Authorization'] = `Bearer ${access_token}`;
-                localStorage.setItem('access_token', access_token)
-                return instance.request(error.config);
+            const newAccessToken = await handleRefreshToken();
+
+            originalRequest.headers[NO_RETRY_HEADER] = "true";
+
+            if (newAccessToken) {
+                localStorage.setItem("access_token", newAccessToken);
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                return instance.request(originalRequest);
             }
         }
 
+
         if (
-            error.config && error.response
-            && +error.response.status === 400
-            && error.config.url === '/api/v1/auth/refresh'
-            && location.pathname.startsWith("/admin")
+            originalRequest &&
+            error.response?.status === 400 &&
+            originalRequest.url === "/api/v1/auth/refresh" &&
+            location.pathname.startsWith("/admin")
         ) {
-            const message = error?.response?.data?.error ?? "Có lỗi xảy ra, vui lòng login.";
-            //dispatch redux action
-            store.dispatch(setRefreshTokenAction({ status: true, message }));
+            localStorage.removeItem("access_token");
+
+            const message =
+                error?.response?.data?.error ??
+                "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.";
+
+            store.dispatch(
+                setRefreshTokenAction({
+                    status: true,
+                    message,
+                })
+            );
         }
 
-        if (+error.response.status === 403) {
+
+        if (error.response?.status === 403) {
             notification.error({
                 message: error?.response?.data?.message ?? "",
-                description: error?.response?.data?.error ?? ""
-            })
+                description: error?.response?.data?.error ?? "",
+            });
         }
 
         return error?.response?.data ?? Promise.reject(error);
     }
 );
 
-/**
- * Replaces main `axios` instance with the custom-one.
- *
- * @param cfg - Axios configuration object.
- * @returns A promise object of a response of the HTTP request with the 'data' object already
- * destructured.
- */
-// const axios = <T>(cfg: AxiosRequestConfig) => instance.request<any, T>(cfg);
-
-// export default axios;
-
 export default instance;
+
+

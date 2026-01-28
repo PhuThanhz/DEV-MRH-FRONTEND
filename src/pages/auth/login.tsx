@@ -1,102 +1,120 @@
-import { Button, Divider, Form, Input, message, notification } from 'antd';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { callLogin } from 'config/api';
-import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { setUserLoginInfo } from '@/redux/slice/accountSlide';
-import styles from 'styles/auth.module.scss';
-import { useAppSelector } from '@/redux/hooks';
+import { Button, Divider, Form, Input, message, notification, Card } from "antd";
+import { Link, useLocation } from "react-router-dom";
+import { callLogin } from "config/api";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { setUserLoginInfo } from "@/redux/slice/accountSlide";
+import { useAppSelector } from "@/redux/hooks";
 
 const LoginPage = () => {
     const [isSubmit, setIsSubmit] = useState(false);
     const dispatch = useDispatch();
-    const isAuthenticated = useAppSelector(state => state.account.isAuthenticated);
+    const isAuthenticated = useAppSelector(
+        (state) => state.account.isAuthenticated
+    );
 
-    let location = useLocation();
-    let params = new URLSearchParams(location.search);
-    const callback = params?.get("callback");
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const callback = params.get("callback");
 
     useEffect(() => {
         if (isAuthenticated) {
-            window.location.href = '/';
+            window.location.href = "/";
         }
-    }, [])
+    }, [isAuthenticated]);
 
     const onFinish = async (values: any) => {
         const { username, password } = values;
         setIsSubmit(true);
+
         const res = await callLogin(username, password);
+
         setIsSubmit(false);
 
         if (res?.data) {
-            localStorage.setItem('access_token', res.data.access_token);
-            dispatch(setUserLoginInfo(res.data.user))
-            message.success('Đăng nhập tài khoản thành công!');
-            window.location.href = callback ? callback : '/';
+            localStorage.setItem("access_token", res.data.access_token);
+            dispatch(setUserLoginInfo(res.data.user));
+            message.success("Đăng nhập tài khoản thành công!");
+            window.location.href = callback || "/";
         } else {
             notification.error({
                 message: "Có lỗi xảy ra",
                 description:
-                    res.message && Array.isArray(res.message) ? res.message[0] : res.message,
-                duration: 5
-            })
+                    Array.isArray(res?.message)
+                        ? res.message[0]
+                        : res?.message,
+                duration: 5,
+            });
         }
     };
 
-
     return (
-        <div className={styles["login-page"]}>
-            <main className={styles.main}>
-                <div className={styles.container}>
-                    <section className={styles.wrapper}>
-                        <div className={styles.heading}>
-                            <h2 className={`${styles.text} ${styles["text-large"]}`}>Đăng Nhập</h2>
-                            <Divider />
+        <div
+            style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f5f5f5",
+                padding: 16,
+            }}
+        >
+            <Card
+                title="Đăng nhập"
+                style={{
+                    width: "100%",
+                    maxWidth: 420,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+            >
+                <Form layout="vertical" onFinish={onFinish}>
+                    <Form.Item
+                        label="Email"
+                        name="username"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Email không được để trống!",
+                            },
+                        ]}
+                    >
+                        <Input placeholder="Nhập email" />
+                    </Form.Item>
 
-                        </div>
-                        <Form
-                            name="basic"
-                            // style={{ maxWidth: 600, margin: '0 auto' }}
-                            onFinish={onFinish}
-                            autoComplete="off"
+                    <Form.Item
+                        label="Mật khẩu"
+                        name="password"
+                        rules={[
+                            {
+                                required: true,
+                                message: "Mật khẩu không được để trống!",
+                            },
+                        ]}
+                    >
+                        <Input.Password placeholder="Nhập mật khẩu" />
+                    </Form.Item>
+
+                    <Form.Item>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={isSubmit}
+                            block
                         >
-                            <Form.Item
-                                labelCol={{ span: 24 }} //whole column
-                                label="Email"
-                                name="username"
-                                rules={[{ required: true, message: 'Email không được để trống!' }]}
-                            >
-                                <Input />
-                            </Form.Item>
+                            Đăng nhập
+                        </Button>
+                    </Form.Item>
 
-                            <Form.Item
-                                labelCol={{ span: 24 }} //whole column
-                                label="Mật khẩu"
-                                name="password"
-                                rules={[{ required: true, message: 'Mật khẩu không được để trống!' }]}
-                            >
-                                <Input.Password />
-                            </Form.Item>
+                    <Divider>Hoặc</Divider>
 
-                            <Form.Item
-                            // wrapperCol={{ offset: 6, span: 16 }}
-                            >
-                                <Button type="primary" htmlType="submit" loading={isSubmit}>
-                                    Đăng nhập
-                                </Button>
-                            </Form.Item>
-                            <Divider>Or</Divider>
-                            <p className="text text-normal">Chưa có tài khoản ?
-                                <span>
-                                    <Link to='/register' > Đăng Ký </Link>
-                                </span>
-                            </p>
-                        </Form>
-                    </section>
-                </div>
-            </main>
+                    <div style={{ textAlign: "center" }}>
+                        Chưa có tài khoản?{" "}
+                        <Link to="/register">Đăng ký</Link>
+                    </div>
+                </Form>
+            </Card>
         </div>
-    )
-}
+    );
+};
 
 export default LoginPage;

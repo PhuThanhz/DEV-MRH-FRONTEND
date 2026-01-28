@@ -37,7 +37,7 @@
         "src/config/*"
       ],
       "hook/*": [
-        "./src/hook/*"
+        "src/hooks/*"
       ],
       "pages/*": [
         "./src/pages/*"
