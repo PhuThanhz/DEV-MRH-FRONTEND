@@ -189,7 +189,6 @@ const PermissionPage = () => {
             ),
         },
     ];
-
     return (
         <PageContainer
             title="Quản lý quyền hạn"

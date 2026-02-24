@@ -19,7 +19,7 @@ const Breadcrumb = () => {
                         )}
                     </li>
                 ))}
-            </ol>
+            </ol>.
         </nav>
     );
 };

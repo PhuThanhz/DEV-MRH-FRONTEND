@@ -10,6 +10,7 @@ import { MODULE_TRANSLATIONS } from '@/constants/moduleTranslation.constant';
 
 const { Panel } = Collapse;
 
+
 interface IProps {
   onChange?: (data: any[]) => void;
   onReset?: () => void;

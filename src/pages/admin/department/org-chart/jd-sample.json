@@ -1,0 +1,27 @@
+{
+    "meta": {
+        "version": "1.2",
+        "effectiveDate": "15/01/2026"
+    },
+    "general": {
+        "directManager": "Tổng Giám đốc / CEO",
+        "collaboration": "Ban Giám đốc, Các Trưởng phòng ban, Đối tác lao động, Cơ quan quản lý nhà nước về lao động"
+    },
+    "sections": {
+        "requirements": {
+            "knowledge": "Kiến thức chuyên sâu về Luật Lao động Việt Nam, Luật Bảo hiểm, quản trị nhân sự chiến lược, HR Analytics và chuyển đổi số nhân sự.\nHiểu biết về tài chính nhân sự, lập ngân sách nhân lực, và các quy định thuế TNCN liên quan đến lương thưởng.",
+            "experience": "Tối thiểu 10–12 năm kinh nghiệm trong lĩnh vực nhân sự.\nÍt nhất 5 năm ở vị trí lãnh đạo cấp cao (HR Director / CHRO) tại doanh nghiệp quy mô ≥ 800 nhân viên.\nKinh nghiệm xây dựng chiến lược nhân sự cho doanh nghiệp F&B / bán lẻ đa điểm là lợi thế.",
+            "skills": "Kỹ năng lãnh đạo đội ngũ, xây dựng văn hóa tổ chức và quản lý thay đổi.\nThành thạo đàm phán quan hệ lao động, giải quyết tranh chấp lao động.\nSử dụng thành thạo HRIS (Workday, BambooHR, FastWork,...), Excel nâng cao, Power BI / Tableau.",
+            "qualities": "Tư duy chiến lược, tầm nhìn dài hạn, khả năng ra quyết định dựa trên dữ liệu.\nTính chính trực cao, bảo mật thông tin nhạy cảm.\nKhả năng chịu áp lực tốt và thích ứng nhanh với môi trường kinh doanh biến động.",
+            "other": "Ưu tiên có chứng chỉ quốc tế (SHRM-SCP, SPHR, CIPD Level 7).\nTiếng Anh giao tiếp tốt (IELTS 7.0+ hoặc TOEIC 850+)."
+        },
+        "responsibilities": [
+            "1. Chiến lược Nhân sự: Xây dựng và triển khai chiến lược nhân sự dài hạn phù hợp với mục tiêu kinh doanh của Công ty.",
+            "2. Tuyển dụng & Phát triển Lãnh đạo: Lãnh đạo tuyển dụng cấp cao, xây dựng kế hoạch kế nhiệm và phát triển lãnh đạo.",
+            "3. Quản lý Hiệu suất & Phúc lợi: Thiết kế hệ thống KPI, chính sách lương – thưởng – phúc lợi cạnh tranh và bền vững.",
+            "4. Quan hệ Lao động & Tuân thủ: Đại diện Công ty trong đàm phán tập thể, xử lý khiếu nại, đảm bảo tuân thủ 100% pháp luật lao động.",
+            "5. Văn hóa & Gắn kết: Xây dựng và lan tỏa văn hóa doanh nghiệp, nâng cao trải nghiệm & mức độ gắn bó của nhân viên.",
+            "6. Báo cáo & Phân tích: Theo dõi các chỉ số nhân sự then chốt (turnover, engagement score, cost per hire,...), báo cáo định kỳ cho Ban lãnh đạo."
+        ]
+    }
+}

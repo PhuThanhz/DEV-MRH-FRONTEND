@@ -24,7 +24,6 @@ const LayoutClient = () => {
             }}
         >
             <Header />
-
             <div
                 style={{
                     flex: 1,

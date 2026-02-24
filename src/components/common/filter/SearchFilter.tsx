@@ -115,13 +115,36 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                                     addLabel
                                 ) : (
                                     <Button
-                                        type="primary"
                                         icon={<PlusOutlined />}
                                         onClick={onAddClick}
-                                        className="h-9 text-sm flex items-center justify-center px-4 w-auto sm:ml-0"
+                                        className="h-9 text-sm flex items-center justify-center px-5 w-auto sm:ml-0"
+                                        style={{
+                                            backgroundColor: "#ff5fa2",
+                                            color: "#ffffff",
+                                            border: "none",
+                                            borderRadius: 10,
+                                            boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
+                                            fontWeight: 500,
+                                            transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = "#ff4b97";
+                                            e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
+                                            e.currentTarget.style.transform = "translateY(-1px)";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = "#ff5fa2";
+                                            e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
+                                            e.currentTarget.style.transform = "translateY(0)";
+                                        }}
+                                        onMouseDown={(e) => {
+                                            e.currentTarget.style.transform = "translateY(0)";
+                                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(255, 95, 162, 0.4)";
+                                        }}
                                     >
                                         {addLabel}
                                     </Button>
+
                                 )}
                             </div>
                         )}

@@ -20,7 +20,6 @@ export const usePermissionsQuery = (query: string) => {
         },
     });
 };
-
 // Lấy chi tiết quyền theo ID
 export const usePermissionByIdQuery = (id?: string) => {
     return useQuery({
