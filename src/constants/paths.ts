@@ -25,6 +25,7 @@ export const PATHS = {
         PERMISSION_CATEGORIES: "/admin/permission-categories",
         PERMISSION_CONTENTS: "/admin/permission-categories/:categoryId/contents",
         PERMISSION_MATRIX: "/admin/permission-contents/:contentId/matrix", // ⭐ BỔ SUNG
+        DEPARTMENT_PERMISSION: "/admin/departments/:departmentId/permissions",
 
 
     },
