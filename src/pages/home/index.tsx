@@ -423,7 +423,6 @@ const HomePage = () => {
                         display: none;
                     }
                 }
-
                 /* Tall narrow screens (e.g. Galaxy Fold) */
                 @media (max-width: 320px) {
                     :root {

@@ -13,13 +13,13 @@ const Breadcrumb = () => {
                         {item.isLast ? (
                             <span className="text-gray-800 font-semibold">{item.label}</span>
                         ) : (
-                            <Link to={item.path} className="hover:text-blue-600 font-medium">
+                            <Link to={item.path} className="!text-pink-600 hover:!text-pink-800 font-medium">
                                 {item.label}
                             </Link>
                         )}
                     </li>
                 ))}
-            </ol>.
+            </ol>
         </nav>
     );
 };
