@@ -973,21 +973,14 @@ export const callIssueJobDescription = (id: number) => {
     );
 };
 /* ===================== PERMISSION MATRIX REAL API ===================== */
-
-/**
- * Lấy danh mục phân quyền theo phòng ban
- */
 export const callFetchPermissionCategoriesByDepartment = (departmentId: number) => {
     return axios.get<IBackendRes<IPermissionCategory[]>>(
         `/api/v1/permission-categories/by-department/${departmentId}`
     );
 };
 
-/**
- * Lấy ma trận phân quyền theo danh mục (category)
- */
 export const callFetchPermissionMatrixByCategory = (categoryId: number) => {
     return axios.get<IBackendRes<IPermissionCategoryMatrix>>(
-        `/api/v1/permission-matrix/category/${categoryId}`
+        `/api/v1/permission-categories/${categoryId}/matrix`
     );
 };

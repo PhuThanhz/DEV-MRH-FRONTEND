@@ -613,25 +613,24 @@ export interface IPermissionCategoryRequest {
 
 /* ===================== PERMISSION CATEGORY MATRIX ===================== */
 export interface IPermissionCategoryMatrix {
-    category: {
-        id: number;
-        code: string;
-        name: string;
-    };
-    contents: {
+    categoryId: number;
+    categoryName: string;
+    departmentName: string;
+
+    columns: {
+        departmentJobTitleId: number;
+        jobTitleName: string;
+    }[];
+
+    rows: {
         contentId: number;
         contentName: string;
-        jobTitles: {
+        cells: {
             departmentJobTitleId: number;
-            jobTitleId: number;
-            jobTitleName: string;
-
-            processActionId: number | null;   // ⭐ QUAN TRỌNG
-            processActionCode?: string;        // để hiển thị
+            processActionCode: string | null;
         }[];
     }[];
 }
-
 /* ===================== PERMISSION CONTENT ===================== */
 
 export interface IPermissionContent {

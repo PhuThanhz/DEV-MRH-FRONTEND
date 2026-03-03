@@ -30,13 +30,19 @@ import {
 import ModalDepartment from "./modal.department";
 import ViewDepartment from "./view.department";
 
+/* ⭐ Thêm import modal phân quyền */
+import ModalPermissionMatrix from "./access-control/ModalPermissionMatrix";
+
 const DepartmentPage = () => {
     const navigate = useNavigate();
 
     const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
-    const [dataInit, setDataInit] = useState<IDepartment | null>(null);
+    const [openPermission, setOpenPermission] = useState(false);
 
+    const [selectedDepartment, setSelectedDepartment] = useState<IDepartment | null>(null);
+
+    const [dataInit, setDataInit] = useState<IDepartment | null>(null);
     const [searchValue, setSearchValue] = useState("");
 
     const [query, setQuery] = useState(
@@ -134,11 +140,11 @@ const DepartmentPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 160, // tăng width để icon không bị chật
+            width: 160,
             fixed: "right",
             render: (_, record) => (
                 <Space size="middle">
-                    {/* Xem chi tiết - xanh dương */}
+                    {/* Xem chi tiết - xanh */}
                     <Button
                         type="text"
                         icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
@@ -158,7 +164,7 @@ const DepartmentPage = () => {
                         }}
                     />
 
-                    {/* Dropdown More - hồng nhạt khi hover */}
+                    {/* More dropdown */}
                     <Dropdown
                         menu={{
                             items: [
@@ -185,6 +191,7 @@ const DepartmentPage = () => {
                                             )}`
                                         ),
                                 },
+
                                 {
                                     key: "career-paths",
                                     icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
@@ -196,6 +203,7 @@ const DepartmentPage = () => {
                                             )}`
                                         ),
                                 },
+
                                 {
                                     key: "objectives-tasks",
                                     icon: <AimOutlined style={{ color: "#eb2f96" }} />,
@@ -207,20 +215,20 @@ const DepartmentPage = () => {
                                             )}`
                                         ),
                                 },
+
+                                /* ⭐ Thay navigate = mở modal phân quyền */
                                 {
                                     key: "permissions",
                                     icon: <LockOutlined style={{ color: "#eb2f96" }} />,
                                     label: "Bản phân quyền",
-                                    onClick: () =>
-                                        navigate(
-                                            `/admin/departments/${record.id}/permissions?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
-                                        ),
+                                    onClick: () => {
+                                        setSelectedDepartment(record);
+                                        setOpenPermission(true);
+                                    },
                                 },
-                                {
-                                    type: "divider",
-                                },
+
+                                { type: "divider" },
+
                                 {
                                     key: "delete",
                                     icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
@@ -244,19 +252,7 @@ const DepartmentPage = () => {
                     >
                         <Button
                             type="text"
-                            icon={
-                                <MoreOutlined
-                                    style={{
-                                        color: "#595959",
-                                        fontSize: 18,
-                                        transition: "color 0.3s",
-                                    }}
-                                />
-                            }
-                            style={{
-                                transition: "background 0.3s, color 0.3s",
-                            }}
-                            className="hover:bg-pink-50 hover:text-pink-600" // hover hồng nhạt
+                            icon={<MoreOutlined style={{ fontSize: 18 }} />}
                         />
                     </Dropdown>
                 </Space>
@@ -306,6 +302,7 @@ const DepartmentPage = () => {
                 }}
             />
 
+            {/* Modal thêm / sửa */}
             <ModalDepartment
                 openModal={openModal}
                 setOpenModal={setOpenModal}
@@ -313,12 +310,23 @@ const DepartmentPage = () => {
                 setDataInit={setDataInit}
             />
 
+            {/* Modal xem chi tiết */}
             <ViewDepartment
                 open={openView}
                 onClose={setOpenView}
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
+
+            {/* ⭐ Modal phân quyền */}
+            {selectedDepartment && (
+                <ModalPermissionMatrix
+                    open={openPermission}
+                    onClose={() => setOpenPermission(false)}
+                    departmentId={selectedDepartment.id}
+                    departmentName={selectedDepartment.name}
+                />
+            )}
         </PageContainer>
     );
 };
