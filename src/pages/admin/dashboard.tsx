@@ -1,491 +1,525 @@
-import { Card, Col, Row, Statistic, Typography } from "antd";
-import CountUp from "react-countup";
+import React from "react";
+import {
+    Card,
+    Col,
+    Row,
+    Progress,
+    Typography,
+    Tag,
+    Button,
+    Table,
+} from "antd";
 import { useAppSelector } from "@/redux/hooks";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import {
-    UserOutlined,
-    SafetyOutlined,
-    KeyOutlined,
+    BankOutlined,
+    ApartmentOutlined,
+    SafetyCertificateOutlined,
     RiseOutlined,
-    TeamOutlined,
-    TrophyOutlined
+    FileTextOutlined,
+    AimOutlined,
+    UserOutlined,
+    FlagOutlined,
+    WarningOutlined,
 } from "@ant-design/icons";
+import CountUp from "react-countup";
+import { Link } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
+interface ModuleItem {
+    key: string;
+    title: string;
+    icon: React.ReactNode;
+    configured: boolean;
+    progress: number;
+    label: string;
+    detail: string;
+    missingInfo: string;
+    path: string;
+    actionText?: string;
+}
+
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+.dashboard-page {
+    min-height: 100vh;
+    padding: 32px;
+    background: #ffffff;
+    font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.dashboard-card {
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    border: 1px solid #e4e7ec !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04) !important;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
+}
+
+.dashboard-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.09) !important;
+    transform: translateY(-1px);
+}
+
+
+
+/* KPI Cards */
+.kpi-card {
+    position: relative;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.kpi-card .ant-card-body {
+    padding: 24px !important;
+}
+
+.kpi-card-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.kpi-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.kpi-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.kpi-icon-blue   { background: #e6f0ff; color: #1677ff; }
+.kpi-icon-orange { background: #fff4e6; color: #fa8c16; }
+.kpi-icon-red    { background: #fff1f0; color: #ff4d4f; }
+
+.kpi-label {
+    font-size: 13px;
+    color: #8c9196;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.kpi-value-warning {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fa8c16;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.kpi-value-danger {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ff4d4f;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.kpi-suffix {
+    font-size: 15px;
+    font-weight: 500;
+    opacity: 0.6;
+    margin-left: 2px;
+}
+
+/* Decorative shape */
+.kpi-card-deco {
+    position: absolute;
+    right: -18px;
+    bottom: -18px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    opacity: 0.06;
+}
+
+.kpi-card-deco-blue   { background: #1677ff; }
+.kpi-card-deco-orange { background: #fa8c16; }
+.kpi-card-deco-red    { background: #ff4d4f; }
+
+/* Overview card */
+.overview-card {
+    background: #ffffff !important;
+    border: 1px solid #e4e7ec !important;
+}
+
+.overview-card .ant-card-body {
+    padding: 28px 32px !important;
+}
+
+.overview-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.overview-stat:last-child { border-bottom: none; }
+
+.overview-stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    flex-shrink: 0;
+}
+
+.overview-stat-dot.done { background: #22c55e; }
+
+.overview-stat-name {
+    flex: 1;
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.overview-stat-name.done {
+    color: #111827;
+    font-weight: 500;
+}
+
+.overview-stat-badge {
+    font-size: 11px;
+    border-radius: 6px;
+    padding: 1px 8px;
+    font-weight: 500;
+}
+
+.overview-stat-badge.done {
+    color: #16a34a;
+    background: #f0fdf4;
+}
+
+.overview-stat-badge.in-progress {
+    color: #d97706;
+    background: #fffbeb;
+}
+
+.overview-stat-badge.not-started {
+    color: #9ca3af;
+    background: #f9fafb;
+}
+
+.module-icon {
+    font-size: 18px;
+    color: #1677ff;
+}
+
+/* Animate circle stroke on load */
+@keyframes stroke-in {
+    from { stroke-dashoffset: 300; opacity: 0; }
+    to { opacity: 1; }
+}
+
+.progress-ring-wrap .ant-progress-circle path:last-child {
+    animation: stroke-in 1s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+/* Remove white circle background inside progress ring */
+.progress-ring-wrap .ant-progress-inner {
+    background: transparent !important;
+}
+
+.progress-ring-wrap .ant-progress-circle-trail {
+    stroke: #f1f5f9 !important;
+}
+
+/* Table */
+.ant-table-thead > tr > th {
+    background: #fafafa !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    font-size: 13px !important;
+}
+
+.section-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 16px !important;
+}
+`;
+
 const DashboardPage = () => {
-    const permissions = useAppSelector((s) => s.account.user.role.permissions);
+    const user = useAppSelector((state) => state.account.user);
+    const permissions = user?.role?.permissions || [];
+    const isSuperAdmin =
+        user?.role?.name?.toUpperCase().includes("SUPER") || false;
+
+    const hasDashboardPermission = permissions.some(
+        (p: any) =>
+            p?.apiPath === ALL_PERMISSIONS.DASHBOARD?.GET_OVERVIEW?.apiPath &&
+            p?.method === ALL_PERMISSIONS.DASHBOARD?.GET_OVERVIEW?.method &&
+            p?.module === ALL_PERMISSIONS.DASHBOARD?.GET_OVERVIEW?.module
+    );
 
     const hasAccess =
-        permissions?.some(
-            (p: any) =>
-                p.apiPath === ALL_PERMISSIONS.DASHBOARD.GET_OVERVIEW.apiPath &&
-                p.method === ALL_PERMISSIONS.DASHBOARD.GET_OVERVIEW.method &&
-                p.module === ALL_PERMISSIONS.DASHBOARD.GET_OVERVIEW.module
-        ) || import.meta.env.VITE_ACL_ENABLE === "false";
-
-    const mockData = {
-        userCount: 1280,
-        roleCount: 14,
-        permissionCount: 56,
-    };
-
-    const formatter = (value: number | string) => (
-        <CountUp end={Number(value)} separator="," />
-    );
+        isSuperAdmin ||
+        hasDashboardPermission ||
+        import.meta.env.VITE_ACL_ENABLE === "false";
 
     if (!hasAccess) {
         return (
-            <div
-                style={{
-                    minHeight: "calc(100vh - 100px)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    background: "linear-gradient(135deg, #fff 0%, #fdf2f8 50%, #fce7f3 100%)",
-                    borderRadius: "24px",
-                    padding: "60px 40px",
-                    position: "relative",
-                    overflow: "hidden",
-                }}
-            >
-                {/* Decorative background elements */}
-                <div
-                    style={{
-                        position: "absolute",
-                        top: "-100px",
-                        right: "-100px",
-                        width: "400px",
-                        height: "400px",
-                        background: "radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%)",
-                        borderRadius: "50%",
-                        pointerEvents: "none",
-                    }}
-                />
-                <div
-                    style={{
-                        position: "absolute",
-                        bottom: "-150px",
-                        left: "-150px",
-                        width: "500px",
-                        height: "500px",
-                        background: "radial-gradient(circle, rgba(244, 114, 182, 0.06) 0%, transparent 70%)",
-                        borderRadius: "50%",
-                        pointerEvents: "none",
-                    }}
-                />
-
-                {/* Floating particles effect */}
-                <div
-                    className="particle"
-                    style={{
-                        position: "absolute",
-                        top: "20%",
-                        left: "15%",
-                        width: "8px",
-                        height: "8px",
-                        background: "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)",
-                        borderRadius: "50%",
-                        opacity: 0.3,
-                        animation: "float 6s ease-in-out infinite",
-                    }}
-                />
-                <div
-                    className="particle"
-                    style={{
-                        position: "absolute",
-                        top: "60%",
-                        right: "20%",
-                        width: "12px",
-                        height: "12px",
-                        background: "linear-gradient(135deg, #f472b6 0%, #fbcfe8 100%)",
-                        borderRadius: "50%",
-                        opacity: 0.25,
-                        animation: "float 8s ease-in-out infinite 1s",
-                    }}
-                />
-                <div
-                    className="particle"
-                    style={{
-                        position: "absolute",
-                        bottom: "25%",
-                        left: "25%",
-                        width: "10px",
-                        height: "10px",
-                        background: "linear-gradient(135deg, #fbcfe8 0%, #f9a8d4 100%)",
-                        borderRadius: "50%",
-                        opacity: 0.2,
-                        animation: "float 7s ease-in-out infinite 2s",
-                    }}
-                />
-
-                {/* Logo with premium styling */}
-                <div
-                    style={{
-                        position: "relative",
-                        marginBottom: "32px",
-                        animation: "fadeInScale 0.8s ease-out",
-                    }}
-                >
-                    <div
-                        style={{
-                            width: "140px",
-                            height: "140px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(244, 114, 182, 0.05) 100%)",
-                            borderRadius: "50%",
-                            padding: "20px",
-                            boxShadow: "0 8px 32px rgba(236, 72, 153, 0.15), 0 0 0 1px rgba(236, 72, 153, 0.1)",
-                            position: "relative",
-                            zIndex: 1,
-                        }}
-                    >
-                        <img
-                            src="/logo/LOGOFINAL.png"
-                            alt="LOTUS HRM"
-                            style={{
-                                width: "100%",
-                                height: "auto",
-                                objectFit: "contain",
-                            }}
-                        />
-                    </div>
-                    {/* Pulsing ring effect */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            inset: "-12px",
-                            borderRadius: "50%",
-                            border: "2px solid rgba(236, 72, 153, 0.2)",
-                            animation: "pulse-ring 3s ease-out infinite",
-                        }}
-                    />
-                </div>
-
-                {/* Welcome text */}
-                <Title
-                    level={1}
-                    style={{
-                        textAlign: "center",
-                        marginBottom: "16px",
-                        background: "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                        fontSize: "42px",
-                        fontWeight: 800,
-                        letterSpacing: "-0.5px",
-                        animation: "fadeInUp 0.8s ease-out 0.2s both",
-                    }}
-                >
-                    Chào mừng đến với LOTUS HRM
-                </Title>
-
-                <Text
-                    style={{
-                        fontSize: "18px",
-                        color: "#ec4899",
-                        textAlign: "center",
-                        fontWeight: 500,
-                        letterSpacing: "0.3px",
-                        animation: "fadeInUp 0.8s ease-out 0.4s both",
-                    }}
-                >
-                    Bộ hồ sơ quản trị nhân sự
-                </Text>
-
-                {/* Subtle tagline */}
-                <Text
-                    type="secondary"
-                    style={{
-                        fontSize: "14px",
-                        textAlign: "center",
-                        marginTop: "8px",
-                        opacity: 0.7,
-                        animation: "fadeInUp 0.8s ease-out 0.6s both",
-                    }}
-                >
-                    Hệ thống quản lý nhân sự tiện dụng & hiện đại
-                </Text>
-
-                {/* Decorative divider */}
-                <div
-                    style={{
-                        marginTop: "32px",
-                        width: "120px",
-                        height: "4px",
-                        background: "linear-gradient(90deg, transparent 0%, #ec4899 50%, transparent 100%)",
-                        borderRadius: "2px",
-                        animation: "fadeIn 0.8s ease-out 0.8s both",
-                    }}
-                />
-
-                {/* Animation styles */}
-                <style>{`
-                    @keyframes fadeInScale {
-                        from {
-                            opacity: 0;
-                            transform: scale(0.8);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: scale(1);
-                        }
-                    }
-
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-
-                    @keyframes fadeIn {
-                        from {
-                            opacity: 0;
-                        }
-                        to {
-                            opacity: 1;
-                        }
-                    }
-
-                    @keyframes pulse-ring {
-                        0% {
-                            transform: scale(1);
-                            opacity: 0.5;
-                        }
-                        50% {
-                            transform: scale(1.1);
-                            opacity: 0.2;
-                        }
-                        100% {
-                            transform: scale(1.2);
-                            opacity: 0;
-                        }
-                    }
-
-                    @keyframes float {
-                        0%, 100% {
-                            transform: translateY(0) translateX(0);
-                        }
-                        33% {
-                            transform: translateY(-20px) translateX(10px);
-                        }
-                        66% {
-                            transform: translateY(-10px) translateX(-10px);
-                        }
-                    }
-                `}</style>
+            <div className="dashboard-page">
+                <style>{styles}</style>
+                <Card className="dashboard-card" style={{ textAlign: "center", padding: 48 }}>
+                    <Title level={4}>Truy cập bị từ chối</Title>
+                    <Text type="secondary">
+                        Bạn không có quyền xem trang Dashboard.
+                    </Text>
+                </Card>
             </div>
         );
     }
 
-    const statsConfig = [
+    const setupStatus = {
+        company: { configured: true, progress: 100, label: "Hoàn tất", detail: "Công ty đã cấu hình", missingInfo: "" },
+        departments: { configured: true, progress: 100, label: "Hoàn tất", detail: "12 phòng ban", missingInfo: "" },
+        rolesAndPermissions: { configured: false, progress: 68, label: "Đang thực hiện", detail: "42/62 quyền đã gán", missingInfo: "Thiếu quyền KPI & Lương" },
+        careerPath: { configured: false, progress: 25, label: "Chưa đầy đủ", detail: "2 cấp bậc", missingInfo: "Thiếu cấp quản lý cao" },
+        jobDescriptions: { configured: true, progress: 85, label: "Gần hoàn tất", detail: "58/68 vị trí có JD", missingInfo: "" },
+        objectivesAndKPI: { configured: false, progress: 0, label: "Chưa bắt đầu", detail: "Chưa có KPI", missingInfo: "Chưa thiết lập KPI phòng ban" },
+    };
+
+    const modules: ModuleItem[] = [
+        { key: "company", title: "Thông tin Công ty", icon: <BankOutlined />, ...setupStatus.company, path: "/admin/company-setup" },
+        { key: "departments", title: "Phòng ban", icon: <ApartmentOutlined />, ...setupStatus.departments, path: "/admin/departments" },
+        { key: "rolesAndPermissions", title: "Phân quyền", icon: <SafetyCertificateOutlined />, ...setupStatus.rolesAndPermissions, path: "/admin/roles-permissions", actionText: "Cập nhật" },
+        { key: "careerPath", title: "Lộ trình thăng tiến", icon: <RiseOutlined />, ...setupStatus.careerPath, path: "/admin/career-path", actionText: "Thiết lập" },
+        { key: "jobDescriptions", title: "Mô tả công việc", icon: <FileTextOutlined />, ...setupStatus.jobDescriptions, path: "/admin/job-descriptions" },
+        { key: "objectivesAndKPI", title: "Mục tiêu & KPI", icon: <AimOutlined />, ...setupStatus.objectivesAndKPI, path: "/admin/objectives-kpi", actionText: "Tạo mới" },
+    ];
+
+    const completedCount = modules.filter((m) => m.configured).length;
+    const totalModules = modules.length;
+    const overallProgress = Math.round((completedCount / totalModules) * 100);
+
+    const totalDepts = 12;
+    const deptsWithKPI = 4;
+    const positionsWithoutJD = 10;
+
+    const kpiData = [
         {
-            title: "Tổng người dùng",
-            value: mockData.userCount,
-            icon: <TeamOutlined style={{ fontSize: "32px" }} />,
-            gradient: "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)",
-            bgGradient: "linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(244, 114, 182, 0.05) 100%)",
+            title: "Tổng nhân sự",
+            value: 456,
+            icon: <UserOutlined />,
+            suffix: "nhân sự",
+            valueClass: "kpi-value",
+            iconClass: "kpi-icon-blue",
+            decoClass: "kpi-card-deco-blue",
         },
         {
-            title: "Tổng vai trò",
-            value: mockData.roleCount,
-            icon: <TrophyOutlined style={{ fontSize: "32px" }} />,
-            gradient: "linear-gradient(135deg, #f472b6 0%, #f9a8d4 100%)",
-            bgGradient: "linear-gradient(135deg, rgba(244, 114, 182, 0.08) 0%, rgba(249, 168, 212, 0.05) 100%)",
+            title: "Phòng ban có mục tiêu KPI",
+            value: deptsWithKPI,
+            icon: <FlagOutlined />,
+            suffix: `/ ${totalDepts} phòng ban`,
+            valueClass: deptsWithKPI < totalDepts ? "kpi-value-warning" : "kpi-value",
+            iconClass: "kpi-icon-orange",
+            decoClass: "kpi-card-deco-orange",
+            extra: deptsWithKPI < totalDepts
+                ? <Tag color="warning" style={{ marginTop: 4, borderRadius: 8 }}>{totalDepts - deptsWithKPI} phòng ban chưa cấu hình</Tag>
+                : null,
         },
         {
-            title: "Tổng quyền hạn",
-            value: mockData.permissionCount,
-            icon: <KeyOutlined style={{ fontSize: "32px" }} />,
-            gradient: "linear-gradient(135deg, #f9a8d4 0%, #fbcfe8 100%)",
-            bgGradient: "linear-gradient(135deg, rgba(249, 168, 212, 0.08) 0%, rgba(251, 207, 232, 0.05) 100%)",
+            title: "Vị trí chưa có JD",
+            value: positionsWithoutJD,
+            icon: <WarningOutlined />,
+            suffix: "vị trí",
+            valueClass: positionsWithoutJD > 0 ? "kpi-value-danger" : "kpi-value",
+            iconClass: "kpi-icon-red",
+            decoClass: "kpi-card-deco-red",
+            extra: positionsWithoutJD > 0
+                ? <Tag color="error" style={{ marginTop: 4, borderRadius: 8 }}>Cần bổ sung JD</Tag>
+                : null,
+        },
+    ];
+
+    const columns = [
+        {
+            title: "Module",
+            dataIndex: "title",
+            render: (text: string, record: ModuleItem) => (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span className="module-icon">{record.icon}</span>
+                    <div>
+                        <div style={{ fontWeight: 600 }}>{text}</div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            {record.detail}
+                        </Text>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: "Tiến độ",
+            dataIndex: "progress",
+            width: 180,
+            render: (progress: number) => (
+                <Progress percent={progress} size="small" strokeColor={progress === 100 ? "#22c55e" : progress > 0 ? "#f59e0b" : "#e5e7eb"} />
+            ),
+        },
+        {
+            title: "Trạng thái",
+            dataIndex: "configured",
+            width: 150,
+            render: (_: any, record: ModuleItem) =>
+                record.configured ? (
+                    <Tag color="success" style={{ borderRadius: 8 }}>✓ Hoàn tất</Tag>
+                ) : record.progress > 0 ? (
+                    <Tag color="warning" style={{ borderRadius: 8 }}>Đang thực hiện</Tag>
+                ) : (
+                    <Tag color="default" style={{ borderRadius: 8 }}>Chưa bắt đầu</Tag>
+                ),
         },
     ];
 
     return (
-        <div style={{ position: "relative" }}>
-            {/* Header section */}
-            <div
-                style={{
-                    marginBottom: "32px",
-                    padding: "32px",
-                    background: "linear-gradient(135deg, #fff 0%, #fdf2f8 50%, #fce7f3 100%)",
-                    borderRadius: "24px",
-                    boxShadow: "0 4px 20px rgba(236, 72, 153, 0.08)",
-                    position: "relative",
-                    overflow: "hidden",
-                }}
-            >
-                {/* Background decoration */}
-                <div
-                    style={{
-                        position: "absolute",
-                        top: "-50px",
-                        right: "-50px",
-                        width: "200px",
-                        height: "200px",
-                        background: "radial-gradient(circle, rgba(236, 72, 153, 0.06) 0%, transparent 70%)",
-                        borderRadius: "50%",
-                        pointerEvents: "none",
-                    }}
-                />
+        <div className="dashboard-page">
+            <style>{styles}</style>
 
-                <div style={{ position: "relative", zIndex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                        <div
-                            style={{
-                                width: "56px",
-                                height: "56px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                background: "linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(244, 114, 182, 0.05) 100%)",
-                                borderRadius: "16px",
-                                padding: "12px",
-                                boxShadow: "0 4px 12px rgba(236, 72, 153, 0.12)",
-                            }}
-                        >
-                            <img
-                                src="/logo/LOGOFINAL.png"
-                                alt="LOTUS"
-                                style={{ width: "100%", height: "auto" }}
-                            />
-                        </div>
-                        <div>
-                            <Title
-                                level={2}
-                                style={{
-                                    margin: 0,
-                                    background: "linear-gradient(135deg, #ec4899 0%, #f472b6 100%)",
-                                    WebkitBackgroundClip: "text",
-                                    WebkitTextFillColor: "transparent",
-                                    backgroundClip: "text",
-                                    fontSize: "28px",
-                                    fontWeight: 700,
-                                }}
-                            >
-                                Tổng quan hệ thống
-                            </Title>
-                            <Text style={{ color: "#f472b6", fontSize: "14px", fontWeight: 500 }}>
-                                Bộ hồ sơ quản trị nhân sự
-                            </Text>
-                        </div>
-                    </div>
-                </div>
+            {/* Header */}
+            <div style={{ marginBottom: 28 }}>
+                <Title level={3} style={{ marginBottom: 4, fontWeight: 700, color: "#111827" }}>
+                    Dashboard HRM
+                </Title>
+                <Text type="secondary" style={{ fontSize: 14 }}>
+                    Tổng quan cấu hình hệ thống và chỉ số nhân sự
+                </Text>
             </div>
 
-            {/* Statistics cards */}
-            <Row gutter={[24, 24]}>
-                {statsConfig.map((stat, index) => (
-                    <Col span={24} md={8} key={index}>
-                        <Card
-                            bordered={false}
-                            style={{
-                                borderRadius: "20px",
-                                background: stat.bgGradient,
-                                border: "1px solid rgba(236, 72, 153, 0.1)",
-                                boxShadow: "0 4px 20px rgba(236, 72, 153, 0.08)",
-                                overflow: "hidden",
-                                position: "relative",
-                                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                            }}
-                            className="stat-card"
-                            hoverable
-                        >
-                            {/* Card decoration */}
-                            <div
-                                style={{
-                                    position: "absolute",
-                                    top: "-30px",
-                                    right: "-30px",
-                                    width: "120px",
-                                    height: "120px",
-                                    background: "radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%)",
-                                    borderRadius: "50%",
-                                    pointerEvents: "none",
-                                }}
-                            />
+            {/* Overall progress */}
+            <Card className="dashboard-card overview-card" style={{ marginBottom: 24 }}>
+                <Row align="middle" justify="space-between" gutter={[32, 0]}>
+                    <Col flex="1">
+                        <div style={{ marginBottom: 4 }}>
+                            <Text style={{ fontSize: 13, color: "#9ca3af", fontWeight: 500 }}>Tiến độ cấu hình</Text>
+                        </div>
+                        <Title level={4} style={{ margin: "0 0 20px", fontWeight: 700, color: "#111827" }}>
+                            Thiết lập hệ thống HRM
+                        </Title>
+                        <div>
+                            {modules.map((m) => (
+                                <div key={m.key} className="overview-stat">
+                                    <span className={`overview-stat-dot ${m.configured ? "done" : ""}`} />
+                                    <span className={`overview-stat-name ${m.configured ? "done" : ""}`}>
+                                        {m.title}
+                                    </span>
+                                    {m.configured ? (
+                                        <span className="overview-stat-badge done">✓ Hoàn tất</span>
+                                    ) : m.progress > 0 ? (
+                                        <span className="overview-stat-badge in-progress">{m.progress}%</span>
+                                    ) : (
+                                        <span className="overview-stat-badge not-started">Chưa bắt đầu</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </Col>
+                    <Col>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                            <div className="progress-ring-wrap">
+                                <Progress
+                                    type="circle"
+                                    percent={overallProgress}
+                                    size={120}
+                                    strokeColor={{ "0%": "#6366f1", "100%": "#a78bfa" }}
+                                    trailColor="#f1f5f9"
+                                    strokeWidth={10}
+                                    strokeLinecap="round"
+                                    format={(pct) => (
+                                        <div style={{ textAlign: "center" }}>
+                                            <div style={{ fontSize: 26, fontWeight: 800, color: "#1e1b4b", lineHeight: 1, letterSpacing: "-1px" }}>{pct}%</div>
+                                            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, fontWeight: 500 }}>hoàn tất</div>
+                                        </div>
+                                    )}
+                                />
+                            </div>
+                            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#6366f1" }} />
+                                    <Text style={{ fontSize: 12, color: "#64748b" }}>{completedCount} xong</Text>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#e2e8f0" }} />
+                                    <Text style={{ fontSize: 12, color: "#94a3b8" }}>{totalModules - completedCount} còn lại</Text>
+                                </div>
+                            </div>
+                        </div>
+                    </Col>
+                </Row>
+            </Card>
 
-                            <div style={{ position: "relative", zIndex: 1 }}>
-                                <div
-                                    style={{
-                                        marginBottom: "16px",
-                                        display: "inline-flex",
-                                        padding: "12px",
-                                        borderRadius: "14px",
-                                        background: "rgba(255, 255, 255, 0.6)",
-                                        boxShadow: "0 2px 8px rgba(236, 72, 153, 0.12)",
-                                    }}
-                                >
-                                    <div style={{ background: stat.gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                                        {stat.icon}
+            {/* KPI Cards – 3 cards, evenly distributed */}
+            <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+                {kpiData.map((item, index) => (
+                    <Col xs={24} sm={12} lg={8} key={index}>
+                        <Card className="dashboard-card kpi-card" style={{ height: "100%" }}>
+                            {/* decorative circle */}
+                            <div className={`kpi-card-deco ${item.decoClass}`} />
+
+                            <div className="kpi-card-inner">
+                                <div className="kpi-card-header">
+                                    <span className="kpi-label">{item.title}</span>
+                                    <div className={`kpi-icon-wrap ${item.iconClass}`}>
+                                        {item.icon}
                                     </div>
                                 </div>
 
-                                <Statistic
-                                    title={
-                                        <span style={{
-                                            color: "#ec4899",
-                                            fontSize: "15px",
-                                            fontWeight: 600,
-                                            letterSpacing: "0.3px"
-                                        }}>
-                                            {stat.title}
-                                        </span>
-                                    }
-                                    value={stat.value}
-                                    formatter={formatter}
-                                    valueStyle={{
-                                        background: stat.gradient,
-                                        WebkitBackgroundClip: "text",
-                                        WebkitTextFillColor: "transparent",
-                                        backgroundClip: "text",
-                                        fontSize: "36px",
-                                        fontWeight: 800,
-                                    }}
-                                />
+                                <div>
+                                    <span className={item.valueClass}>
+                                        <CountUp
+                                            end={item.value}
+                                            duration={1.5}
+                                            decimals={(item as any).decimals ?? 0}
+                                        />
+                                    </span>
+                                    {item.suffix && (
+                                        <span className="kpi-suffix"> {item.suffix}</span>
+                                    )}
+                                </div>
+
+                                {(item as any).extra && (item as any).extra}
                             </div>
                         </Card>
                     </Col>
                 ))}
             </Row>
 
-            {/* Card hover effects */}
-            <style>{`
-                .stat-card {
-                    animation: fadeInUp 0.6s ease-out both;
-                    animation-delay: calc(var(--index, 0) * 0.1s);
-                }
-
-                .stat-card:hover {
-                    transform: translateY(-8px);
-                    box-shadow: 0 12px 32px rgba(236, 72, 153, 0.15) !important;
-                }
-
-                .stat-card:nth-child(1) { --index: 0; }
-                .stat-card:nth-child(2) { --index: 1; }
-                .stat-card:nth-child(3) { --index: 2; }
-
-                @keyframes fadeInUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-            `}</style>
+            {/* Module table */}
+            <Card className="dashboard-card" style={{ padding: 0 }}>
+                <div style={{ padding: "24px 24px 0" }}>
+                    <Title level={4} className="section-title">
+                        Chi tiết cấu hình module
+                    </Title>
+                </div>
+                <Table
+                    columns={columns}
+                    dataSource={modules}
+                    pagination={false}
+                    rowKey="key"
+                />
+            </Card>
         </div>
     );
 };

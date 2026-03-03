@@ -1,6 +1,27 @@
-import { useState } from "react";
-import { Space, Badge, Button, message, Modal, Input } from "antd";
-import { EyeOutlined, EditOutlined, PlusOutlined, SendOutlined } from "@ant-design/icons";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import {
+    Space,
+    Badge,
+    Button,
+    message,
+    Modal,
+    Input,
+    Tooltip,
+    Tag,
+    Timeline,
+    Alert,
+    Dropdown,
+    Menu,
+} from "antd";
+import {
+    EyeOutlined,
+    EditOutlined,
+    SendOutlined,
+    CloseCircleOutlined,
+    ClockCircleOutlined,
+    CheckCircleOutlined,
+    MoreOutlined,
+} from "@ant-design/icons";
 import type { ProColumns } from "@ant-design/pro-components";
 import dayjs from "dayjs";
 
@@ -15,289 +36,489 @@ import ModalSelectReviewer from "./modal.select-reviewer";
 
 import { jobDescriptions } from "./job_descriptions";
 
+// ==================== TYPES ====================
+export interface ReviewHistory {
+    reviewer: string;
+    title: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    comment: string | null;
+    date: string | null;
+}
+
+export interface JobDescription {
+    id: string;
+    title: string;
+    department: string;
+    positions?: string[];
+    createdAt: string;
+    status: "DRAFT" | "IN_REVIEW" | "REJECTED" | "PUBLIC";
+    currentReviewer: string | null;
+    rejectReason: string | null;
+    reviewHistory: ReviewHistory[];
+    issuedDate?: string;
+    issuedBy?: string;
+}
+
 const JobDescriptionPage = () => {
-    // MODAL
     const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
     const [openSelectReviewer, setOpenSelectReviewer] = useState(false);
-
-    // TỪ CHỐI
     const [openRejectModal, setOpenRejectModal] = useState(false);
-    const [rejectReasonInput, setRejectReasonInput] = useState("");
 
-    // DATA INIT
-    const [dataInit, setDataInit] = useState<any | null>(null);
+    const [dataInit, setDataInit] = useState<JobDescription | null>(null);
+    const [rejectReasonInput, setRejectReasonInput] = useState("");
     const [searchValue, setSearchValue] = useState("");
     const [createdAtFilter, setCreatedAtFilter] = useState<string | null>(null);
 
-    // MOCK FLOW FIELD (không sửa interface)
-    const enriched = jobDescriptions.map((jd: any) => ({
-        ...jd,
-        reviewStatus: "DRAFT",
-        reviewHistory: [],
-        currentReviewer: null,
-        rejectReason: null,
-    })) as any[];
+    const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
-    const [data, setData] = useState<any[]>(enriched);
+    const [tableKey, setTableKey] = useState(0);
 
-    // Lọc
-    const filteredList = data.filter((item: any) => {
-        let ok = true;
-        if (searchValue) ok = item.title.toLowerCase().includes(searchValue.toLowerCase());
+    useEffect(() => {
+        const handleResize = () => setTableKey((prev) => prev + 1);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
-        if (createdAtFilter) {
-            const [from, to] = createdAtFilter.split(",");
-            const created = dayjs(item.createdAt);
-            if (from && created.isBefore(dayjs(from))) ok = false;
-            if (to && created.isAfter(dayjs(to).endOf("day"))) ok = false;
+    // ==================== MOCK DATA ====================
+    const initialData: JobDescription[] = useMemo(() => {
+        return jobDescriptions.map((jd: any) => ({
+            ...jd,
+            id: String(jd.id),
+            status: jd.status,
+            positions: jd.positions || [],
+            reviewHistory: jd.reviewHistory || [],
+            currentReviewer: jd.currentReviewer || null,
+            rejectReason: jd.rejectReason || null,
+            issuedDate: jd.issuedDate || undefined,
+            issuedBy: jd.issuedBy || undefined,
+        }));
+    }, []);
+
+    const [data, setData] = useState<JobDescription[]>(initialData);
+
+    // ==================== FILTER ====================
+    const filteredList = useMemo(() => {
+        return data.filter((item) => {
+            let ok = true;
+            if (searchValue) {
+                ok = item.title.toLowerCase().includes(searchValue.toLowerCase());
+            }
+            if (createdAtFilter) {
+                const [from, to] = createdAtFilter.split(",");
+                const created = dayjs(item.createdAt);
+                if (from && created.isBefore(dayjs(from))) ok = false;
+                if (to && created.isAfter(dayjs(to).endOf("day"))) ok = false;
+            }
+            return ok;
+        });
+    }, [data, searchValue, createdAtFilter]);
+
+    // ==================== HELPER ====================
+    const updateJD = useCallback((id: string, updater: (item: JobDescription) => JobDescription) => {
+        setData((prev) => prev.map((item) => (item.id === id ? updater(item) : item)));
+    }, []);
+
+    const simulateAPI = (ms = 800) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const handleAsyncAction = async (id: string, actionFn: () => Promise<void>) => {
+        setActionLoading((prev) => ({ ...prev, [id]: true }));
+        try {
+            await simulateAPI();
+            await actionFn();
+        } catch {
+            message.error("Có lỗi xảy ra, vui lòng thử lại!");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, [id]: false }));
         }
-        return ok;
-    });
+    };
 
-    // ==============================
-    //  ADMIN: GỬI DUYỆT LẦN ĐẦU
-    // ==============================
-    const handleSendReview = (record: any) => {
+    // ==================== UI HELPERS ====================
+    const getStatusTag = (record: JobDescription) => {
+        const config: Record<string, { text: string; color: string }> = {
+            DRAFT: { text: "Nháp", color: "blue" },
+            IN_REVIEW: { text: record.currentReviewer ? `Chờ ${record.currentReviewer}` : "Đang chờ duyệt", color: "orange" },
+            PUBLIC: { text: "Đã ban hành", color: "green" },
+            REJECTED: { text: "Bị từ chối", color: "red" },
+        };
+
+        const c = config[record.status] || config.IN_REVIEW;
+
+        return (
+            <Tag color={c.color} style={{ minWidth: 140, textAlign: "center", fontWeight: 500 }}>
+                {c.text}
+            </Tag>
+        );
+    };
+
+    // ==================== MORE ACTIONS DROPDOWN ====================
+    const getMoreActionsMenu = (record: JobDescription) => {
+        const isPublished = record.status === "PUBLIC";
+
+        return (
+            <Menu>
+                <Menu.Item
+                    key="assign-position"
+                    icon={<SendOutlined />}
+                    disabled={!isPublished}
+                    onClick={() => {
+                        if (!isPublished) {
+                            message.warning("Chỉ JD đã ban hành mới được phép gán!");
+                            return;
+                        }
+                        message.success(`Đã gán JD "${record.title}" cho chức danh`);
+                    }}
+                >
+                    Gán cho chức danh
+                </Menu.Item>
+
+                <Menu.Item
+                    key="assign-employee"
+                    icon={<SendOutlined />}
+                    disabled={!isPublished}
+                    onClick={() => {
+                        if (!isPublished) {
+                            message.warning("Chỉ JD đã ban hành mới được phép gán!");
+                            return;
+                        }
+                        message.success(`Đã gán JD "${record.title}" cho nhân viên`);
+                    }}
+                >
+                    Gán cho nhân viên
+                </Menu.Item>
+
+                <Menu.Divider />
+
+                <Menu.Item
+                    key="send-candidate"
+                    icon={<SendOutlined />}
+                    disabled={!isPublished}
+                    onClick={() => {
+                        if (!isPublished) {
+                            message.warning("Chỉ JD đã ban hành mới được gửi cho ứng viên!");
+                            return;
+                        }
+                        message.success(`Đã gửi JD "${record.title}" cho ứng viên`);
+                    }}
+                >
+                    Gửi cho ứng viên / Đăng tuyển
+                </Menu.Item>
+            </Menu>
+        );
+    };
+
+    // ==================== ACTIONS ====================
+    const handleSendReview = (record: JobDescription) => {
         setDataInit(record);
         setOpenSelectReviewer(true);
     };
 
-    const handleSelectReviewer = (reviewer: any) => {
-        const updated = data.map((item: any) =>
-            item.id === dataInit.id
-                ? {
-                    ...item,
-                    reviewStatus: "IN_REVIEW",
-                    currentReviewer: reviewer.name,
-                    rejectReason: null,
-                    reviewHistory: [
-                        ...item.reviewHistory,
-                        {
-                            reviewer: reviewer.name,
-                            title: reviewer.title,
-                            status: "PENDING",
-                            comment: null,
-                            date: null,
-                        },
-                    ],
-                }
-                : item
-        );
+    const handleSelectReviewer = (reviewer: { name: string; title: string }) => {
+        if (!dataInit) return;
 
-        setData(updated);
+        handleAsyncAction(dataInit.id, async () => {
+            updateJD(dataInit.id, (item) => ({
+                ...item,
+                status: "IN_REVIEW",
+                currentReviewer: reviewer.name,
+                rejectReason: null,
+                reviewHistory: [
+                    ...item.reviewHistory,
+                    {
+                        reviewer: reviewer.name,
+                        title: reviewer.title,
+                        status: "PENDING",
+                        comment: null,
+                        date: dayjs().toISOString(),
+                    },
+                ],
+            }));
+            message.success(`Đã gửi duyệt cho ${reviewer.name}`);
+        });
+
         setOpenSelectReviewer(false);
-        message.success("Đã gửi tới người duyệt!");
     };
 
-    // ==============================
-    //  ADMIN: GỬI TIẾP SAU KHI REVIEWER DUYỆT
-    // ==============================
-    const handleSendNextReviewer = (record: any) => {
+    const handleResend = (record: JobDescription) => {
         setDataInit(record);
         setOpenSelectReviewer(true);
     };
 
-    // ==============================
-    //  ADMIN: GỬI LẠI SAU KHI BỊ TỪ CHỐI
-    // ==============================
-    const handleResend = (record: any) => {
+    const handleReject = (record: JobDescription) => {
         setDataInit(record);
-        setOpenSelectReviewer(true);
+        setRejectReasonInput("");
+        setOpenRejectModal(true);
     };
 
-    // ==============================
-    //  REVIEWER TỪ CHỐI (mock)
-    // ==============================
-    const handleRejectFromReviewer = (record: any, reason: string) => {
-        const updated = data.map((item: any) =>
-            item.id === record.id
-                ? {
-                    ...item,
-                    reviewStatus: "REJECTED",
-                    rejectReason: reason,
-                    currentReviewer: null,
-                    reviewHistory: item.reviewHistory.map((h: any) =>
-                        h.reviewer === item.currentReviewer
-                            ? {
-                                ...h,
-                                status: "REJECTED",
-                                comment: reason,
-                                date: new Date().toISOString(),
-                            }
-                            : h
-                    ),
-                }
-                : item
-        );
+    const handleConfirmReject = () => {
+        if (!dataInit || !rejectReasonInput.trim()) {
+            message.warning("Vui lòng nhập lý do từ chối!");
+            return;
+        }
 
-        setData(updated);
+        handleAsyncAction(dataInit.id, async () => {
+            updateJD(dataInit.id, (item) => ({
+                ...item,
+                status: "REJECTED",
+                currentReviewer: null,
+                rejectReason: rejectReasonInput.trim(),
+                reviewHistory: item.reviewHistory.map((h) =>
+                    h.status === "PENDING"
+                        ? { ...h, status: "REJECTED", comment: rejectReasonInput.trim(), date: dayjs().toISOString() }
+                        : h
+                ),
+            }));
+            message.error("JD đã bị từ chối!");
+        });
+
         setOpenRejectModal(false);
-        message.error("JD đã bị từ chối!");
     };
 
-    // ==============================
-    //  CEO DUYỆT → BAN HÀNH
-    // ==============================
-    const handlePublish = (record: any) => {
-        const updated = data.map((item: any) =>
-            item.id === record.id
-                ? {
-                    ...item,
-                    reviewStatus: "PUBLIC",
-                    currentReviewer: null,
-                    issuedDate: dayjs().toISOString(),
-                    reviewHistory: item.reviewHistory.map((h: any) =>
-                        h.reviewer === "CEO"
-                            ? { ...h, status: "APPROVED", date: new Date().toISOString() }
-                            : h
-                    ),
-                }
-                : item
-        );
-
-        setData(updated);
-        message.success("JD đã được CEO ban hành!");
+    const handlePublish = (record: JobDescription) => {
+        handleAsyncAction(record.id, async () => {
+            updateJD(record.id, (item) => ({
+                ...item,
+                status: "PUBLIC",
+                currentReviewer: null,
+                issuedDate: dayjs().toISOString(),
+                issuedBy: "CEO",
+                reviewHistory: item.reviewHistory.map((h) =>
+                    h.reviewer === "CEO" && h.status === "PENDING"
+                        ? { ...h, status: "APPROVED", date: dayjs().toISOString() }
+                        : h
+                ),
+            }));
+            message.success("JD đã được CEO ban hành thành công!");
+        });
     };
 
-    // ==============================
-    //  TABLE COLUMNS (ADMIN)
-    // ==============================
-    const columns: ProColumns<any>[] = [
-        {
-            title: "STT",
-            width: 60,
-            align: "center",
-            render: (_, __, index) => index + 1,
-        },
+    // ==================== COLUMNS ====================
+    const columns: ProColumns<JobDescription>[] = [
+        { title: "STT", width: 60, align: "center", render: (_, __, index) => index + 1 },
         {
             title: "Tiêu đề",
             dataIndex: "title",
             ellipsis: true,
+            sorter: (a, b) => a.title.localeCompare(b.title),
         },
-        {
-            title: "Phòng ban",
-            dataIndex: "department",
-        },
+        { title: "Phòng ban", dataIndex: "department", width: 160 },
         {
             title: "Người duyệt hiện tại",
-            render: (_, r: any) => r.currentReviewer || "Chưa gửi",
+            render: (_, r) => r.currentReviewer || <span style={{ color: "#999" }}>—</span>,
+            ellipsis: true,
+            width: 180,
         },
         {
             title: "Trạng thái",
-            render: (_, r: any) => {
-                if (r.reviewStatus === "DRAFT") return <Badge status="default" text="Nháp" />;
-                if (r.reviewStatus === "IN_REVIEW") return <Badge status="processing" text="Đang duyệt" />;
-                if (r.reviewStatus === "REJECTED") return <Badge status="error" text="Bị từ chối" />;
-                if (r.reviewStatus === "PUBLIC") return <Badge status="success" text="Đã ban hành" />;
+            width: 220,
+            render: (_, record) => {
+                const lastHistory = record.reviewHistory[record.reviewHistory.length - 1];
+                let tooltip = "";
+
+                if (record.status === "PUBLIC") {
+                    tooltip = record.issuedBy
+                        ? `Ban hành bởi ${record.issuedBy} lúc ${dayjs(record.issuedDate).format("DD/MM/YYYY HH:mm")}`
+                        : `Ban hành lúc ${dayjs(record.issuedDate).format("DD/MM/YYYY HH:mm")}`;
+                } else if (record.status === "IN_REVIEW" && lastHistory?.date) {
+                    tooltip = `Gửi duyệt: ${dayjs(lastHistory.date).format("DD/MM/YYYY HH:mm")}`;
+                }
+
+                return (
+                    <Tooltip title={tooltip}>
+                        {getStatusTag(record)}
+                    </Tooltip>
+                );
             },
         },
         {
             title: "Hành động",
-            width: 380,
+            width: 420,
             fixed: "right",
-            render: (_, record) => (
-                <Space>
-                    <Button
-                        icon={<EyeOutlined />}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenView(true);
-                        }}
-                    />
+            render: (_, record) => {
+                const loading = actionLoading[record.id];
+                const lastHistory = record.reviewHistory.at(-1);
+                const isPendingCEO =
+                    record.status === "IN_REVIEW" &&
+                    lastHistory?.reviewer === "CEO" &&
+                    lastHistory?.status === "PENDING";
 
-                    <Button
-                        icon={<EditOutlined />}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenModal(true);
-                        }}
-                    />
+                return (
+                    <Space size="middle" wrap>
+                        <Tooltip title="Xem chi tiết">
+                            <Button type="text" icon={<EyeOutlined />} onClick={() => { setDataInit(record); setOpenView(true); }} />
+                        </Tooltip>
 
-                    {record.reviewStatus === "DRAFT" && (
-                        <Button
-                            icon={<SendOutlined />}
-                            onClick={() => handleSendReview(record)}
-                            style={{
-                                backgroundColor: "#ff5fa2",
-                                color: "#ffffff",
-                                border: "none",
-                                borderRadius: 6,
-                                boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
-                                fontWeight: 500,
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "#ff4b97";
-                                e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "#ff5fa2";
-                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
-                            }}
-                        >
-                            Gửi duyệt
-                        </Button>
-                    )}
+                        <Tooltip title="Chỉnh sửa">
+                            <Button type="text" icon={<EditOutlined />} onClick={() => { setDataInit(record); setOpenModal(true); }} />
+                        </Tooltip>
 
-                    {record.reviewStatus === "IN_REVIEW" && !record.currentReviewer && (
-                        <Button type="primary" onClick={() => handleSendNextReviewer(record)}>
-                            Chọn người duyệt tiếp
-                        </Button>
-                    )}
-
-                    {record.reviewStatus === "REJECTED" && (
-                        <Button type="primary" onClick={() => handleResend(record)}>
-                            Gửi lại
-                        </Button>
-                    )}
-
-                    {record.reviewHistory?.length > 0 &&
-                        record.reviewHistory.at(-1)?.reviewer === "CEO" &&
-                        record.reviewHistory.at(-1)?.status === "PENDING" &&
-                        record.reviewStatus === "IN_REVIEW" && (
-                            <Button type="primary" danger onClick={() => handlePublish(record)}>
-                                Ban hành
+                        {record.status === "DRAFT" && (
+                            <Button
+                                icon={<SendOutlined />}
+                                loading={loading}
+                                onClick={() => handleSendReview(record)}
+                                style={{
+                                    background: "linear-gradient(90deg, #ff5fa2, #ff85c0)",
+                                    color: "#fff",
+                                    border: "none",
+                                    boxShadow: "0 4px 12px rgba(255, 95, 162, 0.3)",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = "translateY(-2px)";
+                                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(255, 95, 162, 0.4)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(255, 95, 162, 0.3)";
+                                }}
+                            >
+                                Gửi duyệt
                             </Button>
                         )}
-                </Space>
-            ),
+
+                        {record.status === "IN_REVIEW" && (
+                            <>
+                                <Button
+                                    danger
+                                    icon={<CloseCircleOutlined />}
+                                    loading={loading}
+                                    onClick={() => handleReject(record)}
+                                >
+                                    Từ chối
+                                </Button>
+
+                                {isPendingCEO && (
+                                    <Button
+                                        type="primary"
+                                        icon={<CheckCircleOutlined />}
+                                        loading={loading}
+                                        onClick={() => handlePublish(record)}
+                                    >
+                                        Ban hành
+                                    </Button>
+                                )}
+                            </>
+                        )}
+
+                        {record.status === "REJECTED" && (
+                            <Button
+                                icon={<SendOutlined />}
+                                loading={loading}
+                                onClick={() => handleResend(record)}
+                                style={{
+                                    background: "linear-gradient(90deg, #ff5fa2, #ff85c0)",
+                                    color: "#fff",
+                                    border: "none",
+                                }}
+                            >
+                                Gửi lại duyệt
+                            </Button>
+                        )}
+
+                        {/* Nút More (ba chấm) */}
+                        {/* Chỉ hiển thị More nếu đã ban hành */}
+                        {record.status === "PUBLIC" && (
+                            <Dropdown overlay={getMoreActionsMenu(record)} trigger={["click"]}>
+                                <Button type="text" icon={<MoreOutlined />} />
+                            </Dropdown>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
-    // ==============================
-    //         LỊCH SỬ DUYỆT
-    // ==============================
-    const renderReviewHistory = (item: any) => (
-        <div style={{ fontSize: 13, marginTop: 10 }}>
-            <strong>Lịch sử duyệt:</strong>
-            {item.reviewHistory.length === 0 && <div>Chưa có</div>}
-            {item.reviewHistory.map((h: any, idx: number) => (
-                <div key={idx} style={{ marginTop: 4 }}>
-                    • {h.reviewer} ({h.title}) —{" "}
-                    {h.status === "PENDING" && (
-                        <span style={{ color: "#faad14" }}>Đang chờ</span>
-                    )}
-                    {h.status === "APPROVED" && (
-                        <span style={{ color: "#52c41a" }}>Đã duyệt</span>
-                    )}
-                    {h.status === "REJECTED" && (
-                        <span style={{ color: "red" }}>Từ chối: {h.comment}</span>
-                    )}
-                </div>
-            ))}
+    // ==================== EXPANDED ROW ====================
+    const renderReviewHistory = (item: JobDescription) => (
+        <div style={{ padding: "12px 0" }}>
+            <Timeline mode="left" style={{ margin: 0 }}>
+                {item.reviewHistory.map((h, idx) => (
+                    <Timeline.Item
+                        key={idx}
+                        color={h.status === "APPROVED" ? "green" : h.status === "REJECTED" ? "red" : "blue"}
+                        label={h.date ? dayjs(h.date).format("DD/MM/YYYY HH:mm") : undefined}
+                    >
+                        <Space align="center">
+                            <strong>{h.reviewer}</strong>
+                            <Tag
+                                color={
+                                    h.status === "APPROVED" ? "success" : h.status === "REJECTED" ? "error" : "warning"
+                                }
+                            >
+                                {h.status === "PENDING" ? "Đang chờ" : h.status === "APPROVED" ? "Đã duyệt" : "Từ chối"}
+                            </Tag>
+                            {h.comment && <span style={{ color: "#595959" }}>— {h.comment}</span>}
+                        </Space>
+                    </Timeline.Item>
+                ))}
+
+                {item.status === "IN_REVIEW" && item.currentReviewer && (
+                    <Timeline.Item color="blue" dot={<ClockCircleOutlined style={{ fontSize: 16 }} />}>
+                        Đang chờ <strong>{item.currentReviewer}</strong> duyệt
+                    </Timeline.Item>
+                )}
+
+                {item.issuedDate && (
+                    <Timeline.Item color="green" dot={<CheckCircleOutlined style={{ fontSize: 16 }} />}>
+                        Ban hành ngày {dayjs(item.issuedDate).format("DD/MM/YYYY HH:mm")}
+                        {item.issuedBy && (
+                            <>
+                                {" "}
+                                bởi <strong>{item.issuedBy}</strong>
+                            </>
+                        )}
+                    </Timeline.Item>
+                )}
+            </Timeline>
+
+            {item.rejectReason && item.status === "REJECTED" && (
+                <Alert
+                    style={{ marginTop: 16 }}
+                    message="Lý do từ chối lần cuối"
+                    description={item.rejectReason}
+                    type="error"
+                    showIcon
+                />
+            )}
         </div>
     );
 
+    // ==================== CREATE / EDIT ====================
+    const handleFinishModal = async (values: any) => {
+        await simulateAPI(600);
+
+        if (dataInit) {
+            updateJD(dataInit.id, (item) => ({ ...item, ...values }));
+            message.success("Cập nhật JD thành công!");
+        } else {
+            const newJD: JobDescription = {
+                id: `JD_${Date.now()}`,
+                title: values.title || "JD mới",
+                department: values.department || "Chưa xác định",
+                positions: values.positions || [],
+                createdAt: new Date().toISOString(),
+                status: "DRAFT",
+                reviewHistory: [],
+                currentReviewer: null,
+                rejectReason: null,
+                issuedBy: undefined,
+            };
+            setData((prev) => [newJD, ...prev]);
+            message.success("Tạo JD mới thành công!");
+        }
+        setOpenModal(false);
+        setDataInit(null);
+    };
+
     return (
         <PageContainer title="Quản lý Mô tả Công việc (JD)">
-            {/* BỘ LỌC + NÚT TẠO JD */}
-            <div className="flex flex-col gap-3 mb-3">
+            <div className="flex flex-col gap-3 mb-4">
                 <SearchFilter
-                    searchPlaceholder="Tìm theo tên..."
+                    searchPlaceholder="Tìm theo tiêu đề JD..."
                     onSearch={setSearchValue}
                     onReset={() => setSearchValue("")}
-                    showAddButton={true}
-                    addLabel="Tạo JD"
+                    showAddButton
+                    addLabel="Tạo JD mới"
                     onAddClick={() => {
                         setDataInit(null);
                         setOpenModal(true);
@@ -306,81 +527,46 @@ const JobDescriptionPage = () => {
                 <DateRangeFilter fieldName="createdAt" onChange={setCreatedAtFilter} />
             </div>
 
-            {/* DANH SÁCH JD */}
             <DataTable
+                key={tableKey}
                 rowKey="id"
                 columns={columns}
                 dataSource={filteredList}
-                pagination={{
-                    pageSize: 10,
-                    total: filteredList.length,
-                    showSizeChanger: false,
-                }}
-                expandable={{
-                    expandedRowRender: renderReviewHistory,
-                }}
+                pagination={{ pageSize: 10, showSizeChanger: false }}
+                expandable={{ expandedRowRender: renderReviewHistory }}
+                scroll={{ x: "max-content" }}
+                style={{ width: "100%", minWidth: "100%" }}
+                className="custom-ant-table"
             />
 
-            {/* XEM JD */}
-            <ViewJobDescription
-                open={openView}
-                onClose={() => setOpenView(false)}
-                dataInit={dataInit}
-            />
+            <ViewJobDescription open={openView} onClose={() => setOpenView(false)} dataInit={dataInit} />
 
-            {/* SỬA/TẠO JD */}
             <ModalJobDescription
                 open={openModal}
                 onOpenChange={setOpenModal}
                 dataInit={dataInit}
-                onFinish={(values) => {
-                    if (dataInit) {
-                        // EDIT: Cập nhật JD đã có
-                        const updated = data.map((item: any) =>
-                            item.id === dataInit.id
-                                ? { ...item, ...values }
-                                : item
-                        );
-                        setData(updated);
-                        message.success("Cập nhật JD thành công!");
-                    } else {
-                        // CREATE: Tạo JD mới
-                        const newJD = {
-                            id: Date.now().toString(),
-                            ...values,
-                            createdAt: new Date().toISOString(),
-                            reviewStatus: "DRAFT",
-                            reviewHistory: [],
-                            currentReviewer: null,
-                            rejectReason: null,
-                        };
-                        setData([newJD, ...data]);
-                        message.success("Tạo JD thành công!");
-                    }
-                    setOpenModal(false);
-                }}
+                onFinish={handleFinishModal}
             />
 
-            {/* CHỌN NGƯỜI DUYỆT */}
             <ModalSelectReviewer
                 open={openSelectReviewer}
                 onCancel={() => setOpenSelectReviewer(false)}
                 onSubmit={handleSelectReviewer}
             />
 
-            {/* LÝ DO TỪ CHỐI */}
             <Modal
-                title="Lý do từ chối"
+                title="Lý do từ chối JD"
                 open={openRejectModal}
                 onCancel={() => setOpenRejectModal(false)}
-                okText="Từ chối"
-                onOk={() => handleRejectFromReviewer(dataInit, rejectReasonInput)}
+                okText="Xác nhận từ chối"
+                okButtonProps={{ danger: true }}
+                onOk={handleConfirmReject}
             >
                 <Input.TextArea
-                    rows={4}
+                    rows={5}
                     value={rejectReasonInput}
                     onChange={(e) => setRejectReasonInput(e.target.value)}
-                    placeholder="Nhập lý do từ chối..."
+                    placeholder="Nhập lý do từ chối chi tiết..."
                 />
             </Modal>
         </PageContainer>

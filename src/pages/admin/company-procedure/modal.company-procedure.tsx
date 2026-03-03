@@ -4,9 +4,8 @@ import {
     ProFormText,
     ProFormSelect,
     ProFormSwitch,
-    ProFormRadio,
 } from "@ant-design/pro-components";
-import { Col, Form, Row, message, Upload, Button, Radio, Input } from "antd";
+import { Col, Form, Row, message, Upload, Button, Radio } from "antd";
 import { UploadOutlined, LinkOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import { callFetchSection } from "@/config/api";
@@ -23,35 +22,27 @@ interface IProps {
     setDataInit: (v: any) => void;
 }
 
-const ModalCompanyProcedure = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) => {
+const ModalCompanyProcedure = ({
+    openModal,
+    setOpenModal,
+    dataInit,
+    setDataInit,
+}: IProps) => {
     const [form] = Form.useForm();
     const [fileList, setFileList] = useState<UploadFile[]>([]);
     const [fileMode, setFileMode] = useState<"upload" | "url">("upload");
 
     const isEdit = Boolean(dataInit?.id);
 
-    const { mutate: createData, isPending: isCreating } = useCreateCompanyProcedureMutation();
-    const { mutate: updateData, isPending: isUpdating } = useUpdateCompanyProcedureMutation();
+    const { mutate: createData, isPending: isCreating } =
+        useCreateCompanyProcedureMutation();
+    const { mutate: updateData, isPending: isUpdating } =
+        useUpdateCompanyProcedureMutation();
 
     useEffect(() => {
         if (dataInit?.id) {
-            form.setFieldsValue({
-                procedureName: dataInit.procedureName,
-                fileUrl: dataInit.fileUrl,
-                status: dataInit.status,
-                planYear: dataInit.planYear,
-                note: dataInit.note,
-                sectionId: dataInit.sectionId,
-                active: dataInit.active,
-            });
-
-            // Detect mode khi edit
-            if (dataInit.fileUrl) {
-                setFileMode("url");
-                // Không set fileList vì đây là link thủ công
-            } else {
-                setFileMode("upload");
-            }
+            form.setFieldsValue(dataInit);
+            setFileMode(dataInit.fileUrl ? "url" : "upload");
         } else {
             form.resetFields();
             setFileList([]);
@@ -68,32 +59,21 @@ const ModalCompanyProcedure = ({ openModal, setOpenModal, dataInit, setDataInit 
     };
 
     const submitForm = async (values: any) => {
-        // Validate thủ công: phải có fileUrl (từ upload hoặc nhập tay)
         if (!values.fileUrl) {
-            message.error("Vui lòng upload file PDF hoặc nhập link URL!");
+            message.error("Vui lòng upload file PDF hoặc nhập dữ liệu!");
             return;
         }
 
-        const payload: any = {
+        const payload = {
             ...values,
-            planYear: Number(values.planYear),
+            planYear: values.planYear ? Number(values.planYear) : undefined,
             sectionId: Number(values.sectionId),
-            // fileUrl đã có từ form
         };
 
         if (isEdit) {
-            payload.id = dataInit?.id;
-            updateData(payload, {
-                onSuccess: handleReset,
-                onError: (err: any) =>
-                    message.error(err?.response?.data?.message || "Lỗi cập nhật quy trình"),
-            });
+            updateData({ ...payload, id: dataInit?.id }, { onSuccess: handleReset });
         } else {
-            createData(payload, {
-                onSuccess: handleReset,
-                onError: (err: any) =>
-                    message.error(err?.response?.data?.message || "Lỗi tạo quy trình"),
-            });
+            createData(payload, { onSuccess: handleReset });
         }
     };
 
@@ -112,21 +92,16 @@ const ModalCompanyProcedure = ({ openModal, setOpenModal, dataInit, setDataInit 
         maxCount: 1,
         accept: ".pdf",
         beforeUpload: (file) => {
-            const isPDF = file.type === "application/pdf";
-            if (!isPDF) {
+            if (file.type !== "application/pdf") {
                 message.error("Chỉ được upload file PDF!");
                 return Upload.LIST_IGNORE;
             }
-            const isLt10M = file.size / 1024 / 1024 < 10;
-            if (!isLt10M) {
+            if (file.size / 1024 / 1024 >= 10) {
                 message.error("File phải nhỏ hơn 10MB!");
                 return Upload.LIST_IGNORE;
             }
 
-            // ----------------- THAY BẰNG API UPLOAD THẬT NẾU CÓ -----------------
-            // Hiện tại giả lập URL
-            const fakeUrl = URL.createObjectURL(file); // hoặc gọi API upload rồi lấy url thật
-
+            const fakeUrl = URL.createObjectURL(file);
             setFileList([
                 {
                     uid: Date.now().toString(),
@@ -136,10 +111,8 @@ const ModalCompanyProcedure = ({ openModal, setOpenModal, dataInit, setDataInit 
                 },
             ]);
 
-            form.setFieldValue("fileUrl", fakeUrl); // hoặc url từ server
-            message.success("File đã được chọn thành công!");
-
-            return false; // Ngăn auto upload
+            form.setFieldValue("fileUrl", fakeUrl);
+            return false;
         },
         onRemove: () => {
             setFileList([]);
@@ -148,128 +121,148 @@ const ModalCompanyProcedure = ({ openModal, setOpenModal, dataInit, setDataInit 
     };
 
     return (
-        <ModalForm
-            title={isEdit ? "Cập nhật quy trình" : "Tạo quy trình mới"}
-            open={openModal}
-            form={form}
-            onFinish={submitForm}
-            modalProps={{
-                onCancel: handleReset,
-                destroyOnClose: true,
-                maskClosable: false,
-                confirmLoading: isCreating || isUpdating,
-            }}
-            width={700}
-            submitter={{
-                searchConfig: {
-                    submitText: isEdit ? "Cập nhật" : "Tạo mới",
-                    resetText: "Hủy",
-                },
-            }}
-        >
-            <Row gutter={[16, 16]}>
-                <Col span={12}>
-                    <ProFormText
-                        name="procedureName"
-                        label="Tên quy trình"
-                        rules={[{ required: true, message: "Vui lòng nhập tên quy trình!" }]}
-                    />
-                </Col>
+        <>
+            <style>
+                {`
+        .ant-modal-content { border-radius:16px !important; }
+        .ant-modal-body { padding:22px 28px 8px !important; }
 
-                <Col span={12}>
-                    <ProFormSelect
-                        name="sectionId"
-                        label="Bộ phận"
-                        request={loadSections}
-                        rules={[{ required: true, message: "Vui lòng chọn bộ phận!" }]}
-                    />
-                </Col>
+        .file-box{
+          background:#fafafa;
+          border:1px solid #eef2f6;
+          border-radius:12px;
+          padding:12px;
+          margin-top:4px;
+        }
 
-                <Col span={12}>
-                    <ProFormSelect
-                        name="status"
-                        label="Trạng thái"
-                        valueEnum={{
-                            NEED_CREATE: "Cần xây dựng mới",
-                            IN_PROGRESS: "Đang xây dựng",
-                            NEED_UPDATE: "Cần cập nhật",
-                            TERMINATED: "Chấm dứt",
-                        }}
-                    />
-                </Col>
+        .pink-submit-btn{
+          background:linear-gradient(135deg,#ec4899,#db2777)!important;
+          border:none!important;
+          border-radius:8px!important;
+          height:36px!important;
+        }
+        `}
+            </style>
 
-                <Col span={12}>
-                    <ProFormSwitch
-                        name="active"
-                        label="Kích hoạt"
-                        checkedChildren="Bật"
-                        unCheckedChildren="Tắt"
-                        initialValue={dataInit?.active ?? true}
-                    />
-                </Col>
-
-                <Col span={12}>
-                    <ProFormText
-                        name="planYear"
-                        label="Kế hoạch năm"
-                        placeholder="VD: 2026"
-                        fieldProps={{ type: "number" }}
-                    />
-                </Col>
-
-                <Col span={24}>
-                    <Form.Item
-                        label="File quy trình (PDF)"
-                        required
-                        tooltip="Chọn upload file hoặc nhập link URL đã có sẵn"
-                    >
-                        <Radio.Group
-                            value={fileMode}
-                            onChange={(e) => {
-                                setFileMode(e.target.value);
-                                // Reset field kia khi đổi mode
-                                if (e.target.value === "upload") {
-                                    form.setFieldValue("fileUrl", "");
-                                } else {
-                                    setFileList([]);
-                                    form.setFieldValue("fileUrl", dataInit?.fileUrl || "");
-                                }
-                            }}
-                            buttonStyle="solid"
-                            className="mb-3"
+            <ModalForm
+                title={isEdit ? "Cập nhật quy trình" : "Tạo quy trình mới"}
+                open={openModal}
+                form={form}
+                onFinish={submitForm}
+                width={920}
+                style={{ maxWidth: "95vw" }}
+                layout="vertical"
+                modalProps={{
+                    onCancel: handleReset,
+                    destroyOnClose: true,
+                    maskClosable: false,
+                    confirmLoading: isCreating || isUpdating,
+                }}
+                submitter={{
+                    render: (props) => [
+                        <Button key="cancel" onClick={handleReset}>
+                            Hủy
+                        </Button>,
+                        <Button
+                            key="submit"
+                            type="primary"
+                            loading={isCreating || isUpdating}
+                            onClick={() => props?.form?.submit?.()}
+                            className="pink-submit-btn"
                         >
-                            <Radio.Button value="upload">Upload file PDF</Radio.Button>
-                            <Radio.Button value="url">Nhập link URL</Radio.Button>
-                        </Radio.Group>
+                            {isEdit ? "Cập nhật" : "Tạo mới"}
+                        </Button>,
+                    ],
+                }}
+            >
+                <Row gutter={[20, 14]}>
 
-                        {fileMode === "upload" && (
-                            <Upload {...uploadProps}>
-                                <Button icon={<UploadOutlined />}>Chọn file PDF (tối đa 10MB)</Button>
-                            </Upload>
-                        )}
+                    <Col xs={24} lg={12}>
+                        <ProFormText
+                            name="procedureName"
+                            label="Tên quy trình"
+                            rules={[{ required: true }]}
+                        />
+                    </Col>
 
-                        {fileMode === "url" && (
-                            <ProFormText
-                                name="fileUrl"
-                                placeholder="https://example.com/files/quy-trinh.pdf"
-                                rules={[
-                                    { required: true, message: "Vui lòng nhập link URL!" },
-                                    { type: "url", message: "Link không hợp lệ!" },
-                                ]}
-                                fieldProps={{
-                                    prefix: <LinkOutlined />,
-                                    addonAfter: "PDF",
-                                }}
-                            />
-                        )}
-                    </Form.Item>
-                </Col>
+                    <Col xs={24} lg={12}>
+                        <ProFormSelect
+                            name="sectionId"
+                            label="Bộ phận"
+                            request={loadSections}
+                            rules={[{ required: true }]}
+                        />
+                    </Col>
 
-                <Col span={24}>
-                    <ProFormText name="note" label="Ghi chú" />
-                </Col>
-            </Row>
-        </ModalForm>
+                    <Col xs={24} lg={12}>
+                        <ProFormSelect
+                            name="status"
+                            label="Trạng thái"
+                            valueEnum={{
+                                NEED_CREATE: "Cần xây dựng mới",
+                                IN_PROGRESS: "Đang xây dựng",
+                                NEED_UPDATE: "Cần cập nhật",
+                                TERMINATED: "Chấm dứt",
+                            }}
+                        />
+                    </Col>
+
+                    <Col xs={24} lg={12}>
+                        <ProFormText
+                            name="planYear"
+                            label="Kế hoạch năm"
+                            fieldProps={{ type: "number" }}
+                        />
+                    </Col>
+
+                    <Col xs={24}>
+                        <ProFormSwitch
+                            name="active"
+                            label="Kích hoạt"
+                            initialValue={dataInit?.active ?? true}
+                        />
+                    </Col>
+
+                    <Col xs={24}>
+                        <Form.Item label="File quy trình (PDF)" required>
+                            <div className="file-box">
+
+                                <div style={{ marginBottom: 10 }}>
+                                    <Radio.Group
+                                        value={fileMode}
+                                        onChange={(e) => setFileMode(e.target.value)}
+                                    >
+                                        <Radio.Button value="upload">Upload file</Radio.Button>
+                                        <Radio.Button value="url">Nhập dữ liệu</Radio.Button>
+                                    </Radio.Group>
+                                </div>
+
+                                {fileMode === "upload" ? (
+                                    <Upload {...uploadProps}>
+                                        <Button icon={<UploadOutlined />} block>
+                                            Chọn file PDF (≤ 10MB)
+                                        </Button>
+                                    </Upload>
+                                ) : (
+                                    <ProFormText
+                                        name="fileUrl"
+                                        placeholder="Nhập dữ liệu"
+                                        rules={[{ required: true }]}
+                                        fieldProps={{ prefix: <LinkOutlined /> }}
+                                    />
+                                )}
+
+                            </div>
+                        </Form.Item>
+                    </Col>
+
+                    <Col xs={24}>
+                        <ProFormText name="note" label="Ghi chú" />
+                    </Col>
+
+                </Row>
+            </ModalForm>
+        </>
     );
 };
 

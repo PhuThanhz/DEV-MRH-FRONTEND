@@ -59,7 +59,26 @@ const ModalSelectReviewer = ({ open, onCancel, onSubmit }: Props) => {
 
                 <div style={{ textAlign: "right" }}>
                     <Button onClick={onCancel}>Hủy</Button>
-                    <Button type="primary" htmlType="submit" style={{ marginLeft: 8 }}>
+                    <Button
+                        htmlType="submit"
+                        style={{
+                            marginLeft: 8,
+                            backgroundColor: "#ff5fa2",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: 6,
+                            fontWeight: 500,
+                            boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#ff4b97";
+                            e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#ff5fa2";
+                            e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
+                        }}
+                    >
                         Gửi duyệt
                     </Button>
                 </div>
