@@ -323,7 +323,9 @@ const SliderAdmin: React.FC<IProps> = ({
                 }}
             >
                 {Logo}
-                <div style={{ overflowY: "auto", height: "calc(100vh - 64px)" }}>
+
+
+                <div style={{ overflowY: "hidden", height: "calc(100vh - 64px)" }}>
                     {MenuList}
                 </div>
             </Sider>

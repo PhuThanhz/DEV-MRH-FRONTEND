@@ -40,7 +40,6 @@ export interface IAccount {
 export interface IGetAccount extends Omit<IAccount, "access_token"> { }
 
 
-export interface IGetAccount extends Omit<IAccount, "access_token"> { }
 
 export interface IUser {
     id?: string;
@@ -200,6 +199,7 @@ export interface ICompanyProcedure {
     id: number;
 
     // ===== Company =====
+    companyId?: number;      // thêm dòng này
     companyCode?: string;
     companyName?: string;
 
@@ -207,7 +207,7 @@ export interface ICompanyProcedure {
     departmentId?: number;
     departmentName?: string;
 
-    // ===== Section / Team =====
+    // ===== Section =====
     sectionId?: number;
     sectionName?: string;
 
@@ -219,7 +219,7 @@ export interface ICompanyProcedure {
     note?: string;
 
     // ===== Activation =====
-    active: boolean; // ✅ dùng boolean thay vì status int
+    active: boolean;
 
     // ===== Audit =====
     createdAt?: string;
@@ -556,16 +556,7 @@ export interface IReqSalaryStructure {
     hourKpiBonusD?: number | null;
 }
 
-export interface IProcessAction {
-    id?: string;
-    code: string;
-    name: string;
-    shortDescription?: string;
-    description?: string;
-    active: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-}
+
 /* ===================== PROCESS ACTIONS ===================== */
 
 export interface IProcessAction {
@@ -744,4 +735,145 @@ export interface IJobTitleForm {
     nameEn?: string;
     positionLevelId: number;
     active?: boolean;
+}
+/* ===================== DEPARTMENT OBJECTIVES ===================== */
+
+/* ======================================================
+   DEPARTMENT OBJECTIVES / MISSIONS
+   ====================================================== */
+
+/* RESPONSE TREE */
+
+export interface IDepartmentMissionTree {
+    department: {
+        id: number
+        name: string
+    }
+
+    issueDate: string
+
+    objectives: IDepartmentObjectiveItem[]
+
+    tasks: IDepartmentSectionTask[]
+}
+
+/* OBJECTIVE  */
+
+export interface IDepartmentObjectiveItem {
+    id: number
+    content: string
+}
+
+/* SECTION TASK */
+
+export interface IDepartmentSectionTask {
+    sectionId: number
+    sectionName: string
+
+    tasks: IDepartmentTaskItem[]
+}
+
+/* TASK ITEM */
+
+export interface IDepartmentTaskItem {
+    id: number
+    content: string
+}
+
+/* 
+   CREATE REQUEST
+ */
+
+export interface ICreateDepartmentMissionReq {
+
+    departmentId: number
+
+    issueDate?: string
+
+    objectives?: ICreateObjectiveItem[]
+
+    tasks?: ICreateSectionTask[]
+}
+
+/* CREATE OBJECTIVE */
+
+export interface ICreateObjectiveItem {
+
+    content: string
+
+    orderNo?: number
+}
+
+/* CREATE SECTION TASK  */
+
+export interface ICreateSectionTask {
+
+    sectionId: number
+
+    items: ICreateTaskItem[]
+}
+
+/* CREATE TASK ITEM */
+
+export interface ICreateTaskItem {
+
+    content: string
+
+    orderNo?: number
+}
+
+/* 
+   UPDATE OBJECTIVE / TASK
+*/
+
+export interface IUpdateDepartmentObjectiveReq {
+
+    id: number
+
+    content: string
+
+    orderNo?: number
+}
+
+/* 
+   DELETE
+  */
+
+export interface IDeleteDepartmentObjectiveReq {
+
+    id: number
+}
+/* ============================================
+    DEPARTMENT PROCEDURE
+============================================ */
+export interface IDepartmentProcedure {
+    id?: number;
+
+    // ===== Company =====
+    companyId?: number;
+    companyName?: string;
+
+    // ===== Department =====
+    departmentId?: number;
+    departmentName?: string;
+
+    // ===== Section =====
+    sectionId?: number;
+    sectionName?: string;
+
+    // ===== Procedure Info =====
+    procedureName: string;
+    fileUrl?: string;
+    status: "NEED_CREATE" | "IN_PROGRESS" | "NEED_UPDATE" | "TERMINATED";
+    planYear?: number;
+    note?: string;
+
+    // ===== Activation =====
+    active: boolean;
+
+    // ===== Audit =====
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
 }

@@ -198,9 +198,9 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/company-procedures/{id}",
             module: "COMPANY_PROCEDURES",
         },
-        TOGGLE: {
+        ACTIVE: {
             method: "PUT",
-            apiPath: "/api/v1/company-procedures/{id}/toggle",
+            apiPath: "/api/v1/company-procedures/{id}/active",
             module: "COMPANY_PROCEDURES",
         },
     },
@@ -537,9 +537,71 @@ export const ALL_PERMISSIONS = {
         },
     },
 
+    /* ===================== DEPARTMENT OBJECTIVES ===================== */
+    DEPARTMENT_OBJECTIVES: {
+        VIEW: {
+            method: "GET",
+            apiPath: "/api/v1/departments/{departmentId}/objectives",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
 
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/department-objectives",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/department-objectives",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/department-objectives/{id}",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
 
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/department-objectives",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
 
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/department-objectives/{id}",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+    },
+
+    /* ===================== DEPARTMENT PROCEDURES ===================== */
+    DEPARTMENT_PROCEDURES: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/department-procedures",
+            module: "DEPARTMENT_PROCEDURES",
+        },
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/department-procedures/{id}",
+            module: "DEPARTMENT_PROCEDURES",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/department-procedures",
+            module: "DEPARTMENT_PROCEDURES",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/department-procedures",
+            module: "DEPARTMENT_PROCEDURES",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/department-procedures/{id}",
+            module: "DEPARTMENT_PROCEDURES",
+        },
+    },
 };
 
 
@@ -572,5 +634,6 @@ export const ALL_MODULES = {
     PERMISSION_CONTENTS: "PERMISSION_CONTENTS",
     PERMISSION_ASSIGNMENT: "PERMISSION_ASSIGNMENT", // ⭐ BỔ SUNG
     JOB_DESCRIPTIONS: "JOB_DESCRIPTIONS",
-
+    DEPARTMENT_OBJECTIVES: "DEPARTMENT_OBJECTIVES",
+    DEPARTMENT_PROCEDURES: "DEPARTMENT_PROCEDURES",
 };

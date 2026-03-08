@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Badge, Popconfirm, Button, Dropdown } from "antd";
+import { Space, Badge, Popconfirm, Button, Dropdown, Modal, Table, Typography } from "antd";
 import type { MenuProps } from "antd";
 import {
     MoreOutlined,
@@ -11,6 +11,8 @@ import {
     RiseOutlined,
     AimOutlined,
     LockOutlined,
+    FileTextOutlined,
+    TeamOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -22,6 +24,7 @@ import SearchFilter from "@/components/common/filter/SearchFilter";
 
 import type { IDepartment } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
+
 import {
     useDepartmentsQuery,
     useDeleteDepartmentMutation,
@@ -29,20 +32,32 @@ import {
 
 import ModalDepartment from "./modal.department";
 import ViewDepartment from "./view.department";
+import PermissionViewModal from "./permissions/ components/PermissionViewModal";
 
-/* ⭐ Thêm import modal phân quyền */
-import ModalPermissionMatrix from "./access-control/ModalPermissionMatrix";
+import { PATHS } from "@/constants/paths";
+
+// Import component Bảng đồ chức danh
+import PositionChartModal from "@/pages/admin/department/position-chart/PositionChartModal";
+
+const { Title } = Typography;
 
 const DepartmentPage = () => {
     const navigate = useNavigate();
 
     const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
-    const [openPermission, setOpenPermission] = useState(false);
-
-    const [selectedDepartment, setSelectedDepartment] = useState<IDepartment | null>(null);
-
     const [dataInit, setDataInit] = useState<IDepartment | null>(null);
+
+    const [openPermissionModal, setOpenPermissionModal] = useState(false);
+
+    const [selectedDepartment, setSelectedDepartment] = useState<{
+        id: number;
+        name: string;
+    } | null>(null);
+
+    const [openProcessCategoryModal, setOpenProcessCategoryModal] = useState(false);
+    const [openPositionChartModal, setOpenPositionChartModal] = useState(false);
+
     const [searchValue, setSearchValue] = useState("");
 
     const [query, setQuery] = useState(
@@ -50,6 +65,7 @@ const DepartmentPage = () => {
     );
 
     const tableRef = useRef<ActionType>(null);
+
     const { data, isFetching, refetch } = useDepartmentsQuery(query);
     const deleteMutation = useDeleteDepartmentMutation();
 
@@ -58,6 +74,7 @@ const DepartmentPage = () => {
         pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         total: 0,
     };
+
     const departments = data?.result ?? [];
 
     const buildQuery = (params: any, sort: any) => {
@@ -67,17 +84,22 @@ const DepartmentPage = () => {
         };
 
         const filters: string[] = [];
-        if (searchValue)
-            filters.push(`(code~'${searchValue}' or name~'${searchValue}')`);
 
-        if (filters.length > 0) q.filter = filters.join(" and ");
+        if (searchValue) {
+            filters.push(`(code~'${searchValue}' or name~'${searchValue}')`);
+        }
+
+        if (filters.length > 0) {
+            q.filter = filters.join(" and ");
+        }
 
         let sortBy = "sort=createdAt,desc";
 
-        if (sort?.code)
+        if (sort?.code) {
             sortBy = sort.code === "ascend" ? "sort=code,asc" : "sort=code,desc";
-        else if (sort?.name)
+        } else if (sort?.name) {
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
+        }
 
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
@@ -89,11 +111,9 @@ const DepartmentPage = () => {
             sort: "createdAt,desc",
         };
 
-        const filters: string[] = [];
-        if (searchValue)
-            filters.push(`(code~'${searchValue}' or name~'${searchValue}')`);
-
-        if (filters.length > 0) q.filter = filters.join(" and ");
+        if (searchValue) {
+            q.filter = `(code~'${searchValue}' or name~'${searchValue}')`;
+        }
 
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue]);
@@ -140,11 +160,10 @@ const DepartmentPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 160,
+            width: 180,
             fixed: "right",
             render: (_, record) => (
                 <Space size="middle">
-                    {/* Xem chi tiết - xanh */}
                     <Button
                         type="text"
                         icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
@@ -154,7 +173,6 @@ const DepartmentPage = () => {
                         }}
                     />
 
-                    {/* Chỉnh sửa - cam */}
                     <Button
                         type="text"
                         icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
@@ -164,22 +182,9 @@ const DepartmentPage = () => {
                         }}
                     />
 
-                    {/* More dropdown */}
                     <Dropdown
                         menu={{
                             items: [
-                                {
-                                    key: "salary",
-                                    icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Quản lý lương",
-                                    onClick: () =>
-                                        navigate(
-                                            `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
-                                        ),
-                                },
-
                                 {
                                     key: "org-chart",
                                     icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
@@ -190,6 +195,48 @@ const DepartmentPage = () => {
                                                 record.name
                                             )}`
                                         ),
+                                },
+
+                                {
+                                    key: "objectives-tasks",
+                                    icon: <AimOutlined style={{ color: "#eb2f96" }} />,
+                                    label: "Mục tiêu - Nhiệm vụ",
+                                    onClick: () =>
+                                        navigate(
+                                            PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(
+                                                ":departmentId",
+                                                String(record.id)
+                                            ) +
+                                            `?departmentName=${encodeURIComponent(
+                                                record.name
+                                            )}`
+                                        ),
+                                },
+
+                                {
+                                    key: "department-procedures",
+                                    icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
+                                    label: "Quy trình phòng ban",
+                                    onClick: () =>
+                                        navigate(
+                                            PATHS.ADMIN.DEPARTMENT_PROCEDURES.replace(
+                                                ":departmentId",
+                                                String(record.id)
+                                            ) + `?departmentName=${encodeURIComponent(record.name)}`
+                                        ),
+                                },
+
+                                {
+                                    key: "permissions",
+                                    icon: <LockOutlined style={{ color: "#eb2f96" }} />,
+                                    label: "Phân quyền",
+                                    onClick: () => {
+                                        setSelectedDepartment({
+                                            id: record.id!,
+                                            name: record.name,
+                                        });
+                                        setOpenPermissionModal(true);
+                                    },
                                 },
 
                                 {
@@ -205,25 +252,27 @@ const DepartmentPage = () => {
                                 },
 
                                 {
-                                    key: "objectives-tasks",
-                                    icon: <AimOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Mục tiêu nhiệm vụ",
+                                    key: "salary",
+                                    icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
+                                    label: "Khung lương",
                                     onClick: () =>
                                         navigate(
-                                            `/admin/departments/${record.id}/objectives-tasks?departmentName=${encodeURIComponent(
+                                            `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(
                                                 record.name
                                             )}`
                                         ),
                                 },
 
-                                /* ⭐ Thay navigate = mở modal phân quyền */
                                 {
-                                    key: "permissions",
-                                    icon: <LockOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Bản phân quyền",
+                                    key: "position-chart",
+                                    icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
+                                    label: "Bảng đồ chức danh",
                                     onClick: () => {
-                                        setSelectedDepartment(record);
-                                        setOpenPermission(true);
+                                        setSelectedDepartment({
+                                            id: record.id!,
+                                            name: record.name,
+                                        });
+                                        setOpenPositionChartModal(true);
                                     },
                                 },
 
@@ -302,7 +351,6 @@ const DepartmentPage = () => {
                 }}
             />
 
-            {/* Modal thêm / sửa */}
             <ModalDepartment
                 openModal={openModal}
                 setOpenModal={setOpenModal}
@@ -310,7 +358,6 @@ const DepartmentPage = () => {
                 setDataInit={setDataInit}
             />
 
-            {/* Modal xem chi tiết */}
             <ViewDepartment
                 open={openView}
                 onClose={setOpenView}
@@ -318,12 +365,18 @@ const DepartmentPage = () => {
                 setDataInit={setDataInit}
             />
 
-            {/* ⭐ Modal phân quyền */}
             {selectedDepartment && (
-                <ModalPermissionMatrix
-                    open={openPermission}
-                    onClose={() => setOpenPermission(false)}
-                    departmentId={selectedDepartment.id}
+                <PermissionViewModal
+                    open={openPermissionModal}
+                    onClose={() => setOpenPermissionModal(false)}
+                    departmentName={selectedDepartment.name}
+                />
+            )}
+
+            {selectedDepartment && (
+                <PositionChartModal
+                    open={openPositionChartModal}
+                    onClose={() => setOpenPositionChartModal(false)}
                     departmentName={selectedDepartment.name}
                 />
             )}

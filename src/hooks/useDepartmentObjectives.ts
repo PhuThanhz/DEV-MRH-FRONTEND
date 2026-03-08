@@ -1,0 +1,103 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+    callFetchDepartmentObjectives,
+    callCreateDepartmentObjective,
+    callDeleteDepartmentObjective
+} from "@/config/api";
+
+import type { IDepartmentMissionTree } from "@/types/backend";
+import { notify } from "@/components/common/notification/notify";
+
+/* ======================================================
+   FETCH DEPARTMENT OBJECTIVES TREE
+   ====================================================== */
+
+export const useDepartmentObjectivesQuery = (departmentId?: number) => {
+    return useQuery<IDepartmentMissionTree>({
+        queryKey: ["department-objectives", departmentId],
+
+        enabled: !!departmentId,
+
+        queryFn: async () => {
+            if (!departmentId) {
+                throw new Error("Thiếu departmentId");
+            }
+
+            const res = await callFetchDepartmentObjectives(departmentId);
+
+            console.log("OBJECTIVES API:", res);
+
+            if (!res?.data) {
+                throw new Error("Không thể lấy mục tiêu phòng ban");
+            }
+
+            return res.data as IDepartmentMissionTree;
+        },
+    });
+};
+
+
+/* ======================================================
+   CREATE OBJECTIVE
+   ====================================================== */
+
+export const useCreateDepartmentObjectiveMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (payload: any) => {
+            const res = await callCreateDepartmentObjective(payload);
+
+            if (!res?.data) {
+                throw new Error(res?.message || "Không thể tạo mục tiêu");
+            }
+
+            return res;
+        },
+
+        onSuccess: (res, variables: any) => {
+            notify.created(res?.message || "Tạo mục tiêu thành công");
+
+            queryClient.invalidateQueries({
+                queryKey: ["department-objectives", variables?.departmentId],
+            });
+        },
+
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi tạo mục tiêu");
+        },
+    });
+};
+
+
+/* ======================================================
+   DELETE OBJECTIVE
+   ====================================================== */
+
+export const useDeleteDepartmentObjectiveMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callDeleteDepartmentObjective(id);
+
+            if (!res || res.statusCode !== 200) {
+                throw new Error(res?.message || "Không thể xóa mục tiêu");
+            }
+
+            return res.data;
+        },
+
+        onSuccess: () => {
+            notify.deleted("Xóa mục tiêu thành công");
+
+            queryClient.invalidateQueries({
+                queryKey: ["department-objectives"],
+            });
+        },
+
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi xóa mục tiêu");
+        },
+    });
+};

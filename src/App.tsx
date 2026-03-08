@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { useAppDispatch } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
 import LoginPage from 'pages/auth/login';
+import ForgotPassword from 'pages/auth/ForgotPassword';
 import LayoutAdmin from '@/components/layout/admin/layout.admin';
 import ProtectedRoute from 'components/share/protected-route.ts';
 import HomePage from 'pages/home';
@@ -35,7 +36,7 @@ import PermissionCategoryPage from "@/pages/admin/permission-category";
 import JobDescriptionPage from "@/pages/admin/job-description/job-description.page";
 import OrgChartPage from '@/pages/admin/department/org-chart/OrgChartPage'; // ví dụ đường dẫn
 import CompanyOrgChartPage from "@/pages/admin/company/org-chart/OrgChartPage";
-
+import DepartmentProcedurePage from "@/pages/admin/department/procedures";
 /* ===================== PERMISSION CONTENT ===================== */
 
 
@@ -198,8 +199,14 @@ export default function App() {
           element: <DepartmentPermissionPage />,
         },
         {
-          path: "/admin/departments/:id/objectives-tasks",
-          element: <DepartmentObjectivesTasksPage />,
+          path: PATHS.ADMIN.DEPARTMENT_OBJECTIVES,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW}>
+                <DepartmentObjectivesTasksPage />
+              </Access>
+            </ProtectedRoute>
+          ),
         },
         /* ===================== JOB DESCRIPTIONS ===================== */
         {
@@ -237,11 +244,24 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-
+        {
+          path: PATHS.ADMIN.DEPARTMENT_PROCEDURES,
+          element: (
+            <ProtectedRoute>
+              <DepartmentProcedurePage />
+            </ProtectedRoute>
+          ),
+        },
 
       ],
     },
     { path: PATHS.LOGIN, element: <LoginPage /> },
+    {
+      path: "/forgot-password",
+      element: <ForgotPassword />,
+    },
+
+
   ]);
 
   return <RouterProvider router={router} />;

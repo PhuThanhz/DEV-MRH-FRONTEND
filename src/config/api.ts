@@ -11,7 +11,9 @@ import type {
     IPermissionCategoryMatrix,
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq, IJobDescriptionList,
     ICreateJobDescriptionReq,
-    IUpdateJobDescriptionReq, IJobDescription,
+    IUpdateJobDescriptionReq, IJobDescription, IDepartmentMissionTree,
+    ICreateDepartmentMissionReq, IDepartmentProcedure,
+
 
 } from '@/types/backend';
 
@@ -250,8 +252,12 @@ export const callFetchCompanyJobTitlesOfDepartment = (departmentId: number) => {
         `/api/v1/departments/${departmentId}/company-job-titles`
     );
 };
-
-
+// LẤY PHÒNG BAN THEO CÔNG TY
+export const callFetchDepartmentsByCompany = (companyId: number) => {
+    return axios.get<IBackendRes<IDepartment[]>>(
+        `/api/v1/departments/by-company/${companyId}`
+    );
+};
 /* ===================== SECTIONS ===================== */
 
 export const callFetchSection = (query: string) => {
@@ -309,6 +315,12 @@ export const callActiveSection = (id: number) => {
     );
 };
 
+// LẤY BỘ PHẬN THEO PHÒNG BAN
+export const callFetchSectionsByDepartment = (departmentId: number) => {
+    return axios.get<IBackendRes<ISection[]>>(
+        `/api/v1/sections/by-department/${departmentId}`
+    );
+};
 /* ===================== POSITION LEVELS ===================== */
 
 
@@ -405,9 +417,9 @@ export const callUpdateCompanyProcedure = (data: ICompanyProcedure) => {
 };
 
 // Bật / Tắt (toggle active)
-export const callToggleActiveCompanyProcedure = (id: string) => {
-    return axios.put<IBackendRes<ICompanyProcedure>>(
-        `/api/v1/company-procedures/${id}/toggle`
+export const callToggleActiveCompanyProcedure = (id: number) => {
+    return axios.put<IBackendRes<void>>(
+        `/api/v1/company-procedures/${id}/active`
     );
 };
 
@@ -982,5 +994,56 @@ export const callFetchPermissionCategoriesByDepartment = (departmentId: number) 
 export const callFetchPermissionMatrixByCategory = (categoryId: number) => {
     return axios.get<IBackendRes<IPermissionCategoryMatrix>>(
         `/api/v1/permission-categories/${categoryId}/matrix`
+    );
+};
+/* ===================== DEPARTMENT OBJECTIVES ===================== */
+
+export const callFetchDepartmentObjectives = (departmentId: number) => {
+    return axios.get(`/api/v1/departments/${departmentId}/objectives`)
+}
+
+export const callCreateDepartmentObjective = (data: any) => {
+    return axios.post(`/api/v1/department-objectives`, data)
+}
+
+export const callDeleteDepartmentObjective = (id: number) => {
+    return axios.delete(`/api/v1/department-objectives/${id}`)
+}
+/* ===================== DEPARTMENT PROCEDURES ===================== */
+
+export const callFetchDepartmentProcedures = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IDepartmentProcedure>>>(
+        `/api/v1/department-procedures?${query}`
+    );
+};
+
+export const callFetchDepartmentProcedureById = (id: number) => {
+    return axios.get<IBackendRes<IDepartmentProcedure>>(
+        `/api/v1/department-procedures/${id}`
+    );
+};
+
+export const callCreateDepartmentProcedure = (data: IDepartmentProcedure) => {
+    return axios.post<IBackendRes<IDepartmentProcedure>>(
+        `/api/v1/department-procedures`,
+        data
+    );
+};
+
+export const callUpdateDepartmentProcedure = (data: IDepartmentProcedure) => {
+
+    if (!data.id) {
+        throw new Error("Thiếu ID khi cập nhật Department Procedure");
+    }
+
+    return axios.put<IBackendRes<IDepartmentProcedure>>(
+        `/api/v1/department-procedures/${data.id}`,
+        data
+    );
+};
+
+export const callDeleteDepartmentProcedure = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/department-procedures/${id}`
     );
 };

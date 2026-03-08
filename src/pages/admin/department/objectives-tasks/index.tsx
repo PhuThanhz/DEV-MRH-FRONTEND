@@ -1,362 +1,550 @@
-// src/pages/admin/department/objectives-tasks/index.tsx
-
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useLocation } from "react-router-dom";
+import { Button, Input, Popconfirm, message, Skeleton, DatePicker } from "antd";
 import {
-    Space,
-    Typography,
-    Button,
-    Breadcrumb,
-    List,
-    Table,
-    Card,
-    Tag,
-} from "antd";
-import {
-    PrinterOutlined,
-    HomeOutlined,
-    ApartmentOutlined,
-    CheckCircleOutlined,
-    FileTextOutlined,
-    TeamOutlined,
-    CalendarOutlined,
+    PlusOutlined, DeleteOutlined, EditOutlined,
+    SaveOutlined, CloseOutlined,
 } from "@ant-design/icons";
+import dayjs, { Dayjs } from "dayjs";
 
-const { Title, Text } = Typography;
+import PageContainer from "@/components/common/data-table/PageContainer";
+import { useDepartmentObjectivesQuery } from "@/hooks/useDepartmentObjectives";
+import { useSectionsQuery } from "@/hooks/useSections";
+import { callCreateDepartmentObjective } from "@/config/api";
+import type { IDepartmentMissionTree } from "@/types/backend";
 
-// Dữ liệu giả hard-code trực tiếp trong file
-const MOCK_OBJECTIVES = [
-    "Đảm bảo việc phát triển và tối ưu hóa nguồn nhân lực phù hợp với chiến lược phát triển của công ty.",
-    "Nâng cao mức độ gắn kết và trải nghiệm của người lao động nhằm thu hút, giữ chân nhân tài và xây dựng đội ngũ ổn định, phát triển bền vững.",
-    "Đảm bảo hệ thống hành chính – nhân sự vận hành hiệu quả, minh bạch và tuân thủ pháp luật",
-];
+interface ObjectiveItem { content: string; orderNo: number }
+interface TaskItem { content: string; orderNo: number }
+interface SectionTask { sectionId: number; sectionName: string; items: TaskItem[] }
 
-const MOCK_TEAMS = [
-    { id: "t1", name: "Hành chính" },
-    { id: "t2", name: "C&B" },
-    { id: "t3", name: "Tuyển Dụng\n(Hoạch định và thu hút nhân tài)" },
-    { id: "t4", name: "Đào Tạo và\nPhát Triển năng lực" },
-];
+const C = {
+    page: "#F7F3F3",
+    card: "#FFFFFF",
+    r50: "#FEF0F2",
+    r100: "#FCDDE3",
+    r200: "#F8BEC8",
+    r300: "#F0959F",
+    r400: "#E06070",
+    r500: "#C84E62",
+    r600: "#A83A4E",
+    ink: "#18080D",
+    ink40: "#9A7080",
+    ink20: "#C8B0B8",
+    ink10: "#EDE0E3",
+    ink05: "#F6F0F2",
+    danger: "#E05050",
+};
 
-const MOCK_TASKS = [
-    // Hành chính (t1)
-    { teamId: "t1", name: "Vận hành dịch vụ hành chính – văn phòng thông suốt", description: "Vận hành dịch vụ hành chính – văn phòng thông suốt, hỗ trợ hoạt động kinh doanh" },
-    { teamId: "t1", name: "Tối ưu nguồn lực hành chính", description: "Tối ưu nguồn lực hành chính nhằm gia tăng hiệu quả kinh doanh." },
+const STYLE_ID = "dop-v6";
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;500;600&display=swap');
 
-    // C&B (t2)
-    { teamId: "t2", name: "Xây dựng hệ thống lương thưởng phúc lợi", description: "Xây dựng hệ thống lương, thưởng, phúc lợi cạnh tranh & công bằng" },
-    { teamId: "t2", name: "Thủ tục nhân sự", description: "Triển khai các nghiệp vụ về thủ tục nhân sự (bao gồm nhưng không giới hạn: chấm công, hồ sơ nhân sự, hợp đồng lao động,…) theo quy định của Công ty và Luật Lao động." },
-    { teamId: "t2", name: "Thanh toán lương thưởng", description: "Triển khai các nghiệp vụ về thanh toán tiền lương, thưởng và phúc lợi cho người lao động toàn Công ty theo quy định, theo pháp luật lao động." },
+.dopv *, .dopv *::before, .dopv *::after { box-sizing: border-box; }
+.dopv { font-family: 'DM Sans', -apple-system, sans-serif; color: ${C.ink}; -webkit-font-smoothing: antialiased; }
 
-    // Tuyển dụng (t3)
-    { teamId: "t3", name: "Phát triển Thương hiệu Nhà Tuyển dụng", description: "Xây dựng và triển khai chiến lược phát triển Thương hiệu Nhà Tuyển dụng và thu hút nhân tài cho công ty" },
-    { teamId: "t3", name: "Lập kế hoạch tuyển dụng", description: "Lập kế hoạch và tổ chức triển khai công tác tuyển dụng cho Công ty với ngân sách tối ưu." },
-    { teamId: "t3", name: "Phát triển văn hóa doanh nghiệp", description: "Phát triển văn hóa doanh nghiệp và gắn kết con người" },
+@keyframes dopv-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dopv-up { animation: dopv-up .36s cubic-bezier(.22,.9,.36,1) both; }
+.dopv-d1 { animation-delay:.04s } .dopv-d2 { animation-delay:.08s }
+.dopv-d3 { animation-delay:.12s } .dopv-d4 { animation-delay:.16s }
+.dopv-d5 { animation-delay:.20s }
 
-    // Đào tạo và Phát triển (t4)
-    { teamId: "t4", name: "Chuẩn hóa năng lực & đào tạo", description: "Chuẩn hóa tiêu chuẩn năng lực cho từng vị trí. Xây dựng hệ thống quản lý đào tạo và triển khai đào tạo nhằm nâng cao năng lực của đội ngũ." },
-    { teamId: "t4", name: "Xây dựng nguồn lực kế thừa", description: "Xây dựng nguồn lực kế thừa phù hợp chiến lược phát triển công ty." },
-];
+@keyframes dopv-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(.7); }
+}
+.dopv-pulse { animation: dopv-pulse 1.7s ease-in-out infinite; }
 
-const DepartmentObjectivesTasksPage = () => {
-    const { id } = useParams();
-    const [searchParams] = useSearchParams();
+/* ── HEADER ── */
+.dopv-header {
+  background: ${C.card};
+  border-bottom: 1.5px solid ${C.ink10};
+  padding: 22px 36px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+/* tablet */
+@media (max-width: 768px) {
+  .dopv-header {
+    padding: 16px 20px 14px;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+/* mobile */
+@media (max-width: 480px) {
+  .dopv-header { padding: 14px 16px 12px; }
+}
 
-    const departmentName = searchParams.get("departmentName") || "HÀNH CHÍNH NHÂN SỰ";
-    const companyName = "F&B";
+/* dept name */
+.dopv-title {
+  margin: 0; font-size: 26px; font-weight: 700;
+  font-family: 'Lora', Georgia, serif;
+  color: ${C.ink}; letter-spacing: -.02em; line-height: 1.2;
+}
+@media (max-width: 768px) { .dopv-title { font-size: 20px; } }
+@media (max-width: 480px) { .dopv-title { font-size: 18px; } }
 
-    // Lấy ngày hiện tại
-    const currentDate = new Date().toLocaleDateString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+/* header right buttons */
+.dopv-actions {
+  display: flex; gap: 9px; flex-shrink: 0; padding-top: 4px;
+}
+@media (max-width: 768px) {
+  .dopv-actions {
+    width: 100%;
+    padding-top: 0;
+  }
+  .dopv-actions .ant-btn { flex: 1; justify-content: center; }
+}
 
-    const teams = MOCK_TEAMS;
-    const tasks = MOCK_TASKS;
+/* ── BANNER ── */
+.dopv-banner {
+  background: ${C.r50}; border-bottom: 1.5px solid ${C.r100};
+  padding: 8px 36px; font-size: 12px; color: ${C.r500};
+  font-weight: 600; letter-spacing: .04em;
+  display: flex; align-items: center; gap: 7px;
+}
+@media (max-width: 768px) { .dopv-banner { padding: 8px 20px; } }
+@media (max-width: 480px) { .dopv-banner { padding: 8px 16px; font-size: 11px; } }
 
-    const maxTasks = Math.max(
-        ...teams.map(team => tasks.filter(task => task.teamId === team.id).length),
-        1
+/* ── BODY ── */
+.dopv-body {
+  padding: 28px 36px 56px;
+}
+@media (max-width: 768px) { .dopv-body { padding: 20px 20px 40px; } }
+@media (max-width: 480px) { .dopv-body { padding: 16px 16px 32px; } }
+
+/* ── GRID columns ── */
+.dopv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 600px) {
+  .dopv-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* objective row */
+.dopv-obj {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: ${C.card}; border: 1.5px solid ${C.ink10};
+  border-radius: 14px; padding: 14px 18px; margin-bottom: 9px;
+  transition: box-shadow .2s;
+}
+.dopv-obj:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
+@media (max-width: 480px) {
+  .dopv-obj { padding: 11px 13px; gap: 10px; border-radius: 11px; }
+}
+
+/* task row */
+.dopv-task {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid ${C.ink10};
+}
+.dopv-task:last-of-type { border-bottom: none; }
+
+/* column card */
+.dopv-col {
+  background: ${C.card}; border: 1.5px solid ${C.ink10};
+  border-radius: 16px; overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: box-shadow .22s;
+}
+.dopv-col:hover { box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+
+/* delete btn */
+.dopv-del {
+  background: transparent; border: none; cursor: pointer;
+  color: ${C.ink20}; font-size: 13px; padding: 4px 5px;
+  border-radius: 7px; flex-shrink: 0; line-height: 1;
+  transition: color .14s, background .14s;
+}
+.dopv-del:hover { color: ${C.danger}; background: #FFF0F0; }
+
+/* dashed add */
+.dopv-add {
+  width: 100% !important;
+  border: 1.5px dashed ${C.r200} !important;
+  border-radius: 11px !important; color: ${C.r500} !important;
+  background: transparent !important; font-weight: 500 !important;
+  font-size: 12.5px !important; height: 36px !important; margin-top: 12px;
+  transition: background .16s, color .16s !important;
+}
+.dopv-add:hover { background: ${C.r50} !important; color: ${C.r600} !important; }
+
+/* input — trắng, border xám */
+.dopv-input .ant-input {
+  background: #fff !important; font-size: 13.5px !important;
+  font-family: 'DM Sans', sans-serif !important; color: ${C.ink} !important;
+}
+.dopv-input {
+  background: #fff !important; border: 1.5px solid ${C.ink10} !important;
+  border-radius: 9px !important; flex: 1; box-shadow: none !important;
+}
+.dopv-input:focus-within {
+  border-color: ${C.ink20} !important;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.04) !important;
+}
+.dopv-input:hover:not(:focus-within) { border-color: ${C.ink20} !important; }
+
+/* divider */
+.dopv-hr { border: none; border-top: 1.5px solid ${C.ink10}; margin: 28px 0; }
+
+/* datepicker — trắng, border xám */
+.dopv-dp .ant-picker {
+  background: #fff !important; border-color: ${C.ink10} !important; border-radius: 8px !important;
+}
+.dopv-dp .ant-picker:hover, .dopv-dp .ant-picker-focused {
+  border-color: ${C.ink20} !important; box-shadow: 0 0 0 2px rgba(0,0,0,.04) !important;
+}
+
+/* meta row wrap on small screens */
+.dopv-meta {
+  display: flex; align-items: center; gap: 8px; margin-top: 2px; flex-wrap: wrap;
+}
+`;
+
+if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
+    const el = document.createElement("style");
+    el.id = STYLE_ID;
+    el.textContent = css;
+    document.head.appendChild(el);
+}
+
+/* ── SUB-COMPONENTS ── */
+function NumBadge({ n, size = 23, variant = "rose" }: {
+    n: number; size?: number; variant?: "rose" | "neutral"
+}) {
+    return (
+        <span style={{
+            minWidth: size, height: size, borderRadius: size / 2,
+            background: variant === "rose" ? C.r100 : C.ink05,
+            color: variant === "rose" ? C.r500 : C.ink40,
+            fontSize: size * .46, fontWeight: 700,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, marginTop: 1, letterSpacing: "-.01em",
+        }}>
+            {n}
+        </span>
     );
+}
 
-    const taskColumns = [
-        {
-            title: "STT",
-            dataIndex: "index",
-            width: 70,
-            align: "center" as const,
-            fixed: "left" as const,
-            render: (text: number) => <Text type="secondary">{text}</Text>,
-        },
-        ...teams.map((team) => ({
-            title: (
-                <div style={{ textAlign: "center", padding: "8px" }}>
-                    <TeamOutlined style={{ fontSize: 14, marginBottom: 4, display: 'block' }} />
-                    <Text strong style={{ fontSize: 13, display: "block", whiteSpace: "pre-line" }}>
-                        {team.name}
-                    </Text>
-                </div>
-            ),
-            dataIndex: `team_${team.id}`,
-            width: 340,
-            render: (task: any) => {
-                if (!task) return (
-                    <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Text type="secondary">—</Text>
-                    </div>
-                );
-                return (
-                    <div style={{
-                        padding: "12px",
-                        minHeight: 100,
-                        background: "#fafafa",
-                        borderRadius: 4,
-                        border: "1px solid #f0f0f0"
-                    }}>
-                        <Text strong style={{ fontSize: 13, display: "block", marginBottom: 6, color: '#262626' }}>
-                            {task.name}
-                        </Text>
-                        <Text style={{ fontSize: 12, lineHeight: 1.6, color: "#595959" }}>
-                            {task.description}
-                        </Text>
-                    </div>
-                );
-            },
-        })),
-    ];
+function SecLabel({ label, count, style }: {
+    label: string; count: string; style?: React.CSSProperties
+}) {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 16, ...style }}>
+            <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 10.5, fontWeight: 700, letterSpacing: ".1em",
+                textTransform: "uppercase", color: C.r400,
+            }}>
+                <span style={{ width: 14, height: 2, borderRadius: 1, background: C.r300, display: "inline-block" }} />
+                {label}
+            </span>
+            <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.ink20, fontWeight: 400 }}>
+                {count}
+            </span>
+        </div>
+    );
+}
 
-    const taskTableData = Array.from({ length: maxTasks }, (_, rowIndex) => {
-        const row: any = { key: `row-${rowIndex}`, index: rowIndex + 1 };
-        teams.forEach((team) => {
-            const teamTasks = tasks.filter(task => task.teamId === team.id);
-            row[`team_${team.id}`] = teamTasks[rowIndex] || null;
-        });
-        return row;
-    });
+function Empty({ text }: { text: string }) {
+    return (
+        <div style={{ textAlign: "center", padding: "20px 0 10px", color: C.ink20, fontSize: 12.5, fontStyle: "italic" }}>
+            {text}
+        </div>
+    );
+}
+
+function ObjRow({ item, index, editMode, onUpdate, onDelete }: {
+    item: ObjectiveItem; index: number; editMode: boolean;
+    onUpdate: (v: string) => void; onDelete: () => void;
+}) {
+    const delay = `dopv-d${Math.min(index + 1, 5)}`;
+    return (
+        <div className={`dopv-obj dopv-up ${delay}`}>
+            <NumBadge n={index + 1} />
+            {editMode ? (
+                <Input
+                    className="dopv-input"
+                    value={item.content}
+                    onChange={(e) => onUpdate(e.target.value)}
+                    placeholder="Nhập nội dung mục tiêu…"
+                    variant="outlined"
+                    style={{ flex: 1 }}
+                />
+            ) : (
+                <span style={{ flex: 1, fontSize: 14, color: C.ink, lineHeight: 1.65, paddingTop: 1 }}>
+                    {item.content}
+                </span>
+            )}
+            {editMode && (
+                <Popconfirm title="Xoá mục tiêu này?" onConfirm={onDelete} okText="Xoá" cancelText="Huỷ" okButtonProps={{ danger: true }}>
+                    <button className="dopv-del"><DeleteOutlined /></button>
+                </Popconfirm>
+            )}
+        </div>
+    );
+}
+
+/* ── MAIN PAGE ── */
+const DepartmentObjectivesPage = () => {
+    const { departmentId } = useParams();
+    const location = useLocation();
+    const idNumber = departmentId ? Number(departmentId) : undefined;
+
+    const { data, isLoading } = useDepartmentObjectivesQuery(idNumber);
+    const { data: sectionData } = useSectionsQuery(`page=1&size=100&filter=department.id:${idNumber}`);
+    const mission: IDepartmentMissionTree | undefined = data;
+
+    const [objectives, setObjectives] = useState<ObjectiveItem[]>([]);
+    const [sections, setSections] = useState<SectionTask[]>([]);
+    const [editMode, setEditMode] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [issueDate, setIssueDate] = useState<Dayjs | null>(null);
+
+    const departmentName = useMemo(() => {
+        const p = new URLSearchParams(location.search);
+        return p.get("departmentName") || mission?.department?.name || "";
+    }, [location.search, mission]);
+
+    useEffect(() => {
+        if (!sectionData) return;
+        const allSections = sectionData.result || [];
+        const missionTasks = mission?.tasks || [];
+        setSections(allSections.map((sec) => {
+            const found = missionTasks.find((t) => t.sectionId === sec.id);
+            return {
+                sectionId: sec.id!,
+                sectionName: sec.name,
+                items: found?.tasks?.map((t, i) => ({ content: t.content, orderNo: i + 1 })) || [],
+            };
+        }));
+        if (mission) {
+            setObjectives(mission.objectives.map((o, i) => ({ content: o.content, orderNo: i + 1 })));
+            if ((mission as any).issueDate) setIssueDate(dayjs((mission as any).issueDate));
+        }
+    }, [mission, sectionData]);
+
+    /* CRUD */
+    const updateObjective = (i: number, v: string) => { const list = [...objectives]; list[i].content = v; setObjectives(list); };
+    const addObjective = () => setObjectives([...objectives, { content: "", orderNo: objectives.length + 1 }]);
+    const deleteObjective = (i: number) => setObjectives(objectives.filter((_, idx) => idx !== i));
+
+    const updateTask = (sid: number, i: number, v: string) =>
+        setSections(sections.map((s) => {
+            if (s.sectionId !== sid) return s;
+            const items = [...s.items]; items[i].content = v; return { ...s, items };
+        }));
+    const addTask = (sid: number) =>
+        setSections(sections.map((s) =>
+            s.sectionId !== sid ? s : { ...s, items: [...s.items, { content: "", orderNo: s.items.length + 1 }] }
+        ));
+    const deleteTask = (sid: number, i: number) =>
+        setSections(sections.map((s) =>
+            s.sectionId !== sid ? s : { ...s, items: s.items.filter((_, idx) => idx !== i) }
+        ));
+
+    const handleSave = async () => {
+        if (!idNumber) return;
+        try {
+            setSaving(true);
+            const res = await callCreateDepartmentObjective({
+                departmentId: idNumber,
+                objectives,
+                tasks: sections.map((s) => ({ sectionId: s.sectionId, items: s.items })),
+                issueDate: issueDate ? issueDate.format("YYYY-MM-DD") : undefined,
+            });
+            const statusCode = res?.statusCode ?? res?.data?.statusCode;
+            if (statusCode === 200) {
+                message.success("Cập nhật thành công!");
+                setEditMode(false);
+            } else {
+                message.error(res?.message || res?.data?.message || "Lưu thất bại");
+            }
+        } catch {
+            message.error("Có lỗi xảy ra khi lưu dữ liệu");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
-        <div style={{ padding: "24px", background: "#fafafa", minHeight: "100vh" }}>
-            <div style={{ maxWidth: Math.min(1600, 600 + teams.length * 340), margin: "0 auto" }}>
-
-                {/* Breadcrumb */}
-                <Breadcrumb
-                    className="no-print"
-                    style={{ marginBottom: 16 }}
-                    items={[
-                        { href: "/", title: <HomeOutlined /> },
-                        {
-                            href: "/admin/departments",
-                            title: (
-                                <>
-                                    <ApartmentOutlined /> <span>Phòng ban</span>
-                                </>
-                            ),
-                        },
-                        { title: departmentName },
-                    ]}
-                />
+        <PageContainer title="Mục tiêu - Nhiệm vụ phòng ban">
+            <div className="dopv" style={{ background: C.page, minHeight: "100vh" }}>
 
                 {/* HEADER */}
-                <div style={{
-                    background: "linear-gradient(to right, #fff5f7, #fff)",
-                    padding: "32px 24px",
-                    borderBottom: "3px solid #ff4d7d",
-                    position: "relative",
-                    borderRadius: "8px 8px 0 0",
-                    marginBottom: 0,
-                }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ textAlign: "center", flex: 1 }}>
-                            <div style={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: '50%',
-                                background: 'linear-gradient(135deg, #ff4d7d, #ff85a6)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 12px',
-                                boxShadow: '0 4px 12px rgba(255, 77, 125, 0.2)'
-                            }}>
-                                <ApartmentOutlined style={{ fontSize: 28, color: "#fff" }} />
-                            </div>
-                            <Title level={3} style={{ margin: "0 0 8px 0", color: '#262626' }}>
-                                {departmentName}
-                            </Title>
-                            <Space direction="vertical" size={4}>
-                                <Tag style={{
-                                    fontSize: 12,
-                                    padding: "4px 12px",
-                                    borderRadius: 12,
-                                    border: '1px solid #ffadc2',
-                                    background: '#fff5f7',
-                                    color: '#eb2f64'
-                                }}>
-                                    Trực thuộc: {companyName}
-                                </Tag>
-                                <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
-                                    <CalendarOutlined style={{ marginRight: 6 }} />
-                                    Ngày ban hành: {currentDate}
-                                </Text>
-                            </Space>
+                <div className="dopv-header">
+                    {/* left */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, letterSpacing: ".07em", textTransform: "uppercase", color: C.r400 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.r300, display: "inline-block", flexShrink: 0 }} />
+                            Phòng ban
                         </div>
+                        <h1 className="dopv-title">{departmentName || "—"}</h1>
+                        <div className="dopv-meta">
+                            <span style={{ fontSize: 12, color: C.ink40, fontWeight: 500 }}>Ngày ban hành</span>
+                            <span style={{ width: 3, height: 3, borderRadius: "50%", background: C.ink20, display: "inline-block", flexShrink: 0 }} />
+                            {editMode ? (
+                                <div className="dopv-dp">
+                                    <DatePicker
+                                        value={issueDate}
+                                        onChange={(d) => setIssueDate(d)}
+                                        format="DD/MM/YYYY"
+                                        placeholder="Chọn ngày"
+                                        size="small"
+                                        style={{ borderRadius: 8 }}
+                                    />
+                                </div>
+                            ) : (
+                                <span style={{ fontSize: 13, fontWeight: issueDate ? 600 : 400, color: issueDate ? C.ink : C.ink20, fontStyle: issueDate ? "normal" : "italic" }}>
+                                    {issueDate ? issueDate.format("DD/MM/YYYY") : "Chưa cập nhật"}
+                                </span>
+                            )}
+                        </div>
+                    </div>
 
-                        <Button
-                            type="primary"
-                            icon={<PrinterOutlined />}
-                            size="large"
-                            onClick={() => window.print()}
-                            className="no-print"
-                            style={{
-                                position: "absolute",
-                                right: 24,
-                                top: 24,
-                                background: '#ff4d7d',
-                                borderColor: '#ff4d7d',
-                            }}
-                        >
-                            In tài liệu
-                        </Button>
+                    {/* right: buttons */}
+                    <div className="dopv-actions">
+                        {!editMode ? (
+                            <Button
+                                icon={<EditOutlined />}
+                                onClick={() => setEditMode(true)}
+                                style={{ borderRadius: 10, fontWeight: 600, height: 38, paddingLeft: 18, paddingRight: 18, background: C.r50, border: `1.5px solid ${C.r200}`, color: C.r500, fontSize: 13.5, boxShadow: "none" }}
+                            >
+                                Chỉnh sửa
+                            </Button>
+                        ) : (
+                            <>
+                                <Button
+                                    icon={<CloseOutlined />}
+                                    onClick={() => setEditMode(false)}
+                                    style={{ borderRadius: 10, fontWeight: 500, height: 38, paddingLeft: 16, paddingRight: 16, border: `1.5px solid ${C.ink10}`, color: C.ink40, fontSize: 13.5 }}
+                                >
+                                    Huỷ
+                                </Button>
+                                <Button
+                                    icon={<SaveOutlined />}
+                                    loading={saving}
+                                    onClick={handleSave}
+                                    style={{ borderRadius: 10, fontWeight: 700, height: 38, paddingLeft: 20, paddingRight: 20, background: C.r500, border: "none", color: "#fff", fontSize: 13.5, boxShadow: `0 3px 14px ${C.r200}` }}
+                                >
+                                    Lưu thay đổi
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                <div style={{ padding: "24px", background: '#fff', borderRadius: "0 0 8px 8px", boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                    {/* MỤC TIÊU HOẠT ĐỘNG */}
-                    <Card
-                        title={
-                            <Space size={8}>
-                                <CheckCircleOutlined style={{ color: "#ff4d7d", fontSize: 16 }} />
-                                <Text strong>Mục tiêu hoạt động</Text>
-                            </Space>
-                        }
-                        style={{
-                            marginBottom: 24,
-                            borderLeft: '4px solid #ff4d7d',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                        }}
-                        bordered={false}
-                        size="small"
-                    >
-                        <List
-                            dataSource={MOCK_OBJECTIVES}
-                            renderItem={(goal, idx) => (
-                                <List.Item style={{ padding: "10px 0", border: 'none' }}>
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                        <Text type="secondary" style={{ minWidth: 20, marginTop: 2 }}>
-                                            {idx + 1}.
-                                        </Text>
-                                        <Text style={{ fontSize: 14, lineHeight: 1.6, flex: 1 }}>
-                                            {goal}
-                                        </Text>
-                                    </div>
-                                </List.Item>
-                            )}
-                            split={false}
-                        />
-                    </Card>
+                {/* EDIT BANNER */}
+                {editMode && (
+                    <div className="dopv-banner">
+                        <span className="dopv-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: C.r400, display: "inline-block", flexShrink: 0 }} />
+                        Đang chỉnh sửa — nhớ lưu thay đổi trước khi rời trang
+                    </div>
+                )}
 
-                    {/* NHIỆM VỤ THEO BỘ PHẬN */}
-                    <Card
-                        title={
-                            <Space size={8}>
-                                <FileTextOutlined style={{ color: "#ff4d7d", fontSize: 16 }} />
-                                <Text strong>Nhiệm vụ theo bộ phận</Text>
-                            </Space>
-                        }
-                        bordered={false}
-                        size="small"
-                        style={{
-                            borderLeft: '4px solid #ff4d7d',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                        }}
-                    >
-                        <div style={{ overflowX: "auto", marginTop: 16 }}>
-                            <Table
-                                columns={taskColumns}
-                                dataSource={taskTableData}
-                                pagination={false}
-                                bordered
-                                size="small"
-                                scroll={{ x: teams.length * 340 + 70 }}
-                                style={{ background: '#fff' }}
-                            />
+                {/* BODY */}
+                <div className="dopv-body">
+                    {isLoading ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            {[1, 2, 3].map(i => <Skeleton key={i} active paragraph={{ rows: 2 }} />)}
                         </div>
-                    </Card>
+                    ) : (
+                        <>
+                            {/* MỤC TIÊU */}
+                            <SecLabel label="Mục tiêu phòng ban" count={`${objectives.length} mục tiêu`} />
+
+                            {objectives.length === 0 && !editMode && <Empty text="Chưa có mục tiêu nào." />}
+
+                            {objectives.map((item, i) => (
+                                <ObjRow key={i} item={item} index={i} editMode={editMode}
+                                    onUpdate={(v) => updateObjective(i, v)}
+                                    onDelete={() => deleteObjective(i)}
+                                />
+                            ))}
+
+                            {editMode && (
+                                <Button className="dopv-add" icon={<PlusOutlined />} onClick={addObjective} style={{ marginTop: 4 }}>
+                                    Thêm mục tiêu
+                                </Button>
+                            )}
+
+                            <hr className="dopv-hr" />
+
+                            {/* NHIỆM VỤ THEO BỘ PHẬN */}
+                            <SecLabel label="Nhiệm vụ theo bộ phận" count={`${sections.length} bộ phận`} style={{ marginBottom: 20 }} />
+
+                            <div className="dopv-grid">
+                                {sections.map((sec, si) => {
+                                    const delay = `dopv-d${Math.min(si + 1, 5)}`;
+                                    const initial = sec.sectionName.trim().charAt(0).toUpperCase();
+                                    return (
+                                        <div key={sec.sectionId} className={`dopv-col dopv-up ${delay}`} style={{ height: "100%" }}>
+                                            {/* col header */}
+                                            <div style={{ background: C.r50, borderBottom: `1.5px solid ${C.r100}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                                                <span style={{ width: 32, height: 32, borderRadius: 10, background: C.r100, border: `1.5px solid ${C.r200}`, color: C.r500, fontWeight: 700, fontSize: 14, fontFamily: "'Lora', serif", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                    {initial}
+                                                </span>
+                                                <span style={{ fontWeight: 600, fontSize: 13, color: C.ink, flex: 1, lineHeight: 1.3, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {sec.sectionName}
+                                                </span>
+                                                <span style={{ fontSize: 11, color: sec.items.length > 0 ? C.r500 : C.ink20, background: sec.items.length > 0 ? C.r100 : C.ink05, borderRadius: 20, padding: "2px 9px", fontWeight: 700, flexShrink: 0 }}>
+                                                    {sec.items.length}
+                                                </span>
+                                            </div>
+
+                                            {/* col body */}
+                                            <div style={{ padding: "12px 16px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
+                                                <div style={{ flex: 1 }}>
+                                                    {sec.items.length === 0 && !editMode && <Empty text="Chưa có nhiệm vụ" />}
+                                                    {sec.items.map((task, idx) => (
+                                                        <div key={idx} className="dopv-task" style={idx === sec.items.length - 1 ? { borderBottom: "none" } : {}}>
+                                                            <NumBadge n={idx + 1} size={19} variant="neutral" />
+                                                            {editMode ? (
+                                                                <Input
+                                                                    className="dopv-input"
+                                                                    value={task.content}
+                                                                    onChange={(e) => updateTask(sec.sectionId, idx, e.target.value)}
+                                                                    placeholder="Nhập nhiệm vụ…"
+                                                                    variant="outlined"
+                                                                    style={{ flex: 1, fontSize: 12.5 }}
+                                                                />
+                                                            ) : (
+                                                                <span style={{ flex: 1, fontSize: 13, color: C.ink, lineHeight: 1.65 }}>
+                                                                    {task.content}
+                                                                </span>
+                                                            )}
+                                                            {editMode && (
+                                                                <Popconfirm title="Xoá nhiệm vụ này?" onConfirm={() => deleteTask(sec.sectionId, idx)} okText="Xoá" cancelText="Huỷ" okButtonProps={{ danger: true }}>
+                                                                    <button className="dopv-del"><DeleteOutlined /></button>
+                                                                </Popconfirm>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {editMode && (
+                                                    <Button className="dopv-add" icon={<PlusOutlined />} onClick={() => addTask(sec.sectionId)}>
+                                                        Thêm nhiệm vụ
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
-
-            {/* CSS cho styling và in ấn */}
-            <style>{`
-                .ant-table-thead > tr > th {
-                    background: #fafafa !important;
-                    color: #262626 !important;
-                    font-weight: 600;
-                    border-bottom: 2px solid #f0f0f0 !important;
-                }
-                .ant-table-tbody > tr:hover > td {
-                    background: #f5f5f5 !important;
-                }
-                
-                @media print {
-                    body {
-                        background: white !important;
-                        padding: 0 !important;
-                        font-family: 'Times New Roman', Times, serif !important;
-                    }
-                    
-                    .no-print {
-                        display: none !important;
-                    }
-                    
-                    .ant-breadcrumb {
-                        display: none !important;
-                    }
-                    
-                    .ant-card {
-                        box-shadow: none !important;
-                        border: 1px solid #d9d9d9 !important;
-                        page-break-inside: avoid;
-                    }
-                    
-                    .ant-card-head {
-                        background: #f5f5f5 !important;
-                        border-bottom: 2px solid #000 !important;
-                    }
-                    
-                    h3 {
-                        color: #000 !important;
-                        page-break-after: avoid;
-                    }
-                    
-                    table {
-                        page-break-inside: avoid;
-                    }
-                    
-                    table, th, td {
-                        border: 1px solid #000 !important;
-                        border-collapse: collapse !important;
-                    }
-                    
-                    .ant-table-thead > tr > th {
-                        background: #f0f0f0 !important;
-                        font-weight: bold !important;
-                        color: #000 !important;
-                    }
-                    
-                    .ant-tag {
-                        border: 1px solid #000 !important;
-                        background: #fff !important;
-                        color: #000 !important;
-                    }
-                    
-                    @page {
-                        margin: 2cm;
-                        size: A4 landscape;
-                    }
-                }
-            `}</style>
-        </div>
+        </PageContainer>
     );
 };
 
-export default DepartmentObjectivesTasksPage;
+export default DepartmentObjectivesPage;
