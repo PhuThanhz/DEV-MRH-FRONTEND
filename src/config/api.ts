@@ -12,7 +12,7 @@ import type {
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
-    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary
 
 
 } from '@/types/backend';
@@ -1545,5 +1545,12 @@ export const callChangePassword = (data: IReqChangePasswordDTO) => {
     return axios.post<IBackendRes<void>>(
         "/api/v1/auth/change-password",
         data
+    );
+};
+/* ===================== DASHBOARD ===================== */
+
+export const callFetchDashboardSummary = () => {
+    return axios.get<IBackendRes<IDashboardSummary>>(
+        "/api/v1/dashboard/summary"
     );
 };

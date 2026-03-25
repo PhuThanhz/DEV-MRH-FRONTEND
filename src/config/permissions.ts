@@ -1,8 +1,15 @@
 export const ALL_PERMISSIONS = {
     /* ===================== DASHBOARD ===================== */
+    // DASHBOARD: {
+    //     GET_OVERVIEW: { method: "GET", apiPath: "/api/v1/dashboard/overview", module: "DASHBOARD" },
+    //     GET_STATISTICS: { method: "GET", apiPath: "/api/v1/dashboard/statistics", module: "DASHBOARD" },
+    // },
     DASHBOARD: {
-        GET_OVERVIEW: { method: "GET", apiPath: "/api/v1/dashboard/overview", module: "DASHBOARD" },
-        GET_STATISTICS: { method: "GET", apiPath: "/api/v1/dashboard/statistics", module: "DASHBOARD" },
+        GET_SUMMARY: {
+            method: "GET",
+            apiPath: "/api/v1/dashboard/summary",
+            module: "DASHBOARD",
+        },
     },
 
     /* ===================== PERMISSIONS ===================== */
@@ -836,6 +843,7 @@ export const ALL_PERMISSIONS = {
             module: "USERS",
         },
     },
+
 };
 
 
@@ -874,6 +882,5 @@ export const ALL_MODULES = {
     PROCEDURES: "PROCEDURES",           // ← thay COMPANY_PROCEDURES + DEPARTMENT_PROCEDURES
     EMPLOYEE_CAREER_PATHS: "EMPLOYEE_CAREER_PATHS",
     CAREER_PATH_TEMPLATES: "CAREER_PATH_TEMPLATES",
-    CHANGE_PASSWORD: "/change-password",  // ⭐ THÊM
 
 };

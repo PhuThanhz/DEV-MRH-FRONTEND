@@ -75,7 +75,9 @@ export default function App() {
           index: true,
           element: (
             <ProtectedRoute>
-              <DashboardPage />
+              <Access permission={ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY}>
+                <DashboardPage />
+              </Access>
             </ProtectedRoute>
           ),
         },

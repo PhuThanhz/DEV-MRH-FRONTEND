@@ -103,6 +103,18 @@ const Header = () => {
         setOpenMobileMenu(false);
     };
 
+    // Lấy initials từ tên
+    const getInitials = (name?: string) =>
+        name
+            ? name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+            : "US";
+
+    // Lấy role label
+    const getRoleLabel = () => {
+        if (user.role?.permissions?.length) return "Quản trị viên";
+        return "Người dùng";
+    };
+
     return (
         <>
             <header className="bg-gradient-to-r from-pink-500 via-rose-400 to-pink-600 text-white shadow-xl sticky top-0 z-[1000] border-b-2 border-white/20 transition-all duration-300">
@@ -151,7 +163,6 @@ const Header = () => {
                         {/* Right: User / Login */}
                         <div>
                             {!isAuthenticated ? (
-                                // ⭐ Nút Đăng Nhập desktop
                                 <Link to="/login">
                                     <button className="
                                         group relative flex items-center gap-2
@@ -165,14 +176,12 @@ const Header = () => {
                                         shadow-sm hover:shadow-md
                                         overflow-hidden
                                     ">
-                                        {/* Shimmer effect on hover */}
                                         <span className="
                                             absolute inset-0 -translate-x-full
                                             bg-gradient-to-r from-transparent via-white/20 to-transparent
                                             group-hover:translate-x-full
                                             transition-transform duration-500
                                         " />
-                                        {/* Icon */}
                                         <svg
                                             className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5"
                                             viewBox="0 0 24 24" fill="none"
@@ -196,35 +205,65 @@ const Header = () => {
                                     overlayStyle={{ zIndex: 10000 }}
                                     getPopupContainer={() => document.body}
                                 >
-                                    <Space
-                                        align="center"
-                                        className="cursor-pointer p-2 pr-4 rounded-2xl hover:bg-white/15 backdrop-blur-sm transition-all duration-300 group active:scale-95"
+                                    {/* ✨ PILL USER - PREMIUM */}
+                                    <div
+                                        className="
+                                            flex items-center gap-3 cursor-pointer
+                                            px-2 py-1.5 rounded-full
+                                            border border-white/25
+                                            bg-white/10 backdrop-blur-sm
+                                            hover:bg-white/20 hover:border-white/40
+                                            active:scale-95
+                                            transition-all duration-200
+                                            select-none
+                                        "
+                                        style={{ minWidth: 0 }}
                                     >
-                                        <span className="text-sm font-medium text-white drop-shadow-md group-hover:text-pink-50 transition-colors">
-                                            {user?.name || "User"}
-                                        </span>
-                                        <div className="relative">
-                                            <Avatar
-                                                size={42}
-                                                src={avatarSrc}
-                                                className="border-2 border-white/60 shadow-lg group-hover:border-white group-hover:scale-105 transition-all duration-300"
-                                                style={{
-                                                    backgroundColor: avatarSrc ? "transparent" : "#ec4899",
-                                                    fontWeight: 700,
-                                                    color: "#fff",
-                                                    boxShadow: "0 4px 15px rgba(236,72,153,0.3)",
-                                                }}
-                                            >
-                                                {!user?.avatar &&
-                                                    (user?.name
-                                                        ? user.name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                                                        : "US")}
-                                            </Avatar>
-                                            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-pink-500 shadow-sm">
-                                                <span className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75"></span>
+                                        {/* Separator dọc */}
+                                        <div className="flex flex-col items-end gap-0.5 pl-2">
+                                            <span className="text-sm font-semibold text-white leading-tight tracking-wide">
+                                                {user?.name || "User"}
+                                            </span>
+                                            <span className="text-[10px] text-white/60 uppercase tracking-widest leading-tight">
+                                                {getRoleLabel()}
                                             </span>
                                         </div>
-                                    </Space>
+
+                                        {/* Divider */}
+                                        <div className="w-px h-7 bg-white/20 flex-shrink-0" />
+
+                                        {/* Avatar */}
+                                        <div className="relative flex-shrink-0">
+                                            <Avatar
+                                                size={34}
+                                                src={avatarSrc}
+                                                style={{
+                                                    backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",
+                                                    border: "1.5px solid rgba(255,255,255,0.55)",
+                                                    fontWeight: 700,
+                                                    fontSize: 12,
+                                                    color: "#fff",
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                {!user?.avatar && getInitials(user?.name)}
+                                            </Avatar>
+                                            {/* Online dot */}
+                                            <span
+                                                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-pink-500"
+                                                style={{ boxShadow: "0 0 0 1px rgba(52,211,153,0.4)" }}
+                                            />
+                                        </div>
+
+                                        {/* Chevron */}
+                                        <svg
+                                            className="w-3.5 h-3.5 text-white/50 flex-shrink-0 mr-1"
+                                            viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" strokeWidth="2.5"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
                                 </Dropdown>
                             )}
                         </div>
@@ -262,7 +301,6 @@ const Header = () => {
                             </Button>
                         )}
 
-                        {/* ⭐ Nút Đăng Nhập mobile */}
                         {!isAuthenticated && (
                             <Link to="/login">
                                 <button className="

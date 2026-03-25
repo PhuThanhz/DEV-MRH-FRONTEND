@@ -15,18 +15,31 @@ interface IPermission {
 }
 
 interface IRole {
-    id?: number;        // ← string → number
+    id?: number;
     name?: string;
     permissions?: IPermission[];
 }
 
+export type Gender = "MALE" | "FEMALE" | "OTHER";
+
+export interface IUserInfo {
+    employeeCode?: string | null;
+    phone?: string | null;
+    dateOfBirth?: string | null;       // ISO string (từ Java Instant)
+    gender?: Gender | null;
+    startDate?: string | null;
+    contractSignDate?: string | null;
+    contractExpireDate?: string | null;
+}
+
 export interface IUser {
-    id?: number;        // ← string → number (optional để tránh lỗi initial state)
+    id?: number;
     email: string;
     name: string;
     avatar?: string;
     active?: boolean;
     role: IRole;
+    userInfo?: IUserInfo | null;
 }
 
 interface IState {
@@ -39,24 +52,16 @@ interface IState {
 }
 
 /* =========================================
-   FETCH ACCOUNT (THEO BACKEND HIỆN TẠI)
+   FETCH ACCOUNT
 ========================================= */
-export const fetchAccount = createAsyncThunk<
-    IGetAccount,
-    void
->(
+export const fetchAccount = createAsyncThunk<IGetAccount, void>(
     "account/fetchAccount",
     async (_, { rejectWithValue }) => {
         try {
-            const response: IBackendRes<IGetAccount> =
-                await callFetchAccount();
-
-            if (!response?.data) {
-                return rejectWithValue("No account data");
-            }
-
+            const response: IBackendRes<IGetAccount> = await callFetchAccount();
+            if (!response?.data) return rejectWithValue("No account data");
             return response.data;
-        } catch (error) {
+        } catch {
             return rejectWithValue("Fetch account failed");
         }
     }
@@ -71,18 +76,31 @@ const initialState: IState = {
     isRefreshToken: false,
     errorRefreshToken: "",
     user: {
-        id: undefined,      // ← "" → undefined (vì id giờ là number)
+        id: undefined,
         email: "",
         name: "",
         avatar: "",
         active: true,
-        role: {
-            id: undefined,  // ← "" → undefined
-            name: "",
-            permissions: [],
-        },
+        role: { id: undefined, name: "", permissions: [] },
+        userInfo: null,
     },
     activeMenu: "home",
+};
+
+/* =========================================
+   HELPER — map raw backend → IUserInfo
+========================================= */
+const mapUserInfo = (raw?: any): IUserInfo | null => {
+    if (!raw) return null;
+    return {
+        employeeCode: raw.employeeCode ?? null,
+        phone: raw.phone ?? null,
+        dateOfBirth: raw.dateOfBirth ?? null,
+        gender: raw.gender ?? null,
+        startDate: raw.startDate ?? null,
+        contractSignDate: raw.contractSignDate ?? null,
+        contractExpireDate: raw.contractExpireDate ?? null,
+    };
 };
 
 /* =========================================
@@ -102,10 +120,7 @@ export const accountSlice = createSlice({
             state.user = action.payload;
         },
 
-        updateUserProfile: (
-            state,
-            action: PayloadAction<Partial<IUser>>
-        ) => {
+        updateUserProfile: (state, action: PayloadAction<Partial<IUser>>) => {
             state.user = {
                 ...state.user,
                 ...action.payload,
@@ -113,9 +128,13 @@ export const accountSlice = createSlice({
                     ...state.user.role,
                     ...action.payload.role,
                     permissions:
-                        action.payload.role?.permissions ??
-                        state.user.role.permissions,
+                        action.payload.role?.permissions ?? state.user.role.permissions,
                 },
+                // Merge userInfo — giữ lại các field cũ nếu patch không gửi lại
+                userInfo:
+                    action.payload.userInfo !== undefined
+                        ? { ...state.user.userInfo, ...action.payload.userInfo }
+                        : state.user.userInfo,
             };
         },
 
@@ -123,16 +142,13 @@ export const accountSlice = createSlice({
             localStorage.removeItem("access_token");
             state.isAuthenticated = false;
             state.user = {
-                id: undefined,      // ← "" → undefined
+                id: undefined,
                 email: "",
                 name: "",
                 avatar: "",
                 active: true,
-                role: {
-                    id: undefined,  // ← "" → undefined
-                    name: "",
-                    permissions: [],
-                },
+                role: { id: undefined, name: "", permissions: [] },
+                userInfo: null,
             };
         },
 
@@ -155,20 +171,20 @@ export const accountSlice = createSlice({
                 state.isAuthenticated = true;
                 state.isLoading = false;
 
-                const userData = action.payload.user;
+                const u = action.payload.user;
 
                 state.user = {
-                    id: userData.id,            // ← bỏ ?? "" (number không cần fallback string)
-                    email: userData.email ?? "",
-                    name: userData.name ?? "",
-                    avatar: userData.avatar ?? "",
-                    active: userData.active ?? true,
+                    id: u.id,
+                    email: u.email ?? "",
+                    name: u.name ?? "",
+                    avatar: u.avatar ?? "",
+                    active: u.active ?? true,
                     role: {
-                        id: userData.role?.id,  // ← bỏ ?? ""
-                        name: userData.role?.name ?? "",
-                        permissions:
-                            userData.role?.permissions ?? [],
+                        id: u.role?.id,
+                        name: u.role?.name ?? "",
+                        permissions: u.role?.permissions ?? [],
                     },
+                    userInfo: mapUserInfo(u.userInfo),   // ← map từ ResUserDTO.UserInfoBasic
                 };
             })
             .addCase(fetchAccount.rejected, (state) => {

@@ -18,13 +18,13 @@ export interface IModelPaginate<T> {
 export interface IAccount {
     access_token: string;
     user: {
-        id: number;  // ← đổi string → number
+        id: number;
         email: string;
         name: string;
         avatar?: string;
         active?: boolean;
         role: {
-            id: number;  // ← đổi string → number
+            id: number;
             name: string;
             permissions: {
                 id: string;
@@ -33,6 +33,15 @@ export interface IAccount {
                 method: string;
                 module: string;
             }[];
+        };
+        userInfo?: {
+            employeeCode?: string | null;
+            phone?: string | null;
+            dateOfBirth?: string | null;
+            gender?: "MALE" | "FEMALE" | "OTHER" | null;
+            startDate?: string | null;
+            contractSignDate?: string | null;
+            contractExpireDate?: string | null;
         };
     };
 }
@@ -1329,4 +1338,9 @@ export interface IProcedureRequest {
     sectionId?: number | null;
     // ← THÊM: dùng cho CONFIDENTIAL
     userIds?: number[];
+}
+export interface IDashboardSummary {
+    totalCompany: number;
+    totalDepartment: number;
+    totalSection: number;
 }
