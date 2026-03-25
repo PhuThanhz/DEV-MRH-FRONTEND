@@ -561,7 +561,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                 </div>
                             )}
                         </div>
-
                         {/* Overdue banner */}
                         {dataInit.overdue && (
                             <div style={{
@@ -575,7 +574,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                             </div>
                         )}
                     </div>
-
                     {/* ── Tabs ── */}
                     <div style={{ padding: "0 24px 20px", background: T.s1, minHeight: 300 }}>
                         <Tabs
@@ -585,7 +583,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                             tabBarStyle={{ marginBottom: 14 }}
                         />
                     </div>
-
                     {/* ── Audit footer ── */}
                     <div style={{
                         padding: "10px 24px",

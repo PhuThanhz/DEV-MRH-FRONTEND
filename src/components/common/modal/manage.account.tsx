@@ -73,7 +73,7 @@ const formatDate = (v?: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "�
 const genderLabel = (g?: string | null) => ({ MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác" }[g ?? ""] ?? "—");
 
 /* ═══════════════════════════════════════════
-   SUB: AvatarLightbox
+   SUB: AvatarLightbox — đã thu nhỏ & fix nút X
 ═══════════════════════════════════════════ */
 interface AvatarLightboxProps {
     open: boolean; onClose: () => void;
@@ -82,24 +82,86 @@ interface AvatarLightboxProps {
     onFileSelect: (f: File) => false; disabled?: boolean;
 }
 const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, userEmail, onFileSelect, disabled }: AvatarLightboxProps) => (
-    <Modal open={open} onCancel={onClose} footer={null} centered width={300} maskClosable closable={false}
+    <Modal
+        open={open}
+        onCancel={onClose}
+        footer={null}
+        centered
+        width={260}          // ← thu nhỏ từ 300 → 260
+        maskClosable
+        closable={false}     // tắt nút X mặc định của Ant, dùng nút tự làm bên dưới
         styles={{
-            content: { borderRadius: 20, padding: 0, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.15)" },
+            content: {
+                borderRadius: 18,
+                padding: 0,
+                overflow: "hidden",
+                boxShadow: "0 16px 48px rgba(0,0,0,0.14)",
+            },
             mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.25)" },
         }}
     >
-        <div style={{ padding: "36px 28px 28px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-            <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 28, height: 28, borderRadius: "50%", border: "1px solid #e5e7eb", background: "#f9fafb", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#6b7280" }}>✕</button>
+        <div style={{ padding: "24px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+            {/* Nút X — nằm trong content, góc phải trên */}
+            <button
+                onClick={onClose}
+                style={{
+                    position: "absolute", top: 10, right: 10,
+                    width: 24, height: 24, borderRadius: "50%",
+                    border: "1px solid #e5e7eb", background: "#f9fafb",
+                    cursor: "pointer", display: "flex", alignItems: "center",
+                    justifyContent: "center", fontSize: 11, color: "#6b7280",
+                    lineHeight: 1, padding: 0,
+                }}
+            >
+                ✕
+            </button>
+
+            {/* Avatar */}
             {displayAvatar
-                ? <img src={displayAvatar} alt="avatar" style={{ width: 130, height: 130, borderRadius: "50%", objectFit: "cover", border: `3px solid ${PINK_BORDER}`, boxShadow: "0 8px 24px rgba(245,49,127,0.15)" }} />
-                : <div style={{ width: 130, height: 130, borderRadius: "50%", background: `linear-gradient(145deg,#ff9dc4,${PINK})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, fontWeight: 700, color: "#fff", boxShadow: "0 8px 24px rgba(245,49,127,0.2)" }}>{initials}</div>
+                ? <img
+                    src={displayAvatar}
+                    alt="avatar"
+                    style={{
+                        width: 100, height: 100,        // ← thu nhỏ từ 130 → 100
+                        borderRadius: "50%", objectFit: "cover",
+                        border: `3px solid ${PINK_BORDER}`,
+                        boxShadow: "0 6px 20px rgba(245,49,127,0.15)",
+                    }}
+                />
+                : <div style={{
+                    width: 100, height: 100,
+                    borderRadius: "50%",
+                    background: `linear-gradient(145deg,#ff9dc4,${PINK})`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 36, fontWeight: 700, color: "#fff",
+                    boxShadow: "0 6px 20px rgba(245,49,127,0.2)",
+                }}>
+                    {initials}
+                </div>
             }
-            <div style={{ marginTop: 14, fontSize: 15, fontWeight: 600, color: "#111827" }}>{userName}</div>
-            <div style={{ marginTop: 2, fontSize: 12, color: "#9ca3af" }}>{userEmail}</div>
-            <div style={{ width: 36, height: 1, background: "#f3f4f6", margin: "14px 0" }} />
+
+            {/* Name & email */}
+            <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "#111827", textAlign: "center" }}>
+                {userName}
+            </div>
+            <div style={{ marginTop: 2, fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
+                {userEmail}
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: 32, height: 1, background: "#f3f4f6", margin: "12px 0" }} />
+
+            {/* Upload button */}
             <Upload showUploadList={false} beforeUpload={onFileSelect} accept="image/*" multiple={false}>
-                <Button disabled={disabled} icon={<UploadOutlined />}
-                    style={{ borderRadius: 9, height: 36, fontSize: 13, minWidth: 196, borderColor: "#e5e7eb", color: "#374151" }}>
+                <Button
+                    disabled={disabled}
+                    icon={<UploadOutlined />}
+                    size="small"
+                    style={{
+                        borderRadius: 8, height: 32, fontSize: 12,
+                        minWidth: 170, borderColor: "#e5e7eb", color: "#374151",
+                    }}
+                >
                     Tải ảnh mới lên
                 </Button>
             </Upload>
