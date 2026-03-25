@@ -41,6 +41,11 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                     {dataInit?.bandOrder ?? "--"}
                 </Descriptions.Item>
 
+                {/* ⭐ THÊM — hiển thị công ty */}
+                <Descriptions.Item label="Công ty">
+                    {dataInit?.companyName ?? "--"}
+                </Descriptions.Item>
+
                 <Descriptions.Item label="Trạng thái">
                     {dataInit?.status === 1 ? (
                         <Badge status="success" text="Đang hoạt động" />

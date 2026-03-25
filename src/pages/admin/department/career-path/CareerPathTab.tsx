@@ -3,15 +3,13 @@ import { Typography, Button, Modal, message, Tooltip, Space, Skeleton } from "an
 import {
     EditOutlined,
     EyeOutlined,
-    ReloadOutlined,
     DeleteOutlined,
     FilterOutlined,
     AppstoreOutlined,
     ApartmentOutlined,
 } from "@ant-design/icons";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom"; // ← kết quả sau khi xóa
 
-import PageContainer from "@/components/common/data-table/PageContainer";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import {
     useCareerPathsByDepartmentQuery,
@@ -28,39 +26,53 @@ const parseBandNumber = (band: string): number => {
     const match = band?.match(/\d+/);
     return match ? parseInt(match[0], 10) : 999;
 };
+
 const parseLevelNumber = (code?: string | null): number => {
     if (!code) return 999;
     const match = code.match(/\d+/);
     return match ? parseInt(match[0], 10) : 999;
 };
 
+// ── Thứ tự ưu tiên prefix: số càng nhỏ = cấp càng cao ────────────
+const PREFIX_RANK: Record<string, number> = {
+    M: 1,
+    S: 2,
+    // Thêm prefix khác ở đây nếu cần
+};
+
+const getPrefixRank = (code?: string | null): number => {
+    if (!code) return 999;
+    const prefix = code.replace(/\d+/g, "").toUpperCase();
+    return PREFIX_RANK[prefix] ?? 500;
+};
+
+// So sánh 2 code để sort: ưu tiên prefix rank, rồi mới đến số
+const compareLevelCode = (a?: string | null, b?: string | null): number => {
+    const rankA = getPrefixRank(a);
+    const rankB = getPrefixRank(b);
+    if (rankA !== rankB) return rankA - rankB;
+    return parseLevelNumber(a) - parseLevelNumber(b);
+};
+
 // ── Design System ─────────────────────────────────────────────────
 const T = {
-    // Neutrals
     ink: "#0a0a0b",
     ink2: "#2c2c2e",
     ink3: "#636366",
     ink4: "#aeaeb2",
     ink5: "#d1d1d6",
-
-    // Surfaces
     white: "#ffffff",
     s1: "#fafafa",
     s2: "#f5f5f7",
-
-    // Borders
     line: "rgba(0,0,0,0.06)",
     lineMed: "rgba(0,0,0,0.10)",
     lineStr: "rgba(0,0,0,0.15)",
-
-    // Single accent — deep blue, professional
     acc: "#0066ff",
     accSoft: "rgba(0,102,255,0.07)",
     accBord: "rgba(0,102,255,0.18)",
     accText: "#0044cc",
 };
 
-// Step index → subtle hue shift (all professional, no neon)
 const STEP_HUE: { dot: string; chip: string; chipBg: string; chipBorder: string; stripe: string }[] = [
     { dot: "#0066ff", chip: "#0066ff", chipBg: "rgba(0,102,255,0.07)", chipBorder: "rgba(0,102,255,0.18)", stripe: "#0066ff" },
     { dot: "#5856d6", chip: "#5856d6", chipBg: "rgba(88,86,214,0.07)", chipBorder: "rgba(88,86,214,0.18)", stripe: "#5856d6" },
@@ -78,22 +90,26 @@ const getHue = (i: number) => STEP_HUE[i % STEP_HUE.length];
 const StairCard = ({
     item,
     index,
-    total,
+    rank,       // thứ hạng tuyến tính: 0 = cao nhất, N-1 = thấp nhất
+    totalRanks, // tổng số rank duy nhất
     onView,
     onEdit,
     onDelete,
 }: {
     item: ICareerPath;
     index: number;
-    total: number;
+    rank: number;
+    totalRanks: number;
     onView: (r: ICareerPath) => void;
     onEdit: (r: ICareerPath) => void;
     onDelete: (r: ICareerPath) => void;
 }) => {
     const [hov, setHov] = useState(false);
     const h = getHue(index);
-    // index 0 = top rank → most indented (staircase descends left)
-    const indent = ((total - 1 - index) / Math.max(total - 1, 1)) * 22;
+
+    // rank 0 (cao nhất) → indent 0% (sát trái)
+    // rank N-1 (thấp nhất) → indent 22% (sát phải)
+    const indent = ((totalRanks - 1 - rank) / Math.max(totalRanks - 1, 1)) * 22;
 
     return (
         <div
@@ -135,7 +151,7 @@ const StairCard = ({
                     cursor: "default",
                 }}
             >
-                {/* Step index — monospaced, muted */}
+                {/* Step index */}
                 <span style={{
                     width: 28,
                     flexShrink: 0,
@@ -293,6 +309,14 @@ const CareerLadderFlat = ({
 }) => {
     if (paths.length === 0) return <EmptyState label="Chưa có lộ trình nào" />;
 
+    // Tạo danh sách các level code duy nhất, sort từ cao → thấp
+    const uniqueCodes = Array.from(new Set(paths.map(p => p.positionLevelCode ?? "")))
+        .sort(compareLevelCode);
+
+    // Map mỗi code → rank tuyến tính (0 = cao nhất)
+    const rankMap = new Map(uniqueCodes.map((code, i) => [code, i]));
+    const totalRanks = uniqueCodes.length;
+
     return (
         <div>
             {showHeader && (
@@ -320,15 +344,23 @@ const CareerLadderFlat = ({
                 </div>
             )}
 
-            {paths.map((item, i) => (
-                <div key={item.id}>
-                    <StairCard
-                        item={item} index={i} total={paths.length}
-                        onView={onView} onEdit={onEdit} onDelete={onDelete}
-                    />
-                    {i < paths.length - 1 && <Connector color={getHue(i).dot} />}
-                </div>
-            ))}
+            {paths.map((item, i) => {
+                const rank = rankMap.get(item.positionLevelCode ?? "") ?? 0;
+                return (
+                    <div key={item.id}>
+                        <StairCard
+                            item={item}
+                            index={i}
+                            rank={rank}
+                            totalRanks={totalRanks}
+                            onView={onView}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                        />
+                        {i < paths.length - 1 && <Connector color={getHue(i).dot} />}
+                    </div>
+                );
+            })}
 
             {showHeader && (
                 <div style={{
@@ -399,7 +431,6 @@ const CareerLadderBand = ({
                                 userSelect: "none",
                             }}
                         >
-                            {/* Dot */}
                             <div style={{
                                 width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                                 background: h.dot,
@@ -407,7 +438,6 @@ const CareerLadderBand = ({
                                 transition: "box-shadow 0.15s",
                             }} />
 
-                            {/* Band label */}
                             <div style={{
                                 padding: "2px 10px",
                                 borderRadius: 6,
@@ -422,17 +452,12 @@ const CareerLadderBand = ({
                                 {group.band}
                             </div>
 
-                            <Text style={{
-                                fontSize: 12.5,
-                                fontWeight: 500,
-                                color: T.ink4,
-                            }}>
+                            <Text style={{ fontSize: 12.5, fontWeight: 500, color: T.ink4 }}>
                                 {group.positions?.length ?? 0} chức danh
                             </Text>
 
                             <div style={{ flex: 1 }} />
 
-                            {/* Chevron */}
                             <svg
                                 width="14" height="14" viewBox="0 0 14 14"
                                 style={{
@@ -526,8 +551,7 @@ const SegmentedControl = ({
 // ── Main ──────────────────────────────────────────────────────────
 const CareerPathTab = () => {
     const { departmentId } = useParams();
-    const [searchParams] = useSearchParams();
-    const departmentName = searchParams.get("departmentName") || "—";
+
 
     const [openModal, setOpenModal] = useState(false);
     const [openViewDetail, setOpenViewDetail] = useState(false);
@@ -544,13 +568,11 @@ const CareerPathTab = () => {
     );
     const isFetching = deptQuery.isFetching || bandQuery.isFetching;
 
+    // Sort theo prefix rank trước (M > S), rồi mới theo số
     const sortPaths = (paths: ICareerPath[]) =>
-        [...paths].sort((a, b) => {
-            const pA = (a.positionLevelCode ?? "").replace(/\d+/g, "").toUpperCase();
-            const pB = (b.positionLevelCode ?? "").replace(/\d+/g, "").toUpperCase();
-            if (pA !== pB) return pA.localeCompare(pB);
-            return parseLevelNumber(a.positionLevelCode) - parseLevelNumber(b.positionLevelCode);
-        });
+        [...paths].sort((a, b) =>
+            compareLevelCode(a.positionLevelCode, b.positionLevelCode)
+        );
 
     const sortBands = (groups: IResCareerPathBandGroup[]): IResCareerPathBandGroup[] =>
         [...groups].sort((a, b) => {
@@ -633,92 +655,75 @@ const CareerPathTab = () => {
 
     return (
         <div>
-            <PageContainer
-                title={`Lộ trình thăng tiến — ${departmentName}`}
-                extra={
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={handleReset}
+            {/* Toolbar */}
+            <div style={{
+                background: T.white,
+                border: `1px solid ${T.line}`,
+                borderRadius: 12,
+                padding: "14px 18px",
+                marginBottom: 12,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+                <SearchFilter
+                    searchPlaceholder="Tìm chức danh, cấp bậc…"
+                    addLabel="Thêm mới"
+                    showFilterButton={false}
+                    onSearch={setSearchValue}
+                    onReset={handleReset}
+                    onAddClick={() => { setDataInit(null); setOpenModal(true); }}
+                />
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                    <button
+                        onClick={() => setShowFilter(!showFilter)}
                         style={{
-                            borderRadius: 8, borderColor: T.lineMed,
-                            color: T.ink3, fontSize: 13, fontWeight: 500,
-                            boxShadow: "none", height: 32,
+                            display: "flex", alignItems: "center", gap: 5,
+                            padding: "5px 11px",
+                            borderRadius: 7,
+                            border: `1px solid ${showFilter ? T.lineMed : T.line}`,
+                            background: showFilter ? T.s2 : "transparent",
+                            color: showFilter ? T.ink2 : T.ink4,
+                            fontSize: 12.5, fontWeight: showFilter ? 600 : 400,
+                            cursor: "pointer",
+                            transition: "all 0.14s",
                         }}
                     >
-                        Làm mới
-                    </Button>
-                }
-            >
-                {/* Toolbar */}
-                <div style={{
-                    background: T.white,
-                    border: `1px solid ${T.line}`,
-                    borderRadius: 12,
-                    padding: "14px 18px",
-                    marginBottom: 12,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                }}>
-                    <SearchFilter
-                        searchPlaceholder="Tìm chức danh, cấp bậc…"
-                        addLabel="Thêm mới"
-                        showFilterButton={false}
-                        onSearch={setSearchValue}
-                        onReset={handleReset}
-                        onAddClick={() => { setDataInit(null); setOpenModal(true); }}
-                    />
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                        <button
-                            onClick={() => setShowFilter(!showFilter)}
-                            style={{
-                                display: "flex", alignItems: "center", gap: 5,
-                                padding: "5px 11px",
-                                borderRadius: 7,
-                                border: `1px solid ${showFilter ? T.lineMed : T.line}`,
-                                background: showFilter ? T.s2 : "transparent",
-                                color: showFilter ? T.ink2 : T.ink4,
-                                fontSize: 12.5, fontWeight: showFilter ? 600 : 400,
-                                cursor: "pointer",
-                                transition: "all 0.14s",
-                            }}
-                        >
-                            <FilterOutlined style={{ fontSize: 11 }} />
-                            Chế độ xem
-                        </button>
-                    </div>
-
-                    {showFilter && (
-                        <div style={{
-                            marginTop: 10,
-                            padding: "10px 12px",
-                            background: T.s1,
-                            borderRadius: 9,
-                            border: `1px solid ${T.line}`,
-                        }}>
-                            <Text style={{
-                                display: "block",
-                                fontSize: 10, fontWeight: 700,
-                                color: T.ink5, letterSpacing: 0.9,
-                                textTransform: "uppercase", marginBottom: 8,
-                            }}>
-                                Hiển thị theo
-                            </Text>
-                            <SegmentedControl value={viewMode} onChange={setViewMode} />
-                        </div>
-                    )}
+                        <FilterOutlined style={{ fontSize: 11 }} />
+                        Chế độ xem
+                    </button>
                 </div>
 
-                {renderContent()}
+                {showFilter && (
+                    <div style={{
+                        marginTop: 10,
+                        padding: "10px 12px",
+                        background: T.s1,
+                        borderRadius: 9,
+                        border: `1px solid ${T.line}`,
+                    }}>
+                        <Text style={{
+                            display: "block",
+                            fontSize: 10, fontWeight: 700,
+                            color: T.ink5, letterSpacing: 0.9,
+                            textTransform: "uppercase", marginBottom: 8,
+                        }}>
+                            Hiển thị theo
+                        </Text>
+                        <SegmentedControl value={viewMode} onChange={setViewMode} />
+                    </div>
+                )}
+            </div>
 
-                <ModalCareerPath
-                    openModal={openModal} setOpenModal={setOpenModal}
-                    dataInit={dataInit} setDataInit={setDataInit}
-                />
-                <ViewCareerPath
-                    open={openViewDetail} onClose={() => setOpenViewDetail(false)}
-                    dataInit={dataInit} setDataInit={setDataInit}
-                />
-            </PageContainer>
+            {renderContent()}
+
+            <ModalCareerPath
+                openModal={openModal} setOpenModal={setOpenModal}
+                dataInit={dataInit} setDataInit={setDataInit}
+            />
+            <ViewCareerPath
+                open={openViewDetail} onClose={() => setOpenViewDetail(false)}
+                dataInit={dataInit} setDataInit={setDataInit}
+            />
         </div>
     );
 };

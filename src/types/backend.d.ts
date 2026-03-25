@@ -18,13 +18,13 @@ export interface IModelPaginate<T> {
 export interface IAccount {
     access_token: string;
     user: {
-        id: string;
+        id: number;  // ← đổi string → number
         email: string;
         name: string;
         avatar?: string;
         active?: boolean;
         role: {
-            id: string;
+            id: number;  // ← đổi string → number
             name: string;
             permissions: {
                 id: string;
@@ -41,23 +41,73 @@ export interface IGetAccount extends Omit<IAccount, "access_token"> { }
 
 
 
+// ✅ ĐÚNG — đã có trong backend.ts mới
 export interface IUser {
-    id?: string;
+    id?: number;        // ⭐ number
     name: string;
     email: string;
     password?: string;
     avatar?: string;
     role?: {
-        id: string;
+        id: number;     // ⭐ number
         name: string;
     };
     active: boolean;
+    userInfo?: {        // ⭐ THÊM
+        employeeCode?: string;
+        phone?: string;
+        dateOfBirth?: string;
+        gender?: "MALE" | "FEMALE" | "OTHER";
+        startDate?: string;
+        contractSignDate?: string;
+        contractExpireDate?: string;
+    };
     createdBy?: string;
     updatedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
+// ⭐ THÊM — dùng cho change password
+export interface IReqChangePasswordDTO {
+    oldPassword: string;
+    newPassword: string;
+}
+// ===== USER POSITION =====
+export interface IUserPosition {
+    id?: number;
+    source: "COMPANY" | "DEPARTMENT" | "SECTION";
+    active: boolean;
 
+    // ← THÊM
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+    };
+
+    jobTitle?: {
+        id: number;
+        nameVi: string;
+        nameEn?: string;
+        positionCode?: string;
+        band?: string;
+        levelNumber?: number;
+        bandOrder?: number;
+    };
+
+    company?: { id: number; name: string };
+    department?: { id: number; name: string };
+    section?: { id: number; name: string };
+
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+export interface IReqUpdateProfileDTO {
+    name: string;
+    avatar?: string;
+}
 export interface IPermission {
     id?: string;
     name?: string;
@@ -164,6 +214,10 @@ export interface IPositionLevel {
     status: number;        // 1 = active, 0 = inactive
     active: boolean;
 
+    // ⭐ THÊM MỚI — thông tin công ty
+    companyId?: number;
+    companyName?: string;
+
     createdBy?: string;
     updatedBy?: string;
     createdAt?: string;
@@ -189,6 +243,8 @@ export interface IJobTitle {
     positionLevel?: {
         id: number;
         code: string;
+        companyId?: number;   // THÊM
+        companyName?: string; // THÊM
     };
 }
 
@@ -217,6 +273,7 @@ export interface ICompanyProcedure {
     status: "NEED_CREATE" | "IN_PROGRESS" | "NEED_UPDATE" | "TERMINATED";
     planYear?: number;
     note?: string;
+    version?: number;
 
     // ===== Activation =====
     active: boolean;
@@ -277,7 +334,147 @@ export interface ICareerPathRequest {
 
     status?: number;
 }
+/* ===================== EMPLOYEE CAREER PATH ===================== */
 
+// Thông tin 1 bước trong lộ trình (shortcut)
+export interface IEmployeeCareerPathStepInfo {
+    stepOrder: number;
+    careerPathId: number;
+    jobTitleName?: string;
+    positionLevelCode?: string;
+    durationMonths?: number;
+}
+
+// Thông tin từng bước có trạng thái (dùng cho allSteps)
+export interface IEmployeeCareerPathStepProgress {
+    stepOrder: number;
+    careerPathId: number;
+    jobTitleName?: string;
+    positionLevelCode?: string;
+    durationMonths?: number;
+    // COMPLETED = đã qua, CURRENT = đang ở, UPCOMING = chưa đến
+    stepStatus: "COMPLETED" | "CURRENT" | "UPCOMING";
+    promotedAt?: string;    // chỉ có khi COMPLETED
+    actualMonths?: number;  // số tháng thực tế ở bước này
+}
+
+export interface IEmployeeCareerPath {
+    id?: number;
+
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+    };
+
+    // Thông tin template lộ trình
+    template?: {
+        id: number;
+        name: string;
+        departmentId?: number;
+        departmentName?: string;
+    };
+
+    // Toàn bộ lộ trình với trạng thái từng bước
+    allSteps?: IEmployeeCareerPathStepProgress[];
+
+    // Shortcut bước hiện tại + tiếp theo
+    currentStep?: IEmployeeCareerPathStepInfo;
+    nextStep?: IEmployeeCareerPathStepInfo;
+
+    // Tiến độ
+    currentStepOrder?: number;
+    totalSteps?: number;
+    stepStartedAt?: string;
+    daysInCurrentStep?: number;
+    durationMonths?: number;  // dự kiến bước hiện tại
+    overdue?: boolean;        // có quá hạn dự kiến không
+
+    // 0 = Đang tiến hành, 1 = Đã hoàn thành lộ trình, 2 = Tạm dừng
+    progressStatus?: number;
+    progressStatusLabel?: string;
+
+    note?: string;
+    active?: boolean;
+
+    histories?: IEmployeeCareerPathHistory[];
+
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IEmployeeCareerPathHistory {
+    id?: number;
+    fromStepOrder?: number;   // ← thêm
+    fromPositionCode?: string;
+    fromPositionName?: string;
+    toStepOrder?: number;     // ← thêm
+    toPositionCode?: string;
+    toPositionName?: string;
+    promotedAt?: string;
+    note?: string;
+    createdAt?: string;
+    createdBy?: string;
+}
+
+// Gán lộ trình — đơn giản hơn, dùng templateId thay vì targetCareerPathId
+export interface IReqAssignCareerPath {
+    userId: number;
+    templateId: number;           // ← thay targetCareerPathId
+    currentCareerPathId: number;  // chức danh hiện tại → tìm bước bắt đầu
+    startDate?: string;
+    note?: string;
+    // ← bỏ: targetCareerPathId, expectedPromotionDate
+}
+
+// Promote — đơn giản hơn, backend tự tìm bước tiếp theo
+export interface IReqPromoteEmployee {
+    promotedAt?: string;
+    note?: string;
+    // ← bỏ: newCurrentCareerPathId, newTargetCareerPathId, newExpectedPromotionDate
+}
+/* ===================== CAREER PATH TEMPLATE ===================== */
+export interface ICareerPathTemplate {
+    id?: number;
+    name: string;
+    description?: string;
+    departmentId: number;
+    departmentName?: string;
+    active: boolean;
+    steps: ICareerPathTemplateStep[];
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface ICareerPathTemplateStep {
+    id?: number;
+    stepOrder: number;
+    careerPathId: number;
+    bandOrder?: number;
+    jobTitleName?: string;
+    positionLevelCode?: string;
+    levelNumber?: number;
+    departmentId?: number;
+    departmentName?: string;
+    durationMonths?: number;
+    description?: string;
+}
+
+export interface ICareerPathTemplateRequest {
+    name: string;
+    description?: string;
+    departmentId: number;
+    steps: {
+        stepOrder: number;
+        careerPathId: number;
+        durationMonths?: number;
+        description?: string;
+    }[];
+}
 
 
 /* ============================================
@@ -696,53 +893,121 @@ export interface IAssignPermissionReq {
     processActionId: number;
 }
 /* ===================== JOB DESCRIPTION ===================== */
+// export interface IJobDescription {
+//     id?: number
+
+//     code: string
+//     reportTo: string
+//     belongsTo: string
+//     collaborateWith: string
+
+//     status: string
+//     version?: number
+
+//     effectiveDate?: string
+
+//     companyId?: number
+//     departmentId?: number
+
+//     companyJobTitleId?: number
+//     departmentJobTitleId?: number
+//     sectionJobTitleId?: number
+
+//     requirements?: {
+//         knowledge?: string
+//         experience?: string
+//         skills?: string
+//         qualities?: string
+//         otherRequirements?: string
+//     }
+
+//     tasks?: {
+//         id?: number
+//         orderNo: number
+//         title: string
+//         content: string
+//     }[]
+
+//     positions?: {
+//         chartId: number
+//         nodeId: number
+//         nodeName?: string
+//         levelCode?: string
+//     }[]
+
+//     createdAt?: string
+//     updatedAt?: string
+// }
+/* ===================== JOB DESCRIPTION ===================== */
 export interface IJobDescription {
-    id?: number;
-    title: string;
-    content?: string;
-    status: string; // DRAFT | IN_REVIEW | PUBLIC
-    createdBy?: string;
-    updatedBy?: string;
-    createdAt?: string;
-    updatedAt?: string;
-}
+    id?: number
 
-export interface IJobDescriptionList {
-    id: number;
-    title: string;
-    status: "DRAFT" | "IN_REVIEW" | "PUBLIC";
+    code: string
+    reportTo: string
+    belongsTo: string
+    collaborateWith: string
 
-    createdAt?: string;
-    createdBy?: string;
-}
+    status: JD_STATUS
+    version?: number
 
-/* ===================== REQUEST ===================== */
+    effectiveDate?: string
 
-export interface ICreateJobDescriptionReq {
-    title: string;
-    content: string;
-}
+    companyId?: number
+    departmentId?: number
 
-export interface IUpdateJobDescriptionReq {
-    id: number;
-    title: string;
-    content: string;
+    companyJobTitleId?: number
+    departmentJobTitleId?: number
+    sectionJobTitleId?: number
+
+    /* ===== join fields từ backend ===== */
+
+    companyName?: string
+    departmentName?: string
+    jobTitleName?: string
+
+    /* ===== requirement ===== */
+
+    requirements?: {
+        knowledge?: string
+        experience?: string
+        skills?: string
+        qualities?: string
+        otherRequirements?: string
+    }
+
+    /* ===== tasks ===== */
+
+    tasks?: {
+        id?: number
+        orderNo: number
+        title: string
+        content: string
+    }[]
+
+    /* ===== org chart positions ===== */
+
+    positions?: {
+        chartId: number
+        nodeId: number
+        nodeName?: string
+        levelCode?: string
+    }[]
+
+    createdAt?: string
+    updatedAt?: string
+    createdBy?: string
+    updatedBy?: string
 }
 // types/job-title.ts
 
 export interface IJobTitleForm {
     nameVi: string;
     nameEn?: string;
+    companyId?: number;      // THÊM — chỉ dùng filter UI
     positionLevelId: number;
     active?: boolean;
 }
 /* ===================== DEPARTMENT OBJECTIVES ===================== */
-
-/* ======================================================
-   DEPARTMENT OBJECTIVES / MISSIONS
-   ====================================================== */
-
-/* RESPONSE TREE */
 
 export interface IDepartmentMissionTree {
     department: {
@@ -752,95 +1017,80 @@ export interface IDepartmentMissionTree {
 
     issueDate: string
 
+    // FE dùng flag này để biết render list thẳng hay nhóm theo bộ phận
+    hasSections: boolean
+
     objectives: IDepartmentObjectiveItem[]
 
+    // Có bộ phận → dùng tasks
     tasks: IDepartmentSectionTask[]
-}
 
-/* OBJECTIVE  */
+    // Không có bộ phận → dùng generalTasks
+    generalTasks: IDepartmentTaskItem[]
+
+    // Quyền hạn — null/empty thì không hiển thị
+    authorities: IDepartmentAuthorityItem[]
+}
 
 export interface IDepartmentObjectiveItem {
     id: number
     content: string
 }
 
-/* SECTION TASK */
-
 export interface IDepartmentSectionTask {
     sectionId: number
     sectionName: string
-
     tasks: IDepartmentTaskItem[]
 }
-
-/* TASK ITEM */
 
 export interface IDepartmentTaskItem {
     id: number
     content: string
 }
 
-/* 
-   CREATE REQUEST
- */
-
-export interface ICreateDepartmentMissionReq {
-
-    departmentId: number
-
-    issueDate?: string
-
-    objectives?: ICreateObjectiveItem[]
-
-    tasks?: ICreateSectionTask[]
+// THÊM MỚI
+export interface IDepartmentAuthorityItem {
+    id: number
+    content: string
 }
 
-/* CREATE OBJECTIVE */
+export interface ICreateDepartmentMissionReq {
+    departmentId: number
+    issueDate?: string
+    objectives?: ICreateObjectiveItem[]
+    tasks?: ICreateSectionTask[]
+    // THÊM MỚI
+    authorities?: ICreateAuthorityItem[]
+}
 
 export interface ICreateObjectiveItem {
-
     content: string
-
     orderNo?: number
 }
 
-/* CREATE SECTION TASK  */
-
 export interface ICreateSectionTask {
-
-    sectionId: number
-
+    sectionId?: number   // null = không có bộ phận
     items: ICreateTaskItem[]
 }
 
-/* CREATE TASK ITEM */
-
 export interface ICreateTaskItem {
-
     content: string
-
     orderNo?: number
 }
 
-/* 
-   UPDATE OBJECTIVE / TASK
-*/
+// THÊM MỚI
+export interface ICreateAuthorityItem {
+    content: string
+    orderNo?: number
+}
 
 export interface IUpdateDepartmentObjectiveReq {
-
     id: number
-
     content: string
-
     orderNo?: number
 }
 
-/* 
-   DELETE
-  */
-
 export interface IDeleteDepartmentObjectiveReq {
-
     id: number
 }
 /* ============================================
@@ -860,6 +1110,7 @@ export interface IDepartmentProcedure {
     // ===== Section =====
     sectionId?: number;
     sectionName?: string;
+    version?: number;
 
     // ===== Procedure Info =====
     procedureName: string;
@@ -876,4 +1127,206 @@ export interface IDepartmentProcedure {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+}
+/* ===================== ORG CHART ===================== */
+
+// THÀNH:
+export interface IOrgChart {
+    id?: number;
+    name: string;
+    chartType?: "COMPANY" | "DEPARTMENT";  // ← ĐÚNG khớp backend
+    companyId?: number;
+    departmentId?: number;
+    createdAt?: string;
+}
+/* ===================== ORG NODE ===================== */
+
+export interface IOrgNode {
+    id: number
+    chartId: number
+    title?: string
+    name?: string
+    parentId?: number | null
+    levelCode?: string
+    level?: string
+    posX?: number
+    posY?: number
+    holderName?: string        // ← thêm
+    isGoal?: boolean           // ← thêm
+    jobDescriptionId?: number  // ← thêm
+    jobDescriptionCode?: string // ← thêm (backend trả về ResJobPositionNodeDTO có field này)
+    jobDescriptionStatus?: string // ← thêm
+}
+/* ======================================================
+   JD FLOW TYPES
+====================================================== */
+
+/* ===================== JD STATUS ===================== */
+
+export type JD_STATUS =
+    | "DRAFT"
+    | "IN_REVIEW"
+    | "REJECTED"
+    | "PUBLISHED";
+
+
+/* ===================== JD FLOW REQUEST ===================== */
+
+export interface IReqSubmitJdFlow {
+    jdId: number
+    nextUserId: number
+}
+
+export interface IReqApproveJdFlow {
+    jdId: number
+    nextUserId: number
+}
+
+export interface IReqRejectJdFlow {
+    jdId: number
+    comment?: string
+}
+
+export interface IReqIssueJdFlow {
+    jdId: number
+}
+
+
+/* ===================== JD FLOW HISTORY ===================== */
+
+export interface IJDFlowLog {
+    id: number
+
+    jdId: number
+
+    action: "SUBMIT" | "APPROVE" | "REJECT" | "ISSUE"
+
+    fromUser?: {
+        id: number
+        name: string
+    }
+
+    toUser?: {
+        id: number
+        name: string
+    }
+
+    comment?: string
+
+    createdAt?: string
+}
+
+/* ===================== JD APPROVER ===================== */
+
+export interface IJDApprover {
+    id: number
+    name: string
+    email?: string
+    avatar?: string
+}
+export interface IJDFlowItem {
+    jdId: number
+    code: string
+    status: JD_STATUS
+
+    updatedAt?: string
+
+    currentUserIsFinal?: boolean // ✅ thêm field này
+
+    fromUser?: {
+        id: number
+        name: string
+    }
+
+    currentUser?: {
+        id: number
+        name: string
+    }
+}
+
+export interface IJdInbox {
+    jdId: number;
+    code: string;
+
+    companyName?: string;
+    departmentName?: string;
+    jobTitleName?: string;
+
+    status: string;
+
+    fromUser?: {
+        id: number;
+        name: string;
+    };
+
+    currentUser?: {
+        id: number;
+        name: string;
+    };
+
+    updatedAt?: string;
+}
+/* ============================================
+    PROCEDURE (DÙNG CHUNG CHO COMPANY & DEPARTMENT)
+============================================ */
+export type ProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
+
+export interface IProcedure {
+    id?: number;
+    type?: ProcedureType;
+
+    companyCode?: string;
+    companyName?: string;
+
+    departmentId?: number;
+    departmentName?: string;
+
+    sectionId?: number;
+    sectionName?: string;
+
+    procedureName: string;
+    fileUrls?: string[]; // ← đổi từ fileUrl?: string
+    status?: string;
+    planYear?: number;
+    note?: string;
+    version?: number;
+
+    // ← THÊM: dùng cho CONFIDENTIAL
+    userIds?: number[];
+
+    active: boolean;
+
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IProcedureHistory {
+    id?: number;
+    procedureId?: number;
+    version?: number;
+    procedureName?: string;
+    status?: string;
+    planYear?: number;
+    fileUrls?: string[]; // ← đổi từ fileUrl?: string
+    note?: string;
+    departmentName?: string;
+    sectionName?: string;
+    action?: string;      // ← THÊM: "EDIT" hoặc 
+    changedAt?: string;
+    changedBy?: string;
+}
+
+export interface IProcedureRequest {
+    procedureName: string;
+    status?: string;
+    planYear?: number;
+    fileUrls?: string[]; // ← đổi từ fileUrl?: string
+    note?: string;
+    active?: boolean;  // ← thêm dòng này
+    departmentId?: number | null;
+    sectionId?: number | null;
+    // ← THÊM: dùng cho CONFIDENTIAL
+    userIds?: number[];
 }

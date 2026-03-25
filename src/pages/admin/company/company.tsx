@@ -19,6 +19,7 @@ import {
     EyeOutlined,
     MoreOutlined,
     ApartmentOutlined,
+    FileTextOutlined, // ← thêm
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
@@ -41,6 +42,7 @@ import ModalCompany from "./modal.company";
 import ViewCompany from "./view.company";
 
 import { useNavigate } from "react-router-dom";
+import { PATHS } from "@/constants/paths"; // ← thêm
 
 const CompanyPage = () => {
     const navigate = useNavigate();
@@ -121,15 +123,23 @@ const CompanyPage = () => {
                 const items: MenuProps["items"] = [
                     {
                         key: "org-chart",
-                        icon: (
-                            <ApartmentOutlined style={{ color: "#eb2f96" }} />
-                        ),
+                        icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
                         label: "Sơ đồ tổ chức",
                         onClick: () =>
                             navigate(
-                                `/admin/companies/${record.id}/org-chart?companyName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/companies/${record.id}/org-chart?companyName=${encodeURIComponent(record.name)}`
+                            ),
+                    },
+                    {
+                        key: "procedures", // ← thêm
+                        icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
+                        label: "Quy trình công ty",
+                        onClick: () =>
+                            navigate(
+                                PATHS.ADMIN.COMPANY_PROCEDURES.replace(
+                                    ":companyId",
+                                    String(record.id)
+                                ) + `?companyName=${encodeURIComponent(record.name)}`
                             ),
                     },
 
@@ -138,19 +148,13 @@ const CompanyPage = () => {
                     record.status === 1
                         ? {
                             key: "inactive",
-                            icon: (
-                                <StopOutlined
-                                    style={{ color: "#ff4d4f" }}
-                                />
-                            ),
+                            icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
                             label: (
                                 <Popconfirm
                                     title="Vô hiệu hóa công ty?"
                                     okText="Xác nhận"
                                     cancelText="Hủy"
-                                    okButtonProps={{
-                                        loading: isInactivating,
-                                    }}
+                                    okButtonProps={{ loading: isInactivating }}
                                     onConfirm={() =>
                                         inactiveCompany(record.id!, {
                                             onSuccess: () => refetch(),
@@ -165,19 +169,13 @@ const CompanyPage = () => {
                         }
                         : {
                             key: "active",
-                            icon: (
-                                <CheckCircleOutlined
-                                    style={{ color: "#52c41a" }}
-                                />
-                            ),
+                            icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
                             label: (
                                 <Popconfirm
                                     title="Kích hoạt lại công ty?"
                                     okText="Xác nhận"
                                     cancelText="Hủy"
-                                    okButtonProps={{
-                                        loading: isActivating,
-                                    }}
+                                    okButtonProps={{ loading: isActivating }}
                                     onConfirm={() =>
                                         activeCompany(record.id!, {
                                             onSuccess: () => refetch(),
@@ -195,20 +193,12 @@ const CompanyPage = () => {
                 return (
                     <Space size="middle">
                         <Access
-                            permission={
-                                ALL_PERMISSIONS.COMPANY_JOB_TITLES
-                                    .GET_BY_COMPANY
-                            }
+                            permission={ALL_PERMISSIONS.COMPANY_JOB_TITLES.GET_BY_COMPANY}
                         >
                             <Button
                                 type="text"
                                 icon={
-                                    <EyeOutlined
-                                        style={{
-                                            color: "#1677ff",
-                                            fontSize: 18,
-                                        }}
-                                    />
+                                    <EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />
                                 }
                                 onClick={() => {
                                     setDataInit(record);
@@ -217,18 +207,11 @@ const CompanyPage = () => {
                             />
                         </Access>
 
-                        <Access
-                            permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
-                        >
+                        <Access permission={ALL_PERMISSIONS.COMPANIES.UPDATE}>
                             <Button
                                 type="text"
                                 icon={
-                                    <EditOutlined
-                                        style={{
-                                            color: "#fa8c16",
-                                            fontSize: 18,
-                                        }}
-                                    />
+                                    <EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />
                                 }
                                 onClick={() => {
                                     setDataInit(record);
@@ -245,12 +228,7 @@ const CompanyPage = () => {
                             <Button
                                 type="text"
                                 icon={
-                                    <MoreOutlined
-                                        style={{
-                                            color: "#595959",
-                                            fontSize: 18,
-                                        }}
-                                    />
+                                    <MoreOutlined style={{ color: "#595959", fontSize: 18 }} />
                                 }
                             />
                         </Dropdown>
@@ -280,9 +258,7 @@ const CompanyPage = () => {
                 />
             }
         >
-            <Access
-                permission={ALL_PERMISSIONS.COMPANIES.GET_PAGINATE}
-            >
+            <Access permission={ALL_PERMISSIONS.COMPANIES.GET_PAGINATE}>
                 <DataTable<ICompany>
                     actionRef={tableRef}
                     rowKey="id"

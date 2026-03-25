@@ -29,6 +29,24 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/users", module: "USERS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/users/{id}", module: "USERS" },
     },
+    /* ===================== USER POSITIONS ===================== */
+    USER_POSITIONS: {
+        GET_BY_USER: {
+            method: "GET",
+            apiPath: "/api/v1/users/{userId}/positions",
+            module: "USERS",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/users/{userId}/positions",
+            module: "USERS",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/users/positions/{id}",
+            module: "USERS",
+        },
+    },
     /* ===================== COMPANIES ===================== */
     COMPANIES: {
         GET_PAGINATE: {
@@ -503,40 +521,20 @@ export const ALL_PERMISSIONS = {
             module: "PERMISSION_ASSIGNMENT",
         },
     },
+
     /* ===================== JOB DESCRIPTIONS ===================== */
     JOB_DESCRIPTIONS: {
-        GET_PAGINATE: {
+        GET_PAGINATE: { method: "GET", apiPath: "/api/v1/job-descriptions", module: "JOB_DESCRIPTIONS" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/job-descriptions/{id}", module: "JOB_DESCRIPTIONS" },
+        CREATE: { method: "POST", apiPath: "/api/v1/job-descriptions", module: "JOB_DESCRIPTIONS" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/job-descriptions/{id}", module: "JOB_DESCRIPTIONS" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/job-descriptions/{id}", module: "JOB_DESCRIPTIONS" },
+        GET_MY: {                                   // thêm dòng này
             method: "GET",
-            apiPath: "/api/v1/job-descriptions",
-            module: "JOB_DESCRIPTIONS",
-        },
-        GET_BY_ID: {
-            method: "GET",
-            apiPath: "/api/v1/job-descriptions/{id}",
-            module: "JOB_DESCRIPTIONS",
-        },
-        CREATE: {
-            method: "POST",
-            apiPath: "/api/v1/job-descriptions",
-            module: "JOB_DESCRIPTIONS",
-        },
-        UPDATE: {
-            method: "PUT",
-            apiPath: "/api/v1/job-descriptions",
-            module: "JOB_DESCRIPTIONS",
-        },
-        DELETE: {
-            method: "DELETE",
-            apiPath: "/api/v1/job-descriptions/{id}",
-            module: "JOB_DESCRIPTIONS",
-        },
-        ISSUE: {
-            method: "POST",
-            apiPath: "/api/v1/job-descriptions/{id}/issue",
-            module: "JOB_DESCRIPTIONS",
+            apiPath: "/api/v1/job-descriptions/my",
+            module: "JOB_DESCRIPTIONS"
         },
     },
-
     /* ===================== DEPARTMENT OBJECTIVES ===================== */
     DEPARTMENT_OBJECTIVES: {
         VIEW: {
@@ -602,6 +600,242 @@ export const ALL_PERMISSIONS = {
             module: "DEPARTMENT_PROCEDURES",
         },
     },
+
+    /* ===================== ORG CHARTS ===================== */
+
+    ORG_CHARTS: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/job-position-charts",
+            module: "ORG_CHARTS",
+        },
+
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/job-position-charts",
+            module: "ORG_CHARTS",
+        },
+
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/job-position-charts",
+            module: "ORG_CHARTS",
+        },
+
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/job-position-charts/{id}",
+            module: "ORG_CHARTS",
+        },
+    },
+
+    /* ===================== ORG NODES ===================== */
+
+    ORG_NODES: {
+        GET_BY_CHART: {
+            method: "GET",
+            apiPath: "/api/v1/job-position-nodes/chart/{chartId}",
+            module: "ORG_CHARTS",
+        },
+
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/job-position-nodes",
+            module: "ORG_CHARTS",
+        },
+
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/job-position-nodes",
+            module: "ORG_CHARTS",
+        },
+
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/job-position-nodes/{id}",
+            module: "ORG_CHARTS",
+        },
+    },
+    /* ===================== JD FLOW ===================== */
+    JD_FLOW: {
+        FETCH_FLOW: {
+            method: "GET",
+            apiPath: "/api/v1/jd-flow/{jdId}",
+            module: "JD_FLOW",
+        },
+
+        FETCH_INBOX: {
+            method: "GET",
+            apiPath: "/api/v1/jd-flow/inbox",
+            module: "JD_FLOW",
+        },
+
+        FETCH_APPROVERS: {
+            method: "GET",
+            apiPath: "/api/v1/jd-flow/approvers",
+            module: "JD_FLOW",
+        },
+
+        FETCH_LOGS: {
+            method: "GET",
+            apiPath: "/api/v1/jd-flow/logs/{jdId}",
+            module: "JD_FLOW",
+        },
+
+        SUBMIT: {
+            method: "POST",
+            apiPath: "/api/v1/jd-flow/submit",
+            module: "JD_FLOW",
+        },
+
+        APPROVE: {
+            method: "POST",
+            apiPath: "/api/v1/jd-flow/approve",
+            module: "JD_FLOW",
+        },
+
+        REJECT: {
+            method: "POST",
+            apiPath: "/api/v1/jd-flow/reject",
+            module: "JD_FLOW",
+        },
+
+        ISSUE: {
+            method: "POST",
+            apiPath: "/api/v1/jd-flow/issue",
+            module: "JD_FLOW",
+        },
+    },
+    /* ===================== PROCEDURES (DÙNG CHUNG) ===================== */
+    PROCEDURES: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/procedures",
+            module: "PROCEDURES",
+        },
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/{id}",
+            module: "PROCEDURES",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures",
+            module: "PROCEDURES",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/procedures/{id}",
+            module: "PROCEDURES",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/procedures/{id}",
+            module: "PROCEDURES",
+        },
+        TOGGLE_ACTIVE: {
+            method: "PUT",
+            apiPath: "/api/v1/procedures/{id}/active",
+            module: "PROCEDURES",
+        },
+        GET_BY_DEPARTMENT: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/by-department/{departmentId}",
+            module: "PROCEDURES",
+        },
+        GET_BY_SECTION: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/by-section/{sectionId}",
+            module: "PROCEDURES",
+        },
+        GET_HISTORY: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/{id}/history",
+            module: "PROCEDURES",
+        },
+        // ← THÊM
+        GET_CONFIDENTIAL: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/confidential",
+            module: "PROCEDURES",
+        },
+    },
+    /* ===================== EMPLOYEE CAREER PATH ===================== */
+    EMPLOYEE_CAREER_PATHS: {
+        ASSIGN: {
+            method: "POST",
+            apiPath: "/api/v1/employee-career-paths",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/employee-career-paths/{id}",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        PROMOTE: {
+            method: "POST",
+            apiPath: "/api/v1/employee-career-paths/{id}/promote",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        SET_STATUS: {
+            method: "PATCH",
+            apiPath: "/api/v1/employee-career-paths/{id}/status",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        GET_BY_USER: {
+            method: "GET",
+            apiPath: "/api/v1/employee-career-paths/user/{userId}",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        GET_BY_DEPARTMENT: {
+            method: "GET",
+            apiPath: "/api/v1/employee-career-paths/department/{departmentId}",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        GET_UPCOMING: {
+            method: "GET",
+            apiPath: "/api/v1/employee-career-paths/upcoming-promotions",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        GET_HISTORY: {
+            method: "GET",
+            apiPath: "/api/v1/employee-career-paths/history/{userId}",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+        DEACTIVATE: {
+            method: "PATCH",
+            apiPath: "/api/v1/employee-career-paths/{id}/deactivate",
+            module: "EMPLOYEE_CAREER_PATHS",
+        },
+    },
+    /* ===================== CAREER PATH TEMPLATES ===================== */
+    CAREER_PATH_TEMPLATES: {
+        CREATE: { method: "POST", apiPath: "/api/v1/career-path-templates", module: "CAREER_PATH_TEMPLATES" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/career-path-templates/{id}", module: "CAREER_PATH_TEMPLATES" },
+        DEACTIVATE: { method: "PATCH", apiPath: "/api/v1/career-path-templates/{id}/deactivate", module: "CAREER_PATH_TEMPLATES" },
+        ACTIVATE: { method: "PATCH", apiPath: "/api/v1/career-path-templates/{id}/activate", module: "CAREER_PATH_TEMPLATES" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/career-path-templates/{id}", module: "CAREER_PATH_TEMPLATES" },
+        GET_ALL: { method: "GET", apiPath: "/api/v1/career-path-templates", module: "CAREER_PATH_TEMPLATES" },
+        GET_ACTIVE: { method: "GET", apiPath: "/api/v1/career-path-templates/active", module: "CAREER_PATH_TEMPLATES" },
+    },
+    /* ===================== USER INFO ===================== */
+    USER_INFO: {
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/users/{userId}/info",
+            module: "USERS",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/users/{userId}/info",
+            module: "USERS",
+        },
+        GET_BY_USER: {
+            method: "GET",
+            apiPath: "/api/v1/users/{userId}/info",
+            module: "USERS",
+        },
+    },
 };
 
 
@@ -611,7 +845,7 @@ export const ALL_MODULES = {
     PERMISSIONS: "PERMISSIONS",
     ROLES: "ROLES",
     USERS: "USERS",
-    JD_FLOW: "JD",
+    JD_FLOW: "JD_FLOW",
     COMPANIES: "COMPANIES",
     DEPARTMENTS: "DEPARTMENTS",
     SECTIONS: "SECTIONS",
@@ -627,13 +861,19 @@ export const ALL_MODULES = {
     COMPANY_SALARY_GRADES: "COMPANY_SALARY_GRADES",
     SECTION_SALARY_GRADES: "SECTION_SALARY_GRADES",
     JOB_TITLE_PERFORMANCE_CONTENT: "JOB_TITLE_PERFORMANCE_CONTENT",
-    SALARY_RANGE: "SALARY_RANGE",                // xem khung lương theo tháng/giờ
-    SALARY_STRUCTURE: "SALARY_STRUCTURE",        // cấu trúc lương A/B/C/D
+    SALARY_RANGE: "SALARY_RANGE",
+    SALARY_STRUCTURE: "SALARY_STRUCTURE",
     PROCESS_ACTIONS: "PROCESS_ACTIONS",
     PERMISSION_CATEGORY: "PERMISSION_CATEGORY",
     PERMISSION_CONTENTS: "PERMISSION_CONTENTS",
-    PERMISSION_ASSIGNMENT: "PERMISSION_ASSIGNMENT", // ⭐ BỔ SUNG
+    PERMISSION_ASSIGNMENT: "PERMISSION_ASSIGNMENT",
     JOB_DESCRIPTIONS: "JOB_DESCRIPTIONS",
     DEPARTMENT_OBJECTIVES: "DEPARTMENT_OBJECTIVES",
     DEPARTMENT_PROCEDURES: "DEPARTMENT_PROCEDURES",
+    USER_POSITIONS: "USERS",
+    PROCEDURES: "PROCEDURES",           // ← thay COMPANY_PROCEDURES + DEPARTMENT_PROCEDURES
+    EMPLOYEE_CAREER_PATHS: "EMPLOYEE_CAREER_PATHS",
+    CAREER_PATH_TEMPLATES: "CAREER_PATH_TEMPLATES",
+    CHANGE_PASSWORD: "/change-password",  // ⭐ THÊM
+
 };

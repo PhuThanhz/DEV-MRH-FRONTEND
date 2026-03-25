@@ -1,0 +1,558 @@
+import React, { useEffect, useState } from "react";
+import {
+    ModalForm,
+    ProFormText,
+    ProFormSelect,
+    ProFormSwitch,
+} from "@ant-design/pro-components";
+import {
+    Col, Form, Row, message, Upload, Input,
+} from "antd";
+import {
+    UploadOutlined, BankOutlined,
+    ApartmentOutlined, LockOutlined,
+} from "@ant-design/icons";
+import type { UploadFile, UploadProps } from "antd";
+
+import {
+    callFetchCompany,
+    callFetchDepartmentsByCompany,
+    callFetchSectionsByDepartment,
+    callUploadSingleFile,
+} from "@/config/api";
+
+import type {
+    IProcedure, IProcedureRequest, ProcedureType,
+    ICompany, IDepartment, ISection,
+} from "@/types/backend";
+
+import {
+    useCreateProcedureMutation,
+    useUpdateProcedureMutation,
+} from "@/hooks/useProcedure";
+
+import UserSelectField from "./components/UserSelectField";
+
+const PINK = "#e91e8c";
+const PINK_HOVER = "#c4177a";
+
+const TYPE_OPTIONS = [
+    {
+        key: "COMPANY" as ProcedureType,
+        label: "Công ty",
+        icon: <BankOutlined />,
+        activeBg: "#eff6ff",
+        activeColor: "#1d4ed8",
+        activeBorder: "#bfdbfe",
+    },
+    {
+        key: "DEPARTMENT" as ProcedureType,
+        label: "Phòng ban",
+        icon: <ApartmentOutlined />,
+        activeBg: "#f0fdf4",
+        activeColor: "#15803d",
+        activeBorder: "#bbf7d0",
+    },
+    {
+        key: "CONFIDENTIAL" as ProcedureType,
+        label: "Bảo mật",
+        icon: <LockOutlined />,
+        activeBg: "#fff1f2",
+        activeColor: "#be123c",
+        activeBorder: "#fecdd3",
+    },
+] as const;
+
+const TypeSelector: React.FC<{
+    value: ProcedureType;
+    onChange: (v: ProcedureType) => void;
+    disabled?: boolean;
+}> = ({ value, onChange, disabled }) => (
+    <div style={{ display: "flex", gap: 6 }}>
+        {TYPE_OPTIONS.map((opt) => {
+            const isActive = value === opt.key;
+            return (
+                <button
+                    key={opt.key}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => !disabled && onChange(opt.key)}
+                    style={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        padding: "8px 0",
+                        borderRadius: 9,
+                        border: `1.5px solid ${isActive ? opt.activeBorder : "#e5e7eb"}`,
+                        background: isActive ? opt.activeBg : "#fafafa",
+                        color: isActive ? opt.activeColor : "#6b7280",
+                        fontSize: 13,
+                        fontWeight: isActive ? 600 : 400,
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        opacity: disabled ? 0.5 : 1,
+                        transition: "all 0.15s ease",
+                        letterSpacing: "-0.01em",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    {opt.icon}
+                    {opt.label}
+                </button>
+            );
+        })}
+    </div>
+);
+
+const Divider = () => (
+    <div style={{ height: 1, background: "#f5f5f7", margin: "4px 0" }} />
+);
+
+interface IProps {
+    open: boolean;
+    onClose: () => void;
+    dataInit: IProcedure | null;
+    refetch: () => void;
+    fixedCompanyId?: number;
+    fixedDepartmentId?: number;
+    defaultType?: ProcedureType;
+}
+
+const ModalProcedure: React.FC<IProps> = ({
+    open,
+    onClose,
+    dataInit,
+    refetch,
+    fixedCompanyId,
+    fixedDepartmentId,
+    defaultType = "COMPANY",
+}) => {
+    const [form] = Form.useForm();
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [companyId, setCompanyId] = useState<number | null>(null);
+    const [departmentId, setDepartmentId] = useState<number | null>(null);
+    const [procedureType, setProcedureType] = useState<ProcedureType>(defaultType);
+    const [selectedUserCount, setSelectedUserCount] = useState(0);
+
+    const isEdit = Boolean(dataInit?.id);
+    const createMutation = useCreateProcedureMutation(procedureType);
+    const updateMutation = useUpdateProcedureMutation(procedureType);
+    const activeType = TYPE_OPTIONS.find((t) => t.key === procedureType)!;
+
+    useEffect(() => {
+        if (!open) return;
+        if (dataInit?.id) {
+            setProcedureType(defaultType);
+            const userIds = (dataInit as any).userIds ?? [];
+            const urls = dataInit.fileUrls ?? []; // ← đổi
+            form.setFieldsValue({
+                departmentId: dataInit.departmentId,
+                sectionId: dataInit.sectionId,
+                procedureName: dataInit.procedureName,
+                status: dataInit.status,
+                planYear: dataInit.planYear,
+                note: dataInit.note,
+                fileUrls: urls, // ← đổi
+                active: dataInit.active,
+                userIds,
+            });
+            setFileList(
+                urls.map((name, i) => ({ // ← đổi
+                    uid: String(i),
+                    name,
+                    status: "done" as const,
+                    url: `/api/v1/files?fileName=${encodeURIComponent(name)}&folder=procedures`,
+                    response: name,
+                }))
+            );
+            setDepartmentId(dataInit.departmentId ?? null);
+            setSelectedUserCount(userIds.length);
+        } else {
+            form.resetFields();
+            setFileList([]);
+            setProcedureType(defaultType);
+            setCompanyId(fixedCompanyId ?? null);
+            setDepartmentId(fixedDepartmentId ?? null);
+            setSelectedUserCount(0);
+            if (fixedDepartmentId) form.setFieldValue("departmentId", fixedDepartmentId);
+            form.setFieldValue("active", true);
+            form.setFieldValue("fileUrls", []); // ← đổi
+        }
+    }, [open, dataInit]);
+
+    const handleTypeChange = (val: ProcedureType) => {
+        setProcedureType(val);
+        setCompanyId(fixedCompanyId ?? null);
+        setDepartmentId(fixedDepartmentId ?? null);
+        setSelectedUserCount(0);
+        form.setFieldValue("companyId", undefined);
+        form.setFieldValue("departmentId", undefined);
+        form.setFieldValue("sectionId", undefined);
+        form.setFieldValue("userIds", []);
+        form.setFieldValue("fileUrls", []); // ← đổi
+        setFileList([]);
+    };
+
+    const handleReset = () => {
+        form.resetFields();
+        setFileList([]);
+        setCompanyId(fixedCompanyId ?? null);
+        setDepartmentId(fixedDepartmentId ?? null);
+        setProcedureType(defaultType);
+        setSelectedUserCount(0);
+        onClose();
+    };
+
+    const submitForm = async (values: any) => {
+        const payload: IProcedureRequest = {
+            procedureName: values.procedureName,
+            status: values.status,
+            planYear: values.planYear ? Number(values.planYear) : undefined,
+            fileUrls: values.fileUrls ?? [], // ← đổi
+            note: values.note,
+            active: values.active ?? true,
+            departmentId: values.departmentId ?? fixedDepartmentId ?? dataInit?.departmentId ?? null,
+            sectionId: values.sectionId ?? null,
+            ...(procedureType === "CONFIDENTIAL" && { userIds: values.userIds ?? [] }),
+        };
+        if (isEdit && dataInit?.id) {
+            await updateMutation.mutateAsync({ id: dataInit.id, data: payload });
+        } else {
+            await createMutation.mutateAsync(payload);
+        }
+        refetch();
+        handleReset();
+    };
+
+    const loadCompanies = async () => {
+        const res = await callFetchCompany("page=1&size=500");
+        return res?.data?.result?.map((c: ICompany) => ({ label: c.name, value: c.id })) || [];
+    };
+
+    const loadDepartments = async ({ companyId }: any) => {
+        if (!companyId) return [];
+        const res = await callFetchDepartmentsByCompany(companyId);
+        return (res?.data ?? []).map((d: IDepartment) => ({ label: d.name, value: d.id }));
+    };
+
+    const loadSections = async ({ departmentId }: any) => {
+        if (!departmentId) return [];
+        const res = await callFetchSectionsByDepartment(departmentId);
+        return (res?.data ?? []).map((s: ISection) => ({ label: s.name, value: s.id }));
+    };
+
+    const uploadProps: UploadProps = {
+        fileList,
+        // bỏ maxCount: 1 — cho phép nhiều file
+        accept: ".pdf,.doc,.docx,.xls,.xlsx",
+        beforeUpload: async (file) => {
+            const allowed = [
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ];
+            if (!allowed.includes(file.type)) {
+                message.error("Chỉ chấp nhận file PDF, Word, Excel!");
+                return Upload.LIST_IGNORE;
+            }
+            if (file.size / 1024 / 1024 >= 20) {
+                message.error("File phải nhỏ hơn 20MB!");
+                return Upload.LIST_IGNORE;
+            }
+
+            const tempUid = Date.now().toString();
+            setFileList((prev) => [...prev, { uid: tempUid, name: file.name, status: "uploading" }]);
+
+            try {
+                setUploading(true);
+                const res = await callUploadSingleFile(file, "procedures");
+                const fileName = res?.data?.fileName;
+                if (!fileName) throw new Error("Upload thất bại");
+
+                setFileList((prev) =>
+                    prev.map((f) =>
+                        f.uid === tempUid
+                            ? {
+                                ...f,
+                                status: "done" as const,
+                                url: `/api/v1/files?fileName=${encodeURIComponent(fileName)}&folder=procedures`,
+                                response: fileName,
+                            }
+                            : f
+                    )
+                );
+
+                const current: string[] = form.getFieldValue("fileUrls") ?? [];
+                form.setFieldValue("fileUrls", [...current, fileName]);
+                message.success(`Upload ${file.name} thành công!`);
+            } catch {
+                setFileList((prev) => prev.filter((f) => f.uid !== tempUid));
+                message.error("Upload file thất bại!");
+            } finally {
+                setUploading(false);
+            }
+
+            return false;
+        },
+        onRemove: (file) => {
+            setFileList((prev) => prev.filter((f) => f.uid !== file.uid));
+            const removed = (file as any).response ?? file.name;
+            const current: string[] = form.getFieldValue("fileUrls") ?? [];
+            form.setFieldValue("fileUrls", current.filter((u) => u !== removed));
+        },
+    };
+
+    const isLoading = createMutation.isPending || updateMutation.isPending || uploading;
+
+    return (
+        <ModalForm
+            title={
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: "#1c1c1e", letterSpacing: "-0.025em" }}>
+                        {isEdit ? "Cập nhật quy trình" : "Tạo quy trình mới"}
+                    </span>
+                    <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        fontSize: 11, fontWeight: 500,
+                        padding: "3px 9px", borderRadius: 999,
+                        background: activeType.activeBg,
+                        color: activeType.activeColor,
+                        border: `1px solid ${activeType.activeBorder}`,
+                    }}>
+                        {activeType.icon} {activeType.label}
+                    </span>
+                </div>
+            }
+            open={open}
+            form={form}
+            onFinish={submitForm}
+            width={820}
+            layout="vertical"
+            submitter={{
+                searchConfig: {
+                    submitText: isEdit ? "Cập nhật" : "Tạo quy trình",
+                    resetText: "Huỷ",
+                },
+                resetButtonProps: { style: { borderRadius: 8 } },
+                submitButtonProps: {
+                    loading: isLoading,
+                    disabled: uploading,
+                    style: {
+                        borderRadius: 8,
+                        background: PINK,
+                        borderColor: PINK,
+                        fontWeight: 500,
+                    },
+                    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
+                        (e.currentTarget as HTMLButtonElement).style.background = PINK_HOVER;
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = PINK_HOVER;
+                    },
+                    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => {
+                        (e.currentTarget as HTMLButtonElement).style.background = PINK;
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = PINK;
+                    },
+                },
+            }}
+            modalProps={{
+                onCancel: handleReset,
+                destroyOnHidden: true,
+                maskClosable: false,
+                styles: { body: { padding: "20px 24px" } },
+            }}
+        >
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                {/* Hidden field lưu fileUrls */}
+                <Form.Item name="fileUrls" hidden>
+                    <Input />
+                </Form.Item>
+
+                {/* ── Loại quy trình ── */}
+                <Form.Item label="Loại quy trình" style={{ marginBottom: 0 }}>
+                    <TypeSelector
+                        value={procedureType}
+                        onChange={handleTypeChange}
+                        disabled={isEdit}
+                    />
+                </Form.Item>
+
+                <Divider />
+
+                {/* ── Công ty + Phòng ban ── */}
+                <Row gutter={16}>
+                    {!fixedCompanyId && (
+                        <Col xs={24} lg={12}>
+                            {isEdit ? (
+                                <Form.Item label="Công ty" style={{ marginBottom: 0 }}>
+                                    <Input value={dataInit?.companyName} disabled
+                                        style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
+                                </Form.Item>
+                            ) : (
+                                <ProFormSelect
+                                    name="companyId"
+                                    label="Công ty"
+                                    request={loadCompanies}
+                                    rules={[{ required: true, message: "Chọn công ty" }]}
+                                    fieldProps={{
+                                        showSearch: true,
+                                        optionFilterProp: "label",
+                                        onChange: (val) => {
+                                            setCompanyId(val as number);
+                                            setDepartmentId(null);
+                                            setSelectedUserCount(0);
+                                            form.setFieldValue("departmentId", null);
+                                            form.setFieldValue("sectionId", null);
+                                            form.setFieldValue("userIds", []);
+                                        },
+                                    }}
+                                />
+                            )}
+                        </Col>
+                    )}
+                    <Col xs={24} lg={12}>
+                        {isEdit || fixedDepartmentId ? (
+                            <Form.Item label="Phòng ban" style={{ marginBottom: 0 }}>
+                                <Input
+                                    value={
+                                        dataInit?.departmentName ??
+                                        (fixedDepartmentId ? `Phòng ban #${fixedDepartmentId}` : "")
+                                    }
+                                    disabled
+                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }}
+                                />
+                            </Form.Item>
+                        ) : (
+                            <ProFormSelect
+                                name="departmentId"
+                                label="Phòng ban"
+                                request={loadDepartments}
+                                params={{ companyId }}
+                                rules={[{
+                                    required: procedureType === "CONFIDENTIAL",
+                                    message: "Chọn phòng ban",
+                                }]}
+                                fieldProps={{
+                                    allowClear: true,
+                                    onChange: (val) => {
+                                        setDepartmentId(val as number);
+                                        form.setFieldValue("sectionId", null);
+                                    },
+                                }}
+                            />
+                        )}
+                    </Col>
+                </Row>
+
+                {/* ── Bộ phận + Tên quy trình ── */}
+                <Row gutter={16}>
+                    <Col xs={24} lg={12}>
+                        <ProFormSelect
+                            name="sectionId"
+                            label="Bộ phận (không bắt buộc)"
+                            request={loadSections}
+                            params={{ departmentId: departmentId ?? fixedDepartmentId ?? dataInit?.departmentId }}
+                            fieldProps={{ allowClear: true }}
+                        />
+                    </Col>
+                    <Col xs={24} lg={12}>
+                        <ProFormText
+                            name="procedureName"
+                            label="Tên quy trình"
+                            rules={[{ required: true, message: "Nhập tên quy trình" }]}
+                            placeholder="Nhập tên quy trình..."
+                        />
+                    </Col>
+                </Row>
+
+                {/* ── Trạng thái + Năm + Kích hoạt ── */}
+                <Row gutter={16}>
+                    <Col xs={24} lg={8}>
+                        <ProFormSelect
+                            name="status"
+                            label="Trạng thái"
+                            valueEnum={{
+                                NEED_CREATE: "Cần xây dựng mới",
+                                IN_PROGRESS: "Đang xây dựng",
+                                NEED_UPDATE: "Cần cập nhật",
+                                TERMINATED: "Chấm dứt",
+                            }}
+                        />
+                    </Col>
+                    <Col xs={24} lg={8}>
+                        <ProFormText
+                            name="planYear"
+                            label="Kế hoạch năm"
+                            fieldProps={{ type: "number" }}
+                            placeholder="VD: 2026"
+                        />
+                    </Col>
+                    <Col xs={24} lg={8}>
+                        <ProFormSwitch
+                            name="active"
+                            label="Kích hoạt"
+                            initialValue={true}
+                        />
+                    </Col>
+                </Row>
+
+                {/* ── Người được xem — chỉ khi CONFIDENTIAL ── */}
+                {procedureType === "CONFIDENTIAL" && (
+                    <>
+                        <Divider />
+                        <UserSelectField
+                            companyId={companyId}
+                            selectedUserCount={selectedUserCount}
+                            onCountChange={setSelectedUserCount}
+                        />
+                    </>
+                )}
+
+                <Divider />
+
+                {/* ── File + Ghi chú ── */}
+                <Row gutter={16}>
+                    <Col xs={24} lg={14}>
+                        <Form.Item label="File quy trình" style={{ marginBottom: 0 }}>
+                            <Upload {...uploadProps}>
+                                <div style={{
+                                    height: 32,
+                                    border: "1px dashed #d1d5db",
+                                    borderRadius: 8,
+                                    padding: "0 12px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    cursor: "pointer",
+                                    background: "#fafafa",
+                                    color: "#6b7280",
+                                    fontSize: 12,
+                                    whiteSpace: "nowrap",
+                                }}>
+                                    <UploadOutlined style={{ fontSize: 12 }} />
+                                    {uploading ? "Đang upload..." : "Thêm file PDF, Word, Excel"}
+                                    <span style={{ color: "#9ca3af" }}>(tối đa 20MB/file)</span>
+                                </div>
+                            </Upload>
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} lg={10}>
+                        <Form.Item label="Ghi chú" style={{ marginBottom: 0 }}>
+                            <ProFormText
+                                name="note"
+                                noStyle
+                                placeholder="Thêm ghi chú nếu cần..."
+                            />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+            </div>
+        </ModalForm>
+    );
+};
+
+export default ModalProcedure;

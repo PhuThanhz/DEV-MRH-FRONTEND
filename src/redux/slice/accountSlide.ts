@@ -1,12 +1,11 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 import { callFetchAccount } from "@/config/api";
+import type { IBackendRes, IGetAccount } from "@/types/backend";
 
-export const fetchAccount = createAsyncThunk("account/fetchAccount", async () => {
-    const response = await callFetchAccount();
-    return response.data;
-});
-
-
+/* =========================================
+   TYPES
+========================================= */
 interface IPermission {
     id: string;
     name: string;
@@ -16,16 +15,16 @@ interface IPermission {
 }
 
 interface IRole {
-    id?: string;
+    id?: number;        // ← string → number
     name?: string;
     permissions?: IPermission[];
 }
 
-interface IUser {
-    id: string;
+export interface IUser {
+    id?: number;        // ← string → number (optional để tránh lỗi initial state)
     email: string;
     name: string;
-    avatar?: string
+    avatar?: string;
     active?: boolean;
     role: IRole;
 }
@@ -39,20 +38,46 @@ interface IState {
     activeMenu: string;
 }
 
+/* =========================================
+   FETCH ACCOUNT (THEO BACKEND HIỆN TẠI)
+========================================= */
+export const fetchAccount = createAsyncThunk<
+    IGetAccount,
+    void
+>(
+    "account/fetchAccount",
+    async (_, { rejectWithValue }) => {
+        try {
+            const response: IBackendRes<IGetAccount> =
+                await callFetchAccount();
 
+            if (!response?.data) {
+                return rejectWithValue("No account data");
+            }
+
+            return response.data;
+        } catch (error) {
+            return rejectWithValue("Fetch account failed");
+        }
+    }
+);
+
+/* =========================================
+   INITIAL STATE
+========================================= */
 const initialState: IState = {
     isAuthenticated: false,
     isLoading: true,
     isRefreshToken: false,
     errorRefreshToken: "",
     user: {
-        id: "",
+        id: undefined,      // ← "" → undefined (vì id giờ là number)
         email: "",
         name: "",
         avatar: "",
         active: true,
         role: {
-            id: "",
+            id: undefined,  // ← "" → undefined
             name: "",
             permissions: [],
         },
@@ -60,52 +85,63 @@ const initialState: IState = {
     activeMenu: "home",
 };
 
-/* ================================
-   Slice
-=================================*/
+/* =========================================
+   SLICE
+========================================= */
 export const accountSlice = createSlice({
     name: "account",
     initialState,
     reducers: {
-        setActiveMenu: (state, action) => {
+        setActiveMenu: (state, action: PayloadAction<string>) => {
             state.activeMenu = action.payload;
         },
 
-        setUserLoginInfo: (state, action) => {
-            const user = action.payload ?? {};
+        setUserLoginInfo: (state, action: PayloadAction<IUser>) => {
             state.isAuthenticated = true;
             state.isLoading = false;
+            state.user = action.payload;
+        },
 
-            state.user.id = user?.id ?? "";
-            state.user.email = user?.email ?? "";
-            state.user.name = user?.name ?? "";
-            state.user.avatar = user?.avatar ?? "";
-            state.user.active = user?.active ?? true;
-
-            state.user.role = user?.role ?? {};
-            state.user.role.permissions = user?.role?.permissions ?? [];
+        updateUserProfile: (
+            state,
+            action: PayloadAction<Partial<IUser>>
+        ) => {
+            state.user = {
+                ...state.user,
+                ...action.payload,
+                role: {
+                    ...state.user.role,
+                    ...action.payload.role,
+                    permissions:
+                        action.payload.role?.permissions ??
+                        state.user.role.permissions,
+                },
+            };
         },
 
         setLogoutAction: (state) => {
             localStorage.removeItem("access_token");
             state.isAuthenticated = false;
             state.user = {
-                id: "",
+                id: undefined,      // ← "" → undefined
                 email: "",
                 name: "",
                 avatar: "",
                 active: true,
                 role: {
-                    id: "",
+                    id: undefined,  // ← "" → undefined
                     name: "",
                     permissions: [],
                 },
             };
         },
 
-        setRefreshTokenAction: (state, action) => {
-            state.isRefreshToken = action.payload?.status ?? false;
-            state.errorRefreshToken = action.payload?.message ?? "";
+        setRefreshTokenAction: (
+            state,
+            action: PayloadAction<{ status: boolean; message: string }>
+        ) => {
+            state.isRefreshToken = action.payload.status;
+            state.errorRefreshToken = action.payload.message;
         },
     },
 
@@ -116,21 +152,24 @@ export const accountSlice = createSlice({
                 state.isLoading = true;
             })
             .addCase(fetchAccount.fulfilled, (state, action) => {
-                if (action.payload) {
-                    const userData = action.payload?.user ?? action.payload;
+                state.isAuthenticated = true;
+                state.isLoading = false;
 
-                    state.isAuthenticated = true;
-                    state.isLoading = false;
+                const userData = action.payload.user;
 
-                    state.user.id = userData?.id ?? "";
-                    state.user.email = userData?.email ?? "";
-                    state.user.name = userData?.name ?? "";
-                    state.user.avatar = userData?.avatar ?? "";
-                    state.user.active = userData?.active ?? true;
-
-                    state.user.role = userData?.role ?? {};
-                    state.user.role.permissions = userData?.role?.permissions ?? [];
-                }
+                state.user = {
+                    id: userData.id,            // ← bỏ ?? "" (number không cần fallback string)
+                    email: userData.email ?? "",
+                    name: userData.name ?? "",
+                    avatar: userData.avatar ?? "",
+                    active: userData.active ?? true,
+                    role: {
+                        id: userData.role?.id,  // ← bỏ ?? ""
+                        name: userData.role?.name ?? "",
+                        permissions:
+                            userData.role?.permissions ?? [],
+                    },
+                };
             })
             .addCase(fetchAccount.rejected, (state) => {
                 state.isAuthenticated = false;
@@ -139,9 +178,13 @@ export const accountSlice = createSlice({
     },
 });
 
+/* =========================================
+   EXPORTS
+========================================= */
 export const {
     setActiveMenu,
     setUserLoginInfo,
+    updateUserProfile,
     setLogoutAction,
     setRefreshTokenAction,
 } = accountSlice.actions;

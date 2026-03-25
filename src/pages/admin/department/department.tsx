@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Badge, Popconfirm, Button, Dropdown, Modal, Table, Typography } from "antd";
-import type { MenuProps } from "antd";
+import { Space, Badge, Popconfirm, Button, Dropdown } from "antd";
 import {
     MoreOutlined,
     EyeOutlined,
@@ -21,9 +20,11 @@ import { useNavigate } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
 import type { IDepartment } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
+import { callFetchCompany } from "@/config/api";
 
 import {
     useDepartmentsQuery,
@@ -33,13 +34,9 @@ import {
 import ModalDepartment from "./modal.department";
 import ViewDepartment from "./view.department";
 import PermissionViewModal from "./permissions/ components/PermissionViewModal";
-
-import { PATHS } from "@/constants/paths";
-
-// Import component Bảng đồ chức danh
 import PositionChartModal from "@/pages/admin/department/position-chart/PositionChartModal";
 
-const { Title } = Typography;
+import { PATHS } from "@/constants/paths";
 
 const DepartmentPage = () => {
     const navigate = useNavigate();
@@ -49,16 +46,18 @@ const DepartmentPage = () => {
     const [dataInit, setDataInit] = useState<IDepartment | null>(null);
 
     const [openPermissionModal, setOpenPermissionModal] = useState(false);
+    const [openPositionChartModal, setOpenPositionChartModal] = useState(false);
 
     const [selectedDepartment, setSelectedDepartment] = useState<{
         id: number;
         name: string;
+        companyName: string;
     } | null>(null);
 
-    const [openProcessCategoryModal, setOpenProcessCategoryModal] = useState(false);
-    const [openPositionChartModal, setOpenPositionChartModal] = useState(false);
-
     const [searchValue, setSearchValue] = useState("");
+    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState<number | null>(null);
+    const [resetSignal, setResetSignal] = useState(0);
 
     const [query, setQuery] = useState(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
@@ -77,33 +76,31 @@ const DepartmentPage = () => {
 
     const departments = data?.result ?? [];
 
-    const buildQuery = (params: any, sort: any) => {
-        const q: any = {
-            page: params.current,
-            size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        };
+    /*
+     * ===================== BUILD FILTERS =====================
+     */
+    const buildFilters = (
+        search: string,
+        companyId: number | null,
+        status: number | null,
+    ) => {
+        const parts: string[] = [];
 
-        const filters: string[] = [];
+        if (search)
+            parts.push(`(code~'${search}' or name~'${search}')`);
 
-        if (searchValue) {
-            filters.push(`(code~'${searchValue}' or name~'${searchValue}')`);
-        }
+        if (companyId)
+            parts.push(`company.id:${companyId}`);
 
-        if (filters.length > 0) {
-            q.filter = filters.join(" and ");
-        }
+        if (status !== null)
+            parts.push(`status=${status}`);
 
-        let sortBy = "sort=createdAt,desc";
-
-        if (sort?.code) {
-            sortBy = sort.code === "ascend" ? "sort=code,asc" : "sort=code,desc";
-        } else if (sort?.name) {
-            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
-        }
-
-        return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
+        return parts;
     };
 
+    /*
+     * ===================== AUTO BUILD QUERY =====================
+     */
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -111,12 +108,43 @@ const DepartmentPage = () => {
             sort: "createdAt,desc",
         };
 
-        if (searchValue) {
-            q.filter = `(code~'${searchValue}' or name~'${searchValue}')`;
-        }
+        const filters = buildFilters(searchValue, companyIdFilter, statusFilter);
+        if (filters.length > 0) q.filter = filters.join(" and ");
 
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue]);
+    }, [searchValue, companyIdFilter, statusFilter]);
+
+    /*
+     * ===================== BUILD QUERY FOR TABLE =====================
+     */
+    const buildQuery = (params: any, sort: any) => {
+        const q: any = {
+            page: params.current,
+            size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+        };
+
+        const filters = buildFilters(searchValue, companyIdFilter, statusFilter);
+        if (filters.length > 0) q.filter = filters.join(" and ");
+
+        let sortBy = "sort=createdAt,desc";
+        if (sort?.code)
+            sortBy = sort.code === "ascend" ? "sort=code,asc" : "sort=code,desc";
+        else if (sort?.name)
+            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
+
+        return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
+    };
+
+    /*
+     * ===================== RESET =====================
+     */
+    const handleReset = () => {
+        setSearchValue("");
+        setCompanyIdFilter(null);
+        setStatusFilter(null);
+        setResetSignal((s) => s + 1);
+        refetch();
+    };
 
     const handleDelete = async (id: number) => {
         try {
@@ -125,6 +153,9 @@ const DepartmentPage = () => {
         } catch { }
     };
 
+    /*
+     * ===================== COLUMNS =====================
+     */
     const columns: ProColumns<IDepartment>[] = [
         {
             title: "STT",
@@ -172,7 +203,6 @@ const DepartmentPage = () => {
                             setOpenView(true);
                         }}
                     />
-
                     <Button
                         type="text"
                         icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
@@ -181,7 +211,6 @@ const DepartmentPage = () => {
                             setOpenModal(true);
                         }}
                     />
-
                     <Dropdown
                         menu={{
                             items: [
@@ -191,12 +220,9 @@ const DepartmentPage = () => {
                                     label: "Sơ đồ tổ chức",
                                     onClick: () =>
                                         navigate(
-                                            `/admin/departments/${record.id}/org-chart?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
+                                            `/admin/departments/${record.id}/org-chart?departmentName=${encodeURIComponent(record.name)}`
                                         ),
                                 },
-
                                 {
                                     key: "objectives-tasks",
                                     icon: <AimOutlined style={{ color: "#eb2f96" }} />,
@@ -206,13 +232,9 @@ const DepartmentPage = () => {
                                             PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(
                                                 ":departmentId",
                                                 String(record.id)
-                                            ) +
-                                            `?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
+                                            ) + `?departmentName=${encodeURIComponent(record.name)}`
                                         ),
                                 },
-
                                 {
                                     key: "department-procedures",
                                     icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
@@ -225,7 +247,6 @@ const DepartmentPage = () => {
                                             ) + `?departmentName=${encodeURIComponent(record.name)}`
                                         ),
                                 },
-
                                 {
                                     key: "permissions",
                                     icon: <LockOutlined style={{ color: "#eb2f96" }} />,
@@ -234,50 +255,43 @@ const DepartmentPage = () => {
                                         setSelectedDepartment({
                                             id: record.id!,
                                             name: record.name,
+                                            companyName: record.company?.name || "",
                                         });
                                         setOpenPermissionModal(true);
                                     },
                                 },
-
                                 {
                                     key: "career-paths",
                                     icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
                                     label: "Lộ trình thăng tiến",
                                     onClick: () =>
                                         navigate(
-                                            `/admin/departments/${record.id}/career-paths?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
+                                            `/admin/departments/${record.id}/career-paths?departmentName=${encodeURIComponent(record.name)}`
                                         ),
                                 },
-
                                 {
                                     key: "salary",
                                     icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
                                     label: "Khung lương",
                                     onClick: () =>
                                         navigate(
-                                            `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(
-                                                record.name
-                                            )}`
+                                            `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(record.name)}`
                                         ),
                                 },
-
                                 {
                                     key: "position-chart",
                                     icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Bảng đồ chức danh",
+                                    label: "Bản đồ chức danh",
                                     onClick: () => {
                                         setSelectedDepartment({
                                             id: record.id!,
                                             name: record.name,
+                                            companyName: record.company?.name || "",
                                         });
                                         setOpenPositionChartModal(true);
                                     },
                                 },
-
                                 { type: "divider" },
-
                                 {
                                     key: "delete",
                                     icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
@@ -313,19 +327,55 @@ const DepartmentPage = () => {
         <PageContainer
             title="Quản lý phòng ban"
             filter={
-                <SearchFilter
-                    searchPlaceholder="Tìm theo mã hoặc tên..."
-                    addLabel="Thêm phòng ban"
-                    onSearch={setSearchValue}
-                    onReset={() => {
-                        setSearchValue("");
-                        refetch();
-                    }}
-                    onAddClick={() => {
-                        setDataInit(null);
-                        setOpenModal(true);
-                    }}
-                />
+                <div className="flex flex-col gap-3">
+                    <SearchFilter
+                        searchPlaceholder="Tìm theo mã hoặc tên..."
+                        addLabel="Thêm phòng ban"
+                        showFilterButton={false}
+                        onSearch={setSearchValue}
+                        onReset={handleReset}
+                        onAddClick={() => {
+                            setDataInit(null);
+                            setOpenModal(true);
+                        }}
+                    />
+
+                    <AdvancedFilterSelect
+                        resetSignal={resetSignal}
+                        fields={[
+                            {
+                                key: "companyId",
+                                label: "Công ty",
+                                type: "async-select",
+                                loadOptions: async () => {
+                                    const res = await callFetchCompany(
+                                        "page=1&size=100&sort=name,asc"
+                                    );
+                                    return (res?.data?.result ?? []).map((c: any) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
+                            },
+                            {
+                                key: "status",
+                                label: "Trạng thái",
+                                options: [
+                                    { label: "Hoạt động", value: 1, color: "green" },
+                                    { label: "Ngừng hoạt động", value: 0, color: "red" },
+                                ],
+                            },
+                        ]}
+                        onChange={(val) => {
+                            setCompanyIdFilter(
+                                val.companyId !== undefined ? val.companyId : null
+                            );
+                            setStatusFilter(
+                                val.status !== undefined ? val.status : null
+                            );
+                        }}
+                    />
+                </div>
             }
         >
             <DataTable<IDepartment>
@@ -377,7 +427,9 @@ const DepartmentPage = () => {
                 <PositionChartModal
                     open={openPositionChartModal}
                     onClose={() => setOpenPositionChartModal(false)}
+                    departmentId={selectedDepartment.id}
                     departmentName={selectedDepartment.name}
+                    companyName={selectedDepartment.companyName}
                 />
             )}
         </PageContainer>

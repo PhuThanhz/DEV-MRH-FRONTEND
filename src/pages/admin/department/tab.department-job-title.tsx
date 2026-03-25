@@ -17,19 +17,18 @@ import {
 
 import type { IDepartmentJobTitle } from "@/types/backend";
 
-// Drawers
 import DrawerAssignJobTitle from "./drawer.assign-job-title";
 import DrawerDepartmentSalaryGrade from "./department-salary-grade/drawer.department-salary-grade";
 import DrawerJobTitlePerformanceContent from "@/pages/admin/job-title-performance-content/drawer.job-title-performance-content";
 
 interface IProps {
     departmentId?: number;
+    companyId?: number; // THÊM
 }
 
-const DepartmentJobTitleTab = ({ departmentId }: IProps) => {
+const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
     const [data, setData] = useState<IDepartmentJobTitle[]>([]);
     const [loading, setLoading] = useState(false);
-
     const [openDrawer, setOpenDrawer] = useState(false);
 
     const [openSalary, setOpenSalary] = useState(false);
@@ -59,7 +58,7 @@ const DepartmentJobTitleTab = ({ departmentId }: IProps) => {
                     ...x,
                     jobTitle: {
                         ...x.jobTitle,
-                        nameEn: x.jobTitle?.nameEn || "",  // ← thêm fallback để lấy nameEn từ backend
+                        nameEn: x.jobTitle?.nameEn || "",
                     },
                     active: true,
                 }));
@@ -211,6 +210,7 @@ const DepartmentJobTitleTab = ({ departmentId }: IProps) => {
                     open={openDrawer}
                     onClose={() => setOpenDrawer(false)}
                     departmentId={departmentId}
+                    companyId={companyId ?? 0} // THÊM
                     assignedJobIds={data.map((d) => d.jobTitle.id)}
                     onSuccess={fetchData}
                 />

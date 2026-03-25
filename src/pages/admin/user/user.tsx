@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, message, Badge } from "antd";
+import { Space, Tag, Badge } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
-import dayjs from "dayjs";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
@@ -40,6 +39,7 @@ const UserPage = () => {
     );
 
     const tableRef = useRef<ActionType>(null);
+
     const { data, isFetching, refetch } = useUsersQuery(query);
     const { data: rolesData } = useRolesQuery("page=1&size=100");
 
@@ -62,12 +62,21 @@ const UserPage = () => {
         };
 
         const filters: string[] = [];
-        if (searchValue) filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
-        if (roleFilter) filters.push(`role.name='${roleFilter}'`);
-        if (activeFilter !== null) filters.push(`active=${activeFilter}`);
-        if (createdAtFilter) filters.push(createdAtFilter);
+
+        if (searchValue)
+            filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
+
+        if (roleFilter)
+            filters.push(`role.name='${roleFilter}'`);
+
+        if (activeFilter !== null)
+            filters.push(`active=${activeFilter}`);
+
+        if (createdAtFilter)
+            filters.push(createdAtFilter);
 
         if (filters.length > 0) q.filter = filters.join(" and ");
+
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, roleFilter, activeFilter, createdAtFilter]);
 
@@ -76,7 +85,8 @@ const UserPage = () => {
         pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         total: 0,
     };
-    const users = data?.result ?? [];
+
+    const users = data?.result || [];
 
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
@@ -85,17 +95,28 @@ const UserPage = () => {
         };
 
         const filters: string[] = [];
-        if (searchValue) filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
-        if (roleFilter) filters.push(`role.name='${roleFilter}'`);
-        if (activeFilter !== null) filters.push(`active=${activeFilter}`);
-        if (createdAtFilter) filters.push(createdAtFilter);
+
+        if (searchValue)
+            filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
+
+        if (roleFilter)
+            filters.push(`role.name='${roleFilter}'`);
+
+        if (activeFilter !== null)
+            filters.push(`active=${activeFilter}`);
+
+        if (createdAtFilter)
+            filters.push(createdAtFilter);
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let temp = queryString.stringify(q, { encode: false });
 
         let sortBy = "sort=createdAt,desc";
-        if (sort?.name) sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
+
+        if (sort?.name)
+            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
+
         else if (sort?.email)
             sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
 
@@ -120,15 +141,17 @@ const UserPage = () => {
             align: "center",
             render: (_, record) => {
                 const backendURL = import.meta.env.VITE_BACKEND_URL;
+
                 const avatarUrl = record.avatar
                     ? `${backendURL}/storage/AVATAR/${record.avatar}`
                     : null;
 
                 const displayName = record.name || record.email || "";
+
                 const initials = displayName
                     .split(" ")
                     .filter(Boolean)
-                    .map((word) => word[0]?.toUpperCase())
+                    .map((w) => w[0]?.toUpperCase())
                     .slice(0, 2)
                     .join("");
 
@@ -149,8 +172,12 @@ const UserPage = () => {
                 }
 
                 const bgColors = ["#1677ff", "#fa8c16", "#52c41a", "#13c2c2", "#eb2f96"];
+
                 const bg =
-                    bgColors[(displayName.charCodeAt(0) + displayName.length) % bgColors.length];
+                    bgColors[
+                    (displayName.charCodeAt(0) + displayName.length) %
+                    bgColors.length
+                    ];
 
                 return (
                     <div
@@ -174,7 +201,9 @@ const UserPage = () => {
             },
         },
         { title: "Tên hiển thị", dataIndex: "name", sorter: true },
+
         { title: "Email", dataIndex: "email", sorter: true },
+
         {
             title: "Vai trò",
             dataIndex: ["role", "name"],
@@ -196,7 +225,6 @@ const UserPage = () => {
                     <Badge status="error" text="Ngừng hoạt động" />
                 ),
         },
-
         {
             title: "Hành động",
             align: "center",
@@ -268,6 +296,7 @@ const UserPage = () => {
                                 );
                             }}
                         />
+
                         <DateRangeFilter
                             fieldName="createdAt"
                             onChange={(filter) => setCreatedAtFilter(filter)}
@@ -286,6 +315,7 @@ const UserPage = () => {
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);
+
                         return Promise.resolve({
                             data: users,
                             success: true,

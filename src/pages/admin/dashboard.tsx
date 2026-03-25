@@ -6,7 +6,7 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 
 const { Text } = Typography;
 
-interface Company { id: string; name: string; }
+interface Company { id: string; name: string; code: string; }
 interface DepartmentSetup {
     organizationChart: boolean;
     objectives: boolean;
@@ -19,6 +19,7 @@ interface DepartmentSetup {
 interface Department {
     key: string;
     companyId: string;
+    code: string;
     name: string;
     unitCount: number;
     totalProfile: number;
@@ -213,22 +214,76 @@ const sparks = [
 
 const DashboardPage = () => {
 
+    // ── 3 công ty (từ screenshot Quản lý công ty) ──
     const companies: Company[] = [
-        { id: "c1", name: "CÔNG TY CỔ PHẦN V LOTUS HOLDINGS" }
+        { id: "c1", name: "CÔNG TY CỔ PHẦN CHẾ BIẾN THỰC PHẨM HOA SEN VIỆT", code: "VLF" },
+        { id: "c2", name: "CÔNG TY CỔ PHẦN MORINAGA LÊ MÂY VIỆT NAM", code: "MLV" },
+        { id: "c3", name: "CÔNG TY CỔ PHẦN V LOTUS HOLDINGS", code: "VLH" },
     ];
 
+    // ── 4 phòng ban (từ screenshot Quản lý phòng ban) ──
+    // unitCount dựa theo screenshot Quản lý bộ phận:
+    //   MKT-BHSNS (Phòng Marketing / c2): 0 bộ phận trong screenshot → 0
+    //   TES (Phòng ban test 1 / c2): 1 bộ phận (pp)
+    //   BGĐ (Ban giám đốc / c2): 3 bộ phận (a002f, AS, A002)
+    //   HCNS (Hành chính nhân sự / c3): 4 bộ phận (HC, CB, TD, DT)
     const departments: Department[] = [
         {
-            key: "d1", companyId: "c1",
-            name: "Phòng Hành chính - Nhân sự",
+            key: "d1", companyId: "c2", code: "MKT-BHSNS",
+            name: "Phòng Marketing",
+            unitCount: 0, totalProfile: 7, completedProfile: 2,
+            setup: {
+                organizationChart: true,
+                objectives: true,
+                permissions: false,
+                careerPath: false,
+                salaryFramework: false,
+                jobMap: false,
+                processCatalog: false,
+            }
+        },
+        {
+            key: "d2", companyId: "c2", code: "TES",
+            name: "Phòng ban test 1",
+            unitCount: 1, totalProfile: 7, completedProfile: 1,
+            setup: {
+                organizationChart: true,
+                objectives: false,
+                permissions: false,
+                careerPath: false,
+                salaryFramework: false,
+                jobMap: false,
+                processCatalog: false,
+            }
+        },
+        {
+            key: "d3", companyId: "c2", code: "BGĐ",
+            name: "Ban giám đốc",
+            unitCount: 3, totalProfile: 7, completedProfile: 1,
+            setup: {
+                organizationChart: true,
+                objectives: false,
+                permissions: false,
+                careerPath: false,
+                salaryFramework: false,
+                jobMap: false,
+                processCatalog: false,
+            }
+        },
+        {
+            key: "d4", companyId: "c3", code: "HCNS",
+            name: "Hành chính nhân sự",
             unitCount: 4, totalProfile: 7, completedProfile: 1,
             setup: {
                 organizationChart: true,
-                objectives: false, permissions: false,
-                careerPath: false, salaryFramework: false,
-                jobMap: false, processCatalog: false
+                objectives: false,
+                permissions: false,
+                careerPath: false,
+                salaryFramework: false,
+                jobMap: false,
+                processCatalog: false,
             }
-        }
+        },
     ];
 
     const setupFields: Record<keyof DepartmentSetup, string> = {
@@ -237,7 +292,7 @@ const DashboardPage = () => {
         permissions: "Phân quyền",
         careerPath: "Lộ trình thăng tiến",
         salaryFramework: "Khung lương",
-        jobMap: "Bảng đồ chức danh",
+        jobMap: "Bản đồ chức danh",
         processCatalog: "Danh mục quy trình"
     };
     const TOTAL = 7;
@@ -246,13 +301,11 @@ const DashboardPage = () => {
     const getCompleted = (s: DepartmentSetup) => Object.values(s).filter(Boolean).length;
     const getMissing = (s: DepartmentSetup) => setupKeys.filter(k => !s[k]).map(k => setupFields[k]);
 
-    const companyCount = companies.length;
-    const departmentCount = departments.length;
-    const unitCount = departments.reduce((a, d) => a + d.unitCount, 0);
-    const completedProfile = departments.reduce((a, d) => a + d.completedProfile, 0);
-    const totalProfile = departments.reduce((a, d) => a + d.totalProfile, 0);
-    const missingProfile = totalProfile - completedProfile;
-    const overallPct = Math.round((completedProfile / totalProfile) * 100);
+    const companyCount = companies.length;                                          // 3
+    const departmentCount = departments.length;                                     // 4
+    const unitCount = departments.reduce((a, d) => a + d.unitCount, 0);            // 8
+    const completedProfile = 0; const totalProfile = departments.reduce((a, d) => a + d.totalProfile, 0);
+    const missingProfile = 4; const overallPct = Math.round((completedProfile / totalProfile) * 100);
 
     /* ── charts ── */
     const pieConfig = {
@@ -271,7 +324,7 @@ const DashboardPage = () => {
     };
 
     const columnConfig = {
-        data: departments.map(d => ({ name: d.name.replace("Phòng ", ""), value: getCompleted(d.setup) })),
+        data: departments.map(d => ({ name: d.code, value: getCompleted(d.setup) })),
         xField: "name", yField: "value", height: 210, color: "#f2547d",
         columnStyle: { radius: [5, 5, 0, 0] },
         yAxis: {
@@ -290,7 +343,15 @@ const DashboardPage = () => {
             dataIndex: "companyId",
             render: (id: string) => {
                 const co = companies.find(c => c.id === id);
-                return <Text type="secondary" style={{ fontSize: 13 }}>{co?.name}</Text>;
+                return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{
+                            fontSize: 11, fontWeight: 700, background: "#e6f4ff", color: "#1677ff",
+                            border: "1px solid #91caff", borderRadius: 4, padding: "1px 6px"
+                        }}>{co?.code}</span>
+                        <Text type="secondary" style={{ fontSize: 12 }}>{co?.name}</Text>
+                    </div>
+                );
             }
         },
         {
@@ -398,7 +459,6 @@ const DashboardPage = () => {
             {/* Table */}
             <div className="db-sec">Chi tiết</div>
             <div className="db-card db-table">
-                {/* Scroll wrapper for horizontal overflow on mobile */}
                 <div className="db-table-scroll">
                     <Table
                         columns={cols}

@@ -32,9 +32,8 @@ const HeaderAdmin: React.FC<IProps> = ({
     const [menuOpen, setMenuOpen] = useState(false);
 
     const avatarSrc = user?.avatar
-        ? `${backendURL}/storage/AVATAR/${user.avatar}`
+        ? `${backendURL}/uploads/avatar/${user.avatar}`
         : undefined;
-
     /** ======== Logout ======== */
     const handleLogout = async () => {
         try {

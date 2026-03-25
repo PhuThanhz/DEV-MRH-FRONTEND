@@ -24,6 +24,7 @@ interface IProps {
     open: boolean;
     onClose: () => void;
     departmentId: number;
+    companyId: number; // THÊM
     assignedJobIds: number[];
     onSuccess: () => void;
 }
@@ -39,6 +40,7 @@ const DrawerAssignJobTitle = ({
     open,
     onClose,
     departmentId,
+    companyId, // THÊM
     assignedJobIds,
     onSuccess,
 }: IProps) => {
@@ -49,7 +51,6 @@ const DrawerAssignJobTitle = ({
     const [search, setSearch] = useState("");
     const [blockedJobs, setBlockedJobs] = useState<IBlockedJob[]>([]);
 
-    /* ================= LOAD JOB TITLES ĐÃ GÁN Ở CẤP KHÁC ================= */
     const loadBlockedJobTitles = async () => {
         try {
             const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
@@ -74,12 +75,17 @@ const DrawerAssignJobTitle = ({
     const getBlockedSource = (jobTitleId: number): BlockSource | undefined =>
         blockedJobs.find((x) => x.jobTitleId === jobTitleId)?.source;
 
-    /* ================= FETCH MASTER JOB TITLES ================= */
     const fetchData = async () => {
         setLoading(true);
         try {
             const filters: string[] = [];
-            if (search) filters.push(`nameVi~'${search}'`);
+
+            // THÊM — chỉ load chức danh thuộc công ty này
+            if (companyId)
+                filters.push(`positionLevel.company.id:${companyId}`);
+
+            if (search)
+                filters.push(`nameVi~'${search}'`);
 
             const query =
                 filters.length > 0
@@ -103,7 +109,6 @@ const DrawerAssignJobTitle = ({
         }
     }, [open, search]);
 
-    /* ================= ASSIGN ================= */
     const handleAssign = async () => {
         if (selected.length === 0) return;
 
@@ -125,7 +130,6 @@ const DrawerAssignJobTitle = ({
         }
     };
 
-    /* ================= COLUMNS ================= */
     const columns: ColumnsType<any> = [
         {
             title: "Chọn",
@@ -168,8 +172,6 @@ const DrawerAssignJobTitle = ({
             title: "Tên chức danh",
             dataIndex: "nameVi",
         },
-
-        /* ====== ⭐ CỘT CẤP BẬC (MỚI THÊM) ====== */
         {
             title: "Cấp bậc",
             align: "center",
@@ -181,11 +183,9 @@ const DrawerAssignJobTitle = ({
                     (pl?.band && pl?.level
                         ? `${pl.band}${pl.level}`
                         : "--");
-
                 return <Badge color="blue" text={display} />;
             },
         },
-
         {
             title: "Trạng thái",
             align: "center",
@@ -196,15 +196,12 @@ const DrawerAssignJobTitle = ({
                 if (assignedJobIds.includes(r.id)) {
                     return <Badge status="success" text="Đã gán phòng ban" />;
                 }
-
                 if (blockedSource === "COMPANY") {
                     return <Badge status="error" text="Đã gán công ty" />;
                 }
-
                 if (blockedSource === "SECTION") {
                     return <Badge status="warning" text="Đã gán bộ phận" />;
                 }
-
                 return <Badge status="processing" text="Chưa gán" />;
             },
         },
@@ -239,7 +236,6 @@ const DrawerAssignJobTitle = ({
                     allowClear
                     onSearch={setSearch}
                 />
-
                 <Spin spinning={loading}>
                     <Table
                         rowKey="id"

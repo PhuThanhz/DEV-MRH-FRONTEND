@@ -159,11 +159,11 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             label: "Quy trình & Đánh giá",
             icon: <FileDoneOutlined />,
             children: [
-                ...(checkPermission(ALL_PERMISSIONS.COMPANY_PROCEDURES.GET_PAGINATE)
+                ...(checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE)
                     ? [
                         {
-                            label: <Link to="/admin/company-procedures">Quy trình công ty</Link>,
-                            key: "/admin/company-procedures",
+                            label: <Link to="/admin/procedures">Quy trình</Link>,
+                            key: "/admin/procedures",
                         },
                     ]
                     : []),

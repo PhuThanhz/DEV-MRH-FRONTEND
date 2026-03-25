@@ -2,7 +2,8 @@ export const PATHS = {
     HOME: "/",
     LOGIN: "/login",
     REGISTER: "/register",
-
+    FORGOT_PASSWORD: "/forgot-password",           // ⭐ THÊM
+    CONFIRM_RESET_PASSWORD: "/confirm-reset-password", // ⭐ THÊ
     ADMIN: {
         ROOT: "/admin",
         DASHBOARD: "/admin",
@@ -24,10 +25,20 @@ export const PATHS = {
         PROCESS_ACTION: "/admin/process-action",
         PERMISSION_CATEGORIES: "/admin/permission-categories",
         PERMISSION_CONTENTS: "/admin/permission-categories/:categoryId/contents",
-        PERMISSION_MATRIX: "/admin/permission-contents/:contentId/matrix", // ⭐ BỔ SUNG
+        PERMISSION_MATRIX: "/admin/permission-contents/:contentId/matrix",
         DEPARTMENT_PERMISSION: "/admin/departments/:departmentId/permissions",
         DEPARTMENT_OBJECTIVES: "/admin/departments/:departmentId/objectives-tasks",
         DEPARTMENT_PROCEDURES: "/admin/departments/:departmentId/procedures",
+        ORG_CHART_COMPANY: "/admin/companies/:companyId/org-chart",
+        ORG_CHART_DEPARTMENT: "/admin/departments/:departmentId/org-chart",
+        // ===== PROCEDURES (DÙNG CHUNG) =====
+        // type=COMPANY → quy trình công ty
+        // type=DEPARTMENT → quy trình phòng ban
+        PROCEDURES: "/admin/procedures",
+        COMPANY_PROCEDURES: "/admin/companies/:companyId/procedures",
+        CONFIDENTIAL_PROCEDURES: "/admin/confidential-procedures", // ← THÊM
+        CHANGE_PASSWORD: "/change-password",  // ⭐ THÊM
+
     },
     CLIENT: {
         ROOT: "/",

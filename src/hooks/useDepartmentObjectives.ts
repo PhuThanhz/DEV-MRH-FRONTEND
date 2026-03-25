@@ -5,7 +5,7 @@ import {
     callDeleteDepartmentObjective
 } from "@/config/api";
 
-import type { IDepartmentMissionTree } from "@/types/backend";
+import type { IDepartmentMissionTree, ICreateDepartmentMissionReq } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
 /* ======================================================
@@ -25,10 +25,8 @@ export const useDepartmentObjectivesQuery = (departmentId?: number) => {
 
             const res = await callFetchDepartmentObjectives(departmentId);
 
-            console.log("OBJECTIVES API:", res);
-
-            if (!res?.data) {
-                throw new Error("Không thể lấy mục tiêu phòng ban");
+            if (!res || res.statusCode !== 200 || !res.data) {
+                throw new Error(res?.message || "Không thể lấy mục tiêu phòng ban");
             }
 
             return res.data as IDepartmentMissionTree;
@@ -45,26 +43,28 @@ export const useCreateDepartmentObjectiveMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (payload: any) => {
+        // CHỈNH: dùng ICreateDepartmentMissionReq thay vì IDepartmentMissionTree
+        mutationFn: async (payload: ICreateDepartmentMissionReq) => {
             const res = await callCreateDepartmentObjective(payload);
 
-            if (!res?.data) {
-                throw new Error(res?.message || "Không thể tạo mục tiêu");
+            if (!res || res.statusCode !== 201) {
+                throw new Error(res?.message || "Không thể tạo mục tiêu phòng ban");
             }
 
             return res;
         },
 
-        onSuccess: (res, variables: any) => {
-            notify.created(res?.message || "Tạo mục tiêu thành công");
+        onSuccess: (res) => {
+            notify.created(res?.message || "Tạo mục tiêu phòng ban thành công");
 
             queryClient.invalidateQueries({
-                queryKey: ["department-objectives", variables?.departmentId],
+                queryKey: ["department-objectives"],
+                exact: false,
             });
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo mục tiêu");
+            notify.error(error.message || "Lỗi khi tạo mục tiêu phòng ban");
         },
     });
 };
@@ -93,6 +93,7 @@ export const useDeleteDepartmentObjectiveMutation = () => {
 
             queryClient.invalidateQueries({
                 queryKey: ["department-objectives"],
+                exact: false,
             });
         },
 

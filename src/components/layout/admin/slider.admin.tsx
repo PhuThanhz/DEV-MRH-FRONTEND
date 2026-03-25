@@ -53,7 +53,6 @@ const SliderAdmin: React.FC<IProps> = ({
         return () => window.removeEventListener("resize", handleResize);
     }, [setMobileOpen]);
 
-    // Logo với HRM và tagline
     const Logo = (
         <div
             className="logo-container"
@@ -70,27 +69,17 @@ const SliderAdmin: React.FC<IProps> = ({
             }}
         >
             {collapsed && !isMobile ? (
-                // Khi collapse: chỉ logo nhỏ
                 <img
                     src="/logo/LOGOFINAL.png"
                     alt="LOTUS HRM"
-                    style={{
-                        width: 36,
-                        height: "auto",
-                        objectFit: "contain",
-                    }}
+                    style={{ width: 36, height: "auto", objectFit: "contain" }}
                 />
             ) : (
-                // Không collapse: logo + tên + tagline
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <img
                         src="/logo/LOGOFINAL.png"
                         alt="LOTUS HRM"
-                        style={{
-                            width: 42,
-                            height: "auto",
-                            objectFit: "contain",
-                        }}
+                        style={{ width: 42, height: "auto", objectFit: "contain" }}
                     />
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         <span
@@ -118,8 +107,6 @@ const SliderAdmin: React.FC<IProps> = ({
                     </div>
                 </div>
             )}
-
-            {/* Overlay hồng nhạt khi hover */}
             <div
                 className="logo-overlay"
                 style={{
@@ -180,6 +167,95 @@ const SliderAdmin: React.FC<IProps> = ({
         </div>
     );
 
+    const sharedStyles = `
+        /* Menu hover màu hồng nhẹ */
+        .sidebar-menu-pink .ant-menu-item:hover {
+            background-color: rgba(236, 72, 153, 0.08) !important;
+        }
+
+        .sidebar-menu-pink .ant-menu-submenu-title:hover {
+            background-color: rgba(236, 72, 153, 0.08) !important;
+        }
+
+        /* Menu item selected màu hồng */
+        .sidebar-menu-pink .ant-menu-item-selected {
+            background-color: rgba(236, 72, 153, 0.12) !important;
+            color: #ec4899 !important;
+            font-weight: 600;
+        }
+
+        .sidebar-menu-pink .ant-menu-item-selected::after {
+            border-right: 3px solid #ec4899 !important;
+        }
+
+        /* Icon color khi selected */
+        .sidebar-menu-pink .ant-menu-item-selected .ant-menu-item-icon {
+            color: #ec4899 !important;
+        }
+
+        /* Submenu selected */
+        .sidebar-menu-pink .ant-menu-submenu-selected > .ant-menu-submenu-title {
+            color: #ec4899 !important;
+        }
+
+        /* Fix màu xanh popup submenu (khi collapsed) */
+        .ant-menu-submenu-popup .ant-menu-item-selected,
+        .ant-menu-submenu-popup .ant-menu-item-selected a,
+        .ant-menu-submenu-popup .ant-menu-item-selected span {
+            color: #ec4899 !important;
+        }
+
+        .ant-menu-submenu-popup .ant-menu-item-selected {
+            background-color: transparent !important;
+        }
+
+        .ant-menu-submenu-popup .ant-menu-item:hover,
+        .ant-menu-submenu-popup .ant-menu-item:hover a,
+        .ant-menu-submenu-popup .ant-menu-item:hover span {
+            color: #ec4899 !important;
+            background-color: rgba(236, 72, 153, 0.06) !important;
+        }
+
+        .ant-menu-submenu-popup .ant-menu-item-selected::after {
+            border-right: 3px solid #ec4899 !important;
+        }
+
+        /* Logo hover effect */
+        .logo-container:hover .logo-overlay {
+            background: rgba(236, 72, 153, 0.05) !important;
+        }
+
+        /* Smooth transitions */
+        .sidebar-menu-pink .ant-menu-item,
+        .sidebar-menu-pink .ant-menu-submenu-title {
+            transition: all 0.3s ease !important;
+        }
+
+        /* Scrollbar mảnh đẹp */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 2px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 99px;
+        }
+
+        .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        /* Firefox */
+        .sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+        }
+    `;
+
     if (isMobile) {
         return (
             <>
@@ -210,22 +286,10 @@ const SliderAdmin: React.FC<IProps> = ({
                                 style={{ width: 40, height: "auto" }}
                             />
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <span
-                                    style={{
-                                        fontSize: 16,
-                                        fontWeight: 700,
-                                        color: "#d63384",
-                                    }}
-                                >
+                                <span style={{ fontSize: 16, fontWeight: 700, color: "#d63384" }}>
                                     LOTUS HRM
                                 </span>
-                                <span
-                                    style={{
-                                        fontSize: 9,
-                                        fontWeight: 500,
-                                        color: "#f472b6",
-                                    }}
-                                >
+                                <span style={{ fontSize: 9, fontWeight: 500, color: "#f472b6" }}>
                                     Quản trị nhân sự
                                 </span>
                             </div>
@@ -235,9 +299,7 @@ const SliderAdmin: React.FC<IProps> = ({
                             type="text"
                             icon={<CloseOutlined />}
                             onClick={() => setMobileOpen(false)}
-                            style={{
-                                color: "#d63384",
-                            }}
+                            style={{ color: "#d63384" }}
                         />
 
                         <div
@@ -252,54 +314,14 @@ const SliderAdmin: React.FC<IProps> = ({
                         />
                     </div>
 
-                    {MenuList}
+                    <div className="sidebar-scroll" style={{ overflowY: "auto", height: "calc(100% - 64px)" }}>
+                        {MenuList}
+                    </div>
                 </Drawer>
 
                 {ScannerButton}
 
-                {/* CSS cho menu hover và selected màu hồng */}
-                <style>{`
-                    /* Menu hover màu hồng nhẹ */
-                    .sidebar-menu-pink .ant-menu-item:hover {
-                        background-color: rgba(236, 72, 153, 0.08) !important;
-                    }
-
-                    .sidebar-menu-pink .ant-menu-submenu-title:hover {
-                        background-color: rgba(236, 72, 153, 0.08) !important;
-                    }
-
-                    /* Menu item selected màu hồng */
-                    .sidebar-menu-pink .ant-menu-item-selected {
-                        background-color: rgba(236, 72, 153, 0.12) !important;
-                        color: #ec4899 !important;
-                        font-weight: 600;
-                    }
-
-                    .sidebar-menu-pink .ant-menu-item-selected::after {
-                        border-right: 3px solid #ec4899 !important;
-                    }
-
-                    /* Icon color khi selected */
-                    .sidebar-menu-pink .ant-menu-item-selected .ant-menu-item-icon {
-                        color: #ec4899 !important;
-                    }
-
-                    /* Submenu selected */
-                    .sidebar-menu-pink .ant-menu-submenu-selected > .ant-menu-submenu-title {
-                        color: #ec4899 !important;
-                    }
-
-                    /* Logo hover effect */
-                    .logo-container:hover .logo-overlay {
-                        background: rgba(236, 72, 153, 0.05) !important;
-                    }
-
-                    /* Smooth transitions */
-                    .sidebar-menu-pink .ant-menu-item,
-                    .sidebar-menu-pink .ant-menu-submenu-title {
-                        transition: all 0.3s ease !important;
-                    }
-                `}</style>
+                <style>{sharedStyles}</style>
             </>
         );
     }
@@ -324,57 +346,14 @@ const SliderAdmin: React.FC<IProps> = ({
             >
                 {Logo}
 
-
-                <div style={{ overflowY: "hidden", height: "calc(100vh - 64px)" }}>
+                <div className="sidebar-scroll" style={{ overflowY: "auto", height: "calc(100vh - 64px)" }}>
                     {MenuList}
                 </div>
             </Sider>
 
             {ScannerButton}
 
-            {/* CSS cho menu hover và selected màu hồng */}
-            <style>{`
-                /* Menu hover màu hồng nhẹ */
-                .sidebar-menu-pink .ant-menu-item:hover {
-                    background-color: rgba(236, 72, 153, 0.08) !important;
-                }
-
-                .sidebar-menu-pink .ant-menu-submenu-title:hover {
-                    background-color: rgba(236, 72, 153, 0.08) !important;
-                }
-
-                /* Menu item selected màu hồng */
-                .sidebar-menu-pink .ant-menu-item-selected {
-                    background-color: rgba(236, 72, 153, 0.12) !important;
-                    color: #ec4899 !important;
-                    font-weight: 600;
-                }
-
-                .sidebar-menu-pink .ant-menu-item-selected::after {
-                    border-right: 3px solid #ec4899 !important;
-                }
-
-                /* Icon color khi selected */
-                .sidebar-menu-pink .ant-menu-item-selected .ant-menu-item-icon {
-                    color: #ec4899 !important;
-                }
-
-                /* Submenu selected */
-                .sidebar-menu-pink .ant-menu-submenu-selected > .ant-menu-submenu-title {
-                    color: #ec4899 !important;
-                }
-
-                /* Logo hover effect */
-                .logo-container:hover .logo-overlay {
-                    background: rgba(236, 72, 153, 0.05) !important;
-                }
-
-                /* Smooth transitions */
-                .sidebar-menu-pink .ant-menu-item,
-                .sidebar-menu-pink .ant-menu-submenu-title {
-                    transition: all 0.3s ease !important;
-                }
-            `}</style>
+            <style>{sharedStyles}</style>
         </>
     );
 };

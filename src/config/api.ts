@@ -9,10 +9,10 @@ import type {
     IReqJobTitlePerformanceContent, ISalaryStructure,
     ISalaryMatrix, IReqSalaryStructure, IProcessAction, IPermissionCategory,
     IPermissionCategoryMatrix,
-    IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq, IJobDescriptionList,
-    ICreateJobDescriptionReq,
-    IUpdateJobDescriptionReq, IJobDescription, IDepartmentMissionTree,
-    ICreateDepartmentMissionReq, IDepartmentProcedure,
+    IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
+    IJobDescription, IDepartmentMissionTree,
+    ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO
 
 
 } from '@/types/backend';
@@ -35,6 +35,12 @@ export const callLogout = () => {
     return axios.post<IBackendRes<string>>('/api/v1/auth/logout')
 }
 
+export const callUpdateProfile = (data: IReqUpdateProfileDTO) => {
+    return axios.put<IBackendRes<IUser>>(
+        "/api/v1/users/profile",
+        data
+    );
+};
 
 export const callUploadSingleFile = (file: any, folderType: string) => {
     const bodyFormData = new FormData();
@@ -59,14 +65,16 @@ export const callUpdateUser = (user: IUser) => {
     return axios.put<IBackendRes<IUser>>(`/api/v1/users`, { ...user })
 }
 
-export const callDeleteUser = (id: string) => {
+export const callDeleteUser = (id: number) => {
     return axios.delete<IBackendRes<IUser>>(`/api/v1/users/${id}`);
 }
 
 export const callFetchUser = (query: string) => {
     return axios.get<IBackendRes<IModelPaginate<IUser>>>(`/api/v1/users?${query}`);
 }
-
+export const callFetchUserById = (id: number) => {
+    return axios.get<IBackendRes<IUser>>(`/api/v1/users/${id}`);
+}
 
 export const callCreatePermission = (permission: IPermission) => {
     return axios.post<IBackendRes<IPermission>>('/api/v1/permissions', { ...permission })
@@ -151,7 +159,42 @@ export const callActiveCompany = (id: number) => {
         `/api/v1/companies/${id}/active`
     );
 };
+/* ===================== USER POSITIONS ===================== */
 
+export const callFetchUserPositions = (userId: number) => {
+    return axios.get<IBackendRes<IUserPosition[]>>(
+        `/api/v1/users/${userId}/positions`
+    );
+};
+
+export const callCreateUserPosition = (
+    userId: number,
+    data: {
+        source: string;
+        companyJobTitleId?: number;
+        departmentJobTitleId?: number;
+        sectionJobTitleId?: number;
+    }
+) => {
+    return axios.post<IBackendRes<IUserPosition>>(
+        `/api/v1/users/${userId}/positions`,
+        data
+    );
+};
+
+export const callDeleteUserPosition = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/users/positions/${id}`
+    );
+};
+
+
+// ← THÊM
+export const callFetchUsersByCompany = (companyId: number) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/users/by-company/${companyId}`
+    );
+};
 /* ===================== DEPARTMENTS ===================== */
 
 export const callFetchDepartment = (query: string) => {
@@ -330,9 +373,11 @@ export const callFetchPositionLevel = (query: string) => {
     );
 };
 
+// ⭐ THAY — thêm companyId vào payload
 export const callCreatePositionLevel = (data: {
     code: string;
     bandOrder?: number;
+    companyId: number; // ⭐ THÊM
 }) => {
     return axios.post<IBackendRes<IPositionLevel>>(
         `/api/v1/position-levels`,
@@ -939,51 +984,50 @@ export const callAssignPermission = (
 };
 
 
-/* ===================== JD ===================== */
-
+/* ===================== JOB DESCRIPTION ===================== */
 export const callFetchJobDescriptions = (query: string) => {
-    return axios.get<IBackendRes<IModelPaginate<IJobDescriptionList>>>(
+    return axios.get<IBackendRes<IModelPaginate<IJobDescription>>>(
         `/api/v1/job-descriptions?${query}`
     );
 };
 
-export const callGetJobDescriptionById = (id: number) => {
+export const callFetchJobDescriptionById = (id: number) => {
     return axios.get<IBackendRes<IJobDescription>>(
         `/api/v1/job-descriptions/${id}`
     );
 };
 
-export const callCreateJobDescription = (data: ICreateJobDescriptionReq) => {
+export const callCreateJobDescription = (data: IJobDescription) => {
     return axios.post<IBackendRes<IJobDescription>>(
         "/api/v1/job-descriptions",
-        data
+        { ...data }
     );
 };
 
-export const callUpdateJobDescription = (data: IUpdateJobDescriptionReq) => {
+export const callUpdateJobDescription = (
+    id: number,
+    data: IJobDescription
+) => {
     return axios.put<IBackendRes<IJobDescription>>(
-        "/api/v1/job-descriptions",
-        data
+        `/api/v1/job-descriptions/${id}`,
+        { ...data }
     );
 };
 
 export const callDeleteJobDescription = (id: number) => {
-    return axios.delete<IBackendRes<void>>(
+    return axios.delete<IBackendRes<IJobDescription>>(
         `/api/v1/job-descriptions/${id}`
     );
 };
 
-export const callSubmitJobDescription = (id: number) => {
-    return axios.post<IBackendRes<IJobDescription>>(
-        `/api/v1/job-descriptions/${id}/submit`
+
+export const callFetchMyJobDescriptions = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IJobDescription>>>(
+        `/api/v1/job-descriptions/my?${query}`
     );
 };
 
-export const callIssueJobDescription = (id: number) => {
-    return axios.post<IBackendRes<IJobDescription>>(
-        `/api/v1/job-descriptions/${id}/issue`
-    );
-};
+
 /* ===================== PERMISSION MATRIX REAL API ===================== */
 export const callFetchPermissionCategoriesByDepartment = (departmentId: number) => {
     return axios.get<IBackendRes<IPermissionCategory[]>>(
@@ -996,6 +1040,7 @@ export const callFetchPermissionMatrixByCategory = (categoryId: number) => {
         `/api/v1/permission-categories/${categoryId}/matrix`
     );
 };
+
 /* ===================== DEPARTMENT OBJECTIVES ===================== */
 
 export const callFetchDepartmentObjectives = (departmentId: number) => {
@@ -1003,8 +1048,12 @@ export const callFetchDepartmentObjectives = (departmentId: number) => {
 }
 
 export const callCreateDepartmentObjective = (data: any) => {
-    return axios.post(`/api/v1/department-objectives`, data)
+    return axios.post<IBackendRes<IDepartmentMissionTree>>(
+        `/api/v1/department-objectives`, data
+    );
+
 }
+
 
 export const callDeleteDepartmentObjective = (id: number) => {
     return axios.delete(`/api/v1/department-objectives/${id}`)
@@ -1045,5 +1094,456 @@ export const callUpdateDepartmentProcedure = (data: IDepartmentProcedure) => {
 export const callDeleteDepartmentProcedure = (id: number) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/department-procedures/${id}`
+    );
+};
+
+
+/* ===================== ORG CHARTS ===================== */
+
+export const callFetchOrgCharts = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IOrgChart>>>(
+        `/api/v1/job-position-charts?${query}`
+    );
+};
+
+export const callCreateOrgChart = (data: IOrgChart) => {
+    return axios.post<IBackendRes<IOrgChart>>(
+        `/api/v1/job-position-charts`,
+        data
+    );
+};
+
+export const callUpdateOrgChart = (data: IOrgChart) => {
+    return axios.put<IBackendRes<IOrgChart>>(
+        `/api/v1/job-position-charts`,
+        data
+    );
+};
+
+export const callDeleteOrgChart = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/job-position-charts/${id}`
+    );
+};
+
+
+/* ===================== ORG NODES ===================== */
+
+export const callFetchOrgNodes = (chartId: number) => {
+    return axios.get<IBackendRes<IOrgNode[]>>(
+        `/api/v1/job-position-nodes/chart/${chartId}`
+    );
+};
+
+export const callCreateOrgNode = (data: any) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/job-position-nodes`,
+        data
+    );
+};
+
+export const callUpdateOrgNode = (data: any) => {
+    return axios.put<IBackendRes<any>>(
+        `/api/v1/job-position-nodes`,
+        data
+    );
+};
+
+export const callDeleteOrgNode = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/job-position-nodes/${id}`
+    );
+};
+/* ===================== JD FLOW API ===================== */
+
+/**
+ * Lấy trạng thái flow của JD
+ * GET /api/v1/jd-flow/{jdId}
+ */
+export const callFetchJdFlow = (jdId: number) => {
+    return axios.get<IBackendRes<any>>(
+        `/api/v1/jd-flow/${jdId}`
+    );
+};
+
+/**
+ * Lấy danh sách JD đang chờ tôi duyệt
+ * GET /api/v1/jd-flow/inbox
+ */
+export const callFetchJdFlowInbox = () => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/jd-flow/inbox`
+    );
+};
+
+/**
+ * Lấy danh sách user có quyền duyệt JD
+ * GET /api/v1/jd-flow/approvers
+ */
+export const callFetchJdApprovers = () => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/jd-flow/approvers`
+    );
+};
+
+/**
+ * Lấy timeline duyệt JD
+ * GET /api/v1/jd-flow/logs/{jdId}
+ */
+export const callFetchJdFlowLogs = (jdId: number) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/jd-flow/logs/${jdId}`
+    );
+};
+
+/**
+ * Gửi JD đi duyệt
+ * POST /api/v1/jd-flow/submit
+ */
+export const callSubmitJdFlow = (data: {
+    jdId: number;
+    nextUserId: number;
+}) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/jd-flow/submit`,
+        data
+    );
+};
+
+/**
+ * Duyệt JD và chuyển tiếp
+ * POST /api/v1/jd-flow/approve
+ */
+export const callApproveJdFlow = (data: {
+    jdId: number;
+    nextUserId?: number;
+}) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/jd-flow/approve`,
+        data
+    );
+};
+
+/**
+ * Từ chối JD
+ * POST /api/v1/jd-flow/reject
+ */
+export const callRejectJdFlow = (data: {
+    jdId: number;
+    comment?: string;
+}) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/jd-flow/reject`,
+        data
+    );
+};
+
+/**
+ * Ban hành JD
+ * POST /api/v1/jd-flow/issue
+ */
+export const callIssueJdFlow = (data: {
+    jdId: number;
+}) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/jd-flow/issue`,
+        data
+    );
+};
+/**
+ * Lấy danh sách user có quyền ban hành JD
+ * GET /api/v1/jd-flow/issuers
+ */
+export const callFetchJdIssuers = () => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/jd-flow/issuers`
+    );
+};
+/* ===================== PASSWORD RESET ===================== */
+
+export const callRequestPasswordCode = (email: string) => {
+    return axios.post<IBackendRes<{
+        success: boolean;
+        message: string;
+        mode: "activate" | "reset"; // 👈 THÊM DÒNG NÀY
+    }>>(
+        "/api/v1/users/request-password-code",
+        { email }
+    );
+};
+export const callConfirmResetPassword = (
+    email: string,
+    code: string,
+    newPassword: string
+) => {
+    return axios.post<IBackendRes<{ success: boolean; message: string }>>(
+        "/api/v1/users/confirm-reset-password",
+        { email, code, newPassword }
+    );
+};
+/* ===================== PROCEDURES (DÙNG CHUNG) ===================== */
+
+// Tạo mới
+export const callCreateProcedure = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    data: {
+        procedureName: string;
+        status?: string;
+        planYear?: number;
+        fileUrls?: string[]; // ← đổi
+        note?: string;
+        departmentId?: number | null;
+        sectionId?: number | null;
+        userIds?: number[];   // ← THÊM
+
+    }
+) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/procedures?type=${type}`,
+        data
+    );
+};
+
+// Cập nhật
+export const callUpdateProcedure = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number,
+    data: {
+        procedureName: string;
+        status?: string;
+        planYear?: number;
+        fileUrls?: string[]; // ← đổi
+        note?: string;
+        departmentId?: number | null;
+        sectionId?: number | null;
+        userIds?: number[];   // ← THÊM
+    }
+) => {
+    return axios.put<IBackendRes<any>>(
+        `/api/v1/procedures/${id}?type=${type}`,
+        data
+    );
+};
+
+// Xoá
+export const callDeleteProcedure = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number
+) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/procedures/${id}?type=${type}`
+    );
+};
+
+// Bật/tắt active
+export const callToggleActiveProcedure = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number
+) => {
+    return axios.put<IBackendRes<void>>(
+        `/api/v1/procedures/${id}/active?type=${type}`
+    );
+};
+
+// Danh sách (phân trang)
+export const callFetchProcedures = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    query: string
+) => {
+    return axios.get<IBackendRes<IModelPaginate<any>>>(
+        `/api/v1/procedures?type=${type}&${query}`
+    );
+};
+
+// Chi tiết
+export const callFetchProcedureById = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number
+) => {
+    return axios.get<IBackendRes<any>>(
+        `/api/v1/procedures/${id}?type=${type}`
+    );
+};
+
+// Theo phòng ban
+export const callFetchProceduresByDepartment = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    departmentId: number
+) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/procedures/by-department/${departmentId}?type=${type}`
+    );
+};
+
+// Theo bộ phận
+export const callFetchProceduresBySection = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    sectionId: number
+) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/procedures/by-section/${sectionId}?type=${type}`
+    );
+};
+
+// Xem lịch sử version
+export const callFetchProcedureHistory = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number
+) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/procedures/${id}/history?type=${type}`
+    );
+};
+
+// Theo công ty
+export const callFetchProceduresByCompany = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    companyId: number
+) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/procedures/by-company/${companyId}?type=${type}`
+    );
+};
+
+// Danh sách công ty CÓ FILTER
+export const callFetchCompanyProceduresWithFilter = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<any>>>(
+        `/api/v1/procedures/company?${query}`
+    );
+};
+
+// Danh sách phòng ban CÓ FILTER
+export const callFetchDepartmentProceduresWithFilter = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<any>>>(
+        `/api/v1/procedures/department?${query}`
+    );
+};
+
+// ← THÊM: Danh sách bảo mật CÓ FILTER
+export const callFetchConfidentialProceduresWithFilter = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<any>>>(
+        `/api/v1/procedures/confidential?${query}`
+    );
+};
+
+// Tạo phiên bản mới
+export const callReviseProcedure = (
+    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    id: number,
+    data: {
+        procedureName: string;
+        status?: string;
+        planYear?: number;
+        fileUrls?: string[]; // ← đổi
+        note?: string;
+        departmentId?: number | null;
+        sectionId?: number | null;
+        userIds?: number[];   // ← THÊM
+    }
+) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/procedures/${id}/revise?type=${type}`,
+        data
+    );
+};
+/* ===================== EMPLOYEE CAREER PATH ===================== */
+
+export const callAssignEmployeeCareerPath = (data: IReqAssignCareerPath) => {
+    return axios.post<IBackendRes<IEmployeeCareerPath>>(
+        `/api/v1/employee-career-paths`,
+        data
+    );
+};
+
+export const callUpdateEmployeeCareerPath = (id: number, data: IReqAssignCareerPath) => {
+    return axios.put<IBackendRes<IEmployeeCareerPath>>(
+        `/api/v1/employee-career-paths/${id}`,
+        data
+    );
+};
+
+export const callPromoteEmployee = (id: number, data: IReqPromoteEmployee) => {
+    return axios.post<IBackendRes<IEmployeeCareerPath>>(
+        `/api/v1/employee-career-paths/${id}/promote`,
+        data
+    );
+};
+
+export const callSetEmployeeCareerPathStatus = (id: number, status: number) => {
+    return axios.patch<IBackendRes<void>>(
+        `/api/v1/employee-career-paths/${id}/status`,
+        null,
+        { params: { status } }
+    );
+};
+
+export const callGetEmployeeCareerPathByUser = (userId: number) => {
+    return axios.get<IBackendRes<IEmployeeCareerPath>>(
+        `/api/v1/employee-career-paths/user/${userId}`
+    );
+};
+
+export const callGetEmployeeCareerPathsByDepartment = (departmentId: number) => {
+    return axios.get<IBackendRes<IEmployeeCareerPath[]>>(
+        `/api/v1/employee-career-paths/department/${departmentId}`
+    );
+};
+
+export const callGetUpcomingPromotions = (withinDays: number = 30) => {
+    return axios.get<IBackendRes<IEmployeeCareerPath[]>>(
+        `/api/v1/employee-career-paths/upcoming-promotions`,
+        { params: { withinDays } }
+    );
+};
+
+export const callGetEmployeeCareerPathHistory = (userId: number) => {
+    return axios.get<IBackendRes<IEmployeeCareerPathHistory[]>>(
+        `/api/v1/employee-career-paths/history/${userId}`
+    );
+};
+/* ===================== CAREER PATH TEMPLATES ===================== */
+export const callCreateCareerPathTemplate = (data: ICareerPathTemplateRequest) => {
+    return axios.post<IBackendRes<ICareerPathTemplate>>(`/api/v1/career-path-templates`, data);
+};
+
+export const callUpdateCareerPathTemplate = (id: number, data: ICareerPathTemplateRequest) => {
+    return axios.put<IBackendRes<ICareerPathTemplate>>(`/api/v1/career-path-templates/${id}`, data);
+};
+
+export const callDeactivateCareerPathTemplate = (id: number) => {
+    return axios.patch<IBackendRes<void>>(`/api/v1/career-path-templates/${id}/deactivate`);
+};
+
+export const callActivateCareerPathTemplate = (id: number) => {
+    return axios.patch<IBackendRes<void>>(`/api/v1/career-path-templates/${id}/activate`);
+};
+
+export const callGetCareerPathTemplateById = (id: number) => {
+    return axios.get<IBackendRes<ICareerPathTemplate>>(`/api/v1/career-path-templates/${id}`);
+};
+
+export const callGetAllCareerPathTemplates = () => {
+    return axios.get<IBackendRes<ICareerPathTemplate[]>>(`/api/v1/career-path-templates`);
+};
+
+export const callGetActiveCareerPathTemplates = () => {
+    return axios.get<IBackendRes<ICareerPathTemplate[]>>(`/api/v1/career-path-templates/active`);
+};
+
+export const callGetCareerPathTemplatesByDepartment = (departmentId: number) => {
+    return axios.get<IBackendRes<ICareerPathTemplate[]>>(
+        `/api/v1/career-path-templates/by-department/${departmentId}`
+    );
+};
+
+// ← thêm deactivate employee career path
+export const callDeactivateEmployeeCareerPath = (id: number) => {
+    return axios.patch<IBackendRes<void>>(`/api/v1/employee-career-paths/${id}/deactivate`);
+};
+// ⭐ THÊM VÀO CUỐI FILE
+export const callChangePassword = (data: IReqChangePasswordDTO) => {
+    return axios.post<IBackendRes<void>>(
+        "/api/v1/auth/change-password",
+        data
     );
 };

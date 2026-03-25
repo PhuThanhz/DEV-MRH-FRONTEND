@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Badge, Popconfirm, Button } from "antd";
+import { Space, Tag, Popconfirm } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -7,12 +7,16 @@ import queryString from "query-string";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
 import type { IPositionLevel } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
+import { callFetchCompany } from "@/config/api";
 
-import { usePositionLevelsQuery } from "@/hooks/usePositionLevels";
-import { useDeletePositionLevelMutation } from "@/hooks/usePositionLevels"; // Thêm hook delete (tạo nếu chưa có)
+import {
+    usePositionLevelsQuery,
+    useDeletePositionLevelMutation,
+} from "@/hooks/usePositionLevels";
 
 import ModalPositionLevel from "./modal.position-level";
 import ViewDetailPositionLevel from "./view.position-level";
@@ -21,62 +25,63 @@ const PositionLevelPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IPositionLevel | null>(null);
     const [openViewDetail, setOpenViewDetail] = useState(false);
-
     const [searchValue, setSearchValue] = useState("");
+    const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+    const [resetSignal, setResetSignal] = useState(0);
 
     const tableRef = useRef<ActionType>(null);
 
     const [query, setQuery] = useState(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
+        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=bandOrder,asc&sort=code,asc`
     );
 
     const { data, isFetching, refetch } = usePositionLevelsQuery(query);
-    const deleteMutation = useDeletePositionLevelMutation(); // Hook xóa
+    const deleteMutation = useDeletePositionLevelMutation();
 
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const levels = data?.result ?? [];
 
-    // AUTO BUILD QUERY WHEN SEARCH CHANGE
+    const buildFilters = (search: string, filters: Record<string, any>) => {
+        const parts: string[] = [];
+
+        if (search)
+            parts.push(`(code~'${search}' or band~'${search}')`);
+
+        if (filters.companyId)
+            parts.push(`company.id:'${filters.companyId}'`);
+
+        return parts;
+    };
+
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
+            sort: ["bandOrder,asc", "code,asc"],
         };
 
-        const filters: string[] = [];
-
-        if (searchValue)
-            filters.push(`(code~'${searchValue}' or band~'${searchValue}')`);
-
+        const filters = buildFilters(searchValue, filterValues);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue]);
+    }, [searchValue, filterValues]);
 
-    // BUILD QUERY INSIDE TABLE
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize ?? PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
 
-        const filters: string[] = [];
-
-        if (searchValue)
-            filters.push(`(code~'${searchValue}' or band~'${searchValue}')`);
-
+        const filters = buildFilters(searchValue, filterValues);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
-        let sortBy = "sort=createdAt,desc";
-
+        let sortBy = "sort=bandOrder,asc&sort=code,asc";
         if (sort?.code)
             sortBy = sort.code === "ascend" ? "sort=code,asc" : "sort=code,desc";
 
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    // HANDLE DELETE
     const handleDelete = async (id: number) => {
         try {
             await deleteMutation.mutateAsync(id);
@@ -86,7 +91,13 @@ const PositionLevelPage = () => {
         }
     };
 
-    // COLUMNS (bỏ cột Trạng thái, thêm nút Xóa)
+    const handleReset = () => {
+        setSearchValue("");
+        setFilterValues({});
+        setResetSignal((s) => s + 1);
+        refetch();
+    };
+
     const columns: ProColumns<IPositionLevel>[] = [
         {
             title: "STT",
@@ -94,20 +105,38 @@ const PositionLevelPage = () => {
             align: "center",
             render: (_, __, idx) => idx + 1 + (meta.page - 1) * meta.pageSize,
         },
-        { title: "Code", dataIndex: "code", sorter: true },
-        { title: "Band", dataIndex: "band" },
         {
-            title: "Level",
+            title: "Mã bậc",
+            dataIndex: "code",
+            sorter: true,
+        },
+        {
+            title: "Nhóm bậc",
+            dataIndex: "band",
+        },
+        {
+            title: "Cấp độ",
             dataIndex: "levelNumber",
-            render: (v) => <Tag color="purple">{v}</Tag>,
+            align: "center",
+            render: (v) => <Tag color="purple">Cấp {v}</Tag>,
+        },
+        {
+            title: "Thứ tự nhóm",
+            dataIndex: "bandOrder",
+            align: "center",
+            render: (v) => <Tag color="blue">Nhóm {v ?? "--"}</Tag>,
+        },
+        {
+            title: "Công ty",
+            dataIndex: "companyName",
+            render: (v) => v ?? "--",
         },
         {
             title: "Hành động",
             align: "center",
-            width: 160, // tăng width để chứa thêm nút Xóa
+            width: 160,
             render: (_, record) => (
                 <Space size="middle">
-                    {/* Xem chi tiết */}
                     <EyeOutlined
                         style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                         onClick={() => {
@@ -115,8 +144,6 @@ const PositionLevelPage = () => {
                             setOpenViewDetail(true);
                         }}
                     />
-
-                    {/* Chỉnh sửa */}
                     <EditOutlined
                         style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                         onClick={() => {
@@ -124,8 +151,6 @@ const PositionLevelPage = () => {
                             setOpenModal(true);
                         }}
                     />
-
-                    {/* Xóa - có Popconfirm xác nhận */}
                     <Popconfirm
                         title="Xác nhận xóa bậc chức danh này?"
                         description="Hành động này không thể hoàn tác."
@@ -147,19 +172,39 @@ const PositionLevelPage = () => {
         <PageContainer
             title="Quản lý bậc chức danh"
             filter={
-                <SearchFilter
-                    searchPlaceholder="Tìm theo code hoặc band..."
-                    addLabel="Thêm bậc chức danh"
-                    onSearch={(v) => setSearchValue(v)}
-                    onReset={() => {
-                        setSearchValue("");
-                        refetch();
-                    }}
-                    onAddClick={() => {
-                        setDataInit(null);
-                        setOpenModal(true);
-                    }}
-                />
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <SearchFilter
+                        searchPlaceholder="Tìm theo mã bậc hoặc nhóm bậc..."
+                        addLabel="Thêm bậc chức danh"
+                        showFilterButton={false}
+                        onSearch={(v) => setSearchValue(v)}
+                        onReset={handleReset}
+                        onAddClick={() => {
+                            setDataInit(null);
+                            setOpenModal(true);
+                        }}
+                    />
+                    <AdvancedFilterSelect
+                        resetSignal={resetSignal}
+                        onChange={(filters) => setFilterValues(filters)}
+                        fields={[
+                            {
+                                key: "companyId",
+                                label: "Công ty",
+                                type: "async-select",
+                                loadOptions: async () => {
+                                    const res = await callFetchCompany(
+                                        "page=1&size=100&sort=name,asc"
+                                    );
+                                    return (res?.data?.result ?? []).map((c: any) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
+                            },
+                        ]}
+                    />
+                </div>
             }
         >
             <DataTable<IPositionLevel>

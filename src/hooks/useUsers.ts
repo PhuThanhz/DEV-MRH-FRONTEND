@@ -2,8 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchUser,
     callCreateUser,
+    callFetchUserById,   // thêm dòng này
     callUpdateUser,
     callDeleteUser,
+
 } from "@/config/api";
 import type { IUser, IModelPaginate } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
@@ -19,16 +21,19 @@ export const useUsersQuery = (query: string) => {
     });
 };
 
-export const useUserByIdQuery = (id?: string) => {
+export const useUserByIdQuery = (id?: number) => {
     return useQuery({
         queryKey: ["user", id],
         enabled: !!id,
         queryFn: async () => {
             if (!id) throw new Error("Thiếu ID người dùng");
-            const res = await callFetchUser(`filter=id:${id}`);
-            if (!res?.data?.result?.length)
+
+            const res = await callFetchUserById(id);
+
+            if (!res?.data)
                 throw new Error("Không tìm thấy thông tin người dùng");
-            return res.data.result[0] as IUser;
+
+            return res.data as IUser;
         },
     });
 };
@@ -80,7 +85,7 @@ export const useDeleteUserMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (id: string) => {
+        mutationFn: async (id: number) => {
             const res = await callDeleteUser(id);
             if (!res?.statusCode || res.statusCode !== 200) {
                 throw new Error(res?.message || "Không thể xóa người dùng");

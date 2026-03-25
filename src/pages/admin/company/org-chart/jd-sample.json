@@ -1,0 +1,36 @@
+{
+    "meta": {
+        "code": "",
+        "version": "01",
+        "effectiveDate": "01/12/2024",
+        "totalPages": "01/01"
+    },
+    "company": "CÔNG TY CỔ PHẦN V LOTUS HOLDINGS",
+    "general": {
+        "position": "Giám đốc Nhân sự",
+        "department": "Hành chính Nhân sự",
+        "unit": "FnB",
+        "directManager": "Giám đốc Điều Hành",
+        "approver": {
+            "title": "TỔNG GIÁM ĐỐC",
+            "name": "LÊ VÂN MÂY"
+        }
+    },
+    "sections": {
+        "responsibilities": [
+            "1. Chiến lược & Quản trị nguồn nhân lực: - Tham mưu cho CEO/Ban Lãnh đạo về chiến lược nhân sự trung và dài hạn phù hợp với chiến lược kinh doanh. - Định hướng mô hình quản trị nhân sự, cơ cấu tổ chức và nguyên tắc phân quyền nhân sự trong toàn Công ty. - Bảo đảm tính nhất quán giữa chiến lược nhân sự và văn hóa doanh nghiệp.",
+            "2. Thu hút, phát triển và giữ chân nhân tài: - Định hướng chiến lược thu hút nhân tài và thương hiệu nhà tuyển dụng phù hợp với quy mô và đặc thù FnB. - Phê duyệt các chương trình phát triển con người, lộ trình nghề nghiệp và kế hoạch kế thừa vị trí chủ chốt. - Dẫn dắt các chính sách giữ chân nhân sự trọng yếu thông qua đãi ngộ, môi trường làm việc và cơ hội phát triển.",
+            "3. Chính sách đãi ngộ & ngân sách nhân sự (C&B): - Phê duyệt chiến lược lương – thưởng – phúc lợi phù hợp với thị trường, năng lực tài chính và văn hóa Công ty. - Chịu trách nhiệm về ngân sách nhân sự tổng thể, bao gồm quỹ lương, phúc lợi và chi phí liên quan. - Giám sát việc sử dụng ngân sách nhân sự theo định hướng tối ưu và bền vững.",
+            "4. Văn hóa doanh nghiệp & gắn kết nhân viên: - Định hình, lan tỏa và bảo vệ các giá trị cốt lõi của Công ty. - Dẫn dắt các chương trình xây dựng văn hóa, tăng mức độ gắn kết và trải nghiệm của người lao động. - Theo dõi các chỉ số gắn kết, hài lòng và đưa ra định hướng cải thiện môi trường làm việc.",
+            "5. Quản trị quan hệ lao động & tuân thủ pháp luật: - Chịu trách nhiệm cao nhất về tuân thủ pháp luật lao động trong toàn hệ thống. - Định hướng và xử lý các vấn đề quan hệ lao động ở cấp độ chiến lược và rủi ro cao. - Đại diện Công ty trong các vấn đề liên quan đến cơ quan quản lý nhà nước và tổ chức công đoàn khi cần thiết.",
+            "6. Hệ thống & chuyển đổi quản trị nhân sự: - Định hướng ứng dụng công nghệ và hệ thống thông tin nhân sự nhằm nâng cao hiệu quả quản trị. - Dẫn dắt các chương trình thay đổi tổ chức liên quan đến con người (tái cấu trúc, mở rộng, sáp nhập…). - Bảo đảm dữ liệu nhân sự được quản trị tập trung, bảo mật và phục vụ tốt cho quyết định quản lý."
+        ],
+        "requirements": {
+            "knowledge": "- Am hiểu quản trị nhân sự chiến lược, luật lao động và quan hệ lao động.\n- Nắm vững chính sách lương – thưởng – phúc lợi và quản trị ngân sách nhân sự.\n- Hiểu về xây dựng văn hóa doanh nghiệp và gắn kết tổ chức.",
+            "experience": "- Tối thiểu 7–10 năm kinh nghiệm trong lĩnh vực nhân sự, trong đó có vai trò quản lý cấp cao.\n- Kinh nghiệm làm việc trong doanh nghiệp quy mô lớn/chuỗi (FnB, bán lẻ là lợi thế).\n- Đã tham gia xây dựng hoặc tái cấu trúc hệ thống nhân sự cấp công ty.",
+            "skills": "- Tư duy chiến lược và khả năng tư vấn cho Ban Lãnh đạo.\n- Kỹ năng ra quyết định, giao tiếp và xử lý vấn đề nhân sự phức tạp.\n- Khả năng dẫn dắt đội ngũ quản lý nhân sự cấp trung.",
+            "qualities": "- Liêm chính, bản lĩnh, giữ vững nguyên tắc và tính bảo mật.\n- Điềm tĩnh, khách quan, có tư duy hệ thống và tầm nhìn dài hạn.\n- Tinh thần trách nhiệm cao, định hướng xây dựng tổ chức bền vững.",
+            "other": "- Có uy tín chuyên môn để làm việc trực tiếp với CEO và Ban Điều hành.\n- Sẵn sàng đóng vai trò \"kiến trúc sư nhân sự\", không sa đà vào vận hành chi tiết.\n- Phù hợp với văn hóa doanh nghiệp chuỗi, tăng trưởng nhanh."
+        }
+    }
+}

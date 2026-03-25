@@ -20,9 +20,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
                 <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">
                     {title}
                 </h1>
-                <div className="mt-1 sm:mt-0">
-                    <Breadcrumb />
-                </div>
+
             </div>
 
             {filter && <div className="px-6 pb-4">{filter}</div>}

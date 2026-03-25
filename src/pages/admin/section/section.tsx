@@ -18,9 +18,11 @@ import queryString from "query-string";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
 import type { ISection } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
+import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
 import { useSectionsQuery } from "@/hooks/useSections";
 
 import ModalSection from "./modal.section";
@@ -28,15 +30,17 @@ import ViewDetailSection from "./view.section";
 
 import { useNavigate } from "react-router-dom";
 
-
 const SectionPage = () => {
     const navigate = useNavigate();
 
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<ISection | null>(null);
-
     const [openViewDetail, setOpenViewDetail] = useState(false);
+
     const [searchValue, setSearchValue] = useState("");
+    const [departmentIdFilter, setDepartmentIdFilter] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState<number | null>(null);
+    const [resetSignal, setResetSignal] = useState(0);
 
     const tableRef = useRef<ActionType>(null);
 
@@ -49,7 +53,31 @@ const SectionPage = () => {
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const sections = data?.result ?? [];
 
-    // NOTE: Build query khi search thay đổi
+    /*
+     * ===================== BUILD FILTERS =====================
+     */
+    const buildFilters = (
+        search: string,
+        departmentId: number | null,
+        status: number | null,
+    ) => {
+        const parts: string[] = [];
+
+        if (search)
+            parts.push(`(name~'${search}' or code~'${search}')`);
+
+        if (departmentId)
+            parts.push(`department.id:${departmentId}`);
+
+        if (status !== null)
+            parts.push(`status=${status}`);
+
+        return parts;
+    };
+
+    /*
+     * ===================== AUTO BUILD QUERY =====================
+     */
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -57,25 +85,22 @@ const SectionPage = () => {
             sort: "createdAt,desc",
         };
 
-        const filters: string[] = [];
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or code~'${searchValue}')`);
-
+        const filters = buildFilters(searchValue, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
-        setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue]);
 
-    // NOTE: Build query cho Table request
+        setQuery(queryString.stringify(q, { encode: false }));
+    }, [searchValue, departmentIdFilter, statusFilter]);
+
+    /*
+     * ===================== BUILD QUERY FOR TABLE =====================
+     */
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
 
-        const filters: string[] = [];
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or code~'${searchValue}')`);
-
+        const filters = buildFilters(searchValue, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let sortBy = "sort=createdAt,desc";
@@ -85,7 +110,20 @@ const SectionPage = () => {
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    // NOTE: Columns đồng bộ UI với DepartmentPage / CompanyPage
+    /*
+     * ===================== RESET =====================
+     */
+    const handleReset = () => {
+        setSearchValue("");
+        setDepartmentIdFilter(null);
+        setStatusFilter(null);
+        setResetSignal((s) => s + 1);
+        refetch();
+    };
+
+    /*
+     * ===================== COLUMNS =====================
+     */
     const columns: ProColumns<ISection>[] = [
         {
             title: "STT",
@@ -116,7 +154,6 @@ const SectionPage = () => {
             width: 180,
             fixed: "right",
             render: (_, record) => {
-                // NOTE: Dropdown More giống CompanyPage – hiện chỉ UI (chưa gắn API)
                 const items: MenuProps["items"] = [
                     {
                         key: "salary",
@@ -124,9 +161,7 @@ const SectionPage = () => {
                         label: "Khung lương",
                         onClick: () =>
                             navigate(
-                                `/admin/sections/${record.id}/salary-range?sectionName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/sections/${record.id}/salary-range?sectionName=${encodeURIComponent(record.name)}`
                             ),
                     },
                     {
@@ -135,9 +170,7 @@ const SectionPage = () => {
                         label: "Sơ đồ tổ chức",
                         onClick: () =>
                             navigate(
-                                `/admin/sections/${record.id}/org-chart?sectionName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/sections/${record.id}/org-chart?sectionName=${encodeURIComponent(record.name)}`
                             ),
                     },
                     {
@@ -146,9 +179,7 @@ const SectionPage = () => {
                         label: "Lộ trình thăng tiến",
                         onClick: () =>
                             navigate(
-                                `/admin/sections/${record.id}/career-paths?sectionName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/sections/${record.id}/career-paths?sectionName=${encodeURIComponent(record.name)}`
                             ),
                     },
                     {
@@ -157,9 +188,7 @@ const SectionPage = () => {
                         label: "Mục tiêu nhiệm vụ",
                         onClick: () =>
                             navigate(
-                                `/admin/sections/${record.id}/objectives-tasks?sectionName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/sections/${record.id}/objectives-tasks?sectionName=${encodeURIComponent(record.name)}`
                             ),
                     },
                     {
@@ -168,9 +197,7 @@ const SectionPage = () => {
                         label: "Bản phân quyền",
                         onClick: () =>
                             navigate(
-                                `/admin/sections/${record.id}/permissions?sectionName=${encodeURIComponent(
-                                    record.name
-                                )}`
+                                `/admin/sections/${record.id}/permissions?sectionName=${encodeURIComponent(record.name)}`
                             ),
                     },
                 ];
@@ -185,7 +212,6 @@ const SectionPage = () => {
                                 setOpenViewDetail(true);
                             }}
                         />
-
                         <Button
                             type="text"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
@@ -194,15 +220,10 @@ const SectionPage = () => {
                                 setOpenModal(true);
                             }}
                         />
-
                         <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
                             <Button
                                 type="text"
-                                icon={
-                                    <MoreOutlined
-                                        style={{ color: "#595959", fontSize: 18 }}
-                                    />
-                                }
+                                icon={<MoreOutlined style={{ color: "#595959", fontSize: 18 }} />}
                                 className="hover:bg-pink-50 hover:text-pink-600"
                             />
                         </Dropdown>
@@ -216,19 +237,68 @@ const SectionPage = () => {
         <PageContainer
             title="Quản lý bộ phận"
             filter={
-                <SearchFilter
-                    searchPlaceholder="Tìm mã hoặc tên bộ phận..."
-                    addLabel="Thêm bộ phận"
-                    onSearch={(v) => setSearchValue(v)}
-                    onReset={() => {
-                        setSearchValue("");
-                        refetch();
-                    }}
-                    onAddClick={() => {
-                        setDataInit(null);
-                        setOpenModal(true);
-                    }}
-                />
+                <div className="flex flex-col gap-3">
+                    <SearchFilter
+                        searchPlaceholder="Tìm mã hoặc tên bộ phận..."
+                        addLabel="Thêm bộ phận"
+                        showFilterButton={false}
+                        onSearch={(v) => setSearchValue(v)}
+                        onReset={handleReset}
+                        onAddClick={() => {
+                            setDataInit(null);
+                            setOpenModal(true);
+                        }}
+                    />
+
+                    <AdvancedFilterSelect
+                        resetSignal={resetSignal}
+                        fields={[
+                            {
+                                key: "companyId",
+                                label: "Công ty",
+                                type: "async-select",
+                                loadOptions: async () => {
+                                    const res = await callFetchCompany(
+                                        "page=1&size=100&sort=name,asc"
+                                    );
+                                    return (res?.data?.result ?? []).map((c: any) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
+                            },
+                            {
+                                key: "departmentId",
+                                label: "Phòng ban",
+                                type: "async-select",
+                                dependsOn: "companyId",
+                                loadOptionsWithDep: async (companyId: number) => {
+                                    const res = await callFetchDepartmentsByCompany(companyId);
+                                    return (res?.data ?? []).map((d: any) => ({
+                                        label: d.name,
+                                        value: d.id,
+                                    }));
+                                },
+                            },
+                            {
+                                key: "status",
+                                label: "Trạng thái",
+                                options: [
+                                    { label: "Đang hoạt động", value: 1, color: "green" },
+                                    { label: "Ngừng hoạt động", value: 0, color: "red" },
+                                ],
+                            },
+                        ]}
+                        onChange={(val) => {
+                            setDepartmentIdFilter(
+                                val.departmentId !== undefined ? val.departmentId : null
+                            );
+                            setStatusFilter(
+                                val.status !== undefined ? val.status : null
+                            );
+                        }}
+                    />
+                </div>
             }
         >
             <DataTable<ISection>

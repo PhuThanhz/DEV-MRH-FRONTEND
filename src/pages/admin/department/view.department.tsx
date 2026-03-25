@@ -95,7 +95,12 @@ const ViewDepartment = ({
                     {
                         key: "2",
                         label: "Chức danh trong phòng ban",
-                        children: <DepartmentJobTitleTab departmentId={departmentId} />,
+                        children: (
+                            <DepartmentJobTitleTab
+                                departmentId={departmentId}
+                                companyId={dataInit?.company?.id} // THÊM
+                            />
+                        ),
                     },
                     {
                         key: "3",

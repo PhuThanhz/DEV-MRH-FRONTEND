@@ -13,7 +13,7 @@ import {
     useCreateJobTitleMutation,
     useUpdateJobTitleMutation,
 } from "@/hooks/useJobTitles";
-import { callFetchPositionLevel } from "@/config/api";
+import { callFetchCompany, callFetchPositionLevel } from "@/config/api";
 
 interface IProps {
     openModal: boolean;
@@ -36,13 +36,17 @@ const ModalJobTitle = ({
     const { mutateAsync: updateData, isPending: isUpdating } =
         useUpdateJobTitleMutation();
 
-    /* ================= PREFILL ================= */
+    /*
+     * ================= PREFILL =================
+     */
     useEffect(() => {
         if (dataInit?.id) {
             form.setFieldsValue({
                 nameVi: dataInit.nameVi,
                 nameEn: dataInit.nameEn,
                 active: dataInit.active,
+                // prefill companyId từ positionLevel để dropdown công ty hiển thị đúng
+                companyId: dataInit.positionLevel?.companyId,
                 positionLevelId: dataInit.positionLevel?.id,
             });
         } else {
@@ -56,10 +60,10 @@ const ModalJobTitle = ({
         setOpenModal(false);
     };
 
-    /* ================= SUBMIT ================= */
-    const submitForm = async (
-        values: IJobTitleForm
-    ): Promise<boolean> => {
+    /*
+     * ================= SUBMIT =================
+     */
+    const submitForm = async (values: IJobTitleForm): Promise<boolean> => {
         try {
             const payload = {
                 nameVi: values.nameVi,
@@ -90,12 +94,30 @@ const ModalJobTitle = ({
         }
     };
 
-    /* ================= LOAD SELECT ================= */
-    const loadPositionLevels = async () => {
-        const res = await callFetchPositionLevel("page=1&size=500");
+    /*
+     * ================= LOAD COMPANIES =================
+     */
+    const loadCompanies = async () => {
+        const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+        return (
+            res?.data?.result?.map((c: any) => ({
+                label: c.name,
+                value: c.id,
+            })) ?? []
+        );
+    };
+
+    /*
+     * ================= LOAD POSITION LEVELS THEO CÔNG TY =================
+     */
+    const loadPositionLevelsByCompany = async ({ companyId }: any) => {
+        if (!companyId) return [];
+        const res = await callFetchPositionLevel(
+            `page=1&size=500&sort=bandOrder,asc&sort=code,asc&filter=company.id:${companyId}`
+        );
         return (
             res?.data?.result?.map((pl: IPositionLevel) => ({
-                label: `${pl.code} (Band ${pl.bandOrder})`,
+                label: `${pl.code} — Nhóm ${pl.bandOrder ?? "?"}`,
                 value: pl.id,
             })) ?? []
         );
@@ -133,11 +155,39 @@ const ModalJobTitle = ({
                     />
                 </Col>
 
+                {/* BƯỚC 1 — Chọn công ty */}
+                <Col span={12}>
+                    <ProFormSelect
+                        name="companyId"
+                        label="Công ty"
+                        request={loadCompanies}
+                        fieldProps={{
+                            showSearch: true,
+                            optionFilterProp: "label",
+                            placeholder: "Chọn công ty...",
+                            onChange: () => {
+                                // Đổi công ty → reset bậc chức danh
+                                form.setFieldValue("positionLevelId", undefined);
+                            },
+                        }}
+                        rules={[
+                            { required: true, message: "Vui lòng chọn công ty" },
+                        ]}
+                    />
+                </Col>
+
+                {/* BƯỚC 2 — Chọn bậc chức danh theo công ty */}
                 <Col span={12}>
                     <ProFormSelect
                         name="positionLevelId"
                         label="Bậc chức danh"
-                        request={loadPositionLevels}
+                        dependencies={["companyId"]}
+                        request={loadPositionLevelsByCompany}
+                        fieldProps={{
+                            showSearch: true,
+                            optionFilterProp: "label",
+                            placeholder: "Chọn bậc chức danh...",
+                        }}
                         rules={[
                             {
                                 required: true,

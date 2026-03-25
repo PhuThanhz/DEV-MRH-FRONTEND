@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { ModalForm, ProFormText, ProFormSwitch } from "@ant-design/pro-components";
-import { Col, Form, Row, message } from "antd";
+import { Col, Form, Row, Select, message } from "antd";
 
 import type { IPositionLevel } from "@/types/backend";
 import {
     useCreatePositionLevelMutation,
     useUpdatePositionLevelMutation,
 } from "@/hooks/usePositionLevels";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
 
 interface IProps {
     openModal: boolean;
@@ -19,10 +20,14 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
 
+    const { data: companyData } = useCompaniesQuery(
+        "page=1&size=100&sort=name,asc&filter=status:1"
+    );
+    const companies = companyData?.result ?? [];
+
     const { mutate: createLevel, isPending: isCreating } = useCreatePositionLevelMutation();
     const { mutate: updateLevel, isPending: isUpdating } = useUpdatePositionLevelMutation();
 
-    // Prefill form
     useEffect(() => {
         if (dataInit?.id) {
             form.setFieldsValue({
@@ -57,7 +62,7 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
                     message.error(err?.response?.data?.message || "Lỗi cập nhật bậc chức danh"),
             });
         } else {
-            payload.status = 1;
+            payload.companyId = values.companyId;
 
             createLevel(payload, {
                 onSuccess: handleReset,
@@ -73,6 +78,16 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
             open={openModal}
             form={form}
             onFinish={submitForm}
+            // ⭐ Tiếng Việt + màu hồng cho nút xác nhận
+            submitter={{
+                searchConfig: {
+                    submitText: isEdit ? "Cập nhật" : "Tạo mới",
+                    resetText: "Hủy",
+                },
+                submitButtonProps: {
+                    style: { backgroundColor: "#ff85c0", borderColor: "#ff85c0" },
+                },
+            }}
             modalProps={{
                 onCancel: handleReset,
                 afterClose: handleReset,
@@ -83,18 +98,38 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
             width={550}
         >
             <Row gutter={[16, 16]}>
+                {!isEdit && (
+                    <Col span={24}>
+                        <Form.Item
+                            label="Công ty"
+                            name="companyId"
+                            rules={[{ required: true, message: "Vui lòng chọn công ty" }]}
+                        >
+                            <Select
+                                placeholder="Chọn công ty..."
+                                showSearch
+                                optionFilterProp="label"
+                                options={companies.map((c) => ({
+                                    value: c.id,
+                                    label: c.name,
+                                }))}
+                            />
+                        </Form.Item>
+                    </Col>
+                )}
+
                 <Col span={12}>
                     <ProFormText
-                        label="Code"
+                        label="Mã bậc"
                         name="code"
                         placeholder="VD: S1, M2..."
-                        rules={[{ required: true, message: "Vui lòng nhập code" }]}
+                        rules={[{ required: true, message: "Vui lòng nhập mã bậc" }]}
                     />
                 </Col>
 
                 <Col span={12}>
                     <ProFormText
-                        label="Band Order"
+                        label="Thứ tự nhóm"
                         name="bandOrder"
                         placeholder="VD: 1, 2, 3..."
                     />

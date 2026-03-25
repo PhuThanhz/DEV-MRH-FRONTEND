@@ -36,26 +36,45 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         {dataInit.jobTitleName} ({dataInit.positionLevelCode})
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Tiêu chuẩn" span={2}>
+                    <Descriptions.Item label="Tiêu chuẩn chức danh" span={2}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
-                            {dataInit.jobStandard}
+                            {dataInit.jobStandard || "—"}
                         </div>
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Yêu cầu đào tạo" span={2}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
-                            {dataInit.trainingRequirement}
+                            {dataInit.trainingRequirement || "—"}
                         </div>
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Phương pháp đánh giá" span={2}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
-                            {dataInit.evaluationMethod}
+                            {dataInit.evaluationMethod || "—"}
+                        </div>
+                    </Descriptions.Item>
+
+                    {/* THÊM MỚI */}
+                    <Descriptions.Item label="Kết quả đào tạo" span={2}>
+                        <div style={{ whiteSpace: "pre-wrap" }}>
+                            {dataInit.trainingOutcome || "—"}
+                        </div>
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Yêu cầu hiệu quả công việc" span={2}>
+                        <div style={{ whiteSpace: "pre-wrap" }}>
+                            {dataInit.performanceRequirement || "—"}
+                        </div>
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Ghi chú về lương" span={2}>
+                        <div style={{ whiteSpace: "pre-wrap" }}>
+                            {dataInit.salaryNote || "—"}
                         </div>
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Thời gian giữ vị trí">
-                        {dataInit.requiredTime}
+                        {dataInit.requiredTime || "—"}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Trạng thái">
@@ -67,19 +86,23 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Ngày tạo">
-                        {dayjs(dataInit.createdAt).format("DD/MM/YYYY HH:mm")}
+                        {dataInit.createdAt
+                            ? dayjs(dataInit.createdAt).format("DD/MM/YYYY HH:mm")
+                            : "—"}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Người tạo">
-                        {dataInit.createdBy}
+                        {dataInit.createdBy || "—"}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Ngày cập nhật">
-                        {dayjs(dataInit.updatedAt).format("DD/MM/YYYY HH:mm")}
+                        {dataInit.updatedAt
+                            ? dayjs(dataInit.updatedAt).format("DD/MM/YYYY HH:mm")
+                            : "—"}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Người cập nhật">
-                        {dataInit.updatedBy}
+                        {dataInit.updatedBy || "—"}
                     </Descriptions.Item>
                 </Descriptions>
             ) : (
@@ -89,4 +112,4 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     );
 };
 
-export default ViewCareerPath;
+export default ViewCareerPath; 

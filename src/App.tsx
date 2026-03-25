@@ -22,31 +22,30 @@ import DepartmentPage from './pages/admin/department/department';
 import SectionPage from "@/pages/admin/section/section";
 import PositionLevelPage from "@/pages/admin/position-levels/position-levels";
 import JobTitlePage from "@/pages/admin/job-title/job-title.page";
-import CompanyProcedurePage from "@/pages/admin/company-procedure/company-procedure";
-import CareerPathTab from "@/pages/admin/department/career-path/CareerPathTab";
-import EvaluationCriteriaPage from "@/pages/admin/evaluation-criteria/page.evaluation-criteria";
-import DepartmentPermissionPage from
-  "@/pages/admin/department/permissions";
-import DepartmentObjectivesTasksPage
-  from "@/pages/admin/department/objectives-tasks";
-
+// import CareerPathTab from "@/pages/admin/department/career-path/CareerPathTab";
+import CareerPathPage from "@/pages/admin/department/career-path/CareerPathPage";
+import DepartmentPermissionPage from "@/pages/admin/department/permissions";
+import DepartmentObjectivesTasksPage from "@/pages/admin/department/objectives-tasks";
+import CompanyOrgChartPage from "@/pages/admin/company/org-chart";
 import SalaryRangePage from "@/pages/admin/salary-range/SalaryRangePage";
 import ProcessActionPage from "@/pages/admin/process-action";
 import PermissionCategoryPage from "@/pages/admin/permission-category";
 import JobDescriptionPage from "@/pages/admin/job-description/job-description.page";
-import OrgChartPage from '@/pages/admin/department/org-chart/OrgChartPage'; // ví dụ đường dẫn
-import CompanyOrgChartPage from "@/pages/admin/company/org-chart/OrgChartPage";
-import DepartmentProcedurePage from "@/pages/admin/department/procedures";
-/* ===================== PERMISSION CONTENT ===================== */
+import OrgChartPage from '@/pages/admin/department/org-chart';
+import ConfirmResetPassword from 'pages/auth/ConfirmResetPassword';
 
+// ✅ PROCEDURES
+import ProcedureAdminPage from "@/pages/admin/procedures";
+import CompanyProceduresPage from "@/pages/admin/company/procedures";
+import DepartmentProceduresPage from "@/pages/admin/department/procedures";
 
 export default function App() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (
-      window.location.pathname === PATHS.LOGIN
-    ) return;
+    if (window.location.pathname === PATHS.LOGIN) return;
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
     dispatch(fetchAccount());
   }, []);
 
@@ -101,8 +100,14 @@ export default function App() {
           ),
         },
         {
-          path: "/admin/companies/:id/org-chart",
-          element: <CompanyOrgChartPage />,
+          path: PATHS.ADMIN.ORG_CHART_COMPANY,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.COMPANIES.GET_PAGINATE}>
+                <CompanyOrgChartPage />
+              </Access>
+            </ProtectedRoute>
+          ),
         },
         {
           path: PATHS.ADMIN.DEPARTMENT,
@@ -123,10 +128,15 @@ export default function App() {
           ),
         },
         {
-          path: "/admin/departments/:id/org-chart",
-          element: <OrgChartPage />,
+          path: PATHS.ADMIN.ORG_CHART_DEPARTMENT,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE}>
+                <OrgChartPage />
+              </Access>
+            </ProtectedRoute>
+          ),
         },
-
         {
           path: PATHS.ADMIN.SECTION,
           element: (
@@ -135,7 +145,6 @@ export default function App() {
             </Access>
           ),
         },
-        /* ===================== POSITION LEVELS ===================== */
         {
           path: PATHS.ADMIN.POSITION_LEVEL,
           element: (
@@ -174,22 +183,39 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+
+        // ===== PROCEDURES =====
         {
-          path: PATHS.ADMIN.COMPANY_PROCEDURE,
+          path: PATHS.ADMIN.PROCEDURES,
           element: (
             <ProtectedRoute>
-              <Access permission={ALL_PERMISSIONS.COMPANY_PROCEDURES.GET_PAGINATE}>
-                <CompanyProcedurePage />
-              </Access>
+              <ProcedureAdminPage />
             </ProtectedRoute>
           ),
         },
+        {
+          path: PATHS.ADMIN.COMPANY_PROCEDURES,
+          element: (
+            <ProtectedRoute>
+              <CompanyProceduresPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.DEPARTMENT_PROCEDURES,
+          element: (
+            <ProtectedRoute>
+              <DepartmentProceduresPage />
+            </ProtectedRoute>
+          ),
+        },
+
         {
           path: PATHS.ADMIN.CAREER_PATH,
           element: (
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT}>
-                <CareerPathTab />
+                <CareerPathPage />  {/* ← đổi từ CareerPathTab */}
               </Access>
             </ProtectedRoute>
           ),
@@ -208,7 +234,6 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-        /* ===================== JOB DESCRIPTIONS ===================== */
         {
           path: PATHS.ADMIN.JOB_DESCRIPTIONS,
           element: (
@@ -219,9 +244,6 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-
-
-        /* ===================== PROCESS ACTIONS ===================== */
         {
           path: PATHS.ADMIN.PROCESS_ACTION,
           element: (
@@ -232,36 +254,21 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-        /* ===================== PERMISSION CATEGORIES ===================== */
         {
           path: PATHS.ADMIN.PERMISSION_CATEGORIES,
           element: (
             <ProtectedRoute>
-              <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE
-              }>
+              <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE}>
                 <PermissionCategoryPage />
               </Access>
             </ProtectedRoute>
           ),
         },
-        {
-          path: PATHS.ADMIN.DEPARTMENT_PROCEDURES,
-          element: (
-            <ProtectedRoute>
-              <DepartmentProcedurePage />
-            </ProtectedRoute>
-          ),
-        },
-
       ],
     },
     { path: PATHS.LOGIN, element: <LoginPage /> },
-    {
-      path: "/forgot-password",
-      element: <ForgotPassword />,
-    },
-
-
+    { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword /> },
+    { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword /> },
   ]);
 
   return <RouterProvider router={router} />;
