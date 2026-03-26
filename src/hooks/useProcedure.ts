@@ -25,11 +25,11 @@ import type {
 import { notify } from "@/components/common/notification/notify";
 
 /* ===================== FETCH LIST ===================== */
-export const useProceduresQuery = (type: ProcedureType, query: string) => {
+export const useProceduresQuery = (type: ProcedureType, query?: string) => {
     return useQuery({
         queryKey: ["procedures", type, query],
         queryFn: async () => {
-            const res = await callFetchProcedures(type, query);
+            const res = await callFetchProcedures(type, query || "");
             if (!res?.data) {
                 throw new Error("Không thể lấy danh sách quy trình");
             }

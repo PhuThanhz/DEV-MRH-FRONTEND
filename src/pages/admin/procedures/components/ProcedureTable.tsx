@@ -30,11 +30,10 @@ import { PAGINATION_CONFIG } from "@/config/pagination";
 
 const statusMap: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang xây dựng", color: "blue" },
-    NEED_UPDATE: { label: "Cần cập nhật", color: "purple" },
-    TERMINATED: { label: "Chấm dứt", color: "red" },
+    IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
+    NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
+    TERMINATED: { label: "Hết hiệu lực", color: "red" },
 };
-
 interface IProps {
     type: ProcedureType;
 }
@@ -309,11 +308,11 @@ const ProcedureTable = ({ type }: IProps) => {
                                 label: "Trạng thái",
                                 options: [
                                     { label: "Cần xây dựng mới", value: "NEED_CREATE", color: "orange" },
-                                    { label: "Đang xây dựng", value: "IN_PROGRESS", color: "blue" },
-                                    { label: "Cần cập nhật", value: "NEED_UPDATE", color: "purple" },
-                                    { label: "Chấm dứt", value: "TERMINATED", color: "red" },
+                                    { label: "Đang hiệu lực", value: "IN_PROGRESS", color: "green" },
+                                    { label: "Đang cập nhật", value: "NEED_UPDATE", color: "gold" },
+                                    { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
                                 ],
-                            },
+                            }
                         ]}
                         onChange={async (filters) => {
                             setCompanyFilter(filters.company || null);

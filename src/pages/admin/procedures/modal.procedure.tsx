@@ -476,9 +476,9 @@ const ModalProcedure: React.FC<IProps> = ({
                             label="Trạng thái"
                             valueEnum={{
                                 NEED_CREATE: "Cần xây dựng mới",
-                                IN_PROGRESS: "Đang xây dựng",
-                                NEED_UPDATE: "Cần cập nhật",
-                                TERMINATED: "Chấm dứt",
+                                IN_PROGRESS: "Đang hiệu lực",
+                                NEED_UPDATE: "Đang cập nhật",
+                                TERMINATED: "Hết hiệu lực",
                             }}
                         />
                     </Col>

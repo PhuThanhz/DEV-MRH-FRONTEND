@@ -1,4 +1,4 @@
-import { Button, Form, Input, notification } from "antd";
+import { Button, Form, Input } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { callLogin } from "config/api";
 import { useEffect, useState } from "react";
@@ -38,17 +38,19 @@ const LoginPage = () => {
         notify.error("Đăng nhập thất bại");
       }
     } catch (error: any) {
-      notification.error({
-        message: "Đăng nhập thất bại",
-        description:
-          Array.isArray(error?.message)
-            ? error.message[0]
-            : error?.message || "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại!",
-        duration: 5,
-      });
+      const msg = Array.isArray(error?.message)
+        ? error.message[0]
+        : error?.message || "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại!";
+      notify.error(msg);
     } finally {
       setIsSubmit(false);
     }
+  };
+
+  // ── Thay inline error bằng toast notification ──
+  const onFinishFailed = ({ errorFields }: any) => {
+    const firstError = errorFields[0]?.errors[0];
+    if (firstError) notify.error(firstError);
   };
 
   return (
@@ -128,11 +130,13 @@ const LoginPage = () => {
             <p className="form-sub">Nhập thông tin tài khoản để tiếp tục</p>
           </div>
 
-          <Form layout="vertical" onFinish={onFinish}>
+          {/* ── onFinishFailed → toast, help="" → ẩn inline error ── */}
+          <Form layout="vertical" onFinish={onFinish} onFinishFailed={onFinishFailed}>
             <Form.Item
               label={<span className="f-label">Email</span>}
               name="username"
               rules={[{ required: true, message: "Email không được để trống!" }]}
+              help=""
             >
               <Input
                 prefix={<MailOutlined className="input-icon" />}
@@ -146,6 +150,7 @@ const LoginPage = () => {
               label={<span className="f-label">Mật khẩu</span>}
               name="password"
               rules={[{ required: true, message: "Mật khẩu không được để trống!" }]}
+              help=""
             >
               <Input.Password
                 prefix={<LockOutlined className="input-icon" />}
@@ -322,9 +327,7 @@ const LoginPage = () => {
           display: flex; align-items: center; justify-content: center;
           gap: 6px; margin-top: 20px;
         }
-        .activate-label {
-          font-size: 13px; color: #9ca3af;
-        }
+        .activate-label { font-size: 13px; color: #9ca3af; }
         .activate-link {
           font-size: 13px; font-weight: 600;
           color: #ec4899 !important; text-decoration: none;
@@ -332,17 +335,20 @@ const LoginPage = () => {
           padding-bottom: 1px;
           transition: color 0.18s, border-color 0.18s;
         }
-        .activate-link:hover {
-          color: #be185d !important;
-          border-color: #ec4899;
-        }
+        .activate-link:hover { color: #be185d !important; border-color: #ec4899; }
 
         /* Footer */
         .form-footer { margin-top: 28px; font-size: 11.5px; color: #d1d5db; text-align: center; letter-spacing: 0.2px; }
 
-        /* Ant overrides */
+        /* ── Ant overrides ── */
         .ant-form-item { margin-bottom: 20px !important; }
         .ant-form-item-label { padding-bottom: 6px !important; }
+
+        /* Ẩn hoàn toàn inline error message và khoảng trống thừa */
+        .ant-form-item-explain,
+        .ant-form-item-explain-error,
+        .ant-form-item-margin-offset { display: none !important; }
+
         .ant-input-affix-wrapper:focus,
         .ant-input-affix-wrapper-focused {
           border-color: #ec4899 !important;
@@ -352,6 +358,20 @@ const LoginPage = () => {
         .ant-input-affix-wrapper-focused .input-icon { color: #ec4899 !important; }
         .ant-input, .ant-input-password input { font-size: 16px !important; }
         *:focus-visible { outline: none !important; }
+
+        /* ── Fix autofill màu xanh của Chrome ── */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px #fafafa inset !important;
+          -webkit-text-fill-color: #111827 !important;
+          transition: background-color 9999s ease-in-out 0s;
+        }
+        .ant-input-affix-wrapper:has(input:-webkit-autofill) {
+          background: #fafafa !important;
+          border-color: #e5e7eb !important;
+        }
 
         /* ── TABLET + MOBILE ≤ 1024px ── */
         @media (max-width: 1024px) {

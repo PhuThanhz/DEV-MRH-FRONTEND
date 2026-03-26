@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Tag } from "antd";
+import { EyeOutlined, FileTextOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
@@ -10,50 +10,58 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
-
-import ModalProcedure from "@/pages/admin/procedures/modal.procedure";
 import ViewProcedure from "@/pages/admin/procedures/view.procedure";
 
-// ✅ Thay bằng
-import {
-    useDepartmentProceduresWithFilterQuery,
-    useDeleteProcedureMutation,
-} from "@/hooks/useProcedure";
+import { useDepartmentProceduresWithFilterQuery } from "@/hooks/useProcedure";
 
 import type { IProcedure } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 
-const statusMap: Record<string, { label: string; color: string }> = {
+// Trạng thái hiển thị cho người dùng phòng ban
+const STATUS_MAP = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang xây dựng", color: "blue" },
-    NEED_UPDATE: { label: "Cần cập nhật", color: "purple" },
-    TERMINATED: { label: "Chấm dứt", color: "red" },
+    IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
+    NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
+    TERMINATED: { label: "Hết hiệu lực", color: "red" },
+};
+
+// Dùng chung để build filter string
+const buildFilters = (
+    departmentId: string | undefined,
+    searchValue: string,
+    statusFilter: string | null
+): string[] => {
+    const filters: string[] = [];
+    if (departmentId) filters.push(`department.id:${departmentId}`);
+    if (searchValue) filters.push(`procedureName~'${searchValue}'`);
+    if (statusFilter) filters.push(`status='${statusFilter}'`);
+    return filters;
 };
 
 const DepartmentProceduresPage = () => {
-    const { departmentId } = useParams();
+    const { departmentId } = useParams<{ departmentId: string }>();
     const [searchParams] = useSearchParams();
     const departmentName = searchParams.get("departmentName");
 
     const tableRef = useRef<ActionType>(null);
-    const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
     const [dataInit, setDataInit] = useState<IProcedure | null>(null);
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [searchValue, setSearchValue] = useState("");
 
+    // Query khởi tạo — filter ngay theo departmentId
     const [query, setQuery] = useState(() => {
-        const q: any = {
+        const q: Record<string, any> = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-        if (departmentId) q.filter = `department.id:${departmentId}`;
+        const filters = buildFilters(departmentId, "", null);
+        if (filters.length) q.filter = filters.join(" and ");
         return queryString.stringify(q, { encode: false });
     });
 
     const { data, isFetching, refetch } = useDepartmentProceduresWithFilterQuery(query);
-    const deleteMutation = useDeleteProcedureMutation("DEPARTMENT");
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -62,31 +70,32 @@ const DepartmentProceduresPage = () => {
     };
     const procedures = data?.result ?? [];
 
+    // Cập nhật query khi filter thay đổi
     useEffect(() => {
-        const q: any = {
+        const filters = buildFilters(departmentId, searchValue, statusFilter);
+        const q: Record<string, any> = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-        const filters: string[] = [];
-        if (departmentId) filters.push(`department.id:${departmentId}`);
-        if (searchValue) filters.push(`procedureName~'${searchValue}'`);
-        if (statusFilter) filters.push(`status='${statusFilter}'`);
-        if (filters.length > 0) q.filter = filters.join(" and ");
+        if (filters.length) q.filter = filters.join(" and ");
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, statusFilter, departmentId]);
 
-    const buildQuery = (params: any) => {
-        const q: any = {
+    // Query khi phân trang / sort từ DataTable
+    const buildPageQuery = (params: any): string => {
+        const filters = buildFilters(departmentId, searchValue, statusFilter);
+        const q: Record<string, any> = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
-        const filters: string[] = [];
-        if (departmentId) filters.push(`department.id:${departmentId}`);
-        if (searchValue) filters.push(`procedureName~'${searchValue}'`);
-        if (statusFilter) filters.push(`status='${statusFilter}'`);
-        if (filters.length > 0) q.filter = filters.join(" and ");
+        if (filters.length) q.filter = filters.join(" and ");
         return `${queryString.stringify(q, { encode: false })}&sort=createdAt,desc`;
+    };
+
+    const handleView = (record: IProcedure) => {
+        setDataInit(record);
+        setOpenView(true);
     };
 
     const columns: ProColumns<IProcedure>[] = [
@@ -105,31 +114,31 @@ const DepartmentProceduresPage = () => {
         {
             title: "Tên quy trình",
             dataIndex: "procedureName",
-            render: (_, record) =>
-                record.fileUrls?.[0] ? (
-                    <a
-                        href={record.fileUrls?.[0]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "#1677ff", fontWeight: 500 }}
-                    >
-                        <FileTextOutlined style={{ marginRight: 6 }} />
-                        {record.procedureName}
-                    </a>
-                ) : (
-                    <span>{record.procedureName}</span>
-                ),
+            render: (_, record) => (
+                <span
+                    onClick={() => handleView(record)}
+                    style={{ color: "#1677ff", fontWeight: 500, cursor: "pointer" }}
+                >
+                    <FileTextOutlined style={{ marginRight: 6 }} />
+                    {record.procedureName}
+                </span>
+            ),
         },
         {
             title: "Trạng thái",
             dataIndex: "status",
             align: "center",
+            width: 160,
             render: (_, record) => {
-                const s = statusMap[record.status ?? ""] ?? {
-                    label: record.status,
+                const s = STATUS_MAP[record.status as keyof typeof STATUS_MAP] ?? {
+                    label: record.status ?? "--",
                     color: "default",
                 };
-                return <Tag color={s.color}>{s.label}</Tag>;
+                return (
+                    <Tag color={s.color} style={{ borderRadius: 4, fontWeight: 500 }}>
+                        {s.label}
+                    </Tag>
+                );
             },
         },
         {
@@ -139,129 +148,111 @@ const DepartmentProceduresPage = () => {
             width: 100,
         },
         {
-            title: "Version",
+            title: "Phiên bản",
             dataIndex: "version",
             align: "center",
-            width: 80,
-            render: (val) => `v${val ?? 1}`,
+            width: 90,
+            render: (val) => <Tag color="blue">v{val ?? 1}</Tag>,
         },
         {
-            title: "Ngày tạo",
+            title: "Ngày ban hành",
             dataIndex: "createdAt",
             align: "center",
-            width: 120,
+            width: 130,
             render: (val: unknown) =>
                 typeof val === "string" && val
                     ? dayjs(val).format("DD-MM-YYYY")
                     : "--",
         },
         {
-            title: "Hành động",
+            title: "Xem",
             align: "center",
-            width: 120,
+            width: 70,
             render: (_, record) => (
-                <Space>
-                    <EyeOutlined
-                        style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                        onClick={() => { setDataInit(record); setOpenView(true); }}
-                    />
-                    <EditOutlined
-                        style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                        onClick={() => { setDataInit(record); setOpenModal(true); }}
-                    />
-                    <DeleteOutlined
-                        style={{ fontSize: 18, color: "red", cursor: "pointer" }}
-                        onClick={() => deleteMutation.mutateAsync(record.id!)}
-                    />
-                </Space>
+                <EyeOutlined
+                    title="Xem chi tiết"
+                    style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                    onClick={() => handleView(record)}
+                />
             ),
         },
     ];
 
     return (
-        <PageContainer
-            title={`Quy trình phòng ban${departmentName ? " - " + departmentName : ""}`}
-            filter={
-                <div className="flex flex-col gap-3">
-                    <SearchFilter
-                        searchPlaceholder="Tìm theo tên quy trình..."
-                        addLabel="Thêm quy trình"
-                        showFilterButton={false}
-                        onSearch={setSearchValue}
-                        onReset={() => refetch()}
-                        onAddClick={() => {
-                            setDataInit(null);
-                            setOpenModal(true);
-                        }}
-                    />
-                    <div className="flex flex-wrap gap-3 items-center">
-                        <AdvancedFilterSelect
-                            fields={[
-                                {
-                                    key: "status",
-                                    label: "Trạng thái",
-                                    options: [
-                                        { label: "Cần xây dựng mới", value: "NEED_CREATE" },
-                                        { label: "Đang xây dựng", value: "IN_PROGRESS" },
-                                        { label: "Cần cập nhật", value: "NEED_UPDATE" },
-                                        { label: "Chấm dứt", value: "TERMINATED" },
-                                    ],
-                                },
-                            ]}
-                            onChange={(filters) => setStatusFilter(filters.status || null)}
+        <>
+            <PageContainer
+                title={`Quy trình phòng ban${departmentName ? " — " + departmentName : ""}`}
+                filter={
+                    <div className="flex flex-col gap-3">
+                        <SearchFilter
+                            searchPlaceholder="Tìm theo tên quy trình..."
+                            showFilterButton={false}
+                            showAddButton={false}   // Người dùng phòng ban không được thêm
+                            onSearch={setSearchValue}
+                            onReset={() => {
+                                setSearchValue("");
+                                setStatusFilter(null);
+                                refetch();
+                            }}
                         />
-                    </div>
-                </div>
-            }
-        >
-            <DataTable<IProcedure>
-                actionRef={tableRef}
-                rowKey="id"
-                loading={isFetching}
-                columns={columns}
-                dataSource={procedures}
-                request={async (params) => {
-                    const q = buildQuery(params);
-                    setQuery(q);
-                    return { data: procedures, success: true, total: meta.total };
-                }}
-                pagination={{
-                    current: meta.page,
-                    pageSize: meta.pageSize,
-                    total: meta.total,
-                    showQuickJumper: true,
-                    showTotal: (total, range) => (
-                        <div style={{ fontSize: 13 }}>
-                            <span style={{ fontWeight: 500 }}>
-                                {range[0]}–{range[1]}
-                            </span>{" "}
-                            trên{" "}
-                            <span style={{ fontWeight: 600, color: "#1677ff" }}>
-                                {total.toLocaleString()}
-                            </span>{" "}
-                            quy trình
+                        <div className="flex flex-wrap gap-3 items-center">
+                            <AdvancedFilterSelect
+                                fields={[
+                                    {
+                                        key: "status",
+                                        label: "Trạng thái",
+                                        options: [
+                                            { label: "Đang hiệu lực", value: "IN_PROGRESS", color: "green" },
+                                            { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
+                                            { label: "Đang cập nhật", value: "NEED_UPDATE", color: "orange" },
+                                            { label: "Cần xây dựng mới", value: "NEED_CREATE", color: "default" },
+                                        ],
+                                    },
+                                ]}
+                                onChange={(filters) => setStatusFilter(filters.status || null)}
+                            />
                         </div>
-                    ),
-                }}
-                rowSelection={false}
-            />
-
-            <ModalProcedure
-                defaultType="DEPARTMENT"
-                open={openModal}
-                onClose={() => setOpenModal(false)}
-                dataInit={dataInit}
-                refetch={refetch}
-                fixedDepartmentId={departmentId ? Number(departmentId) : undefined}
-            />
+                    </div>
+                }
+            >
+                <DataTable<IProcedure>
+                    actionRef={tableRef}
+                    rowKey="id"
+                    loading={isFetching}
+                    columns={columns}
+                    dataSource={procedures}
+                    request={async (params) => {
+                        const q = buildPageQuery(params);
+                        setQuery(q);
+                        return { data: procedures, success: true, total: meta.total };
+                    }}
+                    pagination={{
+                        current: meta.page,
+                        pageSize: meta.pageSize,
+                        total: meta.total,
+                        showQuickJumper: true,
+                        showTotal: (total, range) => (
+                            <div style={{ fontSize: 13 }}>
+                                <span style={{ fontWeight: 500 }}>{range[0]}–{range[1]}</span>
+                                {" "}trên{" "}
+                                <span style={{ fontWeight: 600, color: "#1677ff" }}>
+                                    {total.toLocaleString()}
+                                </span>
+                                {" "}quy trình
+                            </div>
+                        ),
+                    }}
+                    rowSelection={false}
+                />
+            </PageContainer>
 
             <ViewProcedure
                 type="DEPARTMENT"
                 open={openView}
-                onClose={() => setOpenView(false)}
+                onClose={() => { setOpenView(false); setDataInit(null); }}
                 dataInit={dataInit}
             />
-        </PageContainer>
+        </>
     );
 };
 

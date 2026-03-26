@@ -1,6 +1,9 @@
 /**
- * manage.account.tsx — Light edition
- * Layout 2 cột: trái = thông tin + chức danh | phải = chỉnh sửa + vai trò
+ * manage.account.tsx — Light edition (updated)
+ * - HeroBanner: light/white theme (bỏ dark)
+ * - Bỏ "HĐ hết hạn"
+ * - Bỏ "ID: x" trong Vai trò
+ * - Fix nút "Đổi ảnh" dùng Ant Button thay native button
  */
 
 import { useEffect, useState } from "react";
@@ -73,7 +76,7 @@ const formatDate = (v?: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "�
 const genderLabel = (g?: string | null) => ({ MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác" }[g ?? ""] ?? "—");
 
 /* ═══════════════════════════════════════════
-   SUB: AvatarLightbox — đã thu nhỏ & fix nút X
+   SUB: AvatarLightbox
 ═══════════════════════════════════════════ */
 interface AvatarLightboxProps {
     open: boolean; onClose: () => void;
@@ -87,9 +90,9 @@ const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, user
         onCancel={onClose}
         footer={null}
         centered
-        width={260}          // ← thu nhỏ từ 300 → 260
+        width={260}
         maskClosable
-        closable={false}     // tắt nút X mặc định của Ant, dùng nút tự làm bên dưới
+        closable={false}
         styles={{
             content: {
                 borderRadius: 18,
@@ -101,7 +104,7 @@ const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, user
         }}
     >
         <div style={{ padding: "24px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-            {/* Nút X — nằm trong content, góc phải trên */}
+            {/* Nút X */}
             <button
                 onClick={onClose}
                 style={{
@@ -122,7 +125,7 @@ const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, user
                     src={displayAvatar}
                     alt="avatar"
                     style={{
-                        width: 100, height: 100,        // ← thu nhỏ từ 130 → 100
+                        width: 100, height: 100,
                         borderRadius: "50%", objectFit: "cover",
                         border: `3px solid ${PINK_BORDER}`,
                         boxShadow: "0 6px 20px rgba(245,49,127,0.15)",
@@ -170,7 +173,7 @@ const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, user
 );
 
 /* ═══════════════════════════════════════════
-   SUB: HeroBanner
+   SUB: HeroBanner — LIGHT THEME
 ═══════════════════════════════════════════ */
 interface HeroBannerProps {
     displayAvatar: string; initials: string;
@@ -180,40 +183,126 @@ interface HeroBannerProps {
 const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCount, onAvatarClick, onFileSelect, disabled }: HeroBannerProps) => {
     const [hover, setHover] = useState(false);
     return (
-        <div style={{ background: "linear-gradient(135deg,#1a1a2e 0%,#0d0d18 100%)", borderRadius: 14, padding: "18px 20px", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 85% 40%,rgba(245,49,127,.45) 0%,transparent 55%)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle,rgba(255,255,255,.15) 1px,transparent 1px)", backgroundSize: "18px 18px", opacity: 0.18, pointerEvents: "none" }} />
+        <div style={{
+            background: "linear-gradient(135deg, #fff0f6 0%, #fce7f3 100%)",
+            border: `1px solid ${PINK_BORDER}`,
+            borderRadius: 14,
+            padding: "18px 20px",
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 20,
+        }}>
+            {/* Subtle decorative blob */}
+            <div style={{
+                position: "absolute", top: -30, right: -30,
+                width: 120, height: 120, borderRadius: "50%",
+                background: "rgba(245,49,127,0.07)",
+                pointerEvents: "none",
+            }} />
 
             {/* Avatar */}
-            <div style={{ position: "relative", flexShrink: 0, cursor: "pointer", zIndex: 1 }}
-                onClick={onAvatarClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+            <div
+                style={{ position: "relative", flexShrink: 0, cursor: "pointer", zIndex: 1 }}
+                onClick={onAvatarClick}
+                onMouseEnter={() => setHover(true)}
+                onMouseLeave={() => setHover(false)}
+            >
                 {displayAvatar
-                    ? <img src={displayAvatar} alt="avatar" style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(255,255,255,0.2)", transition: "transform .2s", transform: hover ? "scale(1.06)" : "scale(1)", display: "block" }} />
-                    : <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(145deg,#ff9dc4,${PINK})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#fff", border: "2px solid rgba(255,255,255,0.2)", transition: "transform .2s", transform: hover ? "scale(1.06)" : "scale(1)" }}>{initials}</div>
+                    ? <img src={displayAvatar} alt="avatar" style={{
+                        width: 60, height: 60, borderRadius: "50%", objectFit: "cover",
+                        border: `2px solid ${PINK_BORDER}`,
+                        transition: "transform .2s",
+                        transform: hover ? "scale(1.06)" : "scale(1)",
+                        display: "block",
+                        boxShadow: "0 4px 14px rgba(245,49,127,0.18)",
+                    }} />
+                    : <div style={{
+                        width: 60, height: 60, borderRadius: "50%",
+                        background: `linear-gradient(145deg,#ff9dc4,${PINK})`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 18, fontWeight: 700, color: "#fff",
+                        border: `2px solid ${PINK_BORDER}`,
+                        transition: "transform .2s",
+                        transform: hover ? "scale(1.06)" : "scale(1)",
+                        boxShadow: "0 4px 14px rgba(245,49,127,0.18)",
+                    }}>{initials}</div>
                 }
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(0,0,0,.42)", display: "flex", alignItems: "center", justifyContent: "center", opacity: hover ? 1 : 0, transition: "opacity .15s" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                {/* Camera overlay */}
+                <div style={{
+                    position: "absolute", inset: 0, borderRadius: "50%",
+                    background: "rgba(245,49,127,0.55)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    opacity: hover ? 1 : 0, transition: "opacity .15s",
+                }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                    </svg>
                 </div>
-                <div style={{ position: "absolute", bottom: 2, right: 2, width: 10, height: 10, borderRadius: "50%", background: "#3EBF8F", border: "2px solid #0d0d18" }} />
+                {/* Online dot */}
+                <div style={{
+                    position: "absolute", bottom: 2, right: 2,
+                    width: 10, height: 10, borderRadius: "50%",
+                    background: "#3EBF8F", border: "2px solid #fce7f3",
+                }} />
             </div>
 
             {/* Info */}
             <div style={{ zIndex: 1, flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 17, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,.42)", marginTop: 2 }}>{userEmail}</div>
+                <div style={{
+                    fontSize: 17, fontWeight: 700, color: "#111827",
+                    letterSpacing: "-0.02em",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>{userName}</div>
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{userEmail}</div>
                 <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, border: "1px solid rgba(245,49,127,.4)", color: "#ffb3ce", background: "rgba(245,49,127,.15)" }}>{positionCount} chức danh</span>
-                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, border: "1px solid rgba(62,191,143,.35)", color: "#3EBF8F", background: "rgba(62,191,143,.12)" }}>● Đang hoạt động</span>
+                    <span style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 20,
+                        border: `1px solid ${PINK_BORDER}`, color: PINK,
+                        background: "rgba(245,49,127,0.08)",
+                    }}>{positionCount} chức danh</span>
+                    <span style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 20,
+                        border: "1px solid rgba(62,191,143,.35)", color: "#3EBF8F",
+                        background: "rgba(62,191,143,.10)",
+                    }}>● Đang hoạt động</span>
                 </div>
             </div>
 
-            {/* FAB */}
-            <Upload showUploadList={false} beforeUpload={onFileSelect} accept="image/*" multiple={false} style={{ zIndex: 1 }}>
-                <button disabled={disabled} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", borderRadius: 20, border: "1px solid rgba(255,255,255,.2)", background: "rgba(255,255,255,.1)", backdropFilter: "blur(8px)", color: "rgba(255,255,255,.75)", cursor: "pointer", fontFamily: "inherit", position: "relative", zIndex: 1 }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-                    Đổi ảnh
-                </button>
-            </Upload>
+            {/* Đổi ảnh button — dùng Ant Upload + Button để trigger đúng */}
+            <div style={{ zIndex: 1, flexShrink: 0 }}>
+                <Upload
+                    showUploadList={false}
+                    beforeUpload={onFileSelect}
+                    accept="image/*"
+                    multiple={false}
+                >
+                    <Button
+                        disabled={disabled}
+                        icon={
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        }
+                        style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            fontSize: 11, borderRadius: 20, height: 28,
+                            paddingInline: 12,
+                            border: `1px solid ${PINK_BORDER}`,
+                            background: "#fff",
+                            color: PINK,
+                            boxShadow: "0 2px 8px rgba(245,49,127,0.10)",
+                        }}
+                    >
+                        Đổi ảnh
+                    </Button>
+                </Upload>
+            </div>
         </div>
     );
 };
@@ -238,9 +327,24 @@ const PositionCard = ({ record }: { record: any }) => {
     const cfg = SOURCE_CFG[record.source as keyof typeof SOURCE_CFG] ?? SOURCE_CFG.COMPANY;
     const [hovered, setHovered] = useState(false);
     return (
-        <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-            style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 9, border: `1px solid ${hovered ? "#e5e7eb" : "#f3f4f6"}`, background: hovered ? "#fff" : "#fafafa", transition: "all .15s", transform: hovered ? "translateX(3px)" : "none", cursor: "default" }}>
-            <div style={{ width: 30, height: 30, borderRadius: 7, background: cfg.bg, border: `1px solid ${cfg.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{cfg.icon}</div>
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "8px 10px", borderRadius: 9,
+                border: `1px solid ${hovered ? "#e5e7eb" : "#f3f4f6"}`,
+                background: hovered ? "#fff" : "#fafafa",
+                transition: "all .15s",
+                transform: hovered ? "translateX(3px)" : "none",
+                cursor: "default",
+            }}
+        >
+            <div style={{
+                width: 30, height: 30, borderRadius: 7,
+                background: cfg.bg, border: `1px solid ${cfg.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>{cfg.icon}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 500, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.jobTitle?.nameVi ?? "—"}</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2, flexWrap: "wrap" }}>
@@ -249,7 +353,11 @@ const PositionCard = ({ record }: { record: any }) => {
                     {record.source === "SECTION" && record.section?.name && <><span style={{ fontSize: 10, color: "#d1d5db" }}>›</span><span style={{ fontSize: 10, color: "#F08050" }}>{record.section.name}</span></>}
                 </div>
             </div>
-            <span style={{ fontSize: 9.5, padding: "1px 6px", borderRadius: 5, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color, fontWeight: 600, flexShrink: 0, fontFamily: "monospace" }}>{record.jobTitle?.positionCode ?? "—"}</span>
+            <span style={{
+                fontSize: 9.5, padding: "1px 6px", borderRadius: 5,
+                background: cfg.bg, border: `1px solid ${cfg.border}`,
+                color: cfg.color, fontWeight: 600, flexShrink: 0, fontFamily: "monospace",
+            }}>{record.jobTitle?.positionCode ?? "—"}</span>
         </div>
     );
 };
@@ -305,11 +413,18 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
             }
             const payload: IReqUpdateProfileDTO = { name: values.name, avatar: finalAvatar };
             const res = await callUpdateProfile(payload);
-            if (res?.data) { dispatch(updateUserProfile(res.data)); message.success("Cập nhật thành công!"); onClose(false); }
-            else message.error("Cập nhật thất bại!");
+            if (res?.data) {
+                dispatch(updateUserProfile(res.data));
+                message.success("Cập nhật thành công!");
+                onClose(false);
+            } else {
+                message.error("Cập nhật thất bại!");
+            }
         } catch (err: any) {
             message.error(err?.response?.data?.message || "Đã xảy ra lỗi!");
-        } finally { setSubmitting(false); }
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const displayAvatar = previewUrl || currentAvatar;
@@ -321,7 +436,7 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
             <Form form={form} layout="vertical" onFinish={handleSubmit}
                 initialValues={{ name: user?.name, email: user?.email }}>
 
-                {/* ── Hero ── */}
+                {/* ── Hero (light) ── */}
                 <HeroBanner
                     displayAvatar={displayAvatar} initials={initials}
                     userName={user?.name} userEmail={user?.email}
@@ -337,7 +452,7 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                     {/* ──────── LEFT ──────── */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                        {/* Thông tin cá nhân */}
+                        {/* Thông tin cá nhân — bỏ "HĐ hết hạn" */}
                         <div>
                             <SectionLabel>Thông tin cá nhân</SectionLabel>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -359,11 +474,7 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                                 <InfoItem label="Ký HĐ" value={formatDate(info?.contractSignDate)}
                                     icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5l-3-3z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="12" x2="8" y2="12" /></svg>}
                                 />
-                                <div style={{ gridColumn: "1 / -1" }}>
-                                    <InfoItem label="HĐ hết hạn" value={formatDate(info?.contractExpireDate)}
-                                        icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5l-3-3z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="8" y1="12" x2="11" y2="12" /><line x1="9.5" y1="10.5" x2="9.5" y2="13.5" /></svg>}
-                                    />
-                                </div>
+                                {/* ĐÃ XOÁ: HĐ hết hạn */}
                             </div>
                         </div>
 
@@ -399,14 +510,16 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                                 <Form.Item
                                     label={<span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Họ và tên</span>}
-                                    name="name" style={{ marginBottom: 0 }}
+                                    name="name"
+                                    style={{ marginBottom: 0 }}
                                     rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
                                 >
                                     <Input disabled={submitting} style={{ borderRadius: 9, fontSize: 13, height: 38, borderColor: "#e5e7eb" }} />
                                 </Form.Item>
                                 <Form.Item
                                     label={<span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Email</span>}
-                                    name="email" style={{ marginBottom: 0 }}
+                                    name="email"
+                                    style={{ marginBottom: 0 }}
                                 >
                                     <Input disabled style={{ borderRadius: 9, fontSize: 13, height: 38, background: "#f9fafb", borderColor: "#f0f0f0", color: "#9ca3af" }} />
                                 </Form.Item>
@@ -415,28 +528,44 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
 
                         {/* Actions */}
                         <div style={{ display: "flex", gap: 8 }}>
-                            <Button onClick={() => onClose(false)} disabled={submitting}
-                                style={{ borderRadius: 9, height: 38, fontSize: 13, borderColor: "#e5e7eb", color: "#6b7280" }}>
+                            <Button
+                                onClick={() => onClose(false)}
+                                disabled={submitting}
+                                style={{ borderRadius: 9, height: 38, fontSize: 13, borderColor: "#e5e7eb", color: "#6b7280" }}
+                            >
                                 Huỷ
                             </Button>
-                            <Button type="primary" htmlType="submit" loading={submitting} icon={<EditOutlined />}
-                                style={{ flex: 1, background: PINK, borderColor: PINK, borderRadius: 9, height: 38, fontWeight: 600, fontSize: 13, boxShadow: "0 4px 14px rgba(245,49,127,0.25)" }}>
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={submitting}
+                                icon={<EditOutlined />}
+                                style={{
+                                    flex: 1, background: PINK, borderColor: PINK,
+                                    borderRadius: 9, height: 38, fontWeight: 600, fontSize: 13,
+                                    boxShadow: "0 4px 14px rgba(245,49,127,0.25)",
+                                }}
+                            >
                                 Lưu thay đổi
                             </Button>
                         </div>
 
-                        {/* Vai trò */}
+                        {/* Vai trò — BỎ ID */}
                         <div style={{ padding: "12px 14px", borderRadius: 11, background: PINK_LIGHT, border: `1px solid ${PINK_BORDER}` }}>
                             <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase" as const, color: PINK, marginBottom: 8 }}>Vai trò</div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: 9, background: "#fff", border: `1px solid ${PINK_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <div style={{
+                                    width: 32, height: 32, borderRadius: 9,
+                                    background: "#fff", border: `1px solid ${PINK_BORDER}`,
+                                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                }}>
                                     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke={PINK} strokeWidth="1.6">
                                         <circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" />
                                     </svg>
                                 </div>
                                 <div>
+                                    {/* ĐÃ XOÁ: ID dòng bên dưới */}
                                     <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{user?.role?.name || "—"}</div>
-                                    <div style={{ fontSize: 11, color: "#9ca3af" }}>ID: {user?.role?.id ?? "—"}</div>
                                 </div>
                             </div>
                         </div>
@@ -445,9 +574,12 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
             </Form>
 
             <AvatarLightbox
-                open={lightboxOpen} onClose={() => setLightboxOpen(false)}
-                displayAvatar={displayAvatar} initials={initials}
-                userName={user?.name} userEmail={user?.email}
+                open={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
+                displayAvatar={displayAvatar}
+                initials={initials}
+                userName={user?.name}
+                userEmail={user?.email}
                 onFileSelect={(f) => { setLightboxOpen(false); return handleFileSelect(f); }}
                 disabled={submitting}
             />

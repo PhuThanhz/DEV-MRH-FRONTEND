@@ -2,8 +2,8 @@ import type { IUser } from "@/types/backend";
 import { Avatar, Modal, Typography, Tag } from "antd";
 import {
     UserOutlined, MailOutlined, SafetyOutlined, CalendarOutlined,
-    PhoneOutlined, IdcardOutlined, TeamOutlined, ApartmentOutlined,
-    CheckCircleFilled, CloseCircleFilled, EditOutlined, UserAddOutlined,
+    PhoneOutlined, IdcardOutlined, ApartmentOutlined,
+    CheckCircleFilled, CloseCircleFilled, UserAddOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
@@ -18,69 +18,66 @@ interface IProps {
     setDataInit: (v: any) => void;
 }
 
-// ─── constants ────────────────────────────────────────────────────────────────
 const ACCENT = "#f5317f";
-const ACCENT_SOFT = "#fff0f6";
 const BORDER = "#f0f0f0";
+const BORDER_MED = "#e5e7eb";
 const TEXT_MAIN = "#111827";
 const TEXT_LABEL = "#6b7280";
 const TEXT_MUTED = "#9ca3af";
+const BG_CARD = "#ffffff";
+const BG_SUBTLE = "#fafafa";
 
-const sourceTagConfig: Record<string, { color: string; bg: string; label: string }> = {
-    COMPANY: { color: "#1d4ed8", bg: "#eff6ff", label: "Công ty" },
-    DEPARTMENT: { color: "#15803d", bg: "#f0fdf4", label: "Phòng ban" },
-    SECTION: { color: "#c2410c", bg: "#fff7ed", label: "Bộ phận" },
+const sourceTagConfig: Record<string, { antColor: string; label: string }> = {
+    COMPANY: { antColor: "blue", label: "Công ty" },
+    DEPARTMENT: { antColor: "cyan", label: "Phòng ban" },
+    SECTION: { antColor: "orange", label: "Bộ phận" },
 };
 
 const genderLabel: Record<string, string> = {
     MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác",
 };
 
-// ─── sub-components ───────────────────────────────────────────────────────────
+// ── InfoRow ───────────────────────────────────────────────────────────────────
 const InfoRow = ({
-    icon, label, value, highlight = false,
+    icon, label, value, highlight = false, noBorder = false,
 }: {
     icon: React.ReactNode;
     label: string;
     value: React.ReactNode;
     highlight?: boolean;
+    noBorder?: boolean;
 }) => (
     <div style={{
         display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "10px 0",
-        borderBottom: `1px solid ${BORDER}`,
+        padding: "9px 0",
+        borderBottom: noBorder ? "none" : `1px solid ${BORDER}`,
     }}>
         <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: "#f7f7f8",
+            width: 28, height: 28, borderRadius: 8,
+            background: BG_SUBTLE,
+            border: `1px solid ${BORDER_MED}`,
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0, marginTop: 1,
         }}>
-            <span style={{ fontSize: 13, color: TEXT_MUTED }}>{icon}</span>
+            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{icon}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 1, letterSpacing: "0.02em" }}>
+            <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2, letterSpacing: "0.02em" }}>
                 {label}
             </Text>
-            <Text style={{
-                fontSize: 13, color: highlight ? TEXT_MAIN : TEXT_MAIN,
-                fontWeight: highlight ? 600 : 400,
-                wordBreak: "break-all",
-            }}>
+            <Text style={{ fontSize: 13, color: TEXT_MAIN, fontWeight: highlight ? 600 : 400 }}>
                 {value || "--"}
             </Text>
         </div>
     </div>
 );
 
+// ── SectionTitle ──────────────────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        marginBottom: 4, marginTop: 4,
-    }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
         <Text style={{
             fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-            textTransform: "uppercase", letterSpacing: "0.07em",
+            textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
         }}>
             {children}
         </Text>
@@ -88,7 +85,17 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     </div>
 );
 
-// ─── main ─────────────────────────────────────────────────────────────────────
+// ── SquareBadge dùng Ant Tag ──────────────────────────────────────────────────
+const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) => (
+    <Tag
+        color={antColor}
+        style={{ borderRadius: 6, fontWeight: 600, fontSize: 12, padding: "1px 10px", margin: 0 }}
+    >
+        {label}
+    </Tag>
+);
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const backendURL = import.meta.env.VITE_BACKEND_URL;
@@ -97,16 +104,37 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const handleClose = () => { onClose(false); setDataInit(null); };
 
+    // ── cùng URL pattern với UserPage ──
     const avatarSrc = dataInit?.avatar
-        ? `${backendURL}/storage/AVATAR/${dataInit.avatar}`
+        ? `${backendURL}/api/v1/files?fileName=${dataInit.avatar}&folder=avatar`
         : undefined;
+
+    const info = dataInit?.userInfo;
+
+    const hrFields = [
+        { icon: <IdcardOutlined />, label: "Mã nhân viên", value: info?.employeeCode, highlight: true },
+        { icon: <PhoneOutlined />, label: "Số điện thoại", value: info?.phone },
+        { icon: <UserOutlined />, label: "Giới tính", value: genderLabel[info?.gender ?? ""] },
+        {
+            icon: <CalendarOutlined />, label: "Ngày sinh",
+            value: info?.dateOfBirth ? dayjs(info.dateOfBirth).format("DD/MM/YYYY") : undefined,
+        },
+        {
+            icon: <CalendarOutlined />, label: "Ngày vào làm",
+            value: info?.startDate ? dayjs(info.startDate).format("DD/MM/YYYY") : undefined,
+        },
+        {
+            icon: <CalendarOutlined />, label: "Ngày ký HĐ",
+            value: info?.contractSignDate ? dayjs(info.contractSignDate).format("DD/MM/YYYY") : undefined,
+        },
+    ].filter((f) => f.value && f.value !== "--");
 
     return (
         <>
             <style>{`
                 .detail-modal .ant-modal-content {
                     border-radius: 20px !important;
-                    box-shadow: 0 24px 64px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06) !important;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05) !important;
                     overflow: hidden;
                     padding: 0 !important;
                 }
@@ -145,36 +173,8 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     color: #6b7280 !important;
                 }
 
-                /* position table */
-                .detail-pos-table .ant-table {
-                    border-radius: 12px !important;
-                    overflow: hidden !important;
-                    border: 1.5px solid #f0f0f0 !important;
-                    font-size: 13px !important;
-                }
-                .detail-pos-table .ant-table-thead > tr > th {
-                    background: #fafafa !important;
-                    color: #6b7280 !important;
-                    font-size: 11px !important;
-                    font-weight: 600 !important;
-                    text-transform: uppercase !important;
-                    letter-spacing: 0.05em !important;
-                    border-bottom: 1.5px solid #f0f0f0 !important;
-                    padding: 9px 14px !important;
-                }
-                .detail-pos-table .ant-table-tbody > tr > td {
-                    padding: 11px 14px !important;
-                    border-bottom: 1px solid #f7f7f8 !important;
-                }
-                .detail-pos-table .ant-table-tbody > tr:last-child > td {
-                    border-bottom: none !important;
-                }
-                .detail-pos-table .ant-table-tbody > tr:hover > td {
-                    background: #fafafa !important;
-                }
-                .detail-pos-table .ant-table-placeholder td {
-                    border-bottom: none !important;
-                }
+                /* zebra row hover */
+                .detail-pos-row:hover td { background: #fafafa !important; }
             `}</style>
 
             <Modal
@@ -186,176 +186,190 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                 centered
                 className="detail-modal"
                 styles={{
-                    mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.25)" },
+                    mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.2)" },
                 }}
             >
                 {/* ══ PROFILE HEADER ══════════════════════════════════════════ */}
                 <div style={{
                     display: "flex", alignItems: "center", gap: 16,
                     padding: "14px 18px",
-                    background: "#fafafa",
-                    border: `1.5px solid ${BORDER}`,
+                    background: BG_SUBTLE,
+                    border: `1.5px solid ${BORDER_MED}`,
                     borderRadius: 14,
-                    marginBottom: 18,
+                    marginBottom: 16,
                 }}>
                     <Avatar
-                        size={64}
+                        size={60}
                         src={avatarSrc}
                         icon={<UserOutlined />}
                         style={{
-                            border: "3px solid #fff",
-                            boxShadow: "0 4px 14px rgba(245,49,127,0.15)",
-                            background: "#f5f5f5",
+                            border: "2px solid #e5e7eb",
+                            outline: "3px solid #fff",
+                            outlineOffset: "-1px",
+                            background: "#f3f4f6",
+                            color: "#9ca3af",
                             flexShrink: 0,
                         }}
                     />
+
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                            <Text style={{ fontSize: 17, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
+                            <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
                                 {dataInit?.name || "--"}
                             </Text>
                             {dataInit?.active ? (
-                                <span style={{
-                                    display: "inline-flex", alignItems: "center", gap: 4,
-                                    fontSize: 11, fontWeight: 600, color: "#15803d",
-                                    background: "#f0fdf4", padding: "2px 9px", borderRadius: 20,
-                                    border: "1px solid #bbf7d0",
-                                }}>
-                                    <CheckCircleFilled style={{ fontSize: 10 }} /> Hoạt động
-                                </span>
+                                <Tag
+                                    icon={<CheckCircleFilled />}
+                                    color="success"
+                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}
+                                >
+                                    Hoạt động
+                                </Tag>
                             ) : (
-                                <span style={{
-                                    display: "inline-flex", alignItems: "center", gap: 4,
-                                    fontSize: 11, fontWeight: 600, color: "#dc2626",
-                                    background: "#fef2f2", padding: "2px 9px", borderRadius: 20,
-                                    border: "1px solid #fecaca",
-                                }}>
-                                    <CloseCircleFilled style={{ fontSize: 10 }} /> Vô hiệu hóa
-                                </span>
+                                <Tag
+                                    icon={<CloseCircleFilled />}
+                                    color="error"
+                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}
+                                >
+                                    Vô hiệu hóa
+                                </Tag>
                             )}
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Text style={{ fontSize: 13, color: TEXT_LABEL }}>
                                 <MailOutlined style={{ marginRight: 5, color: TEXT_MUTED }} />
                                 {dataInit?.email || "--"}
                             </Text>
-                            {dataInit?.role && (
-                                <span style={{
-                                    fontSize: 12, fontWeight: 500, color: ACCENT,
-                                    background: ACCENT_SOFT, padding: "1px 10px", borderRadius: 20,
-                                    border: `1px solid #fbb6ce`,
-                                }}>
-                                    <SafetyOutlined style={{ marginRight: 4, fontSize: 11 }} />
+                            {dataInit?.role?.name && (
+                                <Tag
+                                    style={{
+                                        borderRadius: 20, margin: 0, fontWeight: 500, fontSize: 12,
+                                        background: "transparent", border: `1px solid ${BORDER_MED}`,
+                                        color: TEXT_LABEL,
+                                    }}
+                                >
+                                    <SafetyOutlined style={{ marginRight: 4 }} />
                                     {dataInit.role.name}
-                                </span>
+                                </Tag>
                             )}
-                            {dataInit?.userInfo?.employeeCode && (
-                                <Text style={{ fontSize: 12, color: TEXT_MUTED }}>
+                            {info?.employeeCode && (
+                                <Tag
+                                    style={{
+                                        borderRadius: 20, margin: 0, fontSize: 12,
+                                        background: "transparent", border: `1px solid ${BORDER_MED}`,
+                                        color: TEXT_MUTED,
+                                    }}
+                                >
                                     <IdcardOutlined style={{ marginRight: 4 }} />
-                                    {dataInit.userInfo.employeeCode}
-                                </Text>
+                                    {info.employeeCode}
+                                </Tag>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* ══ TWO-COLUMN LAYOUT ═══════════════════════════════════════ */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
-
-                    {/* ── col 1: Tài khoản ── */}
+                {/* ══ TWO-COLUMN ══════════════════════════════════════════════ */}
+                <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr",
+                    gap: 14, marginBottom: 16, alignItems: "start",
+                }}>
+                    {/* ── Tài khoản ── */}
                     <div style={{
-                        background: "#fff", border: `1.5px solid ${BORDER}`,
+                        background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
                         borderRadius: 14, padding: "14px 16px",
                     }}>
                         <SectionTitle>Tài khoản</SectionTitle>
+
                         <InfoRow icon={<MailOutlined />} label="Email" value={dataInit?.email} highlight />
-                        <InfoRow icon={<SafetyOutlined />} label="Vai trò" value={dataInit?.role?.name} />
-                        <div style={{ paddingTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                        <InfoRow
+                            icon={<SafetyOutlined />}
+                            label="Vai trò"
+                            value={
+                                dataInit?.role?.name
+                                    ? <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>{dataInit.role.name}</Tag>
+                                    : "--"
+                            }
+                        />
+
+                        {/* Người tạo / sửa */}
+                        <div style={{
+                            display: "flex", alignItems: "flex-start", gap: 10,
+                            padding: "9px 0", borderBottom: `1px solid ${BORDER}`,
+                        }}>
                             <div style={{
-                                width: 28, height: 28, borderRadius: 7, background: "#f7f7f8",
-                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                width: 28, height: 28, borderRadius: 8,
+                                background: BG_SUBTLE, border: `1px solid ${BORDER_MED}`,
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
                             }}>
-                                <UserAddOutlined style={{ fontSize: 13, color: TEXT_MUTED }} />
+                                <UserAddOutlined style={{ fontSize: 12, color: TEXT_MUTED }} />
                             </div>
-                            <div>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block" }}>Người tạo</Text>
-                                <Text style={{ fontSize: 13 }}>{dataInit?.createdBy || "--"}</Text>
-                            </div>
-                            <div style={{ width: 1, height: 30, background: BORDER, margin: "0 4px" }} />
-                            <div>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block" }}>Người sửa</Text>
-                                <Text style={{ fontSize: 13 }}>{dataInit?.updatedBy || "--"}</Text>
+                            <div style={{ display: "flex", gap: 20 }}>
+                                <div>
+                                    <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người tạo</Text>
+                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{dataInit?.createdBy || "--"}</Text>
+                                </div>
+                                <div style={{ width: 1, height: 28, background: BORDER, alignSelf: "center" }} />
+                                <div>
+                                    <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người sửa</Text>
+                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{dataInit?.updatedBy || "--"}</Text>
+                                </div>
                             </div>
                         </div>
-                        <div style={{ display: "flex", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
-                            <div style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 1 }}>Ngày tạo</Text>
-                                <Text style={{ fontSize: 12, color: TEXT_LABEL }}>
+
+                        {/* Ngày tạo / sửa — dùng nền xám cực nhạt, không có màu */}
+                        <div style={{ display: "flex", gap: 10, paddingTop: 10 }}>
+                            <div style={{
+                                flex: 1, background: BG_SUBTLE, borderRadius: 8,
+                                padding: "7px 10px", border: `1px solid ${BORDER}`,
+                            }}>
+                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày tạo</Text>
+                                <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
                                     {dataInit?.createdAt ? dayjs(dataInit.createdAt).format("DD/MM/YYYY HH:mm") : "--"}
                                 </Text>
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 1 }}>Ngày sửa</Text>
-                                <Text style={{ fontSize: 12, color: TEXT_LABEL }}>
+                            <div style={{
+                                flex: 1, background: BG_SUBTLE, borderRadius: 8,
+                                padding: "7px 10px", border: `1px solid ${BORDER}`,
+                            }}>
+                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày sửa</Text>
+                                <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
                                     {dataInit?.updatedAt ? dayjs(dataInit.updatedAt).format("DD/MM/YYYY HH:mm") : "--"}
                                 </Text>
                             </div>
                         </div>
                     </div>
 
-                    {/* ── col 2: Thông tin nhân sự ── */}
+                    {/* ── Nhân sự ── */}
                     <div style={{
-                        background: "#fff", border: `1.5px solid ${BORDER}`,
+                        background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
                         borderRadius: 14, padding: "14px 16px",
                     }}>
                         <SectionTitle>Nhân sự</SectionTitle>
-                        {dataInit?.userInfo ? (
-                            <>
-                                <InfoRow icon={<IdcardOutlined />} label="Mã nhân viên" value={dataInit.userInfo.employeeCode} highlight />
-                                <InfoRow icon={<PhoneOutlined />} label="Số điện thoại" value={dataInit.userInfo.phone} />
-                                <InfoRow
-                                    icon={<UserOutlined />}
-                                    label="Giới tính"
-                                    value={genderLabel[dataInit.userInfo.gender ?? ""] ?? "--"}
-                                />
-                                <InfoRow
-                                    icon={<CalendarOutlined />}
-                                    label="Ngày sinh"
-                                    value={dataInit.userInfo.dateOfBirth
-                                        ? dayjs(dataInit.userInfo.dateOfBirth).format("DD/MM/YYYY")
-                                        : "--"}
-                                />
-                                <InfoRow
-                                    icon={<CalendarOutlined />}
-                                    label="Ngày vào làm"
-                                    value={dataInit.userInfo.startDate
-                                        ? dayjs(dataInit.userInfo.startDate).format("DD/MM/YYYY")
-                                        : "--"}
-                                />
-                                <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, marginTop: 2 }}>
-                                    <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 3 }}>
-                                        Ngày ký hợp đồng
-                                    </Text>
-                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>
-                                        {dataInit.userInfo.contractSignDate
-                                            ? dayjs(dataInit.userInfo.contractSignDate).format("DD/MM/YYYY")
-                                            : "--"}
-                                    </Text>
-                                </div>
-                            </>
-                        ) : (
-                            <div style={{ padding: "24px 0", textAlign: "center" }}>
+                        {!info || hrFields.length === 0 ? (
+                            <div style={{ padding: "20px 0", textAlign: "center" }}>
                                 <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có thông tin nhân sự</Text>
                             </div>
+                        ) : (
+                            hrFields.map((f, idx) => (
+                                <InfoRow
+                                    key={f.label}
+                                    icon={f.icon}
+                                    label={f.label}
+                                    value={f.value}
+                                    highlight={f.highlight}
+                                    noBorder={idx === hrFields.length - 1}
+                                />
+                            ))
                         )}
                     </div>
                 </div>
 
                 {/* ══ POSITIONS TABLE ══════════════════════════════════════════ */}
-                <div className="detail-pos-table">
+                <div>
                     <div style={{
                         display: "flex", alignItems: "center",
-                        justifyContent: "space-between", marginBottom: 8,
+                        justifyContent: "space-between", marginBottom: 10,
                     }}>
                         <Text style={{
                             fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
@@ -365,24 +379,28 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             Chức danh đang giữ
                         </Text>
                         {positions.length > 0 && (
-                            <span style={{
-                                fontSize: 11, fontWeight: 700, color: ACCENT,
-                                background: ACCENT_SOFT, padding: "2px 10px", borderRadius: 20,
+                            <Tag style={{
+                                borderRadius: 20, margin: 0, fontWeight: 700, fontSize: 11,
+                                background: "transparent", border: `1px solid ${ACCENT}`, color: ACCENT,
                             }}>
                                 {positions.length} chức danh
-                            </span>
+                            </Tag>
                         )}
                     </div>
 
-                    <table style={{ width: "100%", borderCollapse: "collapse", borderRadius: 12, overflow: "hidden", border: `1.5px solid ${BORDER}` }}>
+                    <table style={{
+                        width: "100%", borderCollapse: "collapse",
+                        borderRadius: 12, overflow: "hidden",
+                        border: `1.5px solid ${BORDER_MED}`,
+                    }}>
                         <thead>
-                            <tr style={{ background: "#fafafa" }}>
+                            <tr style={{ background: BG_SUBTLE }}>
                                 {["Chức danh", "Mã bậc", "Cấp", "Công ty", "Phòng ban", "Bộ phận"].map(h => (
                                     <th key={h} style={{
-                                        padding: "9px 14px", textAlign: "left",
-                                        fontSize: 11, fontWeight: 600, color: TEXT_LABEL,
+                                        padding: "10px 14px", textAlign: "left",
+                                        fontSize: 11, fontWeight: 700, color: TEXT_LABEL,
                                         textTransform: "uppercase", letterSpacing: "0.05em",
-                                        borderBottom: `1.5px solid ${BORDER}`,
+                                        borderBottom: `1.5px solid ${BORDER_MED}`,
                                     }}>{h}</th>
                                 ))}
                             </tr>
@@ -400,8 +418,9 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                                             <div style={{
                                                 width: 40, height: 40, borderRadius: 10,
-                                                background: "#f7f7f8", display: "flex",
+                                                background: BG_SUBTLE, display: "flex",
                                                 alignItems: "center", justifyContent: "center",
+                                                border: `1px solid ${BORDER_MED}`,
                                             }}>
                                                 <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
                                             </div>
@@ -412,31 +431,37 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             ) : positions.map((r: IUserPosition, idx: number) => {
                                 const cfg = sourceTagConfig[r.source];
                                 return (
-                                    <tr key={r.id} style={{ borderBottom: idx < positions.length - 1 ? `1px solid #f7f7f8` : "none" }}>
+                                    <tr
+                                        key={r.id}
+                                        className="detail-pos-row"
+                                        style={{
+                                            borderBottom: idx < positions.length - 1 ? `1px solid ${BORDER}` : "none",
+                                            background: "#fff",
+                                        }}
+                                    >
                                         <td style={{ padding: "11px 14px" }}>
-                                            <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>{r.jobTitle?.nameVi ?? "--"}</Text>
+                                            <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
+                                                {r.jobTitle?.nameVi ?? "--"}
+                                            </Text>
                                         </td>
-                                        <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                                            <span style={{
-                                                display: "inline-block", padding: "2px 10px", borderRadius: 20,
-                                                background: "#f5f0ff", color: "#6d28d9", fontSize: 12, fontWeight: 600,
-                                            }}>
-                                                {r.jobTitle?.positionCode ?? "--"}
-                                            </span>
+                                        <td style={{ padding: "11px 14px" }}>
+                                            <SquareBadge label={r.jobTitle?.positionCode ?? "--"} antColor="purple" />
                                         </td>
-                                        <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                                            {cfg ? (
-                                                <span style={{
-                                                    display: "inline-block", padding: "2px 10px", borderRadius: 20,
-                                                    background: cfg.bg, color: cfg.color, fontSize: 12, fontWeight: 500,
-                                                }}>
-                                                    {cfg.label}
-                                                </span>
-                                            ) : "--"}
+                                        <td style={{ padding: "11px 14px" }}>
+                                            {cfg
+                                                ? <SquareBadge label={cfg.label} antColor={cfg.antColor} />
+                                                : <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>--</Text>
+                                            }
                                         </td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_LABEL }}>{r.company?.name ?? "--"}</td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>{r.department?.name ?? "--"}</td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>{r.section?.name ?? "--"}</td>
+                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_LABEL }}>
+                                            {r.company?.name ?? "--"}
+                                        </td>
+                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                                            {r.department?.name ?? "--"}
+                                        </td>
+                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                                            {r.section?.name ?? "--"}
+                                        </td>
                                     </tr>
                                 );
                             })}

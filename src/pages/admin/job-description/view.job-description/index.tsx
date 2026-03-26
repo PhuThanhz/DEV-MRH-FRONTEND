@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Modal, Spin } from "antd";
-import { FileTextOutlined } from "@ant-design/icons";
+import { Modal, Spin, Button } from "antd";
+import { FileTextOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { IJobDescription, IOrgNode } from "@/types/backend";
 import { useJobDescriptionByIdQuery } from "@/hooks/useJobDescriptions";
 import { useJdFlowLogsQuery } from "@/hooks/useJdFlow";
@@ -14,6 +14,8 @@ import Tab2OrgChart from "./components/Tab2OrgChart";
 import Tab3Tasks from "./components/Tab3Tasks";
 import Tab4Requirements from "./components/Tab4Requirements";
 import Tab5History from "./components/Tab5History";
+
+import { exportJdToExcel } from "../components/exportPublishedJd"; // ← thêm mới
 
 const ACCENT = "#e8637a";
 const ACCENT_LIGHT = "#fff0f3";
@@ -75,7 +77,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
     const jdId = open && record ? (record.id ?? (record as any).jdId) : undefined;
 
     const { data, isLoading } = useJobDescriptionByIdQuery(jdId);
-    const { data: logs } = useJdFlowLogsQuery(activeTab === "5" ? jdId : undefined);
+    const { data: logs } = useJdFlowLogsQuery(jdId); // ← bỏ điều kiện activeTab === "5" để luôn fetch
 
     const jd: EnrichedJD | null = (data as EnrichedJD) ?? record;
     const statusInfo = jd?.status
@@ -219,6 +221,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                             </div>
                         </div>
 
+                        {/* ← THAY ĐỔI: thêm nút Xuất Excel vào góc phải header */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                             {jd.version != null && (
                                 <span style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "4px 12px" }}>
@@ -235,6 +238,22 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                                     Tạo: {dayjs(jd.createdAt).format("DD/MM/YYYY HH:mm")}
                                 </span>
                             )}
+                            <Button
+                                icon={<DownloadOutlined />}
+                                size="small"
+                                onClick={() => exportJdToExcel(jd, logs ?? [])}
+                                style={{
+                                    marginTop: 4,
+                                    background: "#e8637a",
+                                    borderColor: "#e8637a",
+                                    color: "#fff",
+                                    fontWeight: 600,
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                }}
+                            >
+                                Xuất Excel
+                            </Button>
                         </div>
                     </div>
 
