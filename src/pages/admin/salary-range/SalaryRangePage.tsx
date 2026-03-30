@@ -12,11 +12,11 @@ import type { ISalaryMatrix } from "@/types/backend";
 
 const GRADE_COLORS = [
     { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
-    { bg: "#fff5f9", border: "#ffc0d9", color: "#d4589a" },
-    { bg: "#fff7fb", border: "#ffd1e8", color: "#d97ab8" },
-    { bg: "#fff9fc", border: "#ffdcee", color: "#de96c8" },
-    { bg: "#fffbfd", border: "#ffe8f3", color: "#e3b0d8" },
-    { bg: "#fffdfe", border: "#ffeef7", color: "#e8c4e4" },
+    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
+    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
+    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
+    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
+    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
 ];
 
 const getGradeStyle = (level: number) =>
@@ -62,24 +62,23 @@ const SalaryRangePage = () => {
     const tableHeader = (type: "MONTH" | "HOUR") => (
         <thead>
             <tr>
-                <th className="sticky-col th-meta" rowSpan={2}>Cấp chức danh</th>
                 <th className="sticky-col-2 th-meta" rowSpan={2}>Chức danh</th>
-                <th className="th-meta" rowSpan={2}>Bậc</th>
+                <th className="th-meta" rowSpan={2}>Bậc lương chức danh</th>
                 <th colSpan={6} className="group-header income-group">
                     {type === "MONTH" ? "Thu nhập cố định" : "Thu nhập theo giờ"}
                 </th>
-                <th colSpan={4} className="group-header kpi-group">KPI Thưởng</th>
+                <th colSpan={4} className="group-header kpi-group">Thưởng hiệu quả công việc</th>
                 <th className="th-meta" rowSpan={2}>Hành động</th>
             </tr>
             <tr>
                 {type === "MONTH" ? (
                     <>
-                        <th className="sub-header income-sub">Lương</th>
-                        <th className="sub-header income-sub">Phụ cấp</th>
-                        <th className="sub-header income-sub">Tiền ăn</th>
-                        <th className="sub-header income-sub">Xăng xe</th>
-                        <th className="sub-header income-sub">Điện thoại</th>
-                        <th className="sub-header income-sub">Khác</th>
+                        <th className="sub-header income-sub">Mức lương</th>
+                        <th className="sub-header income-sub">Phụ cấp chức vụ/ chức danh</th>
+                        <th className="sub-header income-sub">Tiền ăn giữa ca (theo ngày/giờ công)</th>
+                        <th className="sub-header income-sub">Hỗ trợ xăng xe</th>
+                        <th className="sub-header income-sub">Hỗ trợ điện thoại</th>
+                        <th className="sub-header income-sub">Khoản hỗ trợ khác (theo quy định)</th>
                     </>
                 ) : (
                     <>
@@ -91,10 +90,10 @@ const SalaryRangePage = () => {
                         <th className="sub-header income-sub">Khác giờ</th>
                     </>
                 )}
-                <th className="sub-header kpi-sub">KPI A</th>
-                <th className="sub-header kpi-sub">KPI B</th>
-                <th className="sub-header kpi-sub">KPI C</th>
-                <th className="sub-header kpi-sub">KPI D</th>
+                <th className="sub-header kpi-sub">A</th>
+                <th className="sub-header kpi-sub">B</th>
+                <th className="sub-header kpi-sub">C</th>
+                <th className="sub-header kpi-sub">D</th>
             </tr>
         </thead>
     );
@@ -121,9 +120,7 @@ const SalaryRangePage = () => {
                             <tr key={`${type}-${jt.jobTitleId}-${row.gradeId}`} className="data-row">
                                 {idx === 0 && (
                                     <>
-                                        <td rowSpan={jt.rows.length} className="sticky-col band-col">
-                                            <span className="band-badge">{jt.band}{jt.level}</span>
-                                        </td>
+
                                         <td rowSpan={jt.rows.length} className="sticky-col-2 job-title-col">
                                             <span className="job-title-text">{jt.jobTitleName}</span>
                                         </td>
@@ -316,13 +313,13 @@ const SalaryRangePage = () => {
                         min-width: 1600px;
                         background: white;
                     }
-                    .salary-table th,
-                    .salary-table td {
-                        border: 1px solid #f0f0f0;
-                        padding: 10px 13px;
-                        text-align: center;
-                        background: white;
-                    }
+                   .salary-table th,
+.salary-table td {
+    border: 1px solid #bfbfbf;
+    padding: 10px 13px;
+    text-align: center;
+    background: white;
+}
 
                     /* ── Header meta ── */
                     .salary-table thead th.th-meta {
@@ -351,15 +348,17 @@ const SalaryRangePage = () => {
                         white-space: nowrap;
                     }
                     .salary-table thead th.group-header.income-group {
-                        background: #fafafa;
-                        color: #434343;
-                        border-bottom: 1px solid #e8e8e8;
-                    }
-                    .salary-table thead th.group-header.kpi-group {
-                        background: #fafafa;
-                        color: #8c8c8c;
-                        border-bottom: 1px solid #e8e8e8;
-                    }
+    background: #fafafa;
+    color: #000000; /* đen */
+    font-weight: 700; /* đậm */
+    border-bottom: 1px solid #e8e8e8;
+}
+                 .salary-table thead th.group-header.kpi-group {
+    background: #fafafa;
+    color: #000000; /* màu đen */
+    font-weight: 700; /* đậm hơn */
+    border-bottom: 1px solid #e8e8e8;
+}
 
                     /* ── Header sub ── */
                     .salary-table thead th.sub-header {
@@ -373,15 +372,15 @@ const SalaryRangePage = () => {
                         border-bottom: 2px solid #e8e8e8;
                     }
                     .salary-table thead th.sub-header.income-sub {
-                        background: #fafafa;
-                        color: #595959;
-                        border-color: #e8e8e8;
-                    }
-                    .salary-table thead th.sub-header.kpi-sub {
-                        background: #fafafa;
-                        color: #8c8c8c;
-                        border-color: #e8e8e8;
-                    }
+    background: #fafafa;
+    color: #262626; /* đậm hơn */
+    font-weight: 600;
+}
+                   .salary-table thead th.sub-header.kpi-sub {
+    background: #f0f0f0;
+    color: #262626;
+    font-weight: 600;
+}
 
                     /* ── Sticky columns ── */
                     .sticky-col {
@@ -392,7 +391,7 @@ const SalaryRangePage = () => {
                         box-shadow: 2px 0 4px rgba(0,0,0,0.04);
                     }
                     .sticky-col-2 {
-                        position: sticky; left: 130px;
+                        position: sticky; left: 0;
                         z-index: 11 !important;
                         background: white;
                         border-right: 1px solid #e8e8e8 !important;

@@ -131,22 +131,60 @@ const SectionPage = () => {
             align: "center",
             render: (_, __, idx) => idx + 1 + (meta.page - 1) * meta.pageSize,
         },
-        { title: "Mã bộ phận", dataIndex: "code", sorter: true },
+        {
+            title: "Mã bộ phận",
+            dataIndex: "code",
+            sorter: true,
+            align: "center",
+            render: (_, record) => (
+                <Tag
+                    style={{
+                        borderRadius: 4,
+                        padding: "0px 8px",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        height: 22,
+                        lineHeight: "20px",
+                        border: "1px solid #FFD591",
+                        background: "#FFF7E6",
+                        color: "#D46B08",
+                    }}
+                >
+                    {record.code}
+                </Tag>
+            ),
+        },
         { title: "Tên bộ phận", dataIndex: "name", sorter: true },
         {
             title: "Phòng ban",
             dataIndex: ["department", "name"],
+            align: "center",  // ← thêm dòng này
             render: (v) => <Tag color="blue">{v}</Tag>,
         },
         {
             title: "Trạng thái",
-            dataIndex: "active",
-            render: (_, r) =>
-                r.active ? (
-                    <Badge status="success" text="Đang hoạt động" />
-                ) : (
-                    <Badge status="error" text="Ngừng hoạt động" />
-                ),
+            align: "center",
+            render: (_, record) => {
+                const isActive = record.active;
+
+                return (
+                    <Tag
+                        style={{
+                            borderRadius: 4,
+                            padding: "0px 8px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            height: 22,
+                            lineHeight: "20px",
+                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                            background: isActive ? "#f6ffed" : "#fff2f0",
+                            color: isActive ? "#389e0d" : "#cf1322",
+                        }}
+                    >
+                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Hành động",

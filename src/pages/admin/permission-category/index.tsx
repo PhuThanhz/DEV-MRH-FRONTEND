@@ -85,6 +85,7 @@ const PermissionCategoryPage = () => {
             title: "Mã danh mục",
             dataIndex: "code",
             sorter: true,
+            align: "center",
             width: 150,
             render: (text) => (
                 <Tag color="magenta" style={{ fontFamily: "monospace" }}>
@@ -119,7 +120,7 @@ const PermissionCategoryPage = () => {
                 record.active ? (
                     <Tag color="green">Hoạt động</Tag>
                 ) : (
-                    <Tag color="red">Ngưng</Tag>
+                    <Tag color="red">Ngừng hoạt động</Tag>
                 ),
         },
         {

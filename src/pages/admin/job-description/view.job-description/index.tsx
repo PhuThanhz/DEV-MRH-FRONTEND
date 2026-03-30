@@ -14,6 +14,7 @@ import Tab2OrgChart from "./components/Tab2OrgChart";
 import Tab3Tasks from "./components/Tab3Tasks";
 import Tab4Requirements from "./components/Tab4Requirements";
 import Tab5History from "./components/Tab5History";
+import { ReactFlowProvider } from "reactflow";
 
 import { exportJdToExcel } from "../components/exportPublishedJd"; // ← thêm mới
 
@@ -38,7 +39,7 @@ const TABS = [
     { key: "5", label: "Lịch sử duyệt" },
 ];
 
-type EnrichedJD = IJobDescription & {
+export type EnrichedJD = IJobDescription & {
     companyName?: string;
     departmentName?: string;
     jobTitleName?: string;
@@ -156,6 +157,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
             width={900} style={{ top: 20 }}
             styles={{ body: { padding: 0, background: "#f5f6fa", borderRadius: 12, overflow: "hidden" } }}
             title={null} destroyOnClose
+            getContainer={document.body}
         >
             {isLoading ? (
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 300 }}>
@@ -285,7 +287,11 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                         </div>
 
                         {activeTab === "1" && <Tab1General jd={jd} statusInfo={statusInfo} />}
-                        {activeTab === "2" && <Tab2OrgChart loading={loadingChart} nodes={rfNodes} edges={rfEdges} />}
+                        {activeTab === "2" && (
+                            <ReactFlowProvider>
+                                <Tab2OrgChart loading={loadingChart} nodes={rfNodes} edges={rfEdges} />
+                            </ReactFlowProvider>
+                        )}
                         {activeTab === "3" && <Tab3Tasks tasks={jd.tasks} />}
                         {activeTab === "4" && <Tab4Requirements requirements={jd.requirements} />}
                         {activeTab === "5" && <Tab5History logs={logs} />}

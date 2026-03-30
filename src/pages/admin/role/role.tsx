@@ -105,10 +105,11 @@ const RolePage = () => {
         {
             title: "Trạng thái",
             dataIndex: "active",
+            align: "center",  // 👈 thêm dòng này
             hideInSearch: true,
             render: (_, record) => (
                 <Tag color={record.active ? "green" : "red"}>
-                    {record.active ? "Đang hoạt động" : "Ngừng hoạt động"}
+                    {record.active ? "Hoạt động" : "Ngừng hoạt động"}
                 </Tag>
             ),
         },

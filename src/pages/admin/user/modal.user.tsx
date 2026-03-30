@@ -387,7 +387,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     color: #374151 !important;
                 }
             `}</style>
-
             <ModalForm
                 title={
                     <span style={{ letterSpacing: "-0.03em" }}>

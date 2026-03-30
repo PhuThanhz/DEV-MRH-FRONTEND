@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Badge, Popconfirm, Button, Dropdown } from "antd";
+import { Space, Popconfirm, Button, Dropdown, Tag } from "antd";
 import {
     MoreOutlined,
     EyeOutlined,
@@ -168,6 +168,25 @@ const DepartmentPage = () => {
             title: "Mã phòng ban",
             dataIndex: "code",
             sorter: true,
+            align: "center",  // 👈 thêm dòng này
+
+            render: (_, record) => (
+                <Tag
+                    style={{
+                        borderRadius: 4,
+                        padding: "0px 8px",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        height: 22,
+                        lineHeight: "20px",
+                        border: "1px solid #AFA9EC",
+                        background: "#EEEDFE",
+                        color: "#3C3489",
+                    }}
+                >
+                    {record.code}
+                </Tag>
+            ),
         },
         {
             title: "Tên phòng ban",
@@ -181,12 +200,27 @@ const DepartmentPage = () => {
         {
             title: "Trạng thái",
             align: "center",
-            render: (_, record) =>
-                record.status === 1 ? (
-                    <Badge status="success" text="Hoạt động" />
-                ) : (
-                    <Badge status="error" text="Ngừng hoạt động" />
-                ),
+            render: (_, record) => {
+                const isActive = record.status === 1;
+
+                return (
+                    <Tag
+                        style={{
+                            borderRadius: 4,
+                            padding: "0px 8px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            height: 22,
+                            lineHeight: "20px",
+                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                            background: isActive ? "#f6ffed" : "#fff2f0",
+                            color: isActive ? "#389e0d" : "#cf1322",
+                        }}
+                    >
+                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Hành động",

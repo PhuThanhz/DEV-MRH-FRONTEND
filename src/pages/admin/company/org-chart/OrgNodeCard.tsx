@@ -16,6 +16,7 @@ export interface OrgNodeData {
     levelCode: string;
     holderName?: string;
     isGoal?: boolean;
+    jobDescriptionId?: number | null; // ← thêm dòng này
     onEdit: () => void;
     onDelete: () => void;
     onJD?: () => void;
@@ -288,26 +289,28 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                     </span>
                                 ) : <span />}
 
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); data.onJD?.(); }}
-                                    onMouseEnter={() => setJdHover(true)}
-                                    onMouseLeave={() => setJdHover(false)}
-                                    style={{
-                                        display: "flex", alignItems: "center", gap: 4,
-                                        fontSize: 10, fontWeight: 600,
-                                        fontFamily: "'Be Vietnam Pro',sans-serif",
-                                        letterSpacing: "0.05em",
-                                        color: jdHover ? "#374151" : "#6b7280",
-                                        background: jdHover ? "#f3f4f6" : "#ffffff",
-                                        border: `1px solid ${jdHover ? "#d1d5db" : "#e5e7eb"}`,
-                                        borderRadius: 5, cursor: "pointer", padding: "3px 10px",
-                                        transition: "all 0.15s ease",
-                                        boxShadow: jdHover ? "0 1px 4px rgba(0,0,0,.08)" : "none",
-                                    }}
-                                >
-                                    <FileTextOutlined style={{ fontSize: 9 }} />
-                                    Xem JD
-                                </button>
+                                {data.jobDescriptionId ? (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); data.onJD?.(); }}
+                                        onMouseEnter={() => setJdHover(true)}
+                                        onMouseLeave={() => setJdHover(false)}
+                                        style={{
+                                            display: "flex", alignItems: "center", gap: 4,
+                                            fontSize: 10, fontWeight: 600,
+                                            fontFamily: "'Be Vietnam Pro',sans-serif",
+                                            letterSpacing: "0.05em",
+                                            color: jdHover ? "#374151" : "#6b7280",
+                                            background: jdHover ? "#f3f4f6" : "#ffffff",
+                                            border: `1px solid ${jdHover ? "#d1d5db" : "#e5e7eb"}`,
+                                            borderRadius: 5, cursor: "pointer", padding: "3px 10px",
+                                            transition: "all 0.15s ease",
+                                            boxShadow: jdHover ? "0 1px 4px rgba(0,0,0,.08)" : "none",
+                                        }}
+                                    >
+                                        <FileTextOutlined style={{ fontSize: 9 }} />
+                                        Xem JD
+                                    </button>
+                                ) : <span />}
                             </div>
                         </>
                     )}

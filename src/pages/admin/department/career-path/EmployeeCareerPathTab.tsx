@@ -19,11 +19,10 @@ import {
 import type { IEmployeeCareerPath } from "@/types/backend";
 import ModalAssignCareerPath from "./ModalAssignCareerPath";
 import ModalPromoteEmployee from "./ModalPromoteEmployee";
-import DrawerEmployeeDetail from "./DrawerEmployeeDetail";
+import DrawerEmployeeDetail from "./ModalEmployeeDetail";
 
 const { Text, Title } = Typography;
 
-// ── Design tokens ───────────────────────────────────────────────────
 const T = {
     ink: "#1d1d1f",
     ink2: "#424245",
@@ -60,7 +59,6 @@ const AVATAR_COLORS = ["#0066ff", "#5856d6", "#34aadc", "#1db954", "#ff9500", "#
 const avatarColor = (name?: string) =>
     name ? AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] : AVATAR_COLORS[0];
 
-// ── Components ──────────────────────────────────────────────────────
 const ColLabel = ({ children }: { children: React.ReactNode }) => (
     <Text style={{ fontSize: 10, color: T.ink4, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 2 }}>
         {children}
@@ -89,7 +87,6 @@ const ProgressBar = ({ current, total }: { current?: number; total?: number }) =
     );
 };
 
-// ── Employee Card ───────────────────────────────────────────────────
 const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
     const [hov, setHov] = useState(false);
     const st = getSt(item.progressStatus);
@@ -117,7 +114,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 gap: 20,
             }}
         >
-            {/* 1. User Info */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: avatarColor(item.user?.name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 15 }}>
                     {item.user?.name?.charAt(0).toUpperCase()}
@@ -128,7 +124,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 </div>
             </div>
 
-            {/* 2. Current Path */}
             <div style={{ minWidth: 0 }}>
                 <ColLabel>Lộ trình hiện tại</ColLabel>
                 <Text strong style={{ fontSize: 13, color: T.ink2 }}>{item.template?.name}</Text>
@@ -138,7 +133,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 </div>
             </div>
 
-            {/* 3. Next Position */}
             <div>
                 <ColLabel>Vị trí kế tiếp</ColLabel>
                 {item.nextStep ? (
@@ -153,7 +147,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 <ProgressBar current={item.currentStepOrder} total={item.totalSteps} />
             </div>
 
-            {/* 4. Timeline */}
             <div>
                 <ColLabel>Dự kiến bổ nhiệm</ColLabel>
                 {expectedDate ? (
@@ -197,7 +190,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
     );
 };
 
-// ── Main Component ──────────────────────────────────────────────────
 const EmployeeCareerPathTab = () => {
     const { departmentId } = useParams();
     const [searchValue, setSearchValue] = useState("");
@@ -226,7 +218,7 @@ const EmployeeCareerPathTab = () => {
 
     return (
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-            {/* Header & Filter */}
+
             <div style={{ background: T.white, padding: "20px 24px", borderRadius: 20, border: `1px solid ${T.line}`, marginBottom: 20 }}>
                 <SearchFilter
                     searchPlaceholder="Tìm tên nhân viên, vị trí hoặc tên lộ trình..."
@@ -244,7 +236,7 @@ const EmployeeCareerPathTab = () => {
                 </div>
             </div>
 
-            {/* List Content */}
+
             {isFetching ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {[1, 2, 3, 4].map(k => <Skeleton key={k} active avatar paragraph={{ rows: 1 }} style={{ background: T.white, padding: 20, borderRadius: 16 }} />)}
@@ -269,7 +261,7 @@ const EmployeeCareerPathTab = () => {
                 </div>
             )}
 
-            {/* Modals & Drawer */}
+
             <ModalAssignCareerPath open={openAssign} onClose={() => { setOpenAssign(false); setSelected(null); }} dataInit={selected} departmentId={Number(departmentId)} onSuccess={() => { setOpenAssign(false); refetch(); }} />
             <ModalPromoteEmployee open={openPromote} onClose={() => { setOpenPromote(false); setSelected(null); }} dataInit={selected} onSuccess={() => { setOpenPromote(false); refetch(); }} />
             <DrawerEmployeeDetail open={openDetail} onClose={() => { setOpenDetail(false); setSelected(null); }} dataInit={selected} />

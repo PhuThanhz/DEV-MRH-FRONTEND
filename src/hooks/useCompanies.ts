@@ -5,7 +5,7 @@ import {
     callCreateCompany,
     callUpdateCompany,
     callInactiveCompany,
-    callActiveCompany,
+    callActiveCompany, callFetchCompanyById
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
 
@@ -17,6 +17,19 @@ export const useCompaniesQuery = (query: string) => {
             const res = await callFetchCompany(query);
             return res.data as IModelPaginate<ICompany>;
         },
+    });
+};
+// Lấy chi tiết công ty theo ID
+export const useCompanyByIdQuery = (id?: string) => {
+    return useQuery({
+        queryKey: ["company", id],
+        queryFn: async () => {
+            if (!id) throw new Error("Thiếu ID công ty");
+            const res = await callFetchCompanyById(id);
+            if (!res?.data) throw new Error("Không thể lấy thông tin công ty");
+            return res.data as ICompany;
+        },
+        enabled: !!id,
     });
 };
 

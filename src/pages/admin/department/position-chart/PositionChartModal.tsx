@@ -13,6 +13,18 @@ interface PositionChartModalProps {
     companyName?: string;
 }
 
+const getBandStyle = (code: string): { bg: string; border: string; color: string } => {
+    const prefix = code?.charAt(0)?.toUpperCase();
+    const map: Record<string, { bg: string; border: string; color: string }> = {
+        M: { bg: "#fdf2f8", border: "1.5px solid #f9a8d4", color: "#9d174d" }, // Rose — match theme header
+        S: { bg: "#faf5ff", border: "1.5px solid #d8b4fe", color: "#6b21a8" }, // Violet — chuyên môn
+        P: { bg: "#f0fdf4", border: "1.5px solid #86efac", color: "#166534" }, // Green — dự án
+        E: { bg: "#fff7ed", border: "1.5px solid #fdba74", color: "#9a3412" }, // Orange — điều hành
+        T: { bg: "#eff6ff", border: "1.5px solid #93c5fd", color: "#1e40af" }, // Blue — kỹ thuật
+    };
+    return map[prefix] ?? { bg: "#f8fafc", border: "1.5px solid #cbd5e1", color: "#475569" };
+};
+
 const PositionChartModal: React.FC<PositionChartModalProps> = ({
     open,
     onClose,
@@ -70,7 +82,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
             title: "STT",
             width: 64,
             align: "center" as const,
-            onHeaderCell: () => ({ style: { textAlign: "center" as const } }), // ✅
+            onHeaderCell: () => ({ style: { textAlign: "center" as const } }),
             render: (_: any, __: any, index: number) => (
                 <span style={{
                     display: "inline-flex",
@@ -93,30 +105,33 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
             dataIndex: ["jobTitle", "positionCode"],
             width: isMobile ? 110 : 150,
             align: "center" as const,
-            onHeaderCell: () => ({ style: { textAlign: "center" as const } }), // ✅
+            onHeaderCell: () => ({ style: { textAlign: "center" as const } }),
             render: (v: string) => {
                 if (!v) return <span style={{ color: "#d1d5db" }}>--</span>;
+                const s = getBandStyle(v);
                 return (
-                    <Tag style={{
-                        fontWeight: 700,
-                        fontSize: 12,
-                        padding: "3px 14px",
-                        borderRadius: 20,
-                        background: "#eff6ff",
-                        border: "1.5px solid #bfdbfe",
-                        color: "#1d4ed8",
-                        letterSpacing: "0.3px",
-                        margin: 0,
-                    }}>
-                        {v}
-                    </Tag>
+                    <div style={{ display: "flex", justifyContent: "center" }}>
+                        <Tag style={{
+                            fontWeight: 700,
+                            fontSize: 12,
+                            padding: "3px 14px",
+                            borderRadius: 20,
+                            background: s.bg,
+                            border: s.border,
+                            color: s.color,
+                            letterSpacing: "0.3px",
+                            margin: 0,
+                        }}>
+                            {v}
+                        </Tag>
+                    </div>
                 );
             },
         },
         {
             title: "Chức danh Tiếng Việt",
             dataIndex: ["jobTitle", "nameVi"],
-            onHeaderCell: () => ({ style: { textAlign: "left" as const } }), // ✅
+            onHeaderCell: () => ({ style: { textAlign: "left" as const } }),
             render: (v: string) => (
                 <span style={{
                     fontWeight: 600,
@@ -130,7 +145,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
         ...(!isMobile ? [{
             title: "Chức danh Tiếng Anh",
             dataIndex: ["jobTitle", "nameEn"],
-            onHeaderCell: () => ({ style: { textAlign: "left" as const } }), // ✅
+            onHeaderCell: () => ({ style: { textAlign: "left" as const } }),
             render: (v: string) => (
                 <span style={{ color: "#6b7280", fontSize: 13 }}>
                     {v || "--"}
@@ -287,7 +302,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                                             textTransform: "uppercase",
                                             letterSpacing: "0.6px",
                                             whiteSpace: "nowrap",
-                                            ...props.style, // ✅ onHeaderCell tự quyết định align
+                                            ...props.style,
                                         }}
                                     />
                                 ),

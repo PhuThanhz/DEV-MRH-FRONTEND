@@ -20,15 +20,15 @@ const toLines = (val?: string): string[] => {
 };
 
 // ── Border presets ─────────────────────────────────────────────────────────────
-const BD_THIN = { style: "thin", color: { rgb: "BDBDBD" } };
-const BD_MED = { style: "medium", color: { rgb: "888888" } };
+const BD_THIN = { style: "thin", color: { rgb: "B0BEC5" } };
+const BD_MED = { style: "medium", color: { rgb: "455A64" } };
 const BD_OUTER = { top: BD_MED, bottom: BD_MED, left: BD_MED, right: BD_MED };
 const BD_ALL = { top: BD_THIN, bottom: BD_THIN, left: BD_THIN, right: BD_THIN };
 
-// ── Fill presets ───────────────────────────────────────────────────────────────
-const FILL_PINK = { fgColor: { rgb: "E8637A" }, patternType: "solid" };
-const FILL_PINK_LT = { fgColor: { rgb: "FCE8EC" }, patternType: "solid" };
-const FILL_GREY = { fgColor: { rgb: "F3F4F6" }, patternType: "solid" };
+// ── Fill presets (Professional Navy/Blue scheme) ───────────────────────────────
+const FILL_NAVY = { fgColor: { rgb: "1E3A5F" }, patternType: "solid" }; // dark navy header
+const FILL_BLUE_LT = { fgColor: { rgb: "E8EEF6" }, patternType: "solid" }; // light blue section
+const FILL_GREY = { fgColor: { rgb: "F3F4F6" }, patternType: "solid" }; // alternating row
 const FILL_WHITE = { fgColor: { rgb: "FFFFFF" }, patternType: "solid" };
 
 // ── Font presets ───────────────────────────────────────────────────────────────
@@ -36,9 +36,9 @@ const F = {
     white_bold_12: { name: "Arial", sz: 12, bold: true, color: { rgb: "FFFFFF" } },
     white_bold_11: { name: "Arial", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
     white_bold_10: { name: "Arial", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
-    dark_bold_11: { name: "Arial", sz: 11, bold: true, color: { rgb: "1F2937" } },
-    dark_bold_10: { name: "Arial", sz: 10, bold: true, color: { rgb: "1F2937" } },
-    pink_bold_10: { name: "Arial", sz: 10, bold: true, color: { rgb: "9F1239" } },
+    dark_bold_11: { name: "Arial", sz: 11, bold: true, color: { rgb: "1E3A5F" } },
+    dark_bold_10: { name: "Arial", sz: 10, bold: true, color: { rgb: "1E3A5F" } },
+    navy_bold_10: { name: "Arial", sz: 10, bold: true, color: { rgb: "1E3A5F" } },
     dark_10: { name: "Arial", sz: 10, color: { rgb: "1F2937" } },
     grey_10: { name: "Arial", sz: 10, color: { rgb: "6B7280" } },
 };
@@ -71,7 +71,6 @@ function cell(
     };
 }
 
-// Empty cell with just border + fill (for merged range coverage)
 function blankCell(ws: WS, r: number, ci: number, fill: object = FILL_WHITE, border: object = BD_ALL) {
     const addr = `${colLetter(ci)}${r + 1}`;
     if (!ws[addr]) {
@@ -105,7 +104,6 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     ws["!rows"] = [];
 
     // Cols: A(0) B(1) C(2) D(3) E(4) F(5) G(6)
-    //       [label]  [value wide]   [label]  [value]
     ws["!cols"] = [
         { wch: 22 }, // A
         { wch: 26 }, // B
@@ -121,7 +119,7 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     // ════════════════════════════════════════════════════
     // ROW 0–1 : Header block  [Company | Title | Meta]
     // ════════════════════════════════════════════════════
-    // Company name — A0:B1 (2 rows, 2 cols)
+    // Company name — A0:B1
     merge(ws, r, 0, r + 1, 1);
     cell(ws, r, 0,
         fmt(jd.companyName ?? "CÔNG TY CỔ PHẦN V LOTUS HOLDINGS"),
@@ -133,18 +131,17 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
 
     // Title "MÔ TẢ CÔNG VIỆC" — C0:D1
     merge(ws, r, 2, r + 1, 3);
-    cell(ws, r, 2, "MÔ TẢ CÔNG VIỆC", F.white_bold_12, FILL_PINK, AL.cc, BD_OUTER);
-    fillRange(ws, r, 3, 3, FILL_PINK, BD_OUTER);
-    fillRange(ws, r + 1, 2, 3, FILL_PINK, BD_OUTER);
+    cell(ws, r, 2, "MÔ TẢ CÔNG VIỆC", F.white_bold_12, FILL_NAVY, AL.cc, BD_OUTER);
+    fillRange(ws, r, 3, 3, FILL_NAVY, BD_OUTER);
+    fillRange(ws, r + 1, 2, 3, FILL_NAVY, BD_OUTER);
 
-    // Meta block — E0:G0, E1:G1, E2:G2, E3:G3
+    // Meta — E0:G0, E1:G1
     const metaItems = [
         `Mã số: ${fmt(jd.code)}`,
         `Lần ban hành: ${fmt(String(jd.version ?? "01"))}`,
         `Ngày hiệu lực: ${fmtDate(jd.effectiveDate)}`,
         "Số trang: 01/01",
     ];
-    // Row 0 = first 2 meta on rows 0,1 using merged A0:B1 & C0:D1 above, meta starts E
     metaItems.slice(0, 2).forEach((txt, i) => {
         merge(ws, r + i, 4, r + i, 6);
         cell(ws, r + i, 4, txt, F.dark_10, FILL_WHITE, AL.lc, BD_ALL);
@@ -170,14 +167,14 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     // BẢNG MÔ TẢ CÔNG VIỆC CHI TIẾT
     // ════════════════════════════════════════════════════
     merge(ws, r, 0, r, 6);
-    cell(ws, r, 0, "BẢNG MÔ TẢ CÔNG VIỆC CHI TIẾT", F.dark_bold_11, FILL_PINK_LT, AL.cc, BD_OUTER);
-    fillRange(ws, r, 1, 6, FILL_PINK_LT, BD_OUTER);
+    cell(ws, r, 0, "BẢNG MÔ TẢ CÔNG VIỆC CHI TIẾT", F.dark_bold_11, FILL_BLUE_LT, AL.cc, BD_OUTER);
+    fillRange(ws, r, 1, 6, FILL_BLUE_LT, BD_OUTER);
     rh(ws, r, 26); r++;
 
     // Chức vụ
     cell(ws, r, 0, "Chức vụ", F.dark_bold_10, FILL_GREY, AL.lc_nw, BD_ALL);
     merge(ws, r, 1, r, 6);
-    cell(ws, r, 1, fmt(jd.jobTitleName), F.pink_bold_10, FILL_WHITE, AL.lc, BD_ALL);
+    cell(ws, r, 1, fmt(jd.jobTitleName), F.navy_bold_10, FILL_WHITE, AL.lc, BD_ALL);
     fillRange(ws, r, 2, 6, FILL_WHITE, BD_ALL);
     rh(ws, r, 24); r++;
 
@@ -207,13 +204,14 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     // I. SƠ ĐỒ VỊ TRÍ
     // ════════════════════════════════════════════════════
     merge(ws, r, 0, r, 6);
-    cell(ws, r, 0, "I. SƠ ĐỒ VỊ TRÍ CÔNG VIỆC", F.dark_bold_11, FILL_PINK_LT, AL.lc_nw, BD_OUTER);
-    fillRange(ws, r, 1, 6, FILL_PINK_LT, BD_OUTER);
+    cell(ws, r, 0, "I. SƠ ĐỒ VỊ TRÍ CÔNG VIỆC", F.dark_bold_11, FILL_BLUE_LT, AL.lc_nw, BD_OUTER);
+    fillRange(ws, r, 1, 6, FILL_BLUE_LT, BD_OUTER);
     rh(ws, r, 22); r++;
 
-    // Org chart placeholder (empty rows with border)
     const posText = jd.positions?.length
-        ? jd.positions.map(p => `• ${p.nodeName ?? `Node #${p.nodeId}`}${p.levelCode ? ` (${p.levelCode})` : ""}`).join("\n")
+        ? jd.positions.map(p =>
+            `• ${p.nodeName ?? `Node #${p.nodeId}`}${p.levelCode ? ` (${p.levelCode})` : ""}`
+        ).join("\n")
         : "(Chưa có sơ đồ vị trí)";
     merge(ws, r, 0, r + 4, 6);
     cell(ws, r, 0, posText, F.dark_10, FILL_WHITE, AL.lt, BD_OUTER);
@@ -227,8 +225,8 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     // II. MÔ TẢ CÔNG VIỆC (Tasks)
     // ════════════════════════════════════════════════════
     merge(ws, r, 0, r, 6);
-    cell(ws, r, 0, "II. MÔ TẢ CÔNG VIỆC", F.dark_bold_11, FILL_PINK_LT, AL.lc_nw, BD_OUTER);
-    fillRange(ws, r, 1, 6, FILL_PINK_LT, BD_OUTER);
+    cell(ws, r, 0, "II. MÔ TẢ CÔNG VIỆC", F.dark_bold_11, FILL_BLUE_LT, AL.lc_nw, BD_OUTER);
+    fillRange(ws, r, 1, 6, FILL_BLUE_LT, BD_OUTER);
     rh(ws, r, 22); r++;
 
     const tasks = (jd.tasks ?? []).slice().sort((a, b) => a.orderNo - b.orderNo);
@@ -256,16 +254,16 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     // III. YÊU CẦU ĐỐI VỚI VỊ TRÍ
     // ════════════════════════════════════════════════════
     merge(ws, r, 0, r, 6);
-    cell(ws, r, 0, "III. YÊU CẦU ĐỐI VỚI VỊ TRÍ", F.dark_bold_11, FILL_PINK_LT, AL.lc_nw, BD_OUTER);
-    fillRange(ws, r, 1, 6, FILL_PINK_LT, BD_OUTER);
+    cell(ws, r, 0, "III. YÊU CẦU ĐỐI VỚI VỊ TRÍ", F.dark_bold_11, FILL_BLUE_LT, AL.lc_nw, BD_OUTER);
+    fillRange(ws, r, 1, 6, FILL_BLUE_LT, BD_OUTER);
     rh(ws, r, 22); r++;
 
     // Table header
-    cell(ws, r, 0, "STT", F.white_bold_10, FILL_PINK, AL.cc, BD_ALL);
-    cell(ws, r, 1, "Nhóm yêu cầu", F.white_bold_10, FILL_PINK, AL.cc, BD_ALL);
+    cell(ws, r, 0, "STT", F.white_bold_10, FILL_NAVY, AL.cc, BD_ALL);
+    cell(ws, r, 1, "Nhóm yêu cầu", F.white_bold_10, FILL_NAVY, AL.cc, BD_ALL);
     merge(ws, r, 2, r, 6);
-    cell(ws, r, 2, "Chi tiết", F.white_bold_10, FILL_PINK, AL.cc, BD_ALL);
-    fillRange(ws, r, 3, 6, FILL_PINK, BD_ALL);
+    cell(ws, r, 2, "Chi tiết", F.white_bold_10, FILL_NAVY, AL.cc, BD_ALL);
+    fillRange(ws, r, 3, 6, FILL_NAVY, BD_ALL);
     rh(ws, r, 22); r++;
 
     const req = jd.requirements;
@@ -303,47 +301,68 @@ export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
     rh(ws, r, 14); r++;
 
     // ════════════════════════════════════════════════════
-    // SIGN BLOCK
+    // SIGN BLOCK — 2 cột rõ ràng: A:C | E:G (D là khoảng trống giữa)
+    // Layout: A(0)–C(2) = NGƯỜI GIAO VIỆC | D(3) blank | E(4)–G(6) = NGƯỜI NHẬN VIỆC
     // ════════════════════════════════════════════════════
-    // Header row
+
+    // ── Header row ──
     merge(ws, r, 0, r, 2);
-    cell(ws, r, 0, "NGƯỜI GIAO VIỆC", F.dark_bold_10, FILL_PINK_LT, AL.cc, BD_ALL);
-    fillRange(ws, r, 1, 2, FILL_PINK_LT, BD_ALL);
-    merge(ws, r, 3, r, 6); // blank middle
-    blankCell(ws, r, 3, FILL_WHITE, BD_ALL);
-    // we want 2 sign blocks: left A-C, right E-G
+    cell(ws, r, 0, "NGƯỜI GIAO VIỆC", F.white_bold_10, FILL_NAVY, AL.cc, BD_ALL);
+    fillRange(ws, r, 1, 2, FILL_NAVY, BD_ALL);
+
+    // Cột D (3) — khoảng trống giữa
+    blankCell(ws, r, 3, FILL_WHITE, {});
+
     merge(ws, r, 4, r, 6);
-    cell(ws, r, 4, "NGƯỜI NHẬN VIỆC", F.dark_bold_10, FILL_PINK_LT, AL.cc, BD_ALL);
-    fillRange(ws, r, 5, 6, FILL_PINK_LT, BD_ALL);
+    cell(ws, r, 4, "NGƯỜI NHẬN VIỆC", F.white_bold_10, FILL_NAVY, AL.cc, BD_ALL);
+    fillRange(ws, r, 5, 6, FILL_NAVY, BD_ALL);
     rh(ws, r, 22); r++;
 
-    // Chức danh row
+    // ── Chức danh row ──
     merge(ws, r, 0, r, 2);
     cell(ws, r, 0, "Chức danh: TỔNG GIÁM ĐỐC", F.dark_bold_10, FILL_WHITE, AL.lc, BD_ALL);
     fillRange(ws, r, 1, 2, FILL_WHITE, BD_ALL);
-    blankCell(ws, r, 3, FILL_WHITE, BD_ALL);
+
+    blankCell(ws, r, 3, FILL_WHITE, {});
+
     merge(ws, r, 4, r, 6);
     cell(ws, r, 4, `Chức danh: ${fmt(jd.jobTitleName)}`, F.dark_bold_10, FILL_WHITE, AL.lc, BD_ALL);
     fillRange(ws, r, 5, 6, FILL_WHITE, BD_ALL);
     rh(ws, r, 20); r++;
 
-    // Blank signature rows x4
+    // ── Dòng ghi chú nhỏ (ngày ký) ──
+    merge(ws, r, 0, r, 2);
+    cell(ws, r, 0, "Ngày      tháng      năm", F.grey_10, FILL_WHITE, AL.cc, BD_ALL);
+    fillRange(ws, r, 1, 2, FILL_WHITE, BD_ALL);
+
+    blankCell(ws, r, 3, FILL_WHITE, {});
+
+    merge(ws, r, 4, r, 6);
+    cell(ws, r, 4, "Ngày      tháng      năm", F.grey_10, FILL_WHITE, AL.cc, BD_ALL);
+    fillRange(ws, r, 5, 6, FILL_WHITE, BD_ALL);
+    rh(ws, r, 18); r++;
+
+    // ── Blank signature rows x4 ──
     for (let i = 0; i < 4; i++) {
         merge(ws, r, 0, r, 2);
-        cell(ws, r, 0, "", F.dark_10, FILL_WHITE, AL.lc, BD_ALL);
+        cell(ws, r, 0, i === 1 ? "(Ký và ghi rõ họ tên)" : "", F.grey_10, FILL_WHITE, AL.cc, i === 1 ? BD_ALL : BD_ALL);
         fillRange(ws, r, 1, 2, FILL_WHITE, BD_ALL);
-        blankCell(ws, r, 3, FILL_WHITE, BD_ALL);
+
+        blankCell(ws, r, 3, FILL_WHITE, {});
+
         merge(ws, r, 4, r, 6);
-        cell(ws, r, 4, "", F.dark_10, FILL_WHITE, AL.lc, BD_ALL);
+        cell(ws, r, 4, i === 1 ? "(Ký và ghi rõ họ tên)" : "", F.grey_10, FILL_WHITE, AL.cc, BD_ALL);
         fillRange(ws, r, 5, 6, FILL_WHITE, BD_ALL);
         rh(ws, r, 18); r++;
     }
 
-    // Họ và tên row
+    // ── Họ và tên row ──
     merge(ws, r, 0, r, 2);
     cell(ws, r, 0, "Họ và tên: LÊ VÂN MÂY", F.dark_bold_10, FILL_WHITE, AL.lc, BD_ALL);
     fillRange(ws, r, 1, 2, FILL_WHITE, BD_ALL);
-    blankCell(ws, r, 3, FILL_WHITE, BD_ALL);
+
+    blankCell(ws, r, 3, FILL_WHITE, {});
+
     merge(ws, r, 4, r, 6);
     cell(ws, r, 4, "Họ và tên:", F.dark_bold_10, FILL_WHITE, AL.lc, BD_ALL);
     fillRange(ws, r, 5, 6, FILL_WHITE, BD_ALL);

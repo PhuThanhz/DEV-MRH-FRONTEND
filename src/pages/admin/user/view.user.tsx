@@ -36,7 +36,6 @@ const sourceTagConfig: Record<string, { antColor: string; label: string }> = {
 const genderLabel: Record<string, string> = {
     MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác",
 };
-
 // ── InfoRow ───────────────────────────────────────────────────────────────────
 const InfoRow = ({
     icon, label, value, highlight = false, noBorder = false,
@@ -71,7 +70,6 @@ const InfoRow = ({
         </div>
     </div>
 );
-
 // ── SectionTitle ──────────────────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
@@ -84,7 +82,6 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
         <div style={{ flex: 1, height: 1, background: BORDER }} />
     </div>
 );
-
 // ── SquareBadge dùng Ant Tag ──────────────────────────────────────────────────
 const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) => (
     <Tag
@@ -128,7 +125,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
             value: info?.contractSignDate ? dayjs(info.contractSignDate).format("DD/MM/YYYY") : undefined,
         },
     ].filter((f) => f.value && f.value !== "--");
-
     return (
         <>
             <style>{`
@@ -176,7 +172,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                 /* zebra row hover */
                 .detail-pos-row:hover td { background: #fafafa !important; }
             `}</style>
-
             <Modal
                 title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết người dùng</span>}
                 open={open}
@@ -211,7 +206,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             flexShrink: 0,
                         }}
                     />
-
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
                             <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
@@ -235,7 +229,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                 </Tag>
                             )}
                         </div>
-
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Text style={{ fontSize: 13, color: TEXT_LABEL }}>
                                 <MailOutlined style={{ marginRight: 5, color: TEXT_MUTED }} />
@@ -268,7 +261,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         </div>
                     </div>
                 </div>
-
                 {/* ══ TWO-COLUMN ══════════════════════════════════════════════ */}
                 <div style={{
                     display: "grid", gridTemplateColumns: "1fr 1fr",
@@ -291,7 +283,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                     : "--"
                             }
                         />
-
                         {/* Người tạo / sửa */}
                         <div style={{
                             display: "flex", alignItems: "flex-start", gap: 10,
@@ -316,7 +307,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                 </div>
                             </div>
                         </div>
-
                         {/* Ngày tạo / sửa — dùng nền xám cực nhạt, không có màu */}
                         <div style={{ display: "flex", gap: 10, paddingTop: 10 }}>
                             <div style={{
@@ -339,7 +329,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             </div>
                         </div>
                     </div>
-
                     {/* ── Nhân sự ── */}
                     <div style={{
                         background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
@@ -364,7 +353,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         )}
                     </div>
                 </div>
-
                 {/* ══ POSITIONS TABLE ══════════════════════════════════════════ */}
                 <div>
                     <div style={{

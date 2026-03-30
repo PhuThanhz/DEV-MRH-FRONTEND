@@ -129,22 +129,7 @@ const EditableRowHour = ({
                                 placeholder="0"
                                 className="salary-input"
                             />
-                            {isFocused && values[field] && (
-                                <div className="calc-popup">
-                                    <div className="calc-row">
-                                        <span className="calc-label">Giờ</span>
-                                        <span className="calc-value">{formatCurrency(values[field])}</span>
-                                    </div>
-                                    <div className="calc-row">
-                                        <span className="calc-label">Ngày (8h)</span>
-                                        <span className="calc-value">{formatCurrency(String(Number(values[field].replace(/,/g, "") || 0) * 8))}</span>
-                                    </div>
-                                    <div className="calc-row">
-                                        <span className="calc-label">Tháng (208h)</span>
-                                        <span className="calc-value">{formatCurrency(String(Number(values[field].replace(/,/g, "") || 0) * 208))}</span>
-                                    </div>
-                                </div>
-                            )}
+
                         </div>
                     </td>
                 );
@@ -294,22 +279,20 @@ const EditableRowHour = ({
                     }
 
                     /* Micro-interaction saved indicator - just icon, no text */
-                    .save-indicator {
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 32px;
-                        height: 32px;
-                        background: #f6ffed;
-                        border: 1px solid #b7eb8f;
-                        border-radius: 50%;
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    }
+                   .save-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+}
 
-                    .check-icon {
-                        font-size: 16px;
-                        color: #52c41a;
-                    }
+.check-icon {
+    font-size: 16px;
+    color: #52c41a;
+}
 
                     /* Pulse animation when just saved */
                     .save-indicator.saved-pulse {

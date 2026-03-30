@@ -92,27 +92,45 @@ const CompanyPage = () => {
             title: "STT",
             width: 60,
             align: "center",
+
             render: (_, __, index) =>
                 index + 1 + (meta.page - 1) * meta.pageSize,
+        },
+
+        {
+            title: "Mã công ty",
+            dataIndex: "code",
+            align: "center",  // 👈 thêm dòng này
+            render: (_, record) => <Tag color="blue">{record.code}</Tag>,
         },
         {
             title: "Tên công ty",
             dataIndex: "name",
         },
         {
-            title: "Mã công ty",
-            dataIndex: "code",
-            render: (_, record) => <Tag color="blue">{record.code}</Tag>,
-        },
-        {
             title: "Trạng thái",
             align: "center",
-            render: (_, record) =>
-                record.status === 1 ? (
-                    <Badge status="success" text="Hoạt động" />
-                ) : (
-                    <Badge status="error" text="Ngừng hoạt động" />
-                ),
+            render: (_, record) => {
+                const isActive = record.status === 1;
+
+                return (
+                    <Tag
+                        style={{
+                            borderRadius: 4,
+                            padding: "0px 8px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            height: 22,
+                            lineHeight: "20px",
+                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                            background: isActive ? "#f6ffed" : "#fff2f0",
+                            color: isActive ? "#389e0d" : "#cf1322",
+                        }}
+                    >
+                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Hành động",
@@ -284,7 +302,7 @@ const CompanyPage = () => {
             <ViewCompany
                 open={openView}
                 onClose={() => setOpenView(false)}
-                dataInit={dataInit}
+                companyId={dataInit?.id}
             />
         </PageContainer>
     );

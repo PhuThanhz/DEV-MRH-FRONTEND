@@ -19,8 +19,6 @@ import ReactFlow, {
     applyEdgeChanges,
     type EdgeProps,
 } from "reactflow";
-import { Drawer } from "antd";
-import JDViewDetail from "../org-chart/JDViewDetail";
 import "reactflow/dist/style.css";
 import dagre from "dagre";
 
@@ -32,9 +30,11 @@ import {
 } from "@/hooks/useOrgNodes";
 
 import { callFetchOrgNodes, callUpdateOrgNode, callFetchJobDescriptions } from "@/config/api";
-// ✅ 1. Import thêm BulkNodeItem
 import ModalNode, { type BulkNodeItem } from "./modal.node";
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
+
+// ✅ Import ViewJobDescription thật — chỉnh path cho đúng project của bạn
+import ViewJobDescription, { type EnrichedJD } from "../../job-description/view.job-description/index";
 
 interface Props {
     ownerType: "COMPANY" | "DEPARTMENT";
@@ -53,7 +53,7 @@ interface IOrgNode {
     jobDescriptionId?: number | null;
 }
 
-// ── Edge renderer ────────────────────────────────────────────────────────────
+// ── Edge renderer ─────────────────────────────────────────────────────────────
 const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) => {
     const midY = (sourceY + targetY) / 2;
     const d = `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
@@ -74,7 +74,7 @@ const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) =>
     );
 };
 
-// ── Layout ───────────────────────────────────────────────────────────────────
+// ── Layout ────────────────────────────────────────────────────────────────────
 const NODE_W = 200;
 const NODE_H = 130;
 
@@ -96,7 +96,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const EDGE_DEFAULTS = { type: "orgEdge" } satisfies Partial<Edge>;
 
-// ── Graph traversal ──────────────────────────────────────────────────────────
+// ── Graph traversal ───────────────────────────────────────────────────────────
 const getAncestorIds = (nodeId: string, edges: Edge[]): Set<string> => {
     const result = new Set<string>();
     let current = nodeId;
@@ -121,7 +121,7 @@ const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
     return result;
 };
 
-// ── Pure highlight calculator ────────────────────────────────────────────────
+// ── Pure highlight calculator ─────────────────────────────────────────────────
 const applyHighlight = (
     nodes: Node[], edges: Edge[], hoveredId: string | null,
 ): { nodes: Node[]; edges: Edge[] } => {
@@ -172,8 +172,10 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView } = useReactFlow();
 
+    // ✅ Thay jdPosition giả bằng jdRecord thật (chỉ cần id)
     const [jdOpen, setJdOpen] = useState(false);
-    const [jdPosition, setJdPosition] = useState<any>(null);
+    const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
+
     const [jdOptions, setJdOptions] = useState<{ value: number; label: string }[]>([]);
     const { data } = useOrgChartsQuery(query);
     const createChart = useCreateOrgChartMutation();
@@ -203,9 +205,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     }, []);
 
     useEffect(() => {
-        callFetchJobDescriptions("filter=status:PUBLISHED&pageSize=200")
+        callFetchJobDescriptions("filter=status='PUBLISHED'&page=1&pageSize=200")
             .then((res) => {
-                const list = (res.data as any)?.data?.result ?? [];
+                const list = (res.data as any)?.result ?? [];
                 setJdOptions(list.map((jd: any) => ({
                     value: jd.id,
                     label: `${jd.code}${jd.jobTitleName ? " — " + jd.jobTitleName : ""}`,
@@ -249,8 +251,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         const rfNodes: Node[] = nodeList.map((n) => ({
             id: String(n.id), type: "orgNode", position: { x: 0, y: 0 },
             data: {
-                title: n.name ?? "Position", levelCode: n.level ?? "",
-                holderName: n.holderName ?? "", isGoal: n.isGoal ?? false,
+                title: n.name ?? "Position",
+                levelCode: n.level ?? "",
+                holderName: n.holderName ?? "",
+                isGoal: n.isGoal ?? false,
+                // ✅ Lưu jobDescriptionId thật từ API vào node.data
+                jobDescriptionId: n.jobDescriptionId ?? null,
                 highlightState: "idle",
                 onEdit: () => { }, onDelete: () => { }, onJD: () => { },
                 onMouseEnter: () => { }, onMouseLeave: () => { },
@@ -271,8 +277,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         });
 
         const withCbs = finalNodes.map((node) => {
-            const parentEdge = dagreEdges.find((e) => e.target === node.id);
-            const parentNode = parentEdge ? finalNodes.find((n) => n.id === parentEdge.source) : null;
+            // ✅ Lấy jobDescriptionId từ node.data đã được set ở rfNodes
+            const jdId = node.data.jobDescriptionId as number | null;
+
             return {
                 ...node,
                 data: {
@@ -280,14 +287,14 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     onEdit: () => handleOpenEdit(node),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
-                        setJdPosition({
-                            nameVN: node.data.title,
-                            departmentName: node.data.levelCode || "—",
-                            companyName: ownerType === "COMPANY" ? "V Lotus Holdings" : undefined,
-                            directManager: parentNode?.data?.title ?? null,
-                            levelCode: node.data.levelCode,
-                        });
-                        setJdOpen(true);
+                        // ✅ Nếu node có JD thật → mở ViewJobDescription
+                        // Nếu không có → thông báo
+                        if (jdId) {
+                            setJdRecord({ id: jdId } as EnrichedJD);
+                            setJdOpen(true);
+                        } else {
+                            message.info("Vị trí này chưa được gắn JD nào.");
+                        }
                     },
                     onMouseEnter: () => applyHighlightNow(node.id),
                     onMouseLeave: () => applyHighlightNow(null),
@@ -369,15 +376,11 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         setOpenModal(false); setEditingNode(null); loadNodes(chartId);
     }, [chartId, editingNode, createNode, updateNode, loadNodes]);
 
-    // ✅ 2. Handler bulk create — tạo tuần tự, resolve parentId từ createdIds map
     const handleBulkSubmit = useCallback(async (items: BulkNodeItem[]) => {
         if (!chartId) return;
         setOpenModal(false);
-
-        // Map index trong items → id thực tế trả về từ API
         const createdIds = new Map<number, number>();
         let successCount = 0;
-
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             try {
@@ -386,25 +389,16 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     : item.parentIndex !== null
                         ? (createdIds.get(item.parentIndex) ?? null)
                         : null;
-
                 const res = await createNode.mutateAsync({
-                    chartId,
-                    name: item.title,
-                    level: item.levelCode,
-                    holderName: item.holderName ?? null,
-                    parentId,
-                    isGoal: false,
-                    jobDescriptionId: null,
+                    chartId, name: item.title, level: item.levelCode,
+                    holderName: item.holderName ?? null, parentId,
+                    isGoal: false, jobDescriptionId: null,
                 });
-
                 const newId = (res as any)?.id ?? (res as any)?.data?.id ?? (res as any)?.result?.id;
                 if (newId) createdIds.set(i, Number(newId));
                 successCount++;
-            } catch {
-                // bỏ qua node lỗi, tiếp tục tạo node còn lại
-            }
+            } catch { }
         }
-
         message.success(`Đã tạo ${successCount}/${items.length} node!`);
         loadNodes(chartId);
     }, [chartId, createNode, loadNodes]);
@@ -447,7 +441,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 <Background color="#e5e7eb" gap={20} />
             </ReactFlow>
 
-            {/* ✅ 3. Thêm onBulkSubmit vào ModalNode */}
             <ModalNode
                 open={openModal} onClose={handleCloseModal}
                 onSubmit={handleSubmit}
@@ -467,9 +460,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 isEditing={!!editingNode}
             />
 
-            <Drawer open={jdOpen} onClose={() => setJdOpen(false)} width="100%" destroyOnClose title="Mô tả công việc">
-                {jdPosition && <JDViewDetail position={jdPosition} />}
-            </Drawer>
+            {/* ✅ Thay Drawer + JDViewDetail giả bằng ViewJobDescription thật */}
+            <ViewJobDescription
+                open={jdOpen}
+                onClose={() => { setJdOpen(false); setJdRecord(null); }}
+                record={jdRecord}
+            />
         </div>
     );
 };
