@@ -254,9 +254,7 @@ const HeaderAdmin: React.FC<IProps> = ({
                                         <span className="text-sm font-semibold text-white leading-tight tracking-wide">
                                             {user?.name || "Admin"}
                                         </span>
-                                        <span className="text-[10px] text-white/60 uppercase tracking-widest leading-tight">
-                                            {getRoleLabel()}
-                                        </span>
+
                                     </div>
                                     {/* Divider dọc */}
                                     <div className="w-px h-7 bg-white/20 flex-shrink-0" />

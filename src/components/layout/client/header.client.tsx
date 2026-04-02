@@ -224,9 +224,7 @@ const Header = () => {
                                             <span className="text-sm font-semibold text-white leading-tight tracking-wide">
                                                 {user?.name || "User"}
                                             </span>
-                                            <span className="text-[10px] text-white/60 uppercase tracking-widest leading-tight">
-                                                {getRoleLabel()}
-                                            </span>
+
                                         </div>
 
                                         {/* Divider */}

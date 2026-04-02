@@ -25,7 +25,8 @@ import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelec
 import type { IDepartment } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchCompany } from "@/config/api";
-
+import DepartmentJobTitleTab from "./tab.department-job-title";
+import { Modal } from "antd";
 import {
     useDepartmentsQuery,
     useDeleteDepartmentMutation,
@@ -70,7 +71,7 @@ const DepartmentPage = () => {
 
     const { data, isFetching, refetch } = useDepartmentsQuery(query);
     const deleteMutation = useDeleteDepartmentMutation();
-
+    const [openJobTitle, setOpenJobTitle] = useState(false);
     // ===================== PERMISSION CHECKS =====================
     const canViewOrgChart = useAccess(ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE);
     const canViewObjectives = useAccess(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW);
@@ -363,7 +364,19 @@ const DepartmentPage = () => {
                                 }}
                             />
                         </Access>
-
+                        <Access
+                            permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.GET_PAGINATE}
+                            hideChildren
+                        >
+                            <Button
+                                type="text"
+                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenJobTitle(true);
+                                }}
+                            />
+                        </Access>
                         {/* Sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
                             <Button
@@ -486,7 +499,21 @@ const DepartmentPage = () => {
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
-
+            {openJobTitle && dataInit?.id && (
+                <Modal
+                    title={`Chức danh phòng ban: ${dataInit.name}`}
+                    open={openJobTitle}
+                    onCancel={() => setOpenJobTitle(false)}
+                    footer={null}
+                    width="80vw"
+                    destroyOnClose
+                >
+                    <DepartmentJobTitleTab
+                        departmentId={dataInit.id}
+                        companyId={dataInit.company?.id}
+                    />
+                </Modal>
+            )}
             {selectedDepartment && (
                 <PermissionViewModal
                     open={openPermissionModal}

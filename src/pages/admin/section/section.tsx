@@ -31,7 +31,9 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { useNavigate } from "react-router-dom";
-
+import { FileTextOutlined } from "@ant-design/icons";
+import SectionJobTitleTab from "./tab.section-job-title";
+import { Modal } from "antd";
 const SectionPage = () => {
     const navigate = useNavigate();
 
@@ -54,7 +56,7 @@ const SectionPage = () => {
 
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const sections = data?.result ?? [];
-
+    const [openJobTitle, setOpenJobTitle] = useState(false);
     /*
      * ===================== BUILD FILTERS =====================
      */
@@ -254,6 +256,19 @@ const SectionPage = () => {
                                 }}
                             />
                         </Access>
+                        <Access
+                            permission={ALL_PERMISSIONS.SECTION_JOB_TITLES.GET_PAGINATE}
+                            hideChildren
+                        >
+                            <Button
+                                type="text"
+                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenJobTitle(true);
+                                }}
+                            />
+                        </Access>
                         <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
                             <Button
                                 type="text"
@@ -382,6 +397,21 @@ const SectionPage = () => {
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
+            {openJobTitle && dataInit?.id && (
+                <Modal
+                    title={`Chức danh bộ phận: ${dataInit.name}`}
+                    open={openJobTitle}
+                    onCancel={() => setOpenJobTitle(false)}
+                    footer={null}
+                    width="80vw"
+                    destroyOnClose
+                >
+                    <SectionJobTitleTab
+                        sectionId={dataInit.id}
+                        departmentId={dataInit.department?.id}
+                    />
+                </Modal>
+            )}
         </PageContainer>
     );
 };

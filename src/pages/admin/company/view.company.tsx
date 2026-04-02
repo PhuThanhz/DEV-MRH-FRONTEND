@@ -1,12 +1,10 @@
-// ViewCompany.tsx — FULL CODE
+// ViewCompany.tsx
 
-import { Modal, Descriptions, Badge, Tabs, Spin, Empty } from "antd";
-import type { TabsProps } from "antd";
+import { Modal, Descriptions, Badge, Spin, Empty } from "antd";
 import dayjs from "dayjs";
 import { isMobile } from "react-device-detect";
 
 import { useCompanyByIdQuery } from "@/hooks/useCompanies";
-import CompanyJobTitleTab from "./company-job-title/company-job-title.tab";
 
 interface IProps {
     open: boolean;
@@ -21,11 +19,24 @@ const ViewCompany = ({ open, onClose, companyId }: IProps) => {
         isError,
     } = useCompanyByIdQuery(companyId ? String(companyId) : undefined);
 
-    const items: TabsProps["items"] = [
-        {
-            key: "1",
-            label: "Thông tin chung",
-            children: (
+    return (
+        <Modal
+            title={`Chi tiết công ty${company?.name ? `: ${company.name}` : ""}`}
+            open={open}
+            onCancel={onClose}
+            footer={null}
+            width={isMobile ? "100%" : "70vw"}
+            centered
+            destroyOnClose
+            maskClosable={false}
+        >
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : isError || !company ? (
+                <Empty description="Không tìm thấy thông tin công ty" />
+            ) : (
                 <Descriptions
                     bordered
                     column={2}
@@ -81,36 +92,6 @@ const ViewCompany = ({ open, onClose, companyId }: IProps) => {
                         {company?.updatedBy || "--"}
                     </Descriptions.Item>
                 </Descriptions>
-            ),
-        },
-        {
-            key: "2",
-            label: "Chức danh công ty",
-            children: company?.id ? (
-                <CompanyJobTitleTab companyId={company.id} />
-            ) : null,
-        },
-    ];
-
-    return (
-        <Modal
-            title={`Chi tiết công ty${company?.name ? `: ${company.name}` : ""}`}
-            open={open}
-            onCancel={onClose}
-            footer={null}
-            width={isMobile ? "100%" : "70vw"}
-            centered
-            destroyOnClose
-            maskClosable={false}
-        >
-            {isLoading ? (
-                <div style={{ textAlign: "center", padding: "50px 0" }}>
-                    <Spin size="large" />
-                </div>
-            ) : isError || !company ? (
-                <Empty description="Không tìm thấy thông tin công ty" />
-            ) : (
-                <Tabs defaultActiveKey="1" items={items} />
             )}
         </Modal>
     );

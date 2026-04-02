@@ -38,7 +38,8 @@ import EmployeePage from './pages/admin/employees/employee';
 import ProcedureAdminPage from "@/pages/admin/procedures";
 import CompanyProceduresPage from "@/pages/admin/company/procedures";
 import DepartmentProceduresPage from "@/pages/admin/department/procedures";
-
+import WelcomePage from "@/pages/admin/WelcomePage";
+import DashboardOrWelcome from "@/pages/admin/DashboardOrWelcome";
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -75,9 +76,7 @@ export default function App() {
           index: true,
           element: (
             <ProtectedRoute>
-              <Access permission={ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY}>
-                <DashboardPage />
-              </Access>
+              <DashboardOrWelcome />
             </ProtectedRoute>
           ),
         },

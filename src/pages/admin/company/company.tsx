@@ -32,7 +32,8 @@ import {
     useInactiveCompanyMutation,
     useActiveCompanyMutation,
 } from "@/hooks/useCompanies";
-
+import CompanyJobTitleTab from "./company-job-title/company-job-title.tab";
+import { Modal } from "antd";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -50,7 +51,7 @@ const CompanyPage = () => {
     const [openView, setOpenView] = useState(false);
     const [dataInit, setDataInit] = useState<ICompany | null>(null);
     const [searchValue, setSearchValue] = useState("");
-
+    const [openJobTitle, setOpenJobTitle] = useState(false);
     const tableRef = useRef<ActionType>(null);
 
     const [query, setQuery] = useState(
@@ -248,7 +249,19 @@ const CompanyPage = () => {
                                 }}
                             />
                         </Access>
-
+                        <Access
+                            permission={ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE}
+                            hideChildren
+                        >
+                            <Button
+                                type="text"
+                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenJobTitle(true);
+                                }}
+                            />
+                        </Access>
                         <Access
                             permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
                             hideChildren
@@ -346,6 +359,18 @@ const CompanyPage = () => {
                 onClose={() => setOpenView(false)}
                 companyId={dataInit?.id}
             />
+            {openJobTitle && dataInit?.id && (
+                <Modal
+                    title={`Chức danh công ty: ${dataInit.name}`}
+                    open={openJobTitle}
+                    onCancel={() => setOpenJobTitle(false)}
+                    footer={null}
+                    width="80vw"
+                    destroyOnClose
+                >
+                    <CompanyJobTitleTab companyId={dataInit.id} />
+                </Modal>
+            )}
         </PageContainer>
     );
 };
