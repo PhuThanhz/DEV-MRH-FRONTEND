@@ -109,10 +109,14 @@ const PositionLevelPage = () => {
             title: "Mã bậc",
             dataIndex: "code",
             sorter: true,
+            align: "center",
+            render: (code) => <Tag color="magenta">{code}</Tag>,
         },
         {
             title: "Nhóm bậc",
             dataIndex: "band",
+            align: "center",
+            render: (band) => <Tag color="gold">{band}</Tag>,
         },
         {
             title: "Cấp độ",

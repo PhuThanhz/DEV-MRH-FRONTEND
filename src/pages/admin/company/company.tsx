@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import type { MenuProps } from "antd";
-
 import queryString from "query-string";
 import {
     Space,
     Tag,
     Popconfirm,
-    Badge,
     Button,
     Dropdown,
 } from "antd";
@@ -19,7 +17,7 @@ import {
     EyeOutlined,
     MoreOutlined,
     ApartmentOutlined,
-    FileTextOutlined, // ← thêm
+    FileTextOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
@@ -36,13 +34,14 @@ import {
 } from "@/hooks/useCompanies";
 
 import Access from "@/components/share/access";
+import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 
 import ModalCompany from "./modal.company";
 import ViewCompany from "./view.company";
 
 import { useNavigate } from "react-router-dom";
-import { PATHS } from "@/constants/paths"; // ← thêm
+import { PATHS } from "@/constants/paths";
 
 const CompanyPage = () => {
     const navigate = useNavigate();
@@ -64,6 +63,15 @@ const CompanyPage = () => {
         useInactiveCompanyMutation();
     const { mutate: activeCompany, isPending: isActivating } =
         useActiveCompanyMutation();
+
+    // ===================== PERMISSION CHECKS =====================
+    const canViewCompanyOrgChart = useAccess(
+        ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE
+    );
+
+    const canViewCompanyProcedures = useAccess(
+        ALL_PERMISSIONS.COMPANY_PROCEDURES.GET_PAGINATE
+    );
 
     useEffect(() => {
         const q: any = {
@@ -92,15 +100,13 @@ const CompanyPage = () => {
             title: "STT",
             width: 60,
             align: "center",
-
             render: (_, __, index) =>
                 index + 1 + (meta.page - 1) * meta.pageSize,
         },
-
         {
             title: "Mã công ty",
             dataIndex: "code",
-            align: "center",  // 👈 thêm dòng này
+            align: "center",
             render: (_, record) => <Tag color="blue">{record.code}</Tag>,
         },
         {
@@ -138,18 +144,27 @@ const CompanyPage = () => {
             width: 200,
             fixed: "right",
             render: (_, record) => {
-                const items: MenuProps["items"] = [
-                    {
+                const items: MenuProps["items"] = [];
+
+                // Sơ đồ tổ chức công ty
+                if (canViewCompanyOrgChart) {
+                    items.push({
                         key: "org-chart",
                         icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
                         label: "Sơ đồ tổ chức",
                         onClick: () =>
                             navigate(
-                                `/admin/companies/${record.id}/org-chart?companyName=${encodeURIComponent(record.name)}`
+                                `/admin/companies/${record.id}/org-chart?companyName=${encodeURIComponent(
+                                    record.name
+                                )}`
                             ),
-                    },
-                    {
-                        key: "procedures", // ← thêm
+                    });
+                }
+
+                // Quy trình công ty
+                if (canViewCompanyProcedures) {
+                    items.push({
+                        key: "procedures",
                         icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
                         label: "Quy trình công ty",
                         onClick: () =>
@@ -157,79 +172,94 @@ const CompanyPage = () => {
                                 PATHS.ADMIN.COMPANY_PROCEDURES.replace(
                                     ":companyId",
                                     String(record.id)
-                                ) + `?companyName=${encodeURIComponent(record.name)}`
+                                ) +
+                                `?companyName=${encodeURIComponent(record.name)}`
                             ),
-                    },
+                    });
+                }
 
-                    { type: "divider" },
+                // Divider chỉ hiển thị khi có item phía trên
+                if (items.length > 0) {
+                    items.push({ type: "divider" });
+                }
 
-                    record.status === 1
-                        ? {
-                            key: "inactive",
-                            icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
-                            label: (
-                                <Popconfirm
-                                    title="Vô hiệu hóa công ty?"
-                                    okText="Xác nhận"
-                                    cancelText="Hủy"
-                                    okButtonProps={{ loading: isInactivating }}
-                                    onConfirm={() =>
-                                        inactiveCompany(record.id!, {
-                                            onSuccess: () => refetch(),
-                                        })
-                                    }
-                                >
-                                    <span style={{ color: "#ff4d4f" }}>
-                                        Vô hiệu hóa
-                                    </span>
-                                </Popconfirm>
-                            ),
-                        }
-                        : {
-                            key: "active",
-                            icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
-                            label: (
-                                <Popconfirm
-                                    title="Kích hoạt lại công ty?"
-                                    okText="Xác nhận"
-                                    cancelText="Hủy"
-                                    okButtonProps={{ loading: isActivating }}
-                                    onConfirm={() =>
-                                        activeCompany(record.id!, {
-                                            onSuccess: () => refetch(),
-                                        })
-                                    }
-                                >
-                                    <span style={{ color: "#52c41a" }}>
-                                        Kích hoạt
-                                    </span>
-                                </Popconfirm>
-                            ),
-                        },
-                ];
+                // Kích hoạt / Vô hiệu hóa
+                if (record.status === 1) {
+                    items.push({
+                        key: "inactive",
+                        icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
+                        label: (
+                            <Popconfirm
+                                title="Vô hiệu hóa công ty?"
+                                okText="Xác nhận"
+                                cancelText="Hủy"
+                                okButtonProps={{ loading: isInactivating }}
+                                onConfirm={() =>
+                                    inactiveCompany(record.id!, {
+                                        onSuccess: () => refetch(),
+                                    })
+                                }
+                            >
+                                <span style={{ color: "#ff4d4f" }}>
+                                    Vô hiệu hóa
+                                </span>
+                            </Popconfirm>
+                        ),
+                    });
+                } else {
+                    items.push({
+                        key: "active",
+                        icon: (
+                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                        ),
+                        label: (
+                            <Popconfirm
+                                title="Kích hoạt lại công ty?"
+                                okText="Xác nhận"
+                                cancelText="Hủy"
+                                okButtonProps={{ loading: isActivating }}
+                                onConfirm={() =>
+                                    activeCompany(record.id!, {
+                                        onSuccess: () => refetch(),
+                                    })
+                                }
+                            >
+                                <span style={{ color: "#52c41a" }}>
+                                    Kích hoạt
+                                </span>
+                            </Popconfirm>
+                        ),
+                    });
+                }
 
                 return (
                     <Space size="middle">
+                        <Button
+                            type="text"
+                            icon={
+                                <EyeOutlined
+                                    style={{ color: "#1677ff", fontSize: 18 }}
+                                />
+                            }
+                            onClick={() => {
+                                setDataInit(record);
+                                setOpenView(true);
+                            }}
+                        />
+
                         <Access
-                            permission={ALL_PERMISSIONS.COMPANY_JOB_TITLES.GET_BY_COMPANY}
+                            permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
+                            hideChildren
                         >
                             <Button
                                 type="text"
                                 icon={
-                                    <EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />
-                                }
-                                onClick={() => {
-                                    setDataInit(record);
-                                    setOpenView(true);
-                                }}
-                            />
-                        </Access>
-
-                        <Access permission={ALL_PERMISSIONS.COMPANIES.UPDATE}>
-                            <Button
-                                type="text"
-                                icon={
-                                    <EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />
+                                    <EditOutlined
+                                        style={{
+                                            color: "#fa8c16",
+                                            fontSize: 18,
+                                        }}
+                                    />
                                 }
                                 onClick={() => {
                                     setDataInit(record);
@@ -238,18 +268,26 @@ const CompanyPage = () => {
                             />
                         </Access>
 
-                        <Dropdown
-                            menu={{ items }}
-                            trigger={["click"]}
-                            placement="bottomRight"
-                        >
-                            <Button
-                                type="text"
-                                icon={
-                                    <MoreOutlined style={{ color: "#595959", fontSize: 18 }} />
-                                }
-                            />
-                        </Dropdown>
+                        {/* Dropdown chỉ hiển thị khi có ít nhất một quyền */}
+                        {items.length > 0 && (
+                            <Dropdown
+                                menu={{ items }}
+                                trigger={["click"]}
+                                placement="bottomRight"
+                            >
+                                <Button
+                                    type="text"
+                                    icon={
+                                        <MoreOutlined
+                                            style={{
+                                                color: "#595959",
+                                                fontSize: 18,
+                                            }}
+                                        />
+                                    }
+                                />
+                            </Dropdown>
+                        )}
                     </Space>
                 );
             },

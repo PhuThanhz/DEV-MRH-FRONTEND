@@ -10,7 +10,7 @@ import {
     ApartmentOutlined,
     StarOutlined,
     FileTextOutlined,
-    FileDoneOutlined, // thêm icon mới nếu cần cho subgroup
+    FileDoneOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -33,6 +33,29 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 item.apiPath === perm.apiPath && item.method === perm.method
         ) || ACL_ENABLE === "false";
 
+    // ── pre-check từng nhóm để quyết định có hiện group label không ──
+    const hasUserGroup =
+        checkPermission(ALL_PERMISSIONS.USERS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.ROLES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE);
+
+    const hasOrgGroup =
+        checkPermission(ALL_PERMISSIONS.COMPANIES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.SECTIONS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.POSITION_LEVELS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE);
+
+    const hasConfigGroup =
+        checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE);
+
+    const hasQuyTrinhSubgroup =
+        checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE);
+
     const full = [
         // ===================== TỔNG QUAN =====================
         {
@@ -46,10 +69,10 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         },
 
         // ===================== NGƯỜI DÙNG & PHÂN QUYỀN =====================
-        {
-            type: "group",
-            label: "NGƯỜI DÙNG & PHÂN QUYỀN",
-        },
+        ...(hasUserGroup
+            ? [{ type: "group", label: "NGƯỜI DÙNG & PHÂN QUYỀN" }]
+            : []),
+
         ...(checkPermission(ALL_PERMISSIONS.USERS.GET_PAGINATE)
             ? [
                 {
@@ -78,11 +101,10 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ]
             : []),
 
-        // ===================== TỔ CHỨC (GROUP LẠI CHO GỌN) =====================
-        {
-            type: "group",
-            label: "TỔ CHỨC",
-        },
+        // ===================== TỔ CHỨC =====================
+        ...(hasOrgGroup
+            ? [{ type: "group", label: "TỔ CHỨC" }]
+            : []),
 
         // Nhóm con: Công ty & Cấu trúc tổ chức
         ...(checkPermission(ALL_PERMISSIONS.COMPANIES.GET_PAGINATE) ||
@@ -153,37 +175,39 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ]
             : []),
 
-        // Nhóm con: Quy trình & Đánh giá
-        {
-            type: "subgroup",
-            label: "Quy trình & Đánh giá",
-            icon: <FileDoneOutlined />,
-            children: [
-                ...(checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE)
-                    ? [
-                        {
-                            label: <Link to="/admin/procedures">Quy trình</Link>,
-                            key: "/admin/procedures",
-                        },
-                    ]
-                    : []),
-
-                ...(checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE)
-                    ? [
-                        {
-                            label: <Link to="/admin/job-descriptions">Mô tả công việc</Link>,
-                            key: "/admin/job-descriptions",
-                        },
-                    ]
-                    : []),
-            ],
-        },
+        // Nhóm con: Quy trình & Đánh giá — chỉ hiện nếu có ít nhất 1 item
+        ...(hasQuyTrinhSubgroup
+            ? [
+                {
+                    type: "subgroup",
+                    label: "Quy trình & Đánh giá",
+                    icon: <FileDoneOutlined />,
+                    children: [
+                        ...(checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE)
+                            ? [
+                                {
+                                    label: <Link to="/admin/procedures">Quy trình</Link>,
+                                    key: "/admin/procedures",
+                                },
+                            ]
+                            : []),
+                        ...(checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE)
+                            ? [
+                                {
+                                    label: <Link to="/admin/job-descriptions">Mô tả công việc</Link>,
+                                    key: "/admin/job-descriptions",
+                                },
+                            ]
+                            : []),
+                    ],
+                },
+            ]
+            : []),
 
         // ===================== CẤU HÌNH QUY TRÌNH =====================
-        {
-            type: "group",
-            label: "CẤU HÌNH QUY TRÌNH",
-        },
+        ...(hasConfigGroup
+            ? [{ type: "group", label: "CẤU HÌNH QUY TRÌNH" }]
+            : []),
 
         ...(checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE)
             ? [
@@ -194,6 +218,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
+
         /* ===================== PERMISSION CATEGORIES ===================== */
         ...(checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE)
             ? [
@@ -204,9 +229,6 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
-
-
-
     ];
 
     return full;

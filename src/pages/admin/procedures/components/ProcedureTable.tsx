@@ -129,21 +129,32 @@ const ProcedureTable = ({ type }: IProps) => {
             dataIndex: "companyCode",
             align: "center",
             width: 120,
+            render: (code) => <Tag color="blue">{code}</Tag>,
         },
         {
             title: "Công ty",
             dataIndex: "companyName",
+            align: "center",
+
             width: 180,
         },
         {
             title: "Phòng ban",
             dataIndex: "departmentName",
             width: 180,
+            align: "center",
+            render: (name) => (
+                <Tag color="cyan">
+                    {name || "--"}
+                </Tag>
+            ),
         },
         {
             title: "Bộ phận",
             dataIndex: "sectionName",
+            align: "center",
             width: 160,
+            render: (v) => <Tag color="geekblue">{v || "--"}</Tag>,
         },
         {
             title: "Tên quy trình",

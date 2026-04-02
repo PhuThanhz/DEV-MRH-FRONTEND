@@ -207,7 +207,6 @@ const UserPage = () => {
             title: "Vai trò",
             dataIndex: ["role", "name"],
             align: "center",  // 👈 thêm dòng này
-
             render: (_, record) =>
                 record.role?.name ? (
                     <Tag color="blue">{record.role.name}</Tag>

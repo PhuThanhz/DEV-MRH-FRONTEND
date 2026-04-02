@@ -39,10 +39,10 @@ const HeaderAdmin: React.FC<IProps> = ({
     // Thay `unreadCount` bằng số thông báo chưa đọc thật
     // =============================================
     const notifications: { id: number; title: string; desc: string; read: boolean }[] = [
-        // Ví dụ data mẫu — xoá khi có API thật:
-        { id: 1, title: "Hồ sơ mới", desc: "Nguyễn Văn A vừa nộp hồ sơ", read: false },
-        { id: 2, title: "Cập nhật hệ thống", desc: "Phiên bản 2.1.0 đã sẵn sàng", read: false },
-        { id: 3, title: "Duyệt thành công", desc: "Hồ sơ #1023 đã được duyệt", read: true },
+        // // Ví dụ data mẫu — xoá khi có API thật:
+        // { id: 1, title: "Hồ sơ mới", desc: "Nguyễn Văn A vừa nộp hồ sơ", read: false },
+        // { id: 2, title: "Cập nhật hệ thống", desc: "Phiên bản 2.1.0 đã sẵn sàng", read: false },
+        // { id: 3, title: "Duyệt thành công", desc: "Hồ sơ #1023 đã được duyệt", read: true },
     ];
     const unreadCount = notifications.filter((n) => !n.read).length;
     // =============================================

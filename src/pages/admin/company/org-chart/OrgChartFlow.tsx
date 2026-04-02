@@ -28,7 +28,8 @@ import {
     useUpdateOrgNodeMutation,
     useDeleteOrgNodeMutation,
 } from "@/hooks/useOrgNodes";
-
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 import { callFetchOrgNodes, callUpdateOrgNode, callFetchJobDescriptions } from "@/config/api";
 import ModalNode, { type BulkNodeItem } from "./modal.node";
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
@@ -412,22 +413,29 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             position: "relative", border: "1px solid #e8ecf0", overflow: "hidden",
         }}>
             <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", gap: 8 }}>
-                {pendingSaves.size > 0 && (
-                    <Button loading={isSaving} onClick={handleSavePositions}
-                        style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}>
-                        Lưu vị trí ({pendingSaves.size})
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                    {pendingSaves.size > 0 && (
+                        <Button loading={isSaving} onClick={handleSavePositions}
+                            style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}>
+                            Lưu vị trí ({pendingSaves.size})
+                        </Button>
+                    )}
+                </Access>
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                    <Button icon={<ReloadOutlined />} onClick={handleResetPositions}
+                        style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Hoàn tác</Button>
+                </Access>
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                    <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout}
+                        style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Tự căn chỉnh</Button>
+                </Access>
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
+                    <Button icon={<PlusOutlined />} onClick={() => { setEditingNode(null); setOpenModal(true); }}
+                        style={{ background: "#e8637a", borderColor: "#e8637a", color: "#fff", fontWeight: 600, boxShadow: "0 2px 8px rgba(232,99,122,.3)" }}>
+                        Thêm vị trí
                     </Button>
-                )}
-                <Button icon={<ReloadOutlined />} onClick={handleResetPositions}
-                    style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Hoàn tác</Button>
-                <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout}
-                    style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Tự căn chỉnh</Button>
-                <Button icon={<PlusOutlined />} onClick={() => { setEditingNode(null); setOpenModal(true); }}
-                    style={{ background: "#e8637a", borderColor: "#e8637a", color: "#fff", fontWeight: 600, boxShadow: "0 2px 8px rgba(232,99,122,.3)" }}>
-                    Thêm vị trí
-                </Button>
+                </Access>
             </div>
-
             <ReactFlow
                 nodes={nodes} edges={edges}
                 nodeTypes={nodeTypes} edgeTypes={edgeTypes}

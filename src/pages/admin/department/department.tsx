@@ -37,6 +37,9 @@ import PermissionViewModal from "./permissions/ components/PermissionViewModal";
 import PositionChartModal from "@/pages/admin/department/position-chart/PositionChartModal";
 
 import { PATHS } from "@/constants/paths";
+import Access from "@/components/share/access";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const DepartmentPage = () => {
     const navigate = useNavigate();
@@ -68,6 +71,15 @@ const DepartmentPage = () => {
     const { data, isFetching, refetch } = useDepartmentsQuery(query);
     const deleteMutation = useDeleteDepartmentMutation();
 
+    // ===================== PERMISSION CHECKS =====================
+    const canViewOrgChart = useAccess(ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE);
+    const canViewObjectives = useAccess(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW);
+    const canViewProcedures = useAccess(ALL_PERMISSIONS.DEPARTMENT_PROCEDURES.GET_PAGINATE);
+    const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
+    const canViewCareerPaths = useAccess(ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT);
+    const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW);
+    const canViewPositionChart = useAccess(ALL_PERMISSIONS.ORG_NODES.GET_BY_CHART);
+    const canDeleteDepartment = useAccess(ALL_PERMISSIONS.DEPARTMENTS.DELETE);
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
         pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
@@ -154,6 +166,115 @@ const DepartmentPage = () => {
     };
 
     /*
+     * ===================== BUILD DROPDOWN ITEMS =====================
+     */
+    const buildDropdownItems = (record: IDepartment) => {
+        const items: any[] = [];
+
+        if (canViewOrgChart) items.push({
+            key: "org-chart",
+            icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Sơ đồ tổ chức</span>,
+            onClick: () => navigate(
+                `/admin/departments/${record.id}/org-chart?departmentName=${encodeURIComponent(record.name)}`
+            ),
+        });
+
+        if (canViewObjectives) items.push({
+            key: "objectives-tasks",
+            icon: <AimOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Mục tiêu - Nhiệm vụ</span>,
+            onClick: () => navigate(
+                PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(":departmentId", String(record.id))
+                + `?departmentName=${encodeURIComponent(record.name)}`
+            ),
+        });
+
+        if (canViewProcedures) items.push({
+            key: "department-procedures",
+            icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Quy trình phòng ban</span>,
+            onClick: () => navigate(
+                PATHS.ADMIN.DEPARTMENT_PROCEDURES.replace(":departmentId", String(record.id))
+                + `?departmentName=${encodeURIComponent(record.name)}`
+            ),
+        });
+
+        if (canViewPermissions) items.push({
+            key: "permissions",
+            icon: <LockOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Phân quyền</span>,
+            onClick: () => {
+                setSelectedDepartment({
+                    id: record.id!,
+                    name: record.name,
+                    companyName: record.company?.name || "",
+                });
+                setOpenPermissionModal(true);
+            },
+        });
+
+        if (canViewCareerPaths) items.push({
+            key: "career-paths",
+            icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Lộ trình thăng tiến</span>,
+            onClick: () => navigate(
+                `/admin/departments/${record.id}/career-paths?departmentName=${encodeURIComponent(record.name)}`
+            ),
+        });
+
+        if (canViewSalary) items.push({
+            key: "salary",
+            icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Khung lương</span>,
+            onClick: () => navigate(
+                `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(record.name)}`
+            ),
+        });
+
+        if (canViewPositionChart) items.push({
+            key: "position-chart",
+            icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
+            label: <span>Bản đồ chức danh</span>,
+            onClick: () => {
+                setSelectedDepartment({
+                    id: record.id!,
+                    name: record.name,
+                    companyName: record.company?.name || "",
+                });
+                setOpenPositionChartModal(true);
+            },
+        });
+
+        // Chỉ thêm divider khi có item phía trên và có quyền xóa
+        if (items.length > 0 && canDeleteDepartment) {
+            items.push({ type: "divider" });
+        }
+
+        // Nút xóa chỉ hiển thị khi có quyền DELETE
+        if (canDeleteDepartment) {
+            items.push({
+                key: "delete",
+                icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
+                danger: true,
+                label: (
+                    <Popconfirm
+                        title="Xác nhận xoá phòng ban này?"
+                        onConfirm={() => handleDelete(record.id!)}
+                        okText="Xoá"
+                        cancelText="Huỷ"
+                        placement="topRight"
+                    >
+                        <span>Xóa phòng ban</span>
+                    </Popconfirm>
+                ),
+            });
+        }
+
+        return items;
+    };
+
+    /*
      * ===================== COLUMNS =====================
      */
     const columns: ProColumns<IDepartment>[] = [
@@ -168,8 +289,7 @@ const DepartmentPage = () => {
             title: "Mã phòng ban",
             dataIndex: "code",
             sorter: true,
-            align: "center",  // 👈 thêm dòng này
-
+            align: "center",
             render: (_, record) => (
                 <Tag
                     style={{
@@ -202,7 +322,6 @@ const DepartmentPage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.status === 1;
-
                 return (
                     <Tag
                         style={{
@@ -227,133 +346,49 @@ const DepartmentPage = () => {
             align: "center",
             width: 180,
             fixed: "right",
-            render: (_, record) => (
-                <Space size="middle">
-                    <Button
-                        type="text"
-                        icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenView(true);
-                        }}
-                    />
-                    <Button
-                        type="text"
-                        icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenModal(true);
-                        }}
-                    />
-                    <Dropdown
-                        menu={{
-                            items: [
-                                {
-                                    key: "org-chart",
-                                    icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Sơ đồ tổ chức",
-                                    onClick: () =>
-                                        navigate(
-                                            `/admin/departments/${record.id}/org-chart?departmentName=${encodeURIComponent(record.name)}`
-                                        ),
-                                },
-                                {
-                                    key: "objectives-tasks",
-                                    icon: <AimOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Mục tiêu - Nhiệm vụ",
-                                    onClick: () =>
-                                        navigate(
-                                            PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(
-                                                ":departmentId",
-                                                String(record.id)
-                                            ) + `?departmentName=${encodeURIComponent(record.name)}`
-                                        ),
-                                },
-                                {
-                                    key: "department-procedures",
-                                    icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Quy trình phòng ban",
-                                    onClick: () =>
-                                        navigate(
-                                            PATHS.ADMIN.DEPARTMENT_PROCEDURES.replace(
-                                                ":departmentId",
-                                                String(record.id)
-                                            ) + `?departmentName=${encodeURIComponent(record.name)}`
-                                        ),
-                                },
-                                {
-                                    key: "permissions",
-                                    icon: <LockOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Phân quyền",
-                                    onClick: () => {
-                                        setSelectedDepartment({
-                                            id: record.id!,
-                                            name: record.name,
-                                            companyName: record.company?.name || "",
-                                        });
-                                        setOpenPermissionModal(true);
-                                    },
-                                },
-                                {
-                                    key: "career-paths",
-                                    icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Lộ trình thăng tiến",
-                                    onClick: () =>
-                                        navigate(
-                                            `/admin/departments/${record.id}/career-paths?departmentName=${encodeURIComponent(record.name)}`
-                                        ),
-                                },
-                                {
-                                    key: "salary",
-                                    icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Khung lương",
-                                    onClick: () =>
-                                        navigate(
-                                            `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(record.name)}`
-                                        ),
-                                },
-                                {
-                                    key: "position-chart",
-                                    icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
-                                    label: "Bản đồ chức danh",
-                                    onClick: () => {
-                                        setSelectedDepartment({
-                                            id: record.id!,
-                                            name: record.name,
-                                            companyName: record.company?.name || "",
-                                        });
-                                        setOpenPositionChartModal(true);
-                                    },
-                                },
-                                { type: "divider" },
-                                {
-                                    key: "delete",
-                                    icon: <DeleteOutlined style={{ color: "#ff4d4f" }} />,
-                                    label: (
-                                        <Popconfirm
-                                            title="Xác nhận xoá phòng ban này?"
-                                            onConfirm={() => handleDelete(record.id!)}
-                                            okText="Xoá"
-                                            cancelText="Huỷ"
-                                            placement="topRight"
-                                        >
-                                            <span>Xóa phòng ban</span>
-                                        </Popconfirm>
-                                    ),
-                                    danger: true,
-                                },
-                            ],
-                        }}
-                        trigger={["click"]}
-                        placement="bottomRight"
-                    >
+            render: (_, record) => {
+                const dropdownItems = buildDropdownItems(record);
+
+                return (
+                    <Space size="middle">
+                        {/* Xem chi tiết */}
                         <Button
                             type="text"
-                            icon={<MoreOutlined style={{ fontSize: 18 }} />}
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
+                            onClick={() => {
+                                setDataInit(record);
+                                setOpenView(true);
+                            }}
                         />
-                    </Dropdown>
-                </Space>
-            ),
+
+                        {/* Sửa */}
+                        <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
+                            <Button
+                                type="text"
+                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenModal(true);
+                                }}
+                            />
+                        </Access>
+
+                        {/* Dropdown chỉ hiển thị khi có ít nhất một quyền */}
+                        {dropdownItems.length > 0 && (
+                            <Dropdown
+                                menu={{ items: dropdownItems }}
+                                trigger={["click"]}
+                                placement="bottomRight"
+                            >
+                                <Button
+                                    icon={<MoreOutlined style={{ fontSize: 18 }} />}
+                                    type="text"
+                                />
+                            </Dropdown>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
@@ -373,7 +408,6 @@ const DepartmentPage = () => {
                             setOpenModal(true);
                         }}
                     />
-
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
                         fields={[

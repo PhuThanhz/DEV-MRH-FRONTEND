@@ -158,8 +158,8 @@ const SectionPage = () => {
         {
             title: "Phòng ban",
             dataIndex: ["department", "name"],
-            align: "center",  // ← thêm dòng này
-            render: (v) => <Tag color="blue">{v}</Tag>,
+            align: "center",
+            render: (v) => <Tag color="cyan">{v || "--"}</Tag>,
         },
         {
             title: "Trạng thái",
