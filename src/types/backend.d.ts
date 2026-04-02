@@ -1344,3 +1344,71 @@ export interface IDashboardSummary {
     totalDepartment: number;
     totalSection: number;
 }
+/* ===================== EMPLOYEE ===================== */
+
+export interface IEmployee {
+    id: number;
+    name: string;
+    email: string;
+    avatar?: string;
+    active: boolean;
+
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+
+    role?: {
+        id: number;
+        name: string;
+    };
+
+    userInfo?: {
+        employeeCode?: string;
+        phone?: string;
+        dateOfBirth?: string;
+        gender?: "MALE" | "FEMALE" | "OTHER";
+        startDate?: string;
+        contractSignDate?: string;
+        contractExpireDate?: string;
+    };
+
+    positions?: {
+        id: number;
+        source: "COMPANY" | "DEPARTMENT" | "SECTION";
+
+        companyName?: string;
+        departmentName?: string;
+        sectionName?: string;
+
+        jobTitleNameVi?: string;
+    }[];
+}
+export interface ICreateEmployeeReq {
+    name: string;
+    email: string;
+    active?: boolean;
+
+    employeeCode?: string;
+    phone?: string;
+    dateOfBirth?: string;
+    gender?: "MALE" | "FEMALE" | "OTHER";
+    startDate?: string;
+    contractSignDate?: string;
+    contractExpireDate?: string;
+}
+
+export interface IUpdateEmployeeReq {
+    id: number;
+
+    name?: string;
+    active?: boolean;
+
+    employeeCode?: string;
+    phone?: string;
+    dateOfBirth?: string;
+    gender?: "MALE" | "FEMALE" | "OTHER";
+    startDate?: string;
+    contractSignDate?: string;
+    contractExpireDate?: string;
+}

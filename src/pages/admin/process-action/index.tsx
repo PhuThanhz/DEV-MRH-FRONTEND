@@ -161,6 +161,7 @@ const ProcessActionPage = () => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
+                    addPermission={ALL_PERMISSIONS.PROCESS_ACTIONS.CREATE}
                 />
             }
         >

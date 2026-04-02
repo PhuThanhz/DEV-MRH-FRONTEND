@@ -234,18 +234,20 @@ const CompanyPage = () => {
 
                 return (
                     <Space size="middle">
-                        <Button
-                            type="text"
-                            icon={
-                                <EyeOutlined
-                                    style={{ color: "#1677ff", fontSize: 18 }}
-                                />
-                            }
-                            onClick={() => {
-                                setDataInit(record);
-                                setOpenView(true);
-                            }}
-                        />
+                        <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
+                            <Button
+                                type="text"
+                                icon={
+                                    <EyeOutlined
+                                        style={{ color: "#1677ff", fontSize: 18 }}
+                                    />
+                                }
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenView(true);
+                                }}
+                            />
+                        </Access>
 
                         <Access
                             permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
@@ -311,6 +313,8 @@ const CompanyPage = () => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
+                    addPermission={ALL_PERMISSIONS.COMPANIES.CREATE}  // 👈 thêm dòng này
+
                 />
             }
         >

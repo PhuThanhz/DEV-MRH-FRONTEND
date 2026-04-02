@@ -27,7 +27,9 @@ import { useSectionsQuery } from "@/hooks/useSections";
 
 import ModalSection from "./modal.section";
 import ViewDetailSection from "./view.section";
-
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import Access from "@/components/share/access";
+import useAccess from "@/hooks/useAccess";
 import { useNavigate } from "react-router-dom";
 
 const SectionPage = () => {
@@ -242,22 +244,26 @@ const SectionPage = () => {
 
                 return (
                     <Space size="middle">
-                        <Button
-                            type="text"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
-                            onClick={() => {
-                                setDataInit(record);
-                                setOpenViewDetail(true);
-                            }}
-                        />
-                        <Button
-                            type="text"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
-                            onClick={() => {
-                                setDataInit(record);
-                                setOpenModal(true);
-                            }}
-                        />
+                        <Access permission={ALL_PERMISSIONS.SECTIONS.GET_BY_ID} hideChildren>
+                            <Button
+                                type="text"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenViewDetail(true);
+                                }}
+                            />
+                        </Access>
+                        <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
+                            <Button
+                                type="text"
+                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenModal(true);
+                                }}
+                            />
+                        </Access>
                         <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
                             <Button
                                 type="text"
@@ -286,6 +292,8 @@ const SectionPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.SECTIONS.CREATE}  // 👈 thêm dòng này
+
                     />
 
                     <AdvancedFilterSelect

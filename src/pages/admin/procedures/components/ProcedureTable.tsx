@@ -24,10 +24,10 @@ import {
     callFetchDepartmentsByCompany,
     callFetchSectionsByDepartment,
 } from "@/config/api";
-
+import Access from "@/components/share/access";
 import type { IProcedure, ProcedureType, ICompany, IDepartment, ISection } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
-
+import { ALL_PERMISSIONS } from "@/config/permissions";
 const statusMap: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
     IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
@@ -216,26 +216,34 @@ const ProcedureTable = ({ type }: IProps) => {
             width: 160,
             render: (_, record) => (
                 <Space>
-                    <EyeOutlined
-                        title="Xem chi tiết"
-                        style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                        onClick={() => { setDataInit(record); setOpenView(true); }}
-                    />
-                    <EditOutlined
-                        title="Chỉnh sửa"
-                        style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                        onClick={() => { setDataInit(record); setOpenModal(true); }}
-                    />
-                    <RetweetOutlined
-                        title={`Cập nhật phiên bản v${(record.version ?? 1) + 1}`}
-                        style={{ fontSize: 18, color: "#52c41a", cursor: "pointer" }}
-                        onClick={() => { setDataInit(record); setOpenRevise(true); }}
-                    />
-                    <DeleteOutlined
-                        title="Xóa"
-                        style={{ fontSize: 18, color: "red", cursor: "pointer" }}
-                        onClick={() => deleteMutation.mutateAsync(record.id!)}
-                    />
+                    <Access permission={ALL_PERMISSIONS.PROCEDURES.GET_BY_ID} hideChildren>
+                        <EyeOutlined
+                            title="Xem chi tiết"
+                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                            onClick={() => { setDataInit(record); setOpenView(true); }}
+                        />
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.PROCEDURES.UPDATE} hideChildren>
+                        <EditOutlined
+                            title="Chỉnh sửa"
+                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                            onClick={() => { setDataInit(record); setOpenModal(true); }}
+                        />
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.PROCEDURES.REVISE} hideChildren>
+                        <RetweetOutlined
+                            title={`Cập nhật phiên bản v${(record.version ?? 1) + 1}`}
+                            style={{ fontSize: 18, color: "#52c41a", cursor: "pointer" }}
+                            onClick={() => { setDataInit(record); setOpenRevise(true); }}
+                        />
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.PROCEDURES.DELETE} hideChildren>
+                        <DeleteOutlined
+                            title="Xóa"
+                            style={{ fontSize: 18, color: "red", cursor: "pointer" }}
+                            onClick={() => deleteMutation.mutateAsync(record.id!)}
+                        />
+                    </Access>
                 </Space>
             ),
         },
@@ -265,6 +273,13 @@ const ProcedureTable = ({ type }: IProps) => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
+                    addPermission={
+                        type === "COMPANY"
+                            ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
+                            : type === "DEPARTMENT"
+                                ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
+                                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE
+                    }
                 />
                 <div className="flex flex-wrap gap-3 items-center">
                     <AdvancedFilterSelect

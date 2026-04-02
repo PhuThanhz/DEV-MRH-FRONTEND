@@ -6,8 +6,13 @@ import ModalJobDescription from "../modal.job-description";
 
 import { useMyJobDescriptionsQuery } from "@/hooks/useJobDescriptions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import useAccess from "@/hooks/useAccess";
 
 const MyJobDescriptionsTab = () => {
+
+    const canAdd = useAccess(ALL_PERMISSIONS.JOB_DESCRIPTIONS.CREATE);
+    console.log("=== canAddJD:", canAdd);
 
     const [query, setQuery] = useState(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
@@ -28,6 +33,7 @@ const MyJobDescriptionsTab = () => {
                 onAddClick={() => {
                     setOpenModal(true);
                 }}
+                addPermission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.CREATE}
             />
 
             <JobDescriptionTable

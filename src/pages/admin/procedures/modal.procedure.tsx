@@ -32,7 +32,8 @@ import {
 } from "@/hooks/useProcedure";
 
 import UserSelectField from "./components/UserSelectField";
-
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 const PINK = "#e91e8c";
 const PINK_HOVER = "#c4177a";
 
@@ -67,9 +68,10 @@ const TypeSelector: React.FC<{
     value: ProcedureType;
     onChange: (v: ProcedureType) => void;
     disabled?: boolean;
-}> = ({ value, onChange, disabled }) => (
+    options?: typeof TYPE_OPTIONS[number][];
+}> = ({ value, onChange, disabled, options = [...TYPE_OPTIONS] }) => (
     <div style={{ display: "flex", gap: 6 }}>
-        {TYPE_OPTIONS.map((opt) => {
+        {options.map((opt) => {
             const isActive = value === opt.key;
             return (
                 <button
@@ -104,7 +106,48 @@ const TypeSelector: React.FC<{
         })}
     </div>
 );
+const TYPE_PERMISSION_MAP: Record<ProcedureType, { method: string; apiPath: string; module: string }> = {
+    COMPANY: ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE,
+    DEPARTMENT: ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE,
+    CONFIDENTIAL: ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
+};
 
+const TypeSelectorFiltered: React.FC<{
+    value: ProcedureType;
+    onChange: (v: ProcedureType) => void;
+    disabled?: boolean;
+}> = ({ value, onChange, disabled }) => {
+    const canCompany = useAccess(TYPE_PERMISSION_MAP.COMPANY);
+    const canDepartment = useAccess(TYPE_PERMISSION_MAP.DEPARTMENT);
+    const canConfidential = useAccess(TYPE_PERMISSION_MAP.CONFIDENTIAL);
+
+    const accessMap: Record<ProcedureType, boolean> = {
+        COMPANY: canCompany,
+        DEPARTMENT: canDepartment,
+        CONFIDENTIAL: canConfidential,
+    };
+    console.log("ACL:", import.meta.env.VITE_ACL_ENABLE);
+    console.log({ canCompany, canDepartment, canConfidential });
+    const visibleOptions = TYPE_OPTIONS.filter((opt) => accessMap[opt.key]);
+
+    if (visibleOptions.length === 1) {
+        const only = visibleOptions[0];
+        return (
+            <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 9,
+                border: `1.5px solid ${only.activeBorder}`,
+                background: only.activeBg,
+                color: only.activeColor,
+                fontSize: 13, fontWeight: 600,
+            }}>
+                {only.icon} {only.label}
+            </div>
+        );
+    }
+
+    return <TypeSelector value={value} onChange={onChange} disabled={disabled} options={visibleOptions} />;
+};
 const Divider = () => (
     <div style={{ height: 1, background: "#f5f5f7", margin: "4px 0" }} />
 );
@@ -371,9 +414,10 @@ const ModalProcedure: React.FC<IProps> = ({
                     <Input />
                 </Form.Item>
 
+
                 {/* ── Loại quy trình ── */}
                 <Form.Item label="Loại quy trình" style={{ marginBottom: 0 }}>
-                    <TypeSelector
+                    <TypeSelectorFiltered
                         value={procedureType}
                         onChange={handleTypeChange}
                         disabled={isEdit}

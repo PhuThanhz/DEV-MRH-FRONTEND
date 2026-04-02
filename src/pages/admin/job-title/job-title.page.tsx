@@ -196,6 +196,8 @@ const JobTitlePage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.JOB_TITLES.CREATE}  // 👈 thêm dòng này
+
                     />
 
                     <AdvancedFilterSelect

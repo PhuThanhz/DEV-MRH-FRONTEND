@@ -33,7 +33,7 @@ import PermissionCategoryPage from "@/pages/admin/permission-category";
 import JobDescriptionPage from "@/pages/admin/job-description/job-description.page";
 import OrgChartPage from '@/pages/admin/department/org-chart';
 import ConfirmResetPassword from 'pages/auth/ConfirmResetPassword';
-
+import EmployeePage from './pages/admin/employees/employee';
 // ✅ PROCEDURES
 import ProcedureAdminPage from "@/pages/admin/procedures";
 import CompanyProceduresPage from "@/pages/admin/company/procedures";
@@ -87,6 +87,16 @@ export default function App() {
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.USERS.GET_PAGINATE}>
                 <UserPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.EMPLOYEE,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.USERS.GET_PAGINATE}>
+                <EmployeePage />
               </Access>
             </ProtectedRoute>
           ),

@@ -20,7 +20,8 @@ import {
 
 import ModalPositionLevel from "./modal.position-level";
 import ViewDetailPositionLevel from "./view.position-level";
-
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import Access from "@/components/share/access";
 const PositionLevelPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IPositionLevel | null>(null);
@@ -141,32 +142,38 @@ const PositionLevelPage = () => {
             width: 160,
             render: (_, record) => (
                 <Space size="middle">
-                    <EyeOutlined
-                        style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenViewDetail(true);
-                        }}
-                    />
-                    <EditOutlined
-                        style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                        onClick={() => {
-                            setDataInit(record);
-                            setOpenModal(true);
-                        }}
-                    />
-                    <Popconfirm
-                        title="Xác nhận xóa bậc chức danh này?"
-                        description="Hành động này không thể hoàn tác."
-                        onConfirm={() => handleDelete(record.id!)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                        okButtonProps={{ danger: true }}
-                    >
-                        <DeleteOutlined
-                            style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
+                    <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_BY_ID} hideChildren>
+                        <EyeOutlined
+                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                            onClick={() => {
+                                setDataInit(record);
+                                setOpenViewDetail(true);
+                            }}
                         />
-                    </Popconfirm>
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.UPDATE} hideChildren>
+                        <EditOutlined
+                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                            onClick={() => {
+                                setDataInit(record);
+                                setOpenModal(true);
+                            }}
+                        />
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.DELETE} hideChildren>
+                        <Popconfirm
+                            title="Xác nhận xóa bậc chức danh này?"
+                            description="Hành động này không thể hoàn tác."
+                            onConfirm={() => handleDelete(record.id!)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <DeleteOutlined
+                                style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
+                            />
+                        </Popconfirm>
+                    </Access>
                 </Space>
             ),
         },
@@ -187,6 +194,8 @@ const PositionLevelPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.POSITION_LEVELS.CREATE}  // 👈 thêm dòng này
+
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

@@ -39,6 +39,9 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         checkPermission(ALL_PERMISSIONS.ROLES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.PERMISSIONS.GET_PAGINATE);
 
+    const hasEmployeeGroup =
+        checkPermission(ALL_PERMISSIONS.USERS.GET_PAGINATE);
+
     const hasOrgGroup =
         checkPermission(ALL_PERMISSIONS.COMPANIES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE) ||
@@ -46,7 +49,8 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         checkPermission(ALL_PERMISSIONS.POSITION_LEVELS.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE) ||
-        checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE);
+        checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE) ||
+        hasEmployeeGroup;
 
     const hasConfigGroup =
         checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE) ||
@@ -58,15 +62,18 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
 
     const full = [
         // ===================== TỔNG QUAN =====================
-        {
-            type: "group",
-            label: "TỔNG QUAN",
-        },
-        {
-            label: <Link to="/admin">Dashboard</Link>,
-            key: "/admin",
-            icon: <AppstoreOutlined />,
-        },
+        ...(checkPermission(ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY)
+            ? [{ type: "group", label: "TỔNG QUAN" }]
+            : []),
+        ...(checkPermission(ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY)
+            ? [
+                {
+                    label: <Link to="/admin">Dashboard</Link>,
+                    key: "/admin",
+                    icon: <AppstoreOutlined />,
+                },
+            ]
+            : []),
 
         // ===================== NGƯỜI DÙNG & PHÂN QUYỀN =====================
         ...(hasUserGroup
@@ -104,6 +111,17 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         // ===================== TỔ CHỨC =====================
         ...(hasOrgGroup
             ? [{ type: "group", label: "TỔ CHỨC" }]
+            : []),
+
+        // Nhân viên
+        ...(hasEmployeeGroup
+            ? [
+                {
+                    label: <Link to="/admin/employees">Nhân viên</Link>,
+                    key: "/admin/employees",
+                    icon: <TeamOutlined />,
+                },
+            ]
             : []),
 
         // Nhóm con: Công ty & Cấu trúc tổ chức
@@ -175,7 +193,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ]
             : []),
 
-        // Nhóm con: Quy trình & Đánh giá — chỉ hiện nếu có ít nhất 1 item
+        // Nhóm con: Quy trình & Đánh giá
         ...(hasQuyTrinhSubgroup
             ? [
                 {
@@ -219,7 +237,6 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ]
             : []),
 
-        /* ===================== PERMISSION CATEGORIES ===================== */
         ...(checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE)
             ? [
                 {

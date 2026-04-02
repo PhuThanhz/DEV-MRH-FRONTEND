@@ -766,6 +766,28 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/procedures/confidential",
             module: "PROCEDURES",
         },
+        // ← THÊM 3 CREATE RIÊNG
+        CREATE_COMPANY: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/company",
+            module: "PROCEDURES",
+        },
+        CREATE_DEPARTMENT: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/department",
+            module: "PROCEDURES",
+        },
+        CREATE_CONFIDENTIAL: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/confidential",
+            module: "PROCEDURES",
+        },
+        // ← THÊM
+        REVISE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/{id}/revise",
+            module: "PROCEDURES",
+        },
     },
     /* ===================== EMPLOYEE CAREER PATH ===================== */
     EMPLOYEE_CAREER_PATHS: {
@@ -843,7 +865,55 @@ export const ALL_PERMISSIONS = {
             module: "USERS",
         },
     },
-
+    PROCEDURE_COMPANY: {
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/company",
+            module: "PROCEDURE_COMPANY",
+        },
+    },
+    PROCEDURE_DEPARTMENT: {
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/department",
+            module: "PROCEDURE_DEPARTMENT",
+        },
+    },
+    PROCEDURE_CONFIDENTIAL: {
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/confidential",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+    },
+    /* ===================== EMPLOYEES ===================== */
+    EMPLOYEES: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/employees",
+            module: "EMPLOYEES",
+        },
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/employees/{id}",
+            module: "EMPLOYEES",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/employees",
+            module: "EMPLOYEES",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/employees",
+            module: "EMPLOYEES",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/employees/{id}",
+            module: "EMPLOYEES",
+        },
+    },
 };
 
 
@@ -879,8 +949,11 @@ export const ALL_MODULES = {
     DEPARTMENT_OBJECTIVES: "DEPARTMENT_OBJECTIVES",
     DEPARTMENT_PROCEDURES: "DEPARTMENT_PROCEDURES",
     USER_POSITIONS: "USERS",
-    PROCEDURES: "PROCEDURES",           // ← thay COMPANY_PROCEDURES + DEPARTMENT_PROCEDURES
+    PROCEDURES: "PROCEDURES",
     EMPLOYEE_CAREER_PATHS: "EMPLOYEE_CAREER_PATHS",
     CAREER_PATH_TEMPLATES: "CAREER_PATH_TEMPLATES",
-
+    PROCEDURE_COMPANY: "PROCEDURE_COMPANY",
+    PROCEDURE_DEPARTMENT: "PROCEDURE_DEPARTMENT",
+    PROCEDURE_CONFIDENTIAL: "PROCEDURE_CONFIDENTIAL",
+    EMPLOYEES: "EMPLOYEES",
 };

@@ -351,15 +351,18 @@ const DepartmentPage = () => {
 
                 return (
                     <Space size="middle">
+
                         {/* Xem chi tiết */}
-                        <Button
-                            type="text"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
-                            onClick={() => {
-                                setDataInit(record);
-                                setOpenView(true);
-                            }}
-                        />
+                        <Access permission={ALL_PERMISSIONS.DEPARTMENTS.GET_BY_ID} hideChildren>
+                            <Button
+                                type="text"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenView(true);
+                                }}
+                            />
+                        </Access>
 
                         {/* Sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
@@ -372,7 +375,6 @@ const DepartmentPage = () => {
                                 }}
                             />
                         </Access>
-
                         {/* Dropdown chỉ hiển thị khi có ít nhất một quyền */}
                         {dropdownItems.length > 0 && (
                             <Dropdown
@@ -407,6 +409,8 @@ const DepartmentPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.DEPARTMENTS.CREATE}  // 👈 thêm dòng này
+
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

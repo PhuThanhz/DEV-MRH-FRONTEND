@@ -222,6 +222,8 @@ const PermissionCategoryPage = () => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
+                    addPermission={ALL_PERMISSIONS.PERMISSION_CATEGORY.CREATE}
+
                 />
             }
         >

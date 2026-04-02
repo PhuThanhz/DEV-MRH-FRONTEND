@@ -12,7 +12,7 @@ import type {
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
-    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq
 
 
 } from '@/types/backend';
@@ -117,7 +117,39 @@ export const callFetchRoleById = (id: string) => {
     return axios.get<IBackendRes<IRole>>(`/api/v1/roles/${id}`);
 }
 
+/* ===================== EMPLOYEES ===================== */
 
+export const callFetchEmployees = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IEmployee>>>(
+        `/api/v1/employees?${query}`
+    );
+};
+
+export const callFetchEmployeeById = (id: number) => {
+    return axios.get<IBackendRes<IEmployee>>(
+        `/api/v1/employees/${id}`
+    );
+};
+
+export const callCreateEmployee = (data: ICreateEmployeeReq) => {
+    return axios.post<IBackendRes<IEmployee>>(
+        `/api/v1/employees`,
+        data
+    );
+};
+
+export const callUpdateEmployee = (data: IUpdateEmployeeReq) => {
+    return axios.put<IBackendRes<IEmployee>>(
+        `/api/v1/employees`,
+        data
+    );
+};
+
+export const callDeleteEmployee = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/employees/${id}`
+    );
+};
 /* ===================== COMPANIES ===================== */
 
 export const callFetchCompany = (query: string) => {

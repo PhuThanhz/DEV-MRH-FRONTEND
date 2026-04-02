@@ -31,13 +31,11 @@ export const PATHS = {
         DEPARTMENT_PROCEDURES: "/admin/departments/:departmentId/procedures",
         ORG_CHART_COMPANY: "/admin/companies/:companyId/org-chart",
         ORG_CHART_DEPARTMENT: "/admin/departments/:departmentId/org-chart",
-        // ===== PROCEDURES (DÙNG CHUNG) =====
-        // type=COMPANY → quy trình công ty
-        // type=DEPARTMENT → quy trình phòng ban
         PROCEDURES: "/admin/procedures",
         COMPANY_PROCEDURES: "/admin/companies/:companyId/procedures",
         CONFIDENTIAL_PROCEDURES: "/admin/confidential-procedures", // ← THÊM
-        CHANGE_PASSWORD: "/change-password",  // ⭐ THÊM
+        CHANGE_PASSWORD: "/change-password",
+        EMPLOYEE: '/admin/employees',
 
     },
     CLIENT: {

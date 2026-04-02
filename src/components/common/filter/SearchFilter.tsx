@@ -6,6 +6,7 @@ import {
     PlusOutlined,
     ReloadOutlined,
 } from "@ant-design/icons";
+import Access from "@/components/share/access";
 
 interface FilterField {
     name: string;
@@ -24,6 +25,7 @@ interface SearchFilterProps {
     showAddButton?: boolean;
     showFilterButton?: boolean;
     showResetButton?: boolean;
+    addPermission?: { method: string; apiPath: string; module: string };
 }
 
 const SearchFilter: React.FC<SearchFilterProps> = ({
@@ -37,6 +39,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     showAddButton = true,
     showFilterButton = true,
     showResetButton = true,
+    addPermission,
 }) => {
     const [open, setOpen] = useState(false);
     const [form] = Form.useForm();
@@ -69,6 +72,45 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                     </Button>
                 </div>
             </Form>
+        </div>
+    );
+
+    const addButton = (
+        <div className="flex items-center gap-2">
+            {React.isValidElement(addLabel) ? (
+                addLabel
+            ) : (
+                <Button
+                    icon={<PlusOutlined />}
+                    onClick={onAddClick}
+                    className="h-9 text-sm flex items-center justify-center px-5 w-auto sm:ml-0"
+                    style={{
+                        backgroundColor: "#ff5fa2",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: 10,
+                        boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
+                        fontWeight: 500,
+                        transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#ff4b97";
+                        e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "#ff5fa2";
+                        e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                    onMouseDown={(e) => {
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(255, 95, 162, 0.4)";
+                    }}
+                >
+                    {addLabel}
+                </Button>
+            )}
         </div>
     );
 
@@ -110,45 +152,10 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                         )}
 
                         {showAddButton && (
-                            <div className="flex items-center gap-2">
-                                {React.isValidElement(addLabel) ? (
-                                    addLabel
-                                ) : (
-                                    <Button
-                                        icon={<PlusOutlined />}
-                                        onClick={onAddClick}
-                                        className="h-9 text-sm flex items-center justify-center px-5 w-auto sm:ml-0"
-                                        style={{
-                                            backgroundColor: "#ff5fa2",
-                                            color: "#ffffff",
-                                            border: "none",
-                                            borderRadius: 10,
-                                            boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
-                                            fontWeight: 500,
-                                            transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = "#ff4b97";
-                                            e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
-                                            e.currentTarget.style.transform = "translateY(-1px)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = "#ff5fa2";
-                                            e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
-                                            e.currentTarget.style.transform = "translateY(0)";
-                                        }}
-                                        onMouseDown={(e) => {
-                                            e.currentTarget.style.transform = "translateY(0)";
-                                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(255, 95, 162, 0.4)";
-                                        }}
-                                    >
-                                        {addLabel}
-                                    </Button>
-
-                                )}
-                            </div>
+                            addPermission
+                                ? <Access permission={addPermission} hideChildren>{addButton}</Access>
+                                : addButton
                         )}
-
                     </div>
                 </div>
             </div>

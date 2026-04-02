@@ -285,6 +285,8 @@ const UserPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.USERS.CREATE}  // 👈 thêm dòng này
+
                     />
 
                     <div className="flex flex-wrap gap-3 items-center">
