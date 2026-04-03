@@ -79,7 +79,9 @@ const DepartmentPage = () => {
     const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
     const canViewCareerPaths = useAccess(ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT);
     const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW);
-    const canViewPositionChart = useAccess(ALL_PERMISSIONS.ORG_NODES.GET_BY_CHART);
+    const canViewPositionChart = useAccess(
+        ALL_PERMISSIONS.POSITION_CHART.VIEW
+    );
     const canDeleteDepartment = useAccess(ALL_PERMISSIONS.DEPARTMENTS.DELETE);
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -522,7 +524,7 @@ const DepartmentPage = () => {
                 />
             )}
 
-            {selectedDepartment && (
+            {selectedDepartment && canViewPositionChart && (
                 <PositionChartModal
                     open={openPositionChartModal}
                     onClose={() => setOpenPositionChartModal(false)}

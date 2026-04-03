@@ -914,6 +914,13 @@ export const ALL_PERMISSIONS = {
             module: "EMPLOYEES",
         },
     },
+    POSITION_CHART: {
+        VIEW: {
+            method: "GET",
+            apiPath: "/api/v1/departments/{departmentId}/company-job-titles",
+            module: "POSITION_CHART",
+        },
+    },
 };
 
 
@@ -956,4 +963,5 @@ export const ALL_MODULES = {
     PROCEDURE_DEPARTMENT: "PROCEDURE_DEPARTMENT",
     PROCEDURE_CONFIDENTIAL: "PROCEDURE_CONFIDENTIAL",
     EMPLOYEES: "EMPLOYEES",
+    POSITION_CHART: "POSITION_CHART",
 };

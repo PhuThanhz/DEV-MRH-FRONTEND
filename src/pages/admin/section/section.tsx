@@ -197,51 +197,51 @@ const SectionPage = () => {
             fixed: "right",
             render: (_, record) => {
                 const items: MenuProps["items"] = [
-                    {
-                        key: "salary",
-                        icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Khung lương",
-                        onClick: () =>
-                            navigate(
-                                `/admin/sections/${record.id}/salary-range?sectionName=${encodeURIComponent(record.name)}`
-                            ),
-                    },
-                    {
-                        key: "org-chart",
-                        icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Sơ đồ tổ chức",
-                        onClick: () =>
-                            navigate(
-                                `/admin/sections/${record.id}/org-chart?sectionName=${encodeURIComponent(record.name)}`
-                            ),
-                    },
-                    {
-                        key: "career-paths",
-                        icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Lộ trình thăng tiến",
-                        onClick: () =>
-                            navigate(
-                                `/admin/sections/${record.id}/career-paths?sectionName=${encodeURIComponent(record.name)}`
-                            ),
-                    },
-                    {
-                        key: "objectives-tasks",
-                        icon: <AimOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Mục tiêu nhiệm vụ",
-                        onClick: () =>
-                            navigate(
-                                `/admin/sections/${record.id}/objectives-tasks?sectionName=${encodeURIComponent(record.name)}`
-                            ),
-                    },
-                    {
-                        key: "permissions",
-                        icon: <LockOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Bản phân quyền",
-                        onClick: () =>
-                            navigate(
-                                `/admin/sections/${record.id}/permissions?sectionName=${encodeURIComponent(record.name)}`
-                            ),
-                    },
+                    // {
+                    //     key: "salary",
+                    //     icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
+                    //     label: "Khung lương",
+                    //     onClick: () =>
+                    //         navigate(
+                    //             `/admin/sections/${record.id}/salary-range?sectionName=${encodeURIComponent(record.name)}`
+                    //         ),
+                    // },
+                    // {
+                    //     key: "org-chart",
+                    //     icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
+                    //     label: "Sơ đồ tổ chức",
+                    //     onClick: () =>
+                    //         navigate(
+                    //             `/admin/sections/${record.id}/org-chart?sectionName=${encodeURIComponent(record.name)}`
+                    //         ),
+                    // },
+                    // {
+                    //     key: "career-paths",
+                    //     icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
+                    //     label: "Lộ trình thăng tiến",
+                    //     onClick: () =>
+                    //         navigate(
+                    //             `/admin/sections/${record.id}/career-paths?sectionName=${encodeURIComponent(record.name)}`
+                    //         ),
+                    // },
+                    // {
+                    //     key: "objectives-tasks",
+                    //     icon: <AimOutlined style={{ color: "#eb2f96" }} />,
+                    //     label: "Mục tiêu nhiệm vụ",
+                    //     onClick: () =>
+                    //         navigate(
+                    //             `/admin/sections/${record.id}/objectives-tasks?sectionName=${encodeURIComponent(record.name)}`
+                    //         ),
+                    // },
+                    // {
+                    //     key: "permissions",
+                    //     icon: <LockOutlined style={{ color: "#eb2f96" }} />,
+                    //     label: "Bản phân quyền",
+                    //     onClick: () =>
+                    //         navigate(
+                    //             `/admin/sections/${record.id}/permissions?sectionName=${encodeURIComponent(record.name)}`
+                    //         ),
+                    // },
                 ];
 
                 return (
@@ -279,13 +279,13 @@ const SectionPage = () => {
                                 }}
                             />
                         </Access>
-                        <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
+                        {/* <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
                             <Button
                                 type="text"
                                 icon={<MoreOutlined style={{ color: "#595959", fontSize: 18 }} />}
                                 className="hover:bg-pink-50 hover:text-pink-600"
                             />
-                        </Dropdown>
+                        </Dropdown> */}
                     </Space>
                 );
             },
