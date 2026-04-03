@@ -541,7 +541,11 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/job-descriptions/my",
             module: "JOB_DESCRIPTIONS"
         },
+        GET_PUBLISHED: { method: "GET", apiPath: "/api/v1/job-descriptions/published", module: "JOB_DESCRIPTIONS" },
+        GET_REJECTED: { method: "GET", apiPath: "/api/v1/job-descriptions/rejected", module: "JOB_DESCRIPTIONS" },
+        GET_ALL: { method: "GET", apiPath: "/api/v1/job-descriptions/all", module: "JOB_DESCRIPTIONS" },
     },
+
     /* ===================== DEPARTMENT OBJECTIVES ===================== */
     DEPARTMENT_OBJECTIVES: {
         VIEW: {

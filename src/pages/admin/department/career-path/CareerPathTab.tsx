@@ -18,7 +18,8 @@ import {
 import type { ICareerPath, IResCareerPathBandGroup } from "@/types/backend";
 import ModalCareerPath from "./ModalCareerPath";
 import ViewCareerPath from "./ViewCareerPath";
-
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 const { Text } = Typography;
 type ViewMode = "department" | "band";
 
@@ -225,30 +226,38 @@ const StairCard = ({
                         pointerEvents: hov ? "auto" : "none",
                     }}
                 >
-                    <Tooltip title="Xem" mouseEnterDelay={0.6}>
-                        <Button
-                            type="text" size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => onView(item)}
-                            style={{ color: T.ink4, borderRadius: 6, width: 26, height: 26 }}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Sửa" mouseEnterDelay={0.6}>
-                        <Button
-                            type="text" size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => onEdit(item)}
-                            style={{ color: T.ink4, borderRadius: 6, width: 26, height: 26 }}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Xóa" mouseEnterDelay={0.6}>
-                        <Button
-                            type="text" size="small" danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => onDelete(item)}
-                            style={{ borderRadius: 6, width: 26, height: 26 }}
-                        />
-                    </Tooltip>
+                    <Access permission={ALL_PERMISSIONS.CAREER_PATHS.GET_BY_ID} hideChildren>
+                        <Tooltip title="Xem" mouseEnterDelay={0.6}>
+                            <Button
+                                type="text" size="small"
+                                icon={<EyeOutlined />}
+                                onClick={() => onView(item)}
+                                style={{ color: T.ink4, borderRadius: 6, width: 26, height: 26 }}
+                            />
+                        </Tooltip>
+                    </Access>
+
+                    <Access permission={ALL_PERMISSIONS.CAREER_PATHS.UPDATE} hideChildren>
+                        <Tooltip title="Sửa" mouseEnterDelay={0.6}>
+                            <Button
+                                type="text" size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => onEdit(item)}
+                                style={{ color: T.ink4, borderRadius: 6, width: 26, height: 26 }}
+                            />
+                        </Tooltip>
+                    </Access>
+
+                    <Access permission={ALL_PERMISSIONS.CAREER_PATHS.DEACTIVATE} hideChildren>
+                        <Tooltip title="Xóa" mouseEnterDelay={0.6}>
+                            <Button
+                                type="text" size="small" danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => onDelete(item)}
+                                style={{ borderRadius: 6, width: 26, height: 26 }}
+                            />
+                        </Tooltip>
+                    </Access>
                 </Space>
             </div>
         </div>
@@ -671,6 +680,7 @@ const CareerPathTab = () => {
                     onSearch={setSearchValue}
                     onReset={handleReset}
                     onAddClick={() => { setDataInit(null); setOpenModal(true); }}
+                    addPermission={ALL_PERMISSIONS.CAREER_PATHS.CREATE}  // ← thêm dòng này
                 />
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>

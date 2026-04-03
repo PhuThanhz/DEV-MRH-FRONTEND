@@ -15,11 +15,15 @@ import dayjs from "dayjs";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import {
     useEmployeeCareerPathsByDepartmentQuery,
+    useEmployeeCareerPathByUserQuery,
 } from "@/hooks/useEmployeeCareerPaths";
+import { useAppSelector } from "@/redux/hooks";
 import type { IEmployeeCareerPath } from "@/types/backend";
 import ModalAssignCareerPath from "./ModalAssignCareerPath";
 import ModalPromoteEmployee from "./ModalPromoteEmployee";
 import DrawerEmployeeDetail from "./ModalEmployeeDetail";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Text, Title } = Typography;
 
@@ -87,7 +91,7 @@ const ProgressBar = ({ current, total }: { current?: number; total?: number }) =
     );
 };
 
-const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
+const EmployeeCard = ({ item, onView, onEdit, onPromote, isOwn }: any) => {
     const [hov, setHov] = useState(false);
     const st = getSt(item.progressStatus);
 
@@ -161,7 +165,6 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 ) : <Text style={{ color: T.ink5 }}>—</Text>}
             </div>
 
-            {/* 5. Status */}
             <div style={{ textAlign: "right" }}>
                 <div style={{
                     display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20,
@@ -171,13 +174,13 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
                 </div>
             </div>
 
-            {/* 6. Actions Menu */}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <Tooltip title="Xem chi tiết">
                     <Button type="text" shape="circle" icon={<EyeOutlined />} onClick={() => onView(item)} style={{ color: T.ink3 }} />
                 </Tooltip>
 
-                {hov && (
+                {/* Chỉ HR mới thấy nút Sửa và Bổ nhiệm */}
+                {hov && !isOwn && (
                     <div style={{ position: "absolute", right: 24, background: T.white, border: `1px solid ${T.lineMed}`, borderRadius: 10, padding: 4, display: "flex", gap: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", zIndex: 10 }}>
                         <Tooltip title="Sửa"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(item)} /></Tooltip>
                         {item.nextStep && (
@@ -190,31 +193,46 @@ const EmployeeCard = ({ item, onView, onEdit, onPromote }: any) => {
     );
 };
 
-const EmployeeCareerPathTab = () => {
+// ── Props ─────────────────────────────────────────────
+interface Props {
+    viewMode: "department" | "own";
+}
+
+const EmployeeCareerPathTab = ({ viewMode }: Props) => {
     const { departmentId } = useParams();
+    const currentUser = useAppSelector(state => state.account.user);
+
     const [searchValue, setSearchValue] = useState("");
     const [openAssign, setOpenAssign] = useState(false);
     const [openPromote, setOpenPromote] = useState(false);
     const [openDetail, setOpenDetail] = useState(false);
     const [selected, setSelected] = useState<IEmployeeCareerPath | null>(null);
 
-    const { data = [], isFetching, refetch } = useEmployeeCareerPathsByDepartmentQuery(Number(departmentId));
+    // ── Queries ──────────────────────────────────────
+    const deptQuery = useEmployeeCareerPathsByDepartmentQuery(
+        viewMode === "department" ? Number(departmentId) : undefined
+    );
+    const ownQuery = useEmployeeCareerPathByUserQuery(
+        viewMode === "own" ? currentUser?.id : undefined
+    );
 
+    const data: IEmployeeCareerPath[] = viewMode === "department"
+        ? (deptQuery.data ?? [])
+        : (ownQuery.data ? [ownQuery.data] : []);
+
+    const isFetching = deptQuery.isFetching || ownQuery.isFetching;
+    const refetch = viewMode === "department" ? deptQuery.refetch : ownQuery.refetch;
+
+    // ── Stats & filter ───────────────────────────────
     const stats = useMemo(() => ({
         total: data.length,
         overdue: data.filter(d => d.overdue).length,
     }), [data]);
 
-    const filtered = useMemo(() => {
-        return data.filter(item => {
-            const matchSearch =
-                !searchValue ||
-                [item.user?.name, item.user?.email, item.template?.name]
-                    .some(s => s?.toLowerCase().includes(searchValue.toLowerCase()));
-
-            return matchSearch;
-        });
-    }, [data, searchValue]);
+    const filtered = useMemo(() => data.filter(item => {
+        return !searchValue || [item.user?.name, item.user?.email, item.template?.name]
+            .some(s => s?.toLowerCase().includes(searchValue.toLowerCase()));
+    }), [data, searchValue]);
 
     return (
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
@@ -223,19 +241,20 @@ const EmployeeCareerPathTab = () => {
                 <SearchFilter
                     searchPlaceholder="Tìm tên nhân viên, vị trí hoặc tên lộ trình..."
                     onSearch={setSearchValue}
+                    // Nút "Gán lộ trình" chỉ hiện nếu có permission ASSIGN
                     onAddClick={() => { setSelected(null); setOpenAssign(true); }}
                     addLabel="Gán lộ trình"
+                    addPermission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.ASSIGN}
                 />
 
-                <div style={{ display: "flex", gap: 12, marginTop: 20, alignItems: "center" }}>
-                    {stats.overdue > 0 && (
+                {stats.overdue > 0 && (
+                    <div style={{ display: "flex", gap: 12, marginTop: 20, alignItems: "center" }}>
                         <Tag color="error" style={{ borderRadius: 6, padding: "2px 10px", fontWeight: 600, border: "none" }}>
                             {stats.overdue} NHÂN VIÊN TRỄ HẠN
                         </Tag>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
-
 
             {isFetching ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -247,6 +266,7 @@ const EmployeeCareerPathTab = () => {
                         <EmployeeCard
                             key={item.id}
                             item={item}
+                            isOwn={viewMode === "own"}
                             onView={(r: any) => { setSelected(r); setOpenDetail(true); }}
                             onEdit={(r: any) => { setSelected(r); setOpenAssign(true); }}
                             onPromote={(r: any) => { setSelected(r); setOpenPromote(true); }}
@@ -257,10 +277,11 @@ const EmployeeCareerPathTab = () => {
                 <div style={{ textAlign: "center", padding: "100px 0", background: T.s1, borderRadius: 20, border: `1px dashed ${T.lineMed}` }}>
                     <UserOutlined style={{ fontSize: 40, color: T.ink5, marginBottom: 16 }} />
                     <Title level={5} style={{ color: T.ink2 }}>Không có dữ liệu</Title>
-                    <Text style={{ color: T.ink4 }}>Thử thay đổi bộ lọc hoặc thêm lộ trình mới cho nhân viên</Text>
+                    <Text style={{ color: T.ink4 }}>
+                        {viewMode === "own" ? "Bạn chưa được gán lộ trình thăng tiến" : "Thử thay đổi bộ lọc hoặc thêm lộ trình mới cho nhân viên"}
+                    </Text>
                 </div>
             )}
-
 
             <ModalAssignCareerPath open={openAssign} onClose={() => { setOpenAssign(false); setSelected(null); }} dataInit={selected} departmentId={Number(departmentId)} onSuccess={() => { setOpenAssign(false); refetch(); }} />
             <ModalPromoteEmployee open={openPromote} onClose={() => { setOpenPromote(false); setSelected(null); }} dataInit={selected} onSuccess={() => { setOpenPromote(false); refetch(); }} />

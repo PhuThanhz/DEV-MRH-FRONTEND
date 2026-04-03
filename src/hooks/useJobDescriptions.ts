@@ -6,6 +6,9 @@ import {
     callUpdateJobDescription,
     callDeleteJobDescription,
     callFetchMyJobDescriptions,
+    callFetchPublishedJobDescriptions,  // ← thêm
+    callFetchRejectedJobDescriptions,   // ← thêm
+    callFetchAllJobDescriptions,
 } from "@/config/api";
 
 import type { IJobDescription, IModelPaginate } from "@/types/backend";
@@ -128,6 +131,50 @@ export const useMyJobDescriptionsQuery = (query: string) => {
             const res = await callFetchMyJobDescriptions(query);
             if (!res || res.statusCode !== 200)
                 throw new Error(res?.message || "Không thể lấy danh sách JD của tôi");
+            return res.data as IModelPaginate<IJobDescription>;
+        }
+    });
+};
+
+/* ===================== FETCH PUBLISHED JD ===================== */
+
+export const usePublishedJobDescriptionsQuery = (query: string) => {
+    return useQuery({
+        queryKey: ["published-job-descriptions", query],
+        queryFn: async () => {
+            const res = await callFetchPublishedJobDescriptions(query);
+            if (!res || res.statusCode !== 200)
+                throw new Error(res?.message || "Không thể lấy danh sách JD đã published");
+            return res.data as IModelPaginate<IJobDescription>;
+        }
+    });
+};
+
+
+/* ===================== FETCH REJECTED JD ===================== */
+
+export const useRejectedJobDescriptionsQuery = (query: string) => {
+    return useQuery({
+        queryKey: ["rejected-job-descriptions", query],
+        queryFn: async () => {
+            const res = await callFetchRejectedJobDescriptions(query);
+            if (!res || res.statusCode !== 200)
+                throw new Error(res?.message || "Không thể lấy danh sách JD bị rejected");
+            return res.data as IModelPaginate<IJobDescription>;
+        }
+    });
+};
+
+
+/* ===================== FETCH ALL JD ===================== */
+
+export const useAllJobDescriptionsQuery = (query: string) => {
+    return useQuery({
+        queryKey: ["all-job-descriptions", query],
+        queryFn: async () => {
+            const res = await callFetchAllJobDescriptions(query);
+            if (!res || res.statusCode !== 200)
+                throw new Error(res?.message || "Không thể lấy toàn bộ danh sách JD");
             return res.data as IModelPaginate<IJobDescription>;
         }
     });

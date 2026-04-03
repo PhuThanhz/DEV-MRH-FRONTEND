@@ -1059,7 +1059,23 @@ export const callFetchMyJobDescriptions = (query: string) => {
     );
 };
 
+export const callFetchPublishedJobDescriptions = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IJobDescription>>>(
+        `/api/v1/job-descriptions/published?${query}`
+    );
+};
 
+export const callFetchRejectedJobDescriptions = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IJobDescription>>>(
+        `/api/v1/job-descriptions/rejected?${query}`
+    );
+};
+
+export const callFetchAllJobDescriptions = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IJobDescription>>>(
+        `/api/v1/job-descriptions/all?${query}`
+    );
+};
 /* ===================== PERMISSION MATRIX REAL API ===================== */
 export const callFetchPermissionCategoriesByDepartment = (departmentId: number) => {
     return axios.get<IBackendRes<IPermissionCategory[]>>(
