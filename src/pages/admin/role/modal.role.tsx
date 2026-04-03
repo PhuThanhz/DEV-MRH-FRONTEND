@@ -19,7 +19,6 @@ interface IProps {
     singleRole: IRole | null;
     setSingleRole: (v: any) => void;
 }
-
 const ModalRole = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, listPermissions, singleRole, setSingleRole } = props;
     const dispatch = useAppDispatch();

@@ -73,7 +73,8 @@ const CompanyPage = () => {
     const canViewCompanyProcedures = useAccess(
         ALL_PERMISSIONS.COMPANY_PROCEDURES.GET_PAGINATE
     );
-
+    const canInactive = useAccess(ALL_PERMISSIONS.COMPANIES.INACTIVE); // ← thêm
+    const canActive = useAccess(ALL_PERMISSIONS.COMPANIES.ACTIVE);   // ← thêm
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -185,7 +186,7 @@ const CompanyPage = () => {
                 }
 
                 // Kích hoạt / Vô hiệu hóa
-                if (record.status === 1) {
+                if (record.status === 1 && canInactive) {   // ← thêm && canInactive
                     items.push({
                         key: "inactive",
                         icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
@@ -201,18 +202,14 @@ const CompanyPage = () => {
                                     })
                                 }
                             >
-                                <span style={{ color: "#ff4d4f" }}>
-                                    Vô hiệu hóa
-                                </span>
+                                <span style={{ color: "#ff4d4f" }}>Vô hiệu hóa</span>
                             </Popconfirm>
                         ),
                     });
-                } else {
+                } else if (record.status !== 1 && canActive) {  // ← else if + && canActive
                     items.push({
                         key: "active",
-                        icon: (
-                            <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                        ),
+                        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
                         label: (
                             <Popconfirm
                                 title="Kích hoạt lại công ty?"
@@ -225,13 +222,12 @@ const CompanyPage = () => {
                                     })
                                 }
                             >
-                                <span style={{ color: "#52c41a" }}>
-                                    Kích hoạt
-                                </span>
+                                <span style={{ color: "#52c41a" }}>Kích hoạt</span>
                             </Popconfirm>
                         ),
                     });
                 }
+
 
                 return (
                     <Space size="middle">

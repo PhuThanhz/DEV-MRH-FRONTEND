@@ -5,7 +5,7 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import useAccess from "@/hooks/useAccess";
-import CareerPathTab from "./CareerPathTab";
+import CareerPathTab from "../career-path/careerpathtab/CareerPathTab";
 import CareerPathTemplateTab from "./CareerPathTemplateTab";
 import EmployeeCareerPathTab from "./EmployeeCareerPathTab";
 
