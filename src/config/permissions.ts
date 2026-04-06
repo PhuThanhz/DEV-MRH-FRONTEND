@@ -96,6 +96,8 @@ export const ALL_PERMISSIONS = {
         CREATE: { method: "POST", apiPath: "/api/v1/departments", module: "DEPARTMENTS" },
         UPDATE: { method: "PUT", apiPath: "/api/v1/departments/{id}", module: "DEPARTMENTS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/departments/{id}", module: "DEPARTMENTS" },
+        GET_BY_COMPANY: { method: "GET", apiPath: "/api/v1/departments/by-company/{companyId}", module: "DEPARTMENTS" },
+
     },
     /* ===================== DEPARTMENT JOB TITLES ===================== */
     DEPARTMENT_JOB_TITLES: {
@@ -148,6 +150,7 @@ export const ALL_PERMISSIONS = {
         CREATE: { method: "POST", apiPath: "/api/v1/sections", module: "SECTIONS" },
         UPDATE: { method: "PUT", apiPath: "/api/v1/sections", module: "SECTIONS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/sections/{id}", module: "SECTIONS" },
+        GET_BY_DEPARTMENT: { method: "GET", apiPath: "/api/v1/sections/by-department/{departmentId}", module: "SECTIONS" },
 
         // Nếu backend có hỗ trợ active/inactive API (bạn có rồi)
         ACTIVE: { method: "PUT", apiPath: "/api/v1/sections/{id}/active", module: "SECTIONS" },
@@ -368,6 +371,16 @@ export const ALL_PERMISSIONS = {
             method: "PUT",
             apiPath: "/api/v1/department-salary-grades/{id}/restore",
             module: "DEPARTMENT_SALARY_GRADES"
+        },   // ← THÊM MỚI
+        GET_MY: {
+            method: "GET",
+            apiPath: "/api/v1/company-salary-grades/my",
+            module: "COMPANY_SALARY_GRADES"
+        },
+        GET_MY_COMPANY: {
+            method: "GET",
+            apiPath: "/api/v1/company-salary-grades/my-company",
+            module: "COMPANY_SALARY_GRADES"
         },
 
     },
@@ -391,6 +404,17 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/department-salary-grades/{id}/restore",
             module: "DEPARTMENT_SALARY_GRADES"
         },
+        // ← THÊM MỚI
+        GET_MY: {
+            method: "GET",
+            apiPath: "/api/v1/department-salary-grades/my",
+            module: "DEPARTMENT_SALARY_GRADES"
+        },
+        GET_MY_DEPARTMENT: {
+            method: "GET",
+            apiPath: "/api/v1/department-salary-grades/my-department",
+            module: "DEPARTMENT_SALARY_GRADES"
+        },
     },
 
     /* ===================== SECTION SALARY GRADES ===================== */
@@ -404,37 +428,47 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/section-salary-grades/{id}/restore",
             module: "SECTION_SALARY_GRADES"
         },
+        GET_MY: {
+            method: "GET",
+            apiPath: "/api/v1/section-salary-grades/my",
+            module: "SECTION_SALARY_GRADES"
+        },
+        GET_MY_SECTION: {
+            method: "GET",
+            apiPath: "/api/v1/section-salary-grades/my-section",
+            module: "SECTION_SALARY_GRADES"
+        },
     },
     /* ===================== JOB TITLE PERFORMANCE CONTENT ===================== */
     JOB_TITLE_PERFORMANCE_CONTENT: {
         GET_PAGINATE: {
             method: "GET",
-            apiPath: "/api/v1/job-title-performance-contents",
+            apiPath: "/api/v1/job-title-performance-content",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
         GET_BY_ID: {
             method: "GET",
-            apiPath: "/api/v1/job-title-performance-contents/{id}",
+            apiPath: "/api/v1/job-title-performance-content/{id}",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
         CREATE: {
             method: "POST",
-            apiPath: "/api/v1/job-title-performance-contents",
+            apiPath: "/api/v1/job-title-performance-content",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
         UPDATE: {
             method: "PUT",
-            apiPath: "/api/v1/job-title-performance-contents/{id}",
+            apiPath: "/api/v1/job-title-performance-content/{id}",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
-        DELETE: {
-            method: "DELETE",
-            apiPath: "/api/v1/job-title-performance-contents/{id}",
+        DISABLE: {
+            method: "PUT",
+            apiPath: "/api/v1/job-title-performance-content/{id}/disable",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
         RESTORE: {
             method: "PUT",
-            apiPath: "/api/v1/job-title-performance-contents/{id}/restore",
+            apiPath: "/api/v1/job-title-performance-content/{id}/restore",
             module: "JOB_TITLE_PERFORMANCE_CONTENT",
         },
     },
@@ -447,6 +481,11 @@ export const ALL_PERMISSIONS = {
         VIEW: {
             method: "GET",
             apiPath: "/api/v1/departments/{departmentId}/salary-matrix",
+            module: "SALARY_RANGE",
+        },
+        VIEW_MY: {
+            method: "GET",
+            apiPath: "/api/v1/departments/{departmentId}/salary-matrix/my",
             module: "SALARY_RANGE",
         },
     },
@@ -870,25 +909,41 @@ export const ALL_PERMISSIONS = {
         },
     },
     PROCEDURE_COMPANY: {
-        CREATE: {
-            method: "POST",
-            apiPath: "/api/v1/procedures/company",
+        GET_PAGINATE: { // ← THÊM DÒNG NÀY
+            method: "GET",
+            apiPath: "/api/v1/procedures",
             module: "PROCEDURE_COMPANY",
         },
+        CREATE: { method: "POST", apiPath: "/api/v1/procedures/company", module: "PROCEDURE_COMPANY" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_COMPANY" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_COMPANY" },
+        REVISE: { method: "POST", apiPath: "/api/v1/procedures/{id}/revise", module: "PROCEDURE_COMPANY" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_COMPANY" },
     },
     PROCEDURE_DEPARTMENT: {
-        CREATE: {
-            method: "POST",
-            apiPath: "/api/v1/procedures/department",
+        GET_PAGINATE: { // ← THÊM
+            method: "GET",
+            apiPath: "/api/v1/procedures",
             module: "PROCEDURE_DEPARTMENT",
         },
+        CREATE: { method: "POST", apiPath: "/api/v1/procedures/department", module: "PROCEDURE_DEPARTMENT" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_DEPARTMENT" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_DEPARTMENT" },
+        REVISE: { method: "POST", apiPath: "/api/v1/procedures/{id}/revise", module: "PROCEDURE_DEPARTMENT" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_DEPARTMENT" },
     },
+
     PROCEDURE_CONFIDENTIAL: {
-        CREATE: {
-            method: "POST",
-            apiPath: "/api/v1/procedures/confidential",
+        GET_PAGINATE: { // ← THÊM
+            method: "GET",
+            apiPath: "/api/v1/procedures",
             module: "PROCEDURE_CONFIDENTIAL",
         },
+        CREATE: { method: "POST", apiPath: "/api/v1/procedures/confidential", module: "PROCEDURE_CONFIDENTIAL" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_CONFIDENTIAL" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_CONFIDENTIAL" },
+        REVISE: { method: "POST", apiPath: "/api/v1/procedures/{id}/revise", module: "PROCEDURE_CONFIDENTIAL" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_CONFIDENTIAL" },
     },
     /* ===================== EMPLOYEES ===================== */
     EMPLOYEES: {

@@ -350,7 +350,6 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                 reportTo: editRecord.reportTo,
                 belongsTo: editRecord.belongsTo,
                 collaborateWith: editRecord.collaborateWith,
-                status: editRecord.status,
                 effectiveDate: editRecord.effectiveDate ? dayjs(editRecord.effectiveDate) : null,
                 companyId: editRecord.companyId,
                 departmentId: editRecord.departmentId,
@@ -426,7 +425,6 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         } else {
             form.resetFields();
             form.setFieldsValue({
-                status: "DRAFT",
                 tasks: [{ orderNo: 1, title: "", content: "" }],
             });
             setSelectedCompanyId(null); setSelectedDepartmentId(null);
@@ -458,7 +456,6 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                 reportTo: values.reportTo,
                 belongsTo: values.belongsTo,
                 collaborateWith: values.collaborateWith,
-                status: values.status,
                 effectiveDate: values.effectiveDate ? dayjs(values.effectiveDate).toISOString() : undefined,
                 companyId: values.companyId,
                 departmentId: values.departmentId,
@@ -607,14 +604,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày" />
                             </Form.Item>
 
-                            <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: "Chọn trạng thái" }]}>
-                                <Select options={[
-                                    { value: "DRAFT", label: "Nháp" },
-                                    { value: "PENDING", label: "Chờ duyệt" },
-                                    { value: "APPROVED", label: "Đã duyệt" },
-                                    { value: "REJECTED", label: "Từ chối" },
-                                ]} />
-                            </Form.Item>
+
                         </div>
 
                         <Form.Item name="collaborateWith" label="Phối hợp công tác với" rules={[{ required: true, message: "Nhập thông tin" }]}>

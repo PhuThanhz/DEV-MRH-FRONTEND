@@ -227,8 +227,6 @@ const CompanyPage = () => {
                         ),
                     });
                 }
-
-
                 return (
                     <Space size="middle">
                         <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
@@ -249,14 +247,21 @@ const CompanyPage = () => {
                             permission={ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE}
                             hideChildren
                         >
-                            <Button
-                                type="text"
-                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                            <Tag
+                                color="cyan"
+                                style={{
+                                    cursor: "pointer",
+                                    borderRadius: 6,
+                                    padding: "2px 10px",
+                                    fontWeight: 500,
+                                }}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenJobTitle(true);
                                 }}
-                            />
+                            >
+                                Cấu hình chức danh
+                            </Tag>
                         </Access>
                         <Access
                             permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
@@ -364,7 +369,9 @@ const CompanyPage = () => {
                     width="80vw"
                     destroyOnClose
                 >
-                    <CompanyJobTitleTab companyId={dataInit.id} />
+                    <CompanyJobTitleTab companyId={dataInit.id} companyName={dataInit.name}   // 👈 thêm dòng này
+                        hideTitle={true}   // 👈 thêm dòng này
+                    />
                 </Modal>
             )}
         </PageContainer>

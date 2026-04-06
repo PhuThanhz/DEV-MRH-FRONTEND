@@ -830,8 +830,8 @@ export const callUpdateJobTitlePerformanceContent = (
  * DELETE /api/v1/job-title-performance-contents/{id}
  */
 export const callDisableJobTitlePerformanceContent = (id: number) => {
-    return axios.delete<IBackendRes<any>>(
-        `/api/v1/job-title-performance-contents/${id}`
+    return axios.put(
+        `/api/v1/job-title-performance-contents/${id}/disable`
     );
 };
 
@@ -853,6 +853,51 @@ export const callRestoreJobTitlePerformanceContent = (id: number) => {
 export const callFetchSalaryMatrix = (departmentId: number) => {
     return axios.get<IBackendRes<ISalaryMatrix[]>>(
         `/api/v1/departments/${departmentId}/salary-matrix`
+    );
+};
+export const callFetchMySalaryMatrix = (departmentId: number) => {
+    return axios.get<IBackendRes<ISalaryMatrix[]>>(
+        `/api/v1/departments/${departmentId}/salary-matrix/my`
+    );
+};
+// ======================================================================
+// KHUNG LƯƠNG
+// ======================================================================
+// Khung lương cá nhân
+export const callFetchMyCompanySalaryGrades = () => {
+    return axios.get<IBackendRes<ICompanySalaryGrade[]>>(
+        `/api/v1/company-salary-grades/my`
+    );
+};
+
+export const callFetchMyDepartmentSalaryGrades = () => {
+    return axios.get<IBackendRes<IDepartmentSalaryGrade[]>>(
+        `/api/v1/department-salary-grades/my`
+    );
+};
+
+export const callFetchMySectionSalaryGrades = () => {
+    return axios.get<IBackendRes<ISectionSalaryGrade[]>>(
+        `/api/v1/section-salary-grades/my`
+    );
+};
+
+// Khung lương toàn công ty / phòng ban / bộ phận
+export const callFetchMyCompanyAllSalaryGrades = () => {
+    return axios.get<IBackendRes<ICompanySalaryGrade[]>>(
+        `/api/v1/company-salary-grades/my-company`
+    );
+};
+
+export const callFetchMyDepartmentAllSalaryGrades = () => {
+    return axios.get<IBackendRes<IDepartmentSalaryGrade[]>>(
+        `/api/v1/department-salary-grades/my-department`
+    );
+};
+
+export const callFetchMySectionAllSalaryGrades = () => {
+    return axios.get<IBackendRes<ISectionSalaryGrade[]>>(
+        `/api/v1/section-salary-grades/my-section`
     );
 };
 

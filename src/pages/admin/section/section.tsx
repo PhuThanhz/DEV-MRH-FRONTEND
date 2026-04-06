@@ -193,7 +193,7 @@ const SectionPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 180,
+            width: 240,
             fixed: "right",
             render: (_, record) => {
                 const items: MenuProps["items"] = [
@@ -256,18 +256,26 @@ const SectionPage = () => {
                                 }}
                             />
                         </Access>
+
                         <Access
                             permission={ALL_PERMISSIONS.SECTION_JOB_TITLES.GET_PAGINATE}
                             hideChildren
                         >
-                            <Button
-                                type="text"
-                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                            <Tag
+                                color="cyan"
+                                style={{
+                                    cursor: "pointer",
+                                    borderRadius: 6,
+                                    padding: "2px 10px",
+                                    fontWeight: 500,
+                                }}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenJobTitle(true);
                                 }}
-                            />
+                            >
+                                Cấu hình chức danh
+                            </Tag>
                         </Access>
                         <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
                             <Button
@@ -317,29 +325,12 @@ const SectionPage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-                                type: "async-select",
-                                loadOptions: async () => {
-                                    const res = await callFetchCompany(
-                                        "page=1&size=100&sort=name,asc"
-                                    );
-                                    return (res?.data?.result ?? []).map((c: any) => ({
-                                        label: c.name,
-                                        value: c.id,
-                                    }));
-                                },
+
                             },
                             {
                                 key: "departmentId",
                                 label: "Phòng ban",
-                                type: "async-select",
-                                dependsOn: "companyId",
-                                loadOptionsWithDep: async (companyId: number) => {
-                                    const res = await callFetchDepartmentsByCompany(companyId);
-                                    return (res?.data ?? []).map((d: any) => ({
-                                        label: d.name,
-                                        value: d.id,
-                                    }));
-                                },
+
                             },
                             {
                                 key: "status",

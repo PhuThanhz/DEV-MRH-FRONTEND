@@ -34,33 +34,25 @@ const ForgotPassword = () => {
   const onFinish = async (values: { email: string }) => {
     const { email } = values;
     setIsSubmit(true);
+
     try {
-      const res = await callRequestPasswordCode(email);
-
-      if (res?.data?.success) {
-        const realMode = res.data.mode;
-
-        message.success({
-          content:
-            realMode === "activate"
-              ? "Tài khoản chưa kích hoạt. Vui lòng kiểm tra email!"
-              : "Mã đặt lại mật khẩu đã được gửi!",
-          duration: 4,
-        });
-
-        navigate(
-          `/confirm-reset-password?email=${encodeURIComponent(email)}&mode=${realMode}`
-        );
-      }
-    } catch (error: any) {
-      notification.error({
-        message: "Gửi thất bại",
-        description: error?.message || "Không thể gửi email lúc này. Vui lòng thử lại sau.",
-        duration: 5,
-      });
-    } finally {
-      setIsSubmit(false);
+      await callRequestPasswordCode(email);
+    } catch (error) {
+      // bỏ qua lỗi để không lộ thông tin
     }
+
+    // luôn hiển thị giống nhau
+    message.success({
+      content: "Nếu email tồn tại, mã xác nhận sẽ được gửi!",
+      duration: 4,
+    });
+
+    // luôn chuyển trang
+    navigate(
+      `/confirm-reset-password?email=${encodeURIComponent(email)}&mode=${mode}`
+    );
+
+    setIsSubmit(false);
   };
 
   return (

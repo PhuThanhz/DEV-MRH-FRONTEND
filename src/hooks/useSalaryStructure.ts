@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
     callFetchSalaryMatrix,
+    callFetchMySalaryMatrix,  // ← THÊM
     callUpsertSalaryStructure,
 } from "@/config/api";
 
@@ -18,7 +19,7 @@ import type {
 import { notify } from "@/components/common/notification/notify";
 
 // ======================================================================
-// 1) LẤY BẢNG MA TRẬN LƯƠNG (JOB_TITLE × GRADE)
+// 1) LẤY BẢNG MA TRẬN LƯƠNG (JOB_TITLE × GRADE) — ADMIN
 // ======================================================================
 
 export const useSalaryMatrixQuery = (departmentId?: number) => {
@@ -27,18 +28,30 @@ export const useSalaryMatrixQuery = (departmentId?: number) => {
         enabled: !!departmentId,
         queryFn: async () => {
             const res = await callFetchSalaryMatrix(departmentId!);
-
-            if (!res?.data) {
-                throw new Error("Không thể tải bảng khung lương");
-            }
-
+            if (!res?.data) throw new Error("Không thể tải bảng khung lương");
             return res.data as ISalaryMatrix[];
         },
     });
 };
 
 // ======================================================================
-// 2) LẤY CẤU TRÚC LƯƠNG TỪ LOCAL MATRIX (KHÔNG GỌI API!)
+// 2) LẤY BẢNG MA TRẬN LƯƠNG CỦA TÔI — USER/TRƯỞNG PHÒNG
+// ======================================================================
+
+export const useMyDepartmentMatrixQuery = (departmentId?: number) => {
+    return useQuery({
+        queryKey: ["salary-matrix-my", departmentId],
+        enabled: !!departmentId,
+        queryFn: async () => {
+            const res = await callFetchMySalaryMatrix(departmentId!);
+            if (!res?.data) return [];
+            return res.data as ISalaryMatrix[];
+        },
+    });
+};
+
+// ======================================================================
+// 3) LẤY CẤU TRÚC LƯƠNG TỪ LOCAL MATRIX (KHÔNG GỌI API!)
 // ======================================================================
 
 export const useLocalSalaryStructure = (
@@ -56,7 +69,7 @@ export const useLocalSalaryStructure = (
 };
 
 // ======================================================================
-// 3) UPSERT CẤU TRÚC LƯƠNG (THÁNG + GIỜ)
+// 4) UPSERT CẤU TRÚC LƯƠNG (THÁNG + GIỜ)
 // ======================================================================
 
 export const useUpsertSalaryStructureMutation = () => {
@@ -65,18 +78,12 @@ export const useUpsertSalaryStructureMutation = () => {
     return useMutation({
         mutationFn: async (body: IReqSalaryStructure) => {
             const res = await callUpsertSalaryStructure(body);
-
-            if (!res?.data) {
-                throw new Error(res?.message || "Không thể lưu cấu trúc lương");
-            }
-
+            if (!res?.data) throw new Error(res?.message || "Không thể lưu cấu trúc lương");
             return res.data;
         },
 
         onSuccess: () => {
             notify.success("Đã lưu cấu trúc lương");
-
-            // CHỈ cần reload lại bảng matrix
             queryClient.invalidateQueries({ queryKey: ["salary-matrix"] });
         },
 

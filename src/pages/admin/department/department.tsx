@@ -34,7 +34,7 @@ import {
 
 import ModalDepartment from "./modal.department";
 import ViewDepartment from "./view.department";
-import PermissionViewModal from "./permissions/ components/PermissionViewModal";
+import PermissionViewModal from "./permissions/components/PermissionViewModal";
 import PositionChartModal from "@/pages/admin/department/position-chart/PositionChartModal";
 
 import { PATHS } from "@/constants/paths";
@@ -75,13 +75,14 @@ const DepartmentPage = () => {
     // ===================== PERMISSION CHECKS =====================
     const canViewOrgChart = useAccess(ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE);
     const canViewObjectives = useAccess(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW);
-    const canViewProcedures = useAccess(ALL_PERMISSIONS.DEPARTMENT_PROCEDURES.GET_PAGINATE);
-    const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
+    const canViewProcedures = useAccess(
+        ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_PAGINATE
+    ); const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
     const canViewCareerPaths = useAccess(ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT);
-    const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW);
-    const canViewPositionChart = useAccess(
-        ALL_PERMISSIONS.POSITION_CHART.VIEW
-    );
+    const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW)
+        || useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW_MY); const canViewPositionChart = useAccess(
+            ALL_PERMISSIONS.POSITION_CHART.VIEW
+        );
     const canDeleteDepartment = useAccess(ALL_PERMISSIONS.DEPARTMENTS.DELETE);
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -231,7 +232,7 @@ const DepartmentPage = () => {
             icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Khung lương</span>,
             onClick: () => navigate(
-                `/admin/salary-range/${record.id}?departmentName=${encodeURIComponent(record.name)}`
+                `/admin/departments/${record.id}/salary-range?departmentName=${encodeURIComponent(record.name)}`
             ),
         });
 
@@ -370,14 +371,21 @@ const DepartmentPage = () => {
                             permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.GET_PAGINATE}
                             hideChildren
                         >
-                            <Button
-                                type="text"
-                                icon={<FileTextOutlined style={{ color: "#13c2c2", fontSize: 18 }} />}
+                            <Tag
+                                color="cyan"
+                                style={{
+                                    cursor: "pointer",
+                                    borderRadius: 6,
+                                    padding: "2px 10px",
+                                    fontWeight: 500,
+                                }}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenJobTitle(true);
                                 }}
-                            />
+                            >
+                                Cấu hình chức danh
+                            </Tag>
                         </Access>
                         {/* Sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
@@ -433,16 +441,7 @@ const DepartmentPage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-                                type: "async-select",
-                                loadOptions: async () => {
-                                    const res = await callFetchCompany(
-                                        "page=1&size=100&sort=name,asc"
-                                    );
-                                    return (res?.data?.result ?? []).map((c: any) => ({
-                                        label: c.name,
-                                        value: c.id,
-                                    }));
-                                },
+
                             },
                             {
                                 key: "status",
@@ -516,15 +515,25 @@ const DepartmentPage = () => {
                     />
                 </Modal>
             )}
-            {selectedDepartment && (
-                <PermissionViewModal
-                    open={openPermissionModal}
-                    onClose={() => setOpenPermissionModal(false)}
-                    departmentName={selectedDepartment.name}
-                />
-            )}
 
-            {selectedDepartment && canViewPositionChart && (
+
+            {selectedDepartment && (
+                <Modal
+                    open={openPermissionModal}
+                    onCancel={() => setOpenPermissionModal(false)}
+                    footer={null}
+                    width="90vw"
+                    destroyOnClose
+                    title={`Phân quyền — ${selectedDepartment.name}`}
+                >
+                    <PermissionViewModal
+                        departmentId={selectedDepartment.id}   // ✅ QUAN TRỌNG
+                        departmentName={selectedDepartment.name}
+                    />
+                </Modal>
+            )}
+            {/* ← THÊM ĐOẠN NÀY */}
+            {selectedDepartment && (
                 <PositionChartModal
                     open={openPositionChartModal}
                     onClose={() => setOpenPositionChartModal(false)}

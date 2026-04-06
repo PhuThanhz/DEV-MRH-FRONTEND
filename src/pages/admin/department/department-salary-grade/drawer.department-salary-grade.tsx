@@ -25,12 +25,14 @@ import {
     useRestoreDepartmentSalaryGradeMutation,
 } from "@/hooks/useDepartmentSalaryGrades";
 
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+
 import type { IDepartmentSalaryGrade } from "@/types/backend";
 import type { ColumnsType } from "antd/es/table";
 
 const { Title, Text } = Typography;
 
-/* ===================== STYLE CHUẨN (GIỐNG SECTION) ===================== */
 const pinkButtonStyle: React.CSSProperties = {
     backgroundColor: "#ff5fa2",
     color: "#fff",
@@ -61,11 +63,9 @@ const DrawerDepartmentSalaryGrade = ({
     const [openModal, setOpenModal] = useState(false);
     const [form] = Form.useForm();
 
-    /* FETCH DATA */
     const { data = [], isLoading, isFetching, refetch } =
         useDepartmentSalaryGradesQuery(departmentJobTitleId);
 
-    /* MUTATIONS */
     const { mutate: createGrade, isPending: creating } =
         useCreateDepartmentSalaryGradeMutation();
 
@@ -78,7 +78,6 @@ const DrawerDepartmentSalaryGrade = ({
     const suggestedGrade =
         data.length > 0 ? Math.max(...data.map((g) => g.gradeLevel ?? 0)) + 1 : 1;
 
-    /* CREATE */
     const handleCreate = (values: { gradeLevel: number }) => {
         createGrade(
             { departmentJobTitleId, gradeLevel: values.gradeLevel },
@@ -93,7 +92,6 @@ const DrawerDepartmentSalaryGrade = ({
         );
     };
 
-    /* DELETE */
     const handleDelete = (record: IDepartmentSalaryGrade) => {
         deleteGrade(
             { id: record.id, departmentJobTitleId },
@@ -106,7 +104,6 @@ const DrawerDepartmentSalaryGrade = ({
         );
     };
 
-    /* RESTORE */
     const handleRestore = (record: IDepartmentSalaryGrade) => {
         restoreGrade(
             { id: record.id, departmentJobTitleId },
@@ -119,7 +116,6 @@ const DrawerDepartmentSalaryGrade = ({
         );
     };
 
-    /* ===================== TABLE COLUMNS ===================== */
     const columns: ColumnsType<IDepartmentSalaryGrade> = [
         {
             title: "STT",
@@ -164,27 +160,31 @@ const DrawerDepartmentSalaryGrade = ({
             render: (_, record) => (
                 <Space>
                     {record.active ? (
-                        <Popconfirm
-                            title="Bạn chắc chắn muốn xoá?"
-                            onConfirm={() => handleDelete(record)}
-                            okButtonProps={{ danger: true }}
-                        >
+                        <Access permission={ALL_PERMISSIONS.DEPARTMENT_SALARY_GRADES.DELETE} hideChildren>
+                            <Popconfirm
+                                title="Bạn chắc chắn muốn xoá?"
+                                onConfirm={() => handleDelete(record)}
+                                okButtonProps={{ danger: true }}
+                            >
+                                <Button
+                                    type="text"
+                                    danger
+                                    size="small"
+                                    icon={<DeleteOutlined />}
+                                    loading={deleting}
+                                />
+                            </Popconfirm>
+                        </Access>
+                    ) : (
+                        <Access permission={ALL_PERMISSIONS.DEPARTMENT_SALARY_GRADES.RESTORE} hideChildren>
                             <Button
                                 type="text"
-                                danger
                                 size="small"
-                                icon={<DeleteOutlined />}
-                                loading={deleting}
+                                icon={<UndoOutlined style={{ color: "#1677ff" }} />}
+                                loading={restoring}
+                                onClick={() => handleRestore(record)}
                             />
-                        </Popconfirm>
-                    ) : (
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<UndoOutlined style={{ color: "#1677ff" }} />}
-                            loading={restoring}
-                            onClick={() => handleRestore(record)}
-                        />
+                        </Access>
                     )}
                 </Space>
             ),
@@ -223,31 +223,31 @@ const DrawerDepartmentSalaryGrade = ({
                     )}
                 </Card>
 
-                {/* BUTTON BÊN PHẢI DƯỚI */}
-                <div
-                    style={{
-                        width: "100%",
-                        marginTop: 20,
-                        display: "flex",
-                        justifyContent: "flex-end",
-                    }}
-                >
-                    <Button
-                        style={pinkButtonStyle}
-                        onClick={() => setOpenModal(true)}
-                        onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#ff4b97")
-                        }
-                        onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = "#ff5fa2")
-                        }
+                <Access permission={ALL_PERMISSIONS.DEPARTMENT_SALARY_GRADES.CREATE} hideChildren>
+                    <div
+                        style={{
+                            width: "100%",
+                            marginTop: 20,
+                            display: "flex",
+                            justifyContent: "flex-end",
+                        }}
                     >
-                        + Thêm bậc lương
-                    </Button>
-                </div>
+                        <Button
+                            style={pinkButtonStyle}
+                            onClick={() => setOpenModal(true)}
+                            onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor = "#ff4b97")
+                            }
+                            onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor = "#ff5fa2")
+                            }
+                        >
+                            + Thêm bậc lương
+                        </Button>
+                    </div>
+                </Access>
             </Drawer>
 
-            {/* ========== MODAL ========== */}
             <Modal
                 title="Thêm bậc lương mới"
                 open={openModal}

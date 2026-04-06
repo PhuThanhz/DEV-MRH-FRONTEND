@@ -5,6 +5,8 @@ import {
     callUpdateSectionSalaryGrade,
     callDeleteSectionSalaryGrade,
     callRestoreSectionSalaryGrade,
+    callFetchMySectionSalaryGrades,
+    callFetchMySectionAllSalaryGrades,
 } from "@/config/api";
 
 import type {
@@ -117,3 +119,20 @@ export const useRestoreSectionSalaryGradeMutation = () => {
             notify.error(err?.message || "Không thể khôi phục bậc lương"),
     });
 };
+export const useMySectionSalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["section-salary-grades-my"],
+        queryFn: async () => {
+            const res = await callFetchMySectionSalaryGrades();
+            return res?.data ?? [];
+        },
+    });
+
+export const useMySectionAllSalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["section-salary-grades-my-section"],
+        queryFn: async () => {
+            const res = await callFetchMySectionAllSalaryGrades();
+            return res?.data ?? [];
+        },
+    });

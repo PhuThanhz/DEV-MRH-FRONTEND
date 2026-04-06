@@ -8,6 +8,8 @@ import useAccess from "@/hooks/useAccess";
 import CareerPathTab from "../career-path/careerpathtab/CareerPathTab";
 import CareerPathTemplateTab from "./CareerPathTemplateTab";
 import EmployeeCareerPathTab from "./EmployeeCareerPathTab";
+import DeptPageNav from "@/components/common/navigation/DeptPageNav";
+import { useDeptNavPages } from "@/hooks/useDeptNavPages"; // ← thêm
 
 type TabKey = "careerpath" | "template" | "employee";
 
@@ -26,6 +28,8 @@ const CareerPathPage = () => {
     const canViewOwn = useAccess(ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.GET_BY_USER);
     const canViewEmployee = canViewDepartment || canViewOwn;
 
+    const deptNavPages = useDeptNavPages(); // ← thêm
+
     const tabStyle = (active: boolean): React.CSSProperties => ({
         padding: "7px 20px", borderRadius: 7,
         border: "none", cursor: "pointer", fontSize: 13,
@@ -41,7 +45,6 @@ const CareerPathPage = () => {
 
     return (
         <PageContainer title={`Lộ trình thăng tiến — ${departmentName}`}>
-            {/* ── Tab bar ── */}
             <div style={{
                 display: "inline-flex",
                 background: T.s2, borderRadius: 10,
@@ -49,21 +52,18 @@ const CareerPathPage = () => {
                 border: `1px solid ${T.line}`,
                 marginBottom: 20,
             }}>
-                {/* Tab: Chức danh */}
                 <Access permission={ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT} hideChildren>
                     <button onClick={() => setActiveKey("careerpath")} style={tabStyle(activeKey === "careerpath")}>
                         Chức danh
                     </button>
                 </Access>
 
-                {/* Tab: Lộ trình tiêu chuẩn */}
                 <Access permission={ALL_PERMISSIONS.CAREER_PATH_TEMPLATES.GET_ALL} hideChildren>
                     <button onClick={() => setActiveKey("template")} style={tabStyle(activeKey === "template")}>
                         Lộ trình thăng tiến tiêu chuẩn
                     </button>
                 </Access>
 
-                {/* Tab: IDP — hiện nếu có 1 trong 2 permission */}
                 {canViewEmployee && (
                     <button onClick={() => setActiveKey("employee")} style={tabStyle(activeKey === "employee")}>
                         Lộ trình thăng tiến cá nhân - IDP
@@ -71,7 +71,6 @@ const CareerPathPage = () => {
                 )}
             </div>
 
-            {/* ── Content ── */}
             {activeKey === "careerpath" && (
                 <Access permission={ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT}>
                     <CareerPathTab />
@@ -85,6 +84,8 @@ const CareerPathPage = () => {
             {activeKey === "employee" && canViewEmployee && (
                 <EmployeeCareerPathTab viewMode={canViewDepartment ? "department" : "own"} />
             )}
+
+            <DeptPageNav pages={deptNavPages} /> {/* ← sửa */}
         </PageContainer>
     );
 };

@@ -956,7 +956,7 @@ export interface IJobDescription {
     belongsTo: string
     collaborateWith: string
 
-    status: JD_STATUS
+    status?: JD_STATUS
     version?: number
 
     effectiveDate?: string
@@ -1176,9 +1176,9 @@ export type JD_STATUS =
     | "DRAFT"
     | "IN_REVIEW"
     | "REJECTED"
+    | "RETURNED"   // ← THÊM
+    | "APPROVED"
     | "PUBLISHED";
-
-
 /* ===================== JD FLOW REQUEST ===================== */
 
 export interface IReqSubmitJdFlow {
@@ -1228,10 +1228,18 @@ export interface IJDFlowLog {
 /* ===================== JD APPROVER ===================== */
 
 export interface IJDApprover {
-    id: number
-    name: string
-    email?: string
-    avatar?: string
+    id: number;
+    name: string;
+    email: string;
+    avatar?: string;
+    isFinal: boolean;
+    positions: {
+        companyName: string;
+        departmentName?: string;
+        jobTitleName: string;
+        positionCode?: string;
+        source: string;
+    }[];
 }
 export interface IJDFlowItem {
     jdId: number
@@ -1274,6 +1282,16 @@ export interface IJdInbox {
     };
 
     updatedAt?: string;
+
+    // ── THÊM 2 FIELD NÀY ──
+    rejectComment?: string;
+    rejectorName?: string;
+    rejectorPosition?: string;    // ← THÊM
+    rejectorDepartment?: string;  // ← THÊM
+    rejectorPositionCode?: string;  // ← THÊM
+    rejectorPositionCode?: string;  // ← THÊM
+
+
 }
 /* ============================================
     PROCEDURE (DÙNG CHUNG CHO COMPANY & DEPARTMENT)

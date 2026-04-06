@@ -1,7 +1,8 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
-// Import thẳng từ company để dùng chung
 import OrgChartFlow from "@/pages/admin/company/org-chart/OrgChartFlow";
+import DeptPageNav from "@/components/common/navigation/DeptPageNav";
+import { useDeptNavPages } from "@/hooks/useDeptNavPages"; // ← thêm
 
 const DepartmentOrgChartPage = () => {
     const { departmentId } = useParams();
@@ -9,6 +10,8 @@ const DepartmentOrgChartPage = () => {
 
     const id = Number(departmentId);
     const departmentName = searchParams.get("departmentName") ?? "Sơ đồ tổ chức";
+
+    const deptNavPages = useDeptNavPages(); // ← thêm
 
     if (!id) return null;
 
@@ -18,6 +21,7 @@ const DepartmentOrgChartPage = () => {
                 ownerType="DEPARTMENT"
                 ownerId={id}
             />
+            <DeptPageNav pages={deptNavPages} /> {/* ← thêm pages prop */}
         </PageContainer>
     );
 };

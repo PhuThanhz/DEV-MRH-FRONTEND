@@ -5,6 +5,8 @@ import {
     callUpdateDepartmentSalaryGrade,
     callDeleteDepartmentSalaryGrade,
     callRestoreDepartmentSalaryGrade,
+    callFetchMyDepartmentSalaryGrades,
+    callFetchMyDepartmentAllSalaryGrades,
 } from "@/config/api";
 
 import { notify } from "@/components/common/notification/notify";
@@ -123,3 +125,20 @@ export const useRestoreDepartmentSalaryGradeMutation = () => {
         onError: (err: any) => notify.error(err?.message || "Không thể khôi phục"),
     });
 };
+export const useMyDepartmentSalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["department-salary-grades-my"],
+        queryFn: async () => {
+            const res = await callFetchMyDepartmentSalaryGrades();
+            return res?.data ?? [];
+        },
+    });
+
+export const useMyDepartmentAllSalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["department-salary-grades-my-department"],
+        queryFn: async () => {
+            const res = await callFetchMyDepartmentAllSalaryGrades();
+            return res?.data ?? [];
+        },
+    });

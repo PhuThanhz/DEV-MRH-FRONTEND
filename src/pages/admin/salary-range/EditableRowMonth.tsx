@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Button, Input, message } from "antd";
-import { EditOutlined, CheckOutlined } from "@ant-design/icons";
+import { useState, useRef, useEffect } from "react";
+import { Input, message } from "antd";
+import { EditOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ISalaryStructure, IReqSalaryStructure } from "@/types/backend";
 import { useUpsertSalaryStructureMutation } from "@/hooks/useSalaryStructure";
 
@@ -13,62 +13,60 @@ interface Props {
 }
 
 const monthFields = [
-    "monthBaseSalary",
-    "monthPositionAllowance",
-    "monthMealAllowance",
-    "monthFuelSupport",
-    "monthPhoneSupport",
-    "monthOtherSupport",
-    "monthKpiBonusA",
-    "monthKpiBonusB",
-    "monthKpiBonusC",
-    "monthKpiBonusD",
+    "monthBaseSalary", "monthPositionAllowance", "monthMealAllowance",
+    "monthFuelSupport", "monthPhoneSupport", "monthOtherSupport",
+    "monthKpiBonusA", "monthKpiBonusB", "monthKpiBonusC", "monthKpiBonusD",
 ] as const;
 
-const EditableRowMonth = ({
-    structure,
-    ownerLevel,
-    jobTitleId,
-    gradeId,
-    onSaved,
-}: Props) => {
+const parseViVN = (s: string): number | null => {
+    const cleaned = s.replace(/\./g, "").replace(/,/g, "").trim();
+    if (cleaned === "") return null;
+    const n = Number(cleaned);
+    return isNaN(n) ? null : n;
+};
 
-    const [values, setValues] = useState<Record<string, string>>(() => {
-        const initial: any = {};
-        monthFields.forEach((f) => {
-            initial[f] = structure?.[f] != null ? String(structure[f]) : "";
-        });
-        return initial;
+const formatViVN = (s: string): string => {
+    const n = parseViVN(s);
+    if (n == null) return "";
+    return n.toLocaleString("vi-VN");
+};
+
+const structToValues = (structure: ISalaryStructure | null): Record<string, string> => {
+    const out: Record<string, string> = {};
+    monthFields.forEach((f) => {
+        const v = structure?.[f];
+        out[f] = v != null ? formatViVN(String(v)) : "";
     });
+    return out;
+};
 
-    const [originalValues] = useState<Record<string, string>>(() => {
-        const initial: any = {};
-        monthFields.forEach((f) => {
-            initial[f] = structure?.[f] != null ? String(structure[f]) : "";
-        });
-        return initial;
-    });
+const fmt = (val?: number | null) =>
+    val != null ? val.toLocaleString("vi-VN") : <span style={{ color: "#bfbfbf" }}>—</span>;
 
-    const [isSaved, setIsSaved] = useState(true);
-    const [showSavedFeedback, setShowSavedFeedback] = useState(false);
+const EditableRowMonth = ({ structure, ownerLevel, jobTitleId, gradeId, onSaved }: Props) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [values, setValues] = useState<Record<string, string>>(() => structToValues(structure));
+    const savedValuesRef = useRef<Record<string, string>>(structToValues(structure));
     const [focusedField, setFocusedField] = useState<string | null>(null);
+    const [showSavedFeedback, setShowSavedFeedback] = useState(false);
+
+    useEffect(() => {
+        const fresh = structToValues(structure);
+        setValues(fresh);
+        savedValuesRef.current = fresh;
+    }, [structure]);
 
     const upsert = useUpsertSalaryStructureMutation();
 
-    const handleChange = (field: string, v: string) => {
-        setValues((prev) => {
-            const newValues = { ...prev, [field]: v };
-            const hasChanges = monthFields.some(f => newValues[f] !== originalValues[f]);
-            setIsSaved(!hasChanges);
-            return newValues;
-        });
+    const handleEdit = () => setIsEditing(true);
+
+    const handleCancel = () => {
+        setValues(savedValuesRef.current);
+        setIsEditing(false);
     };
 
-    const formatCurrency = (value: string) => {
-        if (!value) return "";
-        const num = parseFloat(value.replace(/,/g, ""));
-        if (isNaN(num)) return value;
-        return num.toLocaleString("vi-VN");
+    const handleChange = (field: string, rawDigits: string) => {
+        setValues((prev) => ({ ...prev, [field]: rawDigits }));
     };
 
     const handleSave = () => {
@@ -77,248 +75,112 @@ const EditableRowMonth = ({
             ownerJobTitleId: jobTitleId,
             salaryGradeId: gradeId,
         };
-
-        monthFields.forEach((f) => {
-            const raw = values[f];
-            payload[f] = raw === "" ? null : Number(raw.replace(/,/g, ""));
-        });
+        monthFields.forEach((f) => { payload[f] = parseViVN(values[f]); });
 
         upsert.mutate(payload, {
             onSuccess: (newStruct) => {
-                message.success({
-                    content: "Đã lưu thành công",
-                    duration: 2,
-                });
+                message.success({ content: "Đã lưu thành công", duration: 2 });
                 onSaved(newStruct as ISalaryStructure);
-                setIsSaved(true);
-
-                // Show micro-interaction feedback
+                setIsEditing(false);
                 setShowSavedFeedback(true);
                 setTimeout(() => setShowSavedFeedback(false), 2000);
             },
             onError: () => {
-                message.error({
-                    content: "Lưu thất bại, vui lòng thử lại",
-                    duration: 3,
-                });
+                message.error({ content: "Lưu thất bại, vui lòng thử lại", duration: 3 });
             },
         });
     };
 
     return (
         <>
-            {monthFields.map((field) => {
-                const isFocused = focusedField === field;
-
-                return (
-                    <td key={field} className={`input-cell ${isFocused ? "focused-cell" : ""}`}>
-                        <div className="input-wrapper">
+            {monthFields.map((field) => (
+                <td key={field} className={`er-input-cell${focusedField === field ? " er-focused" : ""}`}>
+                    {isEditing ? (
+                        <div className="er-input-wrap">
                             <Input
-                                type="text"
                                 value={values[field]}
                                 onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                    handleChange(field, val);
+                                    const digits = e.target.value.replace(/[^0-9]/g, "");
+                                    handleChange(field, digits);
                                 }}
                                 onFocus={() => setFocusedField(field)}
                                 onBlur={(e) => {
-                                    const formatted = formatCurrency(e.target.value);
+                                    const formatted = formatViVN(e.target.value);
                                     setValues((prev) => ({ ...prev, [field]: formatted }));
-                                    setTimeout(() => setFocusedField(null), 200);
+                                    setTimeout(() => setFocusedField(null), 150);
                                 }}
                                 placeholder="0"
-                                className="salary-input"
+                                className="er-salary-input"
                             />
-
                         </div>
-                    </td>
-                );
-            })}
+                    ) : (
+                        <span className="num-display">
+                            {fmt(structure?.[field])}
+                        </span>
+                    )}
+                </td>
+            ))}
 
-            <td className="action-cell">
-                {!isSaved ? (
-                    <Button
-                        type="default"
-                        onClick={handleSave}
-                        loading={upsert.isPending}
-                        size="middle"
-                        icon={<EditOutlined />}
-                        className="save-button-edit"
-                    >
-                        Lưu
-                    </Button>
+            <td className="er-action-cell">
+                {isEditing ? (
+                    <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center" }}>
+                        <CheckOutlined
+                            style={{ fontSize: 18, color: "#52c41a", cursor: upsert.isPending ? "not-allowed" : "pointer", opacity: upsert.isPending ? 0.5 : 1 }}
+                            onClick={upsert.isPending ? undefined : handleSave}
+                        />
+                        <CloseOutlined
+                            style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
+                            onClick={handleCancel}
+                        />
+                    </div>
                 ) : (
-                    <div className={`save-indicator ${showSavedFeedback ? 'saved-pulse' : ''}`}>
-                        <CheckOutlined className="check-icon" />
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <EditOutlined
+                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                            onClick={handleEdit}
+                        />
+                        {showSavedFeedback && (
+                            <CheckOutlined style={{ color: "#52c41a", fontSize: 14 }} />
+                        )}
                     </div>
                 )}
             </td>
 
-            <style>
-                {`
-                    .input-cell {
-                        position: relative;
-                        padding: 8px !important;
-                        transition: background 0.15s ease;
-                    }
-
-                    .input-cell.focused-cell {
-                        background: #fafafa !important;
-                    }
-
-                    .input-wrapper {
-                        position: relative;
-                    }
-
-                    .salary-input {
-                        font-weight: 500;
-                        border-radius: 6px;
-                        min-width: 130px;
-                        text-align: right;
-                        border: none;
-                        background: transparent;
-                        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                        color: #262626;
-                    }
-
-                    .salary-input:hover {
-                        background: #fafafa;
-                    }
-
-                    .salary-input:focus {
-                        background: white;
-                        border: none;
-                        box-shadow: 0 0 0 1px rgba(235, 47, 150, 0.3), 0 2px 8px rgba(235, 47, 150, 0.08);
-                    }
-
-                    .salary-input::placeholder {
-                        color: #d9d9d9;
-                    }
-
-                    .calc-popup {
-                        position: absolute;
-                        top: calc(100% + 8px);
-                        right: 0;
-                        z-index: 1000;
-                        background: white;
-                        border: 1px solid #e8e8e8;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.05);
-                        padding: 10px 12px;
-                        min-width: 200px;
-                        animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                    }
-
-                    @keyframes slideUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(4px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-
-                    .calc-row {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 6px 0;
-                        border-bottom: 1px solid #f5f5f5;
-                    }
-
-                    .calc-row:last-child {
-                        border-bottom: none;
-                    }
-
-                    .calc-label {
-                        font-size: 12px;
-                        font-weight: 600;
-                        color: #8c8c8c;
-                    }
-
-                    .calc-value {
-                        font-size: 13px;
-                        font-weight: 600;
-                        color: #262626;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    }
-
-                    .action-cell {
-                        min-width: 80px;
-                    }
-
-                    /* Save button when editing */
-                    .save-button-edit.ant-btn {
-                        background: white;
-                        border: 1.5px solid #eb2f96;
-                        border-radius: 8px;
-                        font-weight: 500;
-                        color: #eb2f96;
-                        box-shadow: 0 1px 4px rgba(235, 47, 150, 0.15);
-                        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    }
-
-                    .save-button-edit.ant-btn:hover:not(:disabled) {
-                        background: #eb2f96;
-                        color: white;
-                        border-color: #eb2f96;
-                        box-shadow: 0 2px 8px rgba(235, 47, 150, 0.3);
-                        transform: translateY(-1px);
-                    }
-
-                    .save-button-edit.ant-btn:active:not(:disabled) {
-                        transform: translateY(0);
-                    }
-
-                    .save-button-edit .anticon {
-                        font-size: 13px;
-                    }
-
-                    /* Micro-interaction saved indicator - just icon, no text */
-                   .save-indicator {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    background: transparent;
-}
-
-.check-icon {
-    font-size: 16px;
-    color: #52c41a;
-}
-                    /* Pulse animation when just saved */
-                    .save-indicator.saved-pulse {
-                        animation: pulse 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-                    }
-
-                    @keyframes pulse {
-                        0%, 100% {
-                            transform: scale(1);
-                            box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4);
-                        }
-                        50% {
-                            transform: scale(1.1);
-                            box-shadow: 0 0 0 4px rgba(82, 196, 26, 0);
-                        }
-                    }
-
-                    /* Remove Ant Design default styles */
-                    .salary-input.ant-input {
-                        padding: 6px 12px;
-                    }
-
-                    .salary-input.ant-input:focus {
-                        outline: none;
-                    }
-                `}
-            </style>
+            <style>{`
+                .er-input-cell {
+                    position: relative;
+                    padding: 8px !important;
+                    transition: background 0.15s ease;
+                }
+                .er-input-cell.er-focused { background: #fafafa !important; }
+                .er-input-wrap { position: relative; }
+                .num-display {
+                    display: block;
+                    text-align: right;
+                    padding: 0 4px;
+                    font-size: 13px;
+                    color: #262626;
+                }
+                .er-salary-input {
+                    font-weight: 500;
+                    border-radius: 6px;
+                    min-width: 130px;
+                    text-align: right;
+                    border: none;
+                    background: transparent;
+                    transition: all 0.2s;
+                    color: #262626;
+                }
+                .er-salary-input:hover { background: #fafafa; }
+                .er-salary-input:focus {
+                    background: white;
+                    border: none;
+                    box-shadow: 0 0 0 1px rgba(235,47,150,0.3), 0 2px 8px rgba(235,47,150,0.08);
+                }
+                .er-salary-input::placeholder { color: #d9d9d9; }
+                .er-salary-input.ant-input { padding: 6px 12px; }
+                .er-action-cell { min-width: 80px; }
+            `}</style>
         </>
     );
 };

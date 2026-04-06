@@ -204,16 +204,7 @@ const PositionLevelPage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-                                type: "async-select",
-                                loadOptions: async () => {
-                                    const res = await callFetchCompany(
-                                        "page=1&size=100&sort=name,asc"
-                                    );
-                                    return (res?.data?.result ?? []).map((c: any) => ({
-                                        label: c.name,
-                                        value: c.id,
-                                    }));
-                                },
+
                             },
                         ]}
                     />

@@ -4,7 +4,9 @@ import {
     callCreateCompanySalaryGrade,
     callUpdateCompanySalaryGrade,
     callDeleteCompanySalaryGrade,
-    callRestoreCompanySalaryGrade
+    callRestoreCompanySalaryGrade,
+    callFetchMyCompanySalaryGrades,
+    callFetchMyCompanyAllSalaryGrades,
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
 
@@ -115,3 +117,20 @@ export const useRestoreCompanySalaryGradeMutation = () => {
         onError: (err: any) => notify.error(err.message)
     });
 };
+export const useMyCompanySalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["company-salary-grades-my"],
+        queryFn: async () => {
+            const res = await callFetchMyCompanySalaryGrades();
+            return res?.data ?? [];
+        },
+    });
+
+export const useMyCompanyAllSalaryGradesQuery = () =>
+    useQuery({
+        queryKey: ["company-salary-grades-my-company"],
+        queryFn: async () => {
+            const res = await callFetchMyCompanyAllSalaryGrades();
+            return res?.data ?? [];
+        },
+    });

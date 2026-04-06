@@ -40,6 +40,8 @@ import CompanyProceduresPage from "@/pages/admin/company/procedures";
 import DepartmentProceduresPage from "@/pages/admin/department/procedures";
 import WelcomePage from "@/pages/admin/WelcomePage";
 import DashboardOrWelcome from "@/pages/admin/DashboardOrWelcome";
+import PositionChartPage from "@/pages/admin/department/position-chart/index";
+
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -131,8 +133,7 @@ export default function App() {
           ),
         },
         {
-          path: "/admin/salary-range/:departmentId",
-          element: (
+          path: "/admin/departments/:departmentId/salary-range", element: (
             <ProtectedRoute>
               <SalaryRangePage />
             </ProtectedRoute>
@@ -232,8 +233,12 @@ export default function App() {
           ),
         },
         {
-          path: "/admin/departments/:id/permissions",
-          element: <DepartmentPermissionPage />,
+          path: "/admin/departments/:departmentId/permissions",
+          element: (
+            <ProtectedRoute>
+              <DepartmentPermissionPage />
+            </ProtectedRoute>
+          ),
         },
         {
           path: PATHS.ADMIN.DEPARTMENT_OBJECTIVES,
@@ -272,6 +277,15 @@ export default function App() {
               <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE}>
                 <PermissionCategoryPage />
               </Access>
+            </ProtectedRoute>
+          ),
+        },
+        // ← THÊM VÀO ĐÂY
+        {
+          path: "/admin/departments/:departmentId/position-chart",
+          element: (
+            <ProtectedRoute>
+              <PositionChartPage />
             </ProtectedRoute>
           ),
         },

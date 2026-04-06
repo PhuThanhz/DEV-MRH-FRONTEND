@@ -10,10 +10,12 @@ import {
     useCreateDepartmentObjectiveMutation,
 } from "@/hooks/useDepartmentObjectives";
 import { useSectionsQuery } from "@/hooks/useSections";
+import DeptPageNav from "@/components/common/navigation/DeptPageNav"; // ← THÊM
 
 import ObjectivesSection from "./components/ObjectivesSection";
 import TasksSection from "./components/TasksSection";
 import AuthoritiesSection from "./components/AuthoritiesSection";
+import { useDeptNavPages } from "@/hooks/useDeptNavPages";
 
 import type { IDepartmentMissionTree } from "@/types/backend";
 
@@ -30,6 +32,7 @@ const DepartmentObjectivesPage = () => {
     const { departmentId } = useParams();
     const location = useLocation();
     const idNumber = departmentId ? Number(departmentId) : undefined;
+    const deptNavPages = useDeptNavPages();
 
     const { data, isLoading } = useDepartmentObjectivesQuery(idNumber);
     const { data: sectionData } = useSectionsQuery(
@@ -240,6 +243,9 @@ const DepartmentObjectivesPage = () => {
                     </Space>
                 )}
             </div>
+
+            {/* FLOATING NAV */}
+            <DeptPageNav pages={deptNavPages} />
         </PageContainer>
     );
 };

@@ -4,6 +4,7 @@
  * - Bỏ "HĐ hết hạn"
  * - Bỏ "ID: x" trong Vai trò
  * - Fix nút "Đổi ảnh" dùng Ant Button thay native button
+ * - AvatarLightbox: redesign lớn hơn, đẹp hơn
  */
 
 import { useEffect, useState } from "react";
@@ -76,7 +77,7 @@ const formatDate = (v?: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "�
 const genderLabel = (g?: string | null) => ({ MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác" }[g ?? ""] ?? "—");
 
 /* ═══════════════════════════════════════════
-   SUB: AvatarLightbox
+   SUB: AvatarLightbox — REDESIGNED
 ═══════════════════════════════════════════ */
 interface AvatarLightboxProps {
     open: boolean; onClose: () => void;
@@ -84,93 +85,219 @@ interface AvatarLightboxProps {
     userName?: string; userEmail?: string;
     onFileSelect: (f: File) => false; disabled?: boolean;
 }
-const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, userEmail, onFileSelect, disabled }: AvatarLightboxProps) => (
-    <Modal
-        open={open}
-        onCancel={onClose}
-        footer={null}
-        centered
-        width={260}
-        maskClosable
-        closable={false}
-        styles={{
-            content: {
-                borderRadius: 18,
-                padding: 0,
-                overflow: "hidden",
-                boxShadow: "0 16px 48px rgba(0,0,0,0.14)",
-            },
-            mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.25)" },
-        }}
-    >
-        <div style={{ padding: "24px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-            {/* Nút X */}
-            <button
-                onClick={onClose}
-                style={{
-                    position: "absolute", top: 10, right: 10,
-                    width: 24, height: 24, borderRadius: "50%",
-                    border: "1px solid #e5e7eb", background: "#f9fafb",
-                    cursor: "pointer", display: "flex", alignItems: "center",
-                    justifyContent: "center", fontSize: 11, color: "#6b7280",
-                    lineHeight: 1, padding: 0,
-                }}
-            >
-                ✕
-            </button>
 
-            {/* Avatar */}
-            {displayAvatar
-                ? <img
-                    src={displayAvatar}
-                    alt="avatar"
+const AvatarLightbox = ({ open, onClose, displayAvatar, initials, userName, userEmail, onFileSelect, disabled }: AvatarLightboxProps) => {
+    const [uploadHover, setUploadHover] = useState(false);
+
+    return (
+        <Modal
+            open={open}
+            onCancel={onClose}
+            footer={null}
+            centered
+            width={380}
+            maskClosable
+            closable={false}
+            styles={{
+                content: {
+                    borderRadius: 24,
+                    padding: 0,
+                    overflow: "hidden",
+                    boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+                },
+                mask: {
+                    backdropFilter: "blur(8px)",
+                    background: "rgba(0,0,0,0.3)",
+                },
+            }}
+        >
+            {/* Top gradient band */}
+            <div style={{
+                background: "linear-gradient(145deg, #fff0f6 0%, #fce7f3 100%)",
+                padding: "32px 24px 48px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                position: "relative",
+            }}>
+                {/* Decorative blobs */}
+                <div style={{
+                    position: "absolute", top: -20, right: -20,
+                    width: 100, height: 100, borderRadius: "50%",
+                    background: "rgba(245,49,127,0.08)", pointerEvents: "none",
+                }} />
+                <div style={{
+                    position: "absolute", bottom: -10, left: -10,
+                    width: 70, height: 70, borderRadius: "50%",
+                    background: "rgba(245,49,127,0.05)", pointerEvents: "none",
+                }} />
+
+                {/* Close button */}
+                <button
+                    onClick={onClose}
                     style={{
-                        width: 100, height: 100,
-                        borderRadius: "50%", objectFit: "cover",
-                        border: `3px solid ${PINK_BORDER}`,
-                        boxShadow: "0 6px 20px rgba(245,49,127,0.15)",
-                    }}
-                />
-                : <div style={{
-                    width: 100, height: 100,
-                    borderRadius: "50%",
-                    background: `linear-gradient(145deg,#ff9dc4,${PINK})`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 36, fontWeight: 700, color: "#fff",
-                    boxShadow: "0 6px 20px rgba(245,49,127,0.2)",
-                }}>
-                    {initials}
-                </div>
-            }
-
-            {/* Name & email */}
-            <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "#111827", textAlign: "center" }}>
-                {userName}
-            </div>
-            <div style={{ marginTop: 2, fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
-                {userEmail}
-            </div>
-
-            {/* Divider */}
-            <div style={{ width: 32, height: 1, background: "#f3f4f6", margin: "12px 0" }} />
-
-            {/* Upload button */}
-            <Upload showUploadList={false} beforeUpload={onFileSelect} accept="image/*" multiple={false}>
-                <Button
-                    disabled={disabled}
-                    icon={<UploadOutlined />}
-                    size="small"
-                    style={{
-                        borderRadius: 8, height: 32, fontSize: 12,
-                        minWidth: 170, borderColor: "#e5e7eb", color: "#374151",
+                        position: "absolute", top: 12, right: 12,
+                        width: 28, height: 28, borderRadius: "50%",
+                        border: "1px solid rgba(245,49,127,0.2)",
+                        background: "rgba(255,255,255,0.8)",
+                        cursor: "pointer", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontSize: 12, color: "#9ca3af",
+                        backdropFilter: "blur(4px)",
                     }}
                 >
-                    Tải ảnh mới lên
-                </Button>
-            </Upload>
-        </div>
-    </Modal>
-);
+                    ✕
+                </button>
+
+                {/* Avatar with ring */}
+                <div style={{ position: "relative" }}>
+                    {/* Outer glow ring */}
+                    <div style={{
+                        position: "absolute", inset: -6,
+                        borderRadius: "50%",
+                        background: `conic-gradient(${PINK}, #ff9dc4, ${PINK})`,
+                        opacity: 0.3,
+                        animation: "spin 4s linear infinite",
+                    }} />
+                    <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+                    {/* Avatar */}
+                    {displayAvatar
+                        ? <img
+                            src={displayAvatar}
+                            alt="avatar"
+                            style={{
+                                width: 160, height: 160,
+                                borderRadius: "50%", objectFit: "cover",
+                                border: `4px solid #fff`,
+                                boxShadow: `0 8px 32px rgba(245,49,127,0.25)`,
+                                position: "relative", zIndex: 1,
+                                display: "block",
+                            }}
+                        />
+                        : <div style={{
+                            width: 160, height: 160,
+                            borderRadius: "50%",
+                            background: `linear-gradient(145deg, #ff9dc4, ${PINK})`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 56, fontWeight: 700, color: "#fff",
+                            border: `4px solid #fff`,
+                            boxShadow: `0 8px 32px rgba(245,49,127,0.25)`,
+                            position: "relative", zIndex: 1,
+                        }}>
+                            {initials}
+                        </div>
+                    }
+
+                    {/* Online dot */}
+                    <div style={{
+                        position: "absolute", bottom: 8, right: 8, zIndex: 2,
+                        width: 16, height: 16, borderRadius: "50%",
+                        background: "#3EBF8F", border: "3px solid #fff",
+                        boxShadow: "0 2px 6px rgba(62,191,143,0.4)",
+                    }} />
+                </div>
+            </div>
+
+            {/* Bottom white card */}
+            <div style={{
+                background: "#fff",
+                padding: "0 24px 28px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                marginTop: -24,
+                borderRadius: "24px 24px 0 0",
+                position: "relative",
+                zIndex: 2,
+            }}>
+                {/* Pull indicator */}
+                <div style={{
+                    width: 36, height: 4, borderRadius: 2,
+                    background: "#f0f0f0", margin: "12px 0 16px",
+                }} />
+
+                {/* Name */}
+                <div style={{
+                    fontSize: 18, fontWeight: 700, color: "#111827",
+                    textAlign: "center", letterSpacing: "-0.02em",
+                }}>
+                    {userName}
+                </div>
+
+                {/* Email badge */}
+                <div style={{
+                    marginTop: 6, fontSize: 12, color: "#9ca3af",
+                    background: "#f9fafb", border: "1px solid #f0f0f0",
+                    borderRadius: 20, padding: "3px 12px",
+                }}>
+                    {userEmail}
+                </div>
+
+                {/* Status */}
+                <div style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    marginTop: 10, fontSize: 11,
+                    color: "#3EBF8F", fontWeight: 500,
+                }}>
+                    <div style={{
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#3EBF8F",
+                        boxShadow: "0 0 6px rgba(62,191,143,0.6)",
+                    }} />
+                    Đang hoạt động
+                </div>
+
+                {/* Divider */}
+                <div style={{
+                    width: "100%", height: 1,
+                    background: "linear-gradient(90deg, transparent, #f0f0f0, transparent)",
+                    margin: "18px 0",
+                }} />
+
+                {/* Upload button */}
+                <Upload
+                    showUploadList={false}
+                    beforeUpload={onFileSelect}
+                    accept="image/*"
+                    multiple={false}
+                >
+                    <button
+                        disabled={disabled}
+                        onMouseEnter={() => setUploadHover(true)}
+                        onMouseLeave={() => setUploadHover(false)}
+                        style={{
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            width: 220, height: 42,
+                            borderRadius: 12,
+                            border: `1.5px solid ${uploadHover ? PINK : "rgba(245,49,127,0.25)"}`,
+                            background: uploadHover
+                                ? "linear-gradient(135deg, #fff0f6, #fce7f3)"
+                                : "#fff",
+                            color: PINK,
+                            fontSize: 13, fontWeight: 600,
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            transition: "all .15s",
+                            boxShadow: uploadHover
+                                ? "0 4px 16px rgba(245,49,127,0.15)"
+                                : "none",
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Tải ảnh mới lên
+                    </button>
+                </Upload>
+
+                <div style={{ marginTop: 8, fontSize: 10, color: "#d1d5db" }}>
+                    JPG, PNG tối đa 5MB
+                </div>
+            </div>
+        </Modal>
+    );
+};
 
 /* ═══════════════════════════════════════════
    SUB: HeroBanner — LIGHT THEME
@@ -195,7 +322,6 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
             gap: 16,
             marginBottom: 20,
         }}>
-            {/* Subtle decorative blob */}
             <div style={{
                 position: "absolute", top: -30, right: -30,
                 width: 120, height: 120, borderRadius: "50%",
@@ -203,7 +329,6 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                 pointerEvents: "none",
             }} />
 
-            {/* Avatar */}
             <div
                 style={{ position: "relative", flexShrink: 0, cursor: "pointer", zIndex: 1 }}
                 onClick={onAvatarClick}
@@ -230,7 +355,6 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                         boxShadow: "0 4px 14px rgba(245,49,127,0.18)",
                     }}>{initials}</div>
                 }
-                {/* Camera overlay */}
                 <div style={{
                     position: "absolute", inset: 0, borderRadius: "50%",
                     background: "rgba(245,49,127,0.55)",
@@ -242,7 +366,6 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                         <circle cx="12" cy="13" r="4" />
                     </svg>
                 </div>
-                {/* Online dot */}
                 <div style={{
                     position: "absolute", bottom: 2, right: 2,
                     width: 10, height: 10, borderRadius: "50%",
@@ -250,7 +373,6 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                 }} />
             </div>
 
-            {/* Info */}
             <div style={{ zIndex: 1, flex: 1, minWidth: 0 }}>
                 <div style={{
                     fontSize: 17, fontWeight: 700, color: "#111827",
@@ -272,14 +394,8 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                 </div>
             </div>
 
-            {/* Đổi ảnh button — dùng Ant Upload + Button để trigger đúng */}
             <div style={{ zIndex: 1, flexShrink: 0 }}>
-                <Upload
-                    showUploadList={false}
-                    beforeUpload={onFileSelect}
-                    accept="image/*"
-                    multiple={false}
-                >
+                <Upload showUploadList={false} beforeUpload={onFileSelect} accept="image/*" multiple={false}>
                     <Button
                         disabled={disabled}
                         icon={
@@ -294,8 +410,7 @@ const HeroBanner = ({ displayAvatar, initials, userName, userEmail, positionCoun
                             fontSize: 11, borderRadius: 20, height: 28,
                             paddingInline: 12,
                             border: `1px solid ${PINK_BORDER}`,
-                            background: "#fff",
-                            color: PINK,
+                            background: "#fff", color: PINK,
                             boxShadow: "0 2px 8px rgba(245,49,127,0.10)",
                         }}
                     >
@@ -436,7 +551,6 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
             <Form form={form} layout="vertical" onFinish={handleSubmit}
                 initialValues={{ name: user?.name, email: user?.email }}>
 
-                {/* ── Hero (light) ── */}
                 <HeroBanner
                     displayAvatar={displayAvatar} initials={initials}
                     userName={user?.name} userEmail={user?.email}
@@ -446,13 +560,10 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                     disabled={submitting}
                 />
 
-                {/* ── 2-col body ── */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
 
                     {/* ──────── LEFT ──────── */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-                        {/* Thông tin cá nhân — bỏ "HĐ hết hạn" */}
                         <div>
                             <SectionLabel>Thông tin cá nhân</SectionLabel>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
@@ -474,11 +585,9 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                                 <InfoItem label="Ký HĐ" value={formatDate(info?.contractSignDate)}
                                     icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5l-3-3z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="12" x2="8" y2="12" /></svg>}
                                 />
-                                {/* ĐÃ XOÁ: HĐ hết hạn */}
                             </div>
                         </div>
 
-                        {/* Chức danh */}
                         <div>
                             <SectionLabel extra={
                                 <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 20, background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb" }}>
@@ -503,8 +612,6 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
 
                     {/* ──────── RIGHT ──────── */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-                        {/* Form chỉnh sửa */}
                         <div>
                             <SectionLabel>Chỉnh sửa thông tin</SectionLabel>
                             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -526,7 +633,6 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                             </div>
                         </div>
 
-                        {/* Actions */}
                         <div style={{ display: "flex", gap: 8 }}>
                             <Button
                                 onClick={() => onClose(false)}
@@ -550,7 +656,6 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                             </Button>
                         </div>
 
-                        {/* Vai trò — BỎ ID */}
                         <div style={{ padding: "12px 14px", borderRadius: 11, background: PINK_LIGHT, border: `1px solid ${PINK_BORDER}` }}>
                             <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: ".09em", textTransform: "uppercase" as const, color: PINK, marginBottom: 8 }}>Vai trò</div>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -563,10 +668,7 @@ const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
                                         <circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" />
                                     </svg>
                                 </div>
-                                <div>
-                                    {/* ĐÃ XOÁ: ID dòng bên dưới */}
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{user?.role?.name || "—"}</div>
-                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{user?.role?.name || "—"}</div>
                             </div>
                         </div>
                     </div>

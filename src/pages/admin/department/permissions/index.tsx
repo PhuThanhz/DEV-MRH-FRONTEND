@@ -1,41 +1,23 @@
-import { useState } from "react";
-import { Card, Button, Space, Typography } from "antd";
 import { useParams, useSearchParams } from "react-router-dom";
-
-import PermissionViewModal from "./ components/PermissionViewModal";
-
-const { Title, Text } = Typography;
+import PageContainer from "@/components/common/data-table/PageContainer";
+import DeptPageNav from "@/components/common/navigation/DeptPageNav";
+import { useDeptNavPages } from "@/hooks/useDeptNavPages";
+import PermissionViewModal from "./components/PermissionViewModal";
 
 const DepartmentPermissionPage = () => {
-    const { id: departmentId } = useParams();
-    const [params] = useSearchParams();
-
-    const [open, setOpen] = useState(true);
-
-    const departmentName = params.get("departmentName");
+    const { departmentId } = useParams<{ departmentId: string }>();
+    const [searchParams] = useSearchParams();
+    const departmentName = searchParams.get("departmentName") || "";
+    const deptNavPages = useDeptNavPages();
 
     return (
-        <div style={{ padding: 24 }}>
-            <Card>
-                <Space direction="vertical" size={12}>
-                    <Title level={4}>Bản phân quyền phòng ban</Title>
-                    <Text type="secondary">
-                        Phòng ban: {departmentName || `ID ${departmentId}`}
-                    </Text>
-
-                    <Button type="primary" onClick={() => setOpen(true)}>
-                        Xem bảng phân quyền
-                    </Button>
-                </Space>
-            </Card>
-
-            {/* MODAL VIEW */}
+        <PageContainer title={`Phân quyền — ${departmentName}`}>
             <PermissionViewModal
-                open={open}
-                onClose={() => setOpen(false)}
-                departmentName={departmentName || ""}
+                departmentId={Number(departmentId)}
+                departmentName={departmentName}
             />
-        </div>
+            <DeptPageNav pages={deptNavPages} />
+        </PageContainer>
     );
 };
 

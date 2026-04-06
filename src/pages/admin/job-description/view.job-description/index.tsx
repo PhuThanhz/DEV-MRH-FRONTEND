@@ -15,8 +15,9 @@ import Tab3Tasks from "./components/Tab3Tasks";
 import Tab4Requirements from "./components/Tab4Requirements";
 import Tab5History from "./components/Tab5History";
 import { ReactFlowProvider } from "reactflow";
-
-import { exportJdToExcel } from "../components/exportPublishedJd"; // ← thêm mới
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import { exportJdToExcel } from "../components/exportPublishedJd";
 
 const ACCENT = "#e8637a";
 const ACCENT_LIGHT = "#fff0f3";
@@ -31,12 +32,11 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string; bor
     REJECTED: { label: "Từ chối", color: "#b91c1c", bg: "#fef2f2", border: "#fecaca" },
 };
 
-const TABS = [
+const BASE_TABS = [
     { key: "1", label: "Thông tin chung" },
     { key: "2", label: "Sơ đồ vị trí" },
     { key: "3", label: "Mô tả công việc" },
     { key: "4", label: "Yêu cầu vị trí" },
-    { key: "5", label: "Lịch sử duyệt" },
 ];
 
 export type EnrichedJD = IJobDescription & {
@@ -75,10 +75,21 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
     const [rfEdges, setRfEdges] = useState<Edge[]>([]);
     const [loadingChart, setLoadingChart] = useState(false);
 
+    // ── Permission check ──
+    const canViewHistory = useAccess(ALL_PERMISSIONS.JD_FLOW.FETCH_LOGS);
+
+    // ── Tabs động theo permission ──
+    const TABS = [
+        ...BASE_TABS,
+        ...(canViewHistory ? [{ key: "5", label: "Lịch sử duyệt" }] : []),
+    ];
+
     const jdId = open && record ? (record.id ?? (record as any).jdId) : undefined;
 
     const { data, isLoading } = useJobDescriptionByIdQuery(jdId);
-    const { data: logs } = useJdFlowLogsQuery(jdId); // ← bỏ điều kiện activeTab === "5" để luôn fetch
+
+    // ── Chỉ fetch logs khi có quyền ──
+    const { data: logs } = useJdFlowLogsQuery(canViewHistory ? jdId : undefined);
 
     const jd: EnrichedJD | null = (data as EnrichedJD) ?? record;
     const statusInfo = jd?.status
@@ -223,7 +234,6 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                             </div>
                         </div>
 
-                        {/* ← THAY ĐỔI: thêm nút Xuất Excel vào góc phải header */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                             {jd.version != null && (
                                 <span style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "4px 12px" }}>
@@ -294,7 +304,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                         )}
                         {activeTab === "3" && <Tab3Tasks tasks={jd.tasks} />}
                         {activeTab === "4" && <Tab4Requirements requirements={jd.requirements} />}
-                        {activeTab === "5" && <Tab5History logs={logs} />}
+                        {activeTab === "5" && canViewHistory && <Tab5History logs={logs} />}
 
                     </div>
                 </div>

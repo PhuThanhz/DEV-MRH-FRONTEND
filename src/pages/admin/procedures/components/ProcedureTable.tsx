@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, RetweetOutlined } from "@ant-design/icons";
+import { Space, Tag, Popconfirm, Tooltip } from "antd";
+import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
@@ -28,17 +28,21 @@ import Access from "@/components/share/access";
 import type { IProcedure, ProcedureType, ICompany, IDepartment, ISection } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+
 const statusMap: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
     IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
     NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
     TERMINATED: { label: "Hết hiệu lực", color: "red" },
 };
+
 interface IProps {
     type: ProcedureType;
+    companyId?: number;
+    departmentId?: number;
 }
 
-const ProcedureTable = ({ type }: IProps) => {
+const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const tableRef = useRef<ActionType>(null);
 
     const [openModal, setOpenModal] = useState(false);
@@ -49,16 +53,11 @@ const ProcedureTable = ({ type }: IProps) => {
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [createdAtFilter, setCreatedAtFilter] = useState<string | null>(null);
     const [searchValue, setSearchValue] = useState("");
-
-    // ← filter mới
     const [companyFilter, setCompanyFilter] = useState<string | null>(null);
     const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
     const [sectionFilter, setSectionFilter] = useState<string | null>(null);
     const [planYearFilter, setPlanYearFilter] = useState<number | null>(null);
-
-    // ← cache departmentId để load bộ phận
     const [cachedDepartmentId, setCachedDepartmentId] = useState<number | null>(null);
-
     const [resetSignal, setResetSignal] = useState(0);
 
     const [query, setQuery] = useState(
@@ -75,47 +74,103 @@ const ProcedureTable = ({ type }: IProps) => {
     };
     const procedures = data?.result ?? [];
 
+    // ===================== BUILD FILTERS =====================
+    const buildFilters = (
+        search: string,
+        status: string | null,
+        createdAt: string | null,
+        company: string | null,
+        department: string | null,
+        section: string | null,
+        planYear: number | null,
+    ) => {
+        const parts: string[] = [];
+        if (companyId) parts.push(`department.company.id:${companyId}`);
+        if (departmentId) parts.push(`department.id:${departmentId}`);
+        if (search) parts.push(`procedureName~'${search}'`);
+        if (status) parts.push(`status='${status}'`);
+        if (createdAt) parts.push(createdAt);
+        if (company) parts.push(`department.company.name~'${company}'`);
+        if (department) parts.push(`department.name~'${department}'`);
+        if (section) parts.push(`section.name~'${section}'`);
+        if (planYear) parts.push(`planYear=${planYear}`);
+        return parts;
+    };
+
+    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-        const filters: string[] = [];
-        if (searchValue) filters.push(`procedureName~'${searchValue}'`);
-        if (statusFilter) filters.push(`status='${statusFilter}'`);
-        if (createdAtFilter) filters.push(createdAtFilter);
-        if (companyFilter) filters.push(`department.company.name~'${companyFilter}'`);
-        if (departmentFilter) filters.push(`department.name~'${departmentFilter}'`);
-        if (sectionFilter) filters.push(`section.name~'${sectionFilter}'`);
-        if (planYearFilter) filters.push(`planYear=${planYearFilter}`);
+        const filters = buildFilters(
+            searchValue, statusFilter, createdAtFilter,
+            companyFilter, departmentFilter, sectionFilter, planYearFilter
+        );
         if (filters.length > 0) q.filter = filters.join(" and ");
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, statusFilter, createdAtFilter, companyFilter, departmentFilter, sectionFilter, planYearFilter, type]);
+    }, [
+        searchValue, statusFilter, createdAtFilter,
+        companyFilter, departmentFilter, sectionFilter, planYearFilter,
+        type, companyId, departmentId,
+    ]);
 
+    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
-        const filters: string[] = [];
-        if (searchValue) filters.push(`procedureName~'${searchValue}'`);
-        if (statusFilter) filters.push(`status='${statusFilter}'`);
-        if (createdAtFilter) filters.push(createdAtFilter);
-        if (companyFilter) filters.push(`department.company.name~'${companyFilter}'`);
-        if (departmentFilter) filters.push(`department.name~'${departmentFilter}'`);
-        if (sectionFilter) filters.push(`section.name~'${sectionFilter}'`);
-        if (planYearFilter) filters.push(`planYear=${planYearFilter}`);
+        const filters = buildFilters(
+            searchValue, statusFilter, createdAtFilter,
+            companyFilter, departmentFilter, sectionFilter, planYearFilter
+        );
         if (filters.length > 0) q.filter = filters.join(" and ");
-        let temp = queryString.stringify(q, { encode: false });
+
         let sortBy = "sort=createdAt,desc";
         if (sort?.procedureName)
             sortBy = sort.procedureName === "ascend"
                 ? "sort=procedureName,asc"
                 : "sort=procedureName,desc";
-        return `${temp}&${sortBy}`;
+
+        return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
+    // ===================== RESET =====================
+    const handleReset = () => {
+        setSearchValue("");
+        setStatusFilter(null);
+        setCreatedAtFilter(null);
+        setCompanyFilter(null);
+        setDepartmentFilter(null);
+        setSectionFilter(null);
+        setPlanYearFilter(null);
+        setCachedDepartmentId(null);
+        setResetSignal((s) => s + 1);
+        refetch();
+    };
+
+    // ===================== PERMISSION =====================
+    const permission = {
+        view: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.GET_BY_ID
+            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_BY_ID
+                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.GET_BY_ID,
+        update: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.UPDATE
+            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.UPDATE
+                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.UPDATE,
+        revise: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.REVISE
+            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.REVISE
+                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.REVISE,
+        delete: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.DELETE
+            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.DELETE
+                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.DELETE,
+        create: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
+            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
+                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
+    };
+
+    // ===================== COLUMNS =====================
     const columns: ProColumns<IProcedure>[] = [
         {
             title: "STT",
@@ -129,24 +184,24 @@ const ProcedureTable = ({ type }: IProps) => {
             dataIndex: "companyCode",
             align: "center",
             width: 120,
-            render: (code) => <Tag color="blue">{code}</Tag>,
+            hideInTable: !!companyId || !!departmentId,
+            render: (_, record) => <Tag color="blue">{record.companyCode}</Tag>,
         },
         {
             title: "Công ty",
             dataIndex: "companyName",
             align: "center",
-
             width: 180,
+            hideInTable: !!companyId || !!departmentId,
         },
         {
             title: "Phòng ban",
             dataIndex: "departmentName",
             width: 180,
             align: "center",
-            render: (name) => (
-                <Tag color="cyan">
-                    {name || "--"}
-                </Tag>
+            hideInTable: !!departmentId,
+            render: (_, record) => (
+                <Tag color="cyan">{record.departmentName || "--"}</Tag>
             ),
         },
         {
@@ -154,7 +209,9 @@ const ProcedureTable = ({ type }: IProps) => {
             dataIndex: "sectionName",
             align: "center",
             width: 160,
-            render: (v) => <Tag color="geekblue">{v || "--"}</Tag>,
+            render: (_, record) => (
+                <Tag color="geekblue">{record.sectionName || "--"}</Tag>
+            ),
         },
         {
             title: "Tên quy trình",
@@ -198,54 +255,146 @@ const ProcedureTable = ({ type }: IProps) => {
             dataIndex: "version",
             align: "center",
             width: 80,
-            render: (val) => <Tag color="blue">v{val ?? 1}</Tag>,
+            render: (_, record) => <Tag color="blue">v{record.version ?? 1}</Tag>,
         },
         {
             title: "Ngày ban hành",
             dataIndex: "createdAt",
             align: "center",
             width: 120,
-            render: (val: unknown) =>
-                typeof val === "string" && val
-                    ? dayjs(val).format("DD-MM-YYYY")
+            render: (_, record) =>
+                record.createdAt
+                    ? dayjs(record.createdAt).format("DD-MM-YYYY")
                     : "--",
         },
         {
             title: "Hành động",
             align: "center",
-            width: 160,
+            width: 200,
             render: (_, record) => (
-                <Space>
-                    <Access permission={ALL_PERMISSIONS.PROCEDURES.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            title="Xem chi tiết"
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                            onClick={() => { setDataInit(record); setOpenView(true); }}
-                        />
+                <Space size="small">
+                    {/* 👁️ XEM */}
+                    <Access permission={permission.view} hideChildren>
+                        <Tooltip title="Xem chi tiết">
+                            <EyeOutlined
+                                style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                                onClick={() => { setDataInit(record); setOpenView(true); }}
+                            />
+                        </Tooltip>
                     </Access>
-                    <Access permission={ALL_PERMISSIONS.PROCEDURES.UPDATE} hideChildren>
-                        <EditOutlined
-                            title="Chỉnh sửa"
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                            onClick={() => { setDataInit(record); setOpenModal(true); }}
-                        />
+
+                    {/* ✏️ SỬA */}
+                    <Access permission={permission.update} hideChildren>
+                        <Tooltip title="Chỉnh sửa">
+                            <EditOutlined
+                                style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                                onClick={() => { setDataInit(record); setOpenModal(true); }}
+                            />
+                        </Tooltip>
                     </Access>
-                    <Access permission={ALL_PERMISSIONS.PROCEDURES.REVISE} hideChildren>
-                        <RetweetOutlined
-                            title={`Cập nhật phiên bản v${(record.version ?? 1) + 1}`}
-                            style={{ fontSize: 18, color: "#52c41a", cursor: "pointer" }}
-                            onClick={() => { setDataInit(record); setOpenRevise(true); }}
-                        />
+
+                    {/* 🔁 TẠO PHIÊN BẢN MỚI — dùng Tag thay icon */}
+                    <Access permission={permission.revise} hideChildren>
+                        <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
+                            <Tag
+                                color="green"
+                                style={{
+                                    cursor: "pointer",
+                                    borderRadius: 6,
+                                    padding: "2px 8px",
+                                    fontWeight: 500,
+                                    margin: 0,
+                                }}
+                                onClick={() => { setDataInit(record); setOpenRevise(true); }}
+                            >
+                                v{(record.version ?? 1) + 1}
+                            </Tag>
+                        </Tooltip>
                     </Access>
-                    <Access permission={ALL_PERMISSIONS.PROCEDURES.DELETE} hideChildren>
-                        <DeleteOutlined
-                            title="Xóa"
-                            style={{ fontSize: 18, color: "red", cursor: "pointer" }}
-                            onClick={() => deleteMutation.mutateAsync(record.id!)}
-                        />
+
+                    {/* 🗑️ XOÁ */}
+                    <Access permission={permission.delete} hideChildren>
+                        <Popconfirm
+                            title="Xác nhận xoá quy trình này?"
+                            onConfirm={() => deleteMutation.mutateAsync(record.id!)}
+                            okText="Xoá"
+                            cancelText="Huỷ"
+                            placement="topRight"
+                        >
+                            <Tooltip title="Xóa">
+                                <DeleteOutlined
+                                    style={{ fontSize: 18, color: "red", cursor: "pointer" }}
+                                />
+                            </Tooltip>
+                        </Popconfirm>
                     </Access>
                 </Space>
             ),
+        },
+    ];
+
+    // ===================== FILTER FIELDS =====================
+    const filterFields: any[] = [
+        ...(!companyId && !departmentId ? [{
+            key: "company",
+            label: "Công ty",
+            type: "async-select",
+            loadOptions: async () => {
+                const res = await callFetchCompany("page=1&size=500");
+                const list: ICompany[] = (res?.data as any)?.result ?? [];
+                return list.map((c) => ({ label: c.name, value: c.name }));
+            },
+        }] : []),
+        ...(!departmentId ? [{
+            key: "department",
+            label: "Phòng ban",
+            type: "async-select",
+            ...(companyId ? {
+                loadOptions: async () => {
+                    const res = await callFetchDepartmentsByCompany(companyId);
+                    const list: IDepartment[] = (res?.data as any) ?? [];
+                    return list.map((d) => ({ label: d.name, value: d.name }));
+                },
+            } : {
+                dependsOn: "company",
+                loadOptionsWithDep: async (companyName: string) => {
+                    const res = await callFetchCompany("page=1&size=500");
+                    const list: ICompany[] = (res?.data as any)?.result ?? [];
+                    const company = list.find((c) => c.name === companyName);
+                    if (!company?.id) return [];
+                    const dRes = await callFetchDepartmentsByCompany(company.id);
+                    const dList: IDepartment[] = (dRes?.data as any) ?? [];
+                    return dList.map((d) => ({ label: d.name, value: d.name }));
+                },
+            }),
+        }] : []),
+        {
+            key: "section",
+            label: "Bộ phận",
+            type: "async-select",
+            dependsOn: "department",
+            loadOptionsWithDep: async (_: string) => {
+                const id = cachedDepartmentId ?? departmentId;
+                if (!id) return [];
+                const res = await callFetchSectionsByDepartment(id);
+                const list: ISection[] = (res?.data as any) ?? [];
+                return list.map((s) => ({ label: s.name, value: s.name }));
+            },
+        },
+        {
+            key: "planYear",
+            label: "Năm KH",
+            type: "number",
+        },
+        {
+            key: "status",
+            label: "Trạng thái",
+            options: [
+                { label: "Cần xây dựng mới", value: "NEED_CREATE", color: "orange" },
+                { label: "Đang hiệu lực", value: "IN_PROGRESS", color: "green" },
+                { label: "Đang cập nhật", value: "NEED_UPDATE", color: "gold" },
+                { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
+            ],
         },
     ];
 
@@ -257,89 +406,17 @@ const ProcedureTable = ({ type }: IProps) => {
                     addLabel="Thêm quy trình"
                     showFilterButton={false}
                     onSearch={setSearchValue}
-                    onReset={() => {
-                        setSearchValue("");
-                        setStatusFilter(null);
-                        setCreatedAtFilter(null);
-                        setCompanyFilter(null);
-                        setDepartmentFilter(null);
-                        setSectionFilter(null);
-                        setPlanYearFilter(null);
-                        setCachedDepartmentId(null);
-                        setResetSignal((s) => s + 1);
-                        refetch();
-                    }}
+                    onReset={handleReset}
                     onAddClick={() => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
-                    addPermission={
-                        type === "COMPANY"
-                            ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
-                            : type === "DEPARTMENT"
-                                ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
-                                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE
-                    }
+                    addPermission={permission.create}
                 />
                 <div className="flex flex-wrap gap-3 items-center">
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
-                        fields={[
-                            {
-                                key: "company",
-                                label: "Công ty",
-                                type: "async-select",
-                                loadOptions: async () => {
-                                    const res = await callFetchCompany("page=1&size=500");
-                                    const paginate = res?.data as any;
-                                    const list: ICompany[] = paginate?.result ?? [];
-                                    return list.map((c) => ({ label: c.name, value: c.name }));
-                                },
-                            },
-                            {
-                                key: "department",
-                                label: "Phòng ban",
-                                type: "async-select",
-                                dependsOn: "company",
-                                loadOptionsWithDep: async (companyCode: string) => {
-                                    const res = await callFetchCompany("page=1&size=500");
-                                    const paginate = res?.data as any;
-                                    const list: ICompany[] = paginate?.result ?? [];
-                                    const company = list.find((c) => c.name === companyCode);
-                                    if (!company?.id) return [];
-                                    const dRes = await callFetchDepartmentsByCompany(company.id);
-                                    const dList: IDepartment[] = (dRes?.data as any) ?? [];
-                                    return dList.map((d) => ({ label: d.name, value: d.name }));
-                                },
-                            },
-                            {
-                                key: "section",
-                                label: "Bộ phận",
-                                type: "async-select",
-                                dependsOn: "department",
-                                loadOptionsWithDep: async (_departmentName: string) => {
-                                    if (!cachedDepartmentId) return [];
-                                    const res = await callFetchSectionsByDepartment(cachedDepartmentId);
-                                    const list: ISection[] = (res?.data as any) ?? [];
-                                    return list.map((s) => ({ label: s.name, value: s.name }));
-                                },
-                            },
-                            {
-                                key: "planYear",
-                                label: "Năm KH",
-                                type: "number",
-                            },
-                            {
-                                key: "status",
-                                label: "Trạng thái",
-                                options: [
-                                    { label: "Cần xây dựng mới", value: "NEED_CREATE", color: "orange" },
-                                    { label: "Đang hiệu lực", value: "IN_PROGRESS", color: "green" },
-                                    { label: "Đang cập nhật", value: "NEED_UPDATE", color: "gold" },
-                                    { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
-                                ],
-                            }
-                        ]}
+                        fields={filterFields}
                         onChange={async (filters) => {
                             setCompanyFilter(filters.company || null);
                             setDepartmentFilter(filters.department || null);
@@ -347,16 +424,22 @@ const ProcedureTable = ({ type }: IProps) => {
                             setPlanYearFilter(filters.planYear || null);
                             setStatusFilter(filters.status || null);
 
-                            // ← cache departmentId khi chọn phòng ban
-                            if (filters.department && filters.company) {
-                                const res = await callFetchCompany("page=1&size=500");
-                                const paginate = res?.data as any;
-                                const list: ICompany[] = paginate?.result ?? [];
-                                const company = list.find((c) => c.name === filters.company); if (company?.id) {
-                                    const dRes = await callFetchDepartmentsByCompany(company.id);
+                            if (filters.department) {
+                                if (companyId) {
+                                    const dRes = await callFetchDepartmentsByCompany(companyId);
                                     const dList: IDepartment[] = (dRes?.data as any) ?? [];
                                     const found = dList.find((d) => d.name === filters.department);
                                     setCachedDepartmentId(found?.id ?? null);
+                                } else if (filters.company) {
+                                    const res = await callFetchCompany("page=1&size=500");
+                                    const list: ICompany[] = (res?.data as any)?.result ?? [];
+                                    const company = list.find((c) => c.name === filters.company);
+                                    if (company?.id) {
+                                        const dRes = await callFetchDepartmentsByCompany(company.id);
+                                        const dList: IDepartment[] = (dRes?.data as any) ?? [];
+                                        const found = dList.find((d) => d.name === filters.department);
+                                        setCachedDepartmentId(found?.id ?? null);
+                                    }
                                 }
                             } else {
                                 setCachedDepartmentId(null);
@@ -406,6 +489,7 @@ const ProcedureTable = ({ type }: IProps) => {
                 onClose={() => setOpenModal(false)}
                 dataInit={dataInit}
                 refetch={refetch}
+                {...(companyId ? { fixedCompanyId: companyId } : {})}
             />
 
             <ModalRevise

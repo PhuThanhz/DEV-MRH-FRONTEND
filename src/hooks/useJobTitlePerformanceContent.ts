@@ -118,6 +118,7 @@ export const useDisableJobTitlePerformanceContentMutation = () => {
 
             queryClient.invalidateQueries({
                 queryKey: ["job-title-performance-content"],
+                exact: false,
             });
         },
     });
@@ -139,6 +140,7 @@ export const useRestoreJobTitlePerformanceContentMutation = () => {
 
             queryClient.invalidateQueries({
                 queryKey: ["job-title-performance-content"],
+                exact: false,
             });
         },
     });

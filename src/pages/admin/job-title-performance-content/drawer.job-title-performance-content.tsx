@@ -29,6 +29,9 @@ import {
 
 import { useSalaryGradesByOwnerLevel } from "@/hooks/useSalaryGradesByOwnerLevel";
 
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+
 import type {
     IJobTitlePerformanceContent,
     IReqJobTitlePerformanceContent,
@@ -171,39 +174,44 @@ const DrawerJobTitlePerformanceContent = ({
             align: "center",
             render: (_, record) => (
                 <Space>
-                    <Button
-                        type="text"
-                        icon={<EyeOutlined />}
-                        size="small"
-                        title="Xem chi tiết"
-                        onClick={() => {
-                            setSelectedView(record);
-                            setOpenView(true);
-                        }}
-                        style={{ color: "#1890ff" }}
-                    />
-                    <Button
-                        type="text"
-                        icon={<EditOutlined />}
-                        size="small"
-                        title="Sửa"
-                        onClick={() => {
-                            setSelected(record);
-                            setOpenUpdate(true);
-                        }}
-                    />
+                    {/* Xem chi tiết */}
+                    <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.GET_BY_ID} hideChildren>
+                        <EyeOutlined
+                            style={{ fontSize: 16, color: "#1677ff", cursor: "pointer" }}
+                            onClick={() => {
+                                setSelectedView(record);
+                                setOpenView(true);
+                            }}
+                        />
+                    </Access>
+
+                    {/* Sửa */}
+                    <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.UPDATE} hideChildren>
+                        <EditOutlined
+                            style={{ fontSize: 16, color: "#fa8c16", cursor: "pointer" }}
+                            onClick={() => {
+                                setSelected(record);
+                                setOpenUpdate(true);
+                            }}
+                        />
+                    </Access>
+
+                    {/* Vô hiệu / Khôi phục */}
                     {record.active ? (
-                        <Popconfirm title="Vô hiệu?" onConfirm={() => handleDisable(record.id)}>
+                        <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.DISABLE} hideChildren>                            <Popconfirm title="Vô hiệu?" onConfirm={() => handleDisable(record.id)}>
                             <Button size="small" danger loading={disabling}>
                                 Vô hiệu
                             </Button>
                         </Popconfirm>
+                        </Access>
                     ) : (
-                        <Popconfirm title="Khôi phục?" onConfirm={() => handleRestore(record.id)}>
-                            <Button size="small" type="primary" loading={restoring}>
-                                Khôi phục
-                            </Button>
-                        </Popconfirm>
+                        <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.RESTORE} hideChildren>
+                            <Popconfirm title="Khôi phục?" onConfirm={() => handleRestore(record.id)}>
+                                <Button size="small" type="primary" loading={restoring}>
+                                    Khôi phục
+                                </Button>
+                            </Popconfirm>
+                        </Access>
                     )}
                 </Space>
             ),
@@ -254,114 +262,28 @@ const DrawerJobTitlePerformanceContent = ({
                                                 maxWidth: "100%",
                                             }}
                                         >
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                        color: "#1890ff",
-                                                        marginBottom: 8,
-                                                    }}
-                                                >
-                                                    Nội dung A
+                                            {["A", "B", "C", "D"].map((label) => (
+                                                <div key={label}>
+                                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1890ff", marginBottom: 8 }}>
+                                                        Nội dung {label}
+                                                    </div>
+                                                    <div
+                                                        style={{
+                                                            whiteSpace: "pre-line",
+                                                            wordBreak: "break-word",
+                                                            lineHeight: 1.7,
+                                                            padding: 16,
+                                                            background: "#fff",
+                                                            border: "1px solid #e8e8e8",
+                                                            borderRadius: 8,
+                                                            minHeight: 100,
+                                                            fontSize: 14,
+                                                        }}
+                                                    >
+                                                        {record[`content${label}` as keyof IJobTitlePerformanceContent] as string || "—"}
+                                                    </div>
                                                 </div>
-                                                <div
-                                                    style={{
-                                                        whiteSpace: "pre-line",
-                                                        wordBreak: "break-word",
-                                                        lineHeight: 1.7,
-                                                        padding: 16,
-                                                        background: "#fff",
-                                                        border: "1px solid #e8e8e8",
-                                                        borderRadius: 8,
-                                                        minHeight: 100,
-                                                        fontSize: 14,
-                                                    }}
-                                                >
-                                                    {record.contentA || "—"}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                        color: "#1890ff",
-                                                        marginBottom: 8,
-                                                    }}
-                                                >
-                                                    Nội dung B
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        whiteSpace: "pre-line",
-                                                        wordBreak: "break-word",
-                                                        lineHeight: 1.7,
-                                                        padding: 16,
-                                                        background: "#fff",
-                                                        border: "1px solid #e8e8e8",
-                                                        borderRadius: 8,
-                                                        minHeight: 100,
-                                                        fontSize: 14,
-                                                    }}
-                                                >
-                                                    {record.contentB || "—"}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                        color: "#1890ff",
-                                                        marginBottom: 8,
-                                                    }}
-                                                >
-                                                    Nội dung C
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        whiteSpace: "pre-line",
-                                                        wordBreak: "break-word",
-                                                        lineHeight: 1.7,
-                                                        padding: 16,
-                                                        background: "#fff",
-                                                        border: "1px solid #e8e8e8",
-                                                        borderRadius: 8,
-                                                        minHeight: 100,
-                                                        fontSize: 14,
-                                                    }}
-                                                >
-                                                    {record.contentC || "—"}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div
-                                                    style={{
-                                                        fontSize: 14,
-                                                        fontWeight: 600,
-                                                        color: "#1890ff",
-                                                        marginBottom: 8,
-                                                    }}
-                                                >
-                                                    Nội dung D
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        whiteSpace: "pre-line",
-                                                        wordBreak: "break-word",
-                                                        lineHeight: 1.7,
-                                                        padding: 16,
-                                                        background: "#fff",
-                                                        border: "1px solid #e8e8e8",
-                                                        borderRadius: 8,
-                                                        minHeight: 100,
-                                                        fontSize: 14,
-                                                    }}
-                                                >
-                                                    {record.contentD || "—"}
-                                                </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     </div>
                                 ),
@@ -370,11 +292,13 @@ const DrawerJobTitlePerformanceContent = ({
                     )}
                 </Card>
 
-                <div style={{ textAlign: "right", marginTop: 16 }}>
-                    <Button type="primary" onClick={() => setOpenCreate(true)}>
-                        Thêm tiêu chí mới
-                    </Button>
-                </div>
+                <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.CREATE} hideChildren>
+                    <div style={{ textAlign: "right", marginTop: 16 }}>
+                        <Button type="primary" onClick={() => setOpenCreate(true)}>
+                            Thêm tiêu chí mới
+                        </Button>
+                    </div>
+                </Access>
             </Drawer>
 
             <ModalJobTitlePerformanceContent
