@@ -6,8 +6,6 @@ import {
     CheckCircleOutlined,
     StopOutlined,
     ApartmentOutlined,
-    EyeOutlined,
-    ClockCircleOutlined,
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 
@@ -23,7 +21,6 @@ import ViewCareerPath from "./ViewCareerPath";
 
 const { Text } = Typography;
 
-// ── Design tokens — đồng bộ với ModalEmployeeDetail ──────────────
 const T = {
     ink: "#0d0d10",
     ink2: "#232329",
@@ -62,70 +59,104 @@ const T = {
     slateBord: "rgba(71,85,105,0.16)",
 };
 
-// ── Level badge — đồng bộ màu sắc ────────────────────────────────
 const LEVEL_COLOR: Record<string, { bg: string; bd: string; txt: string }> = {
     S: { bg: T.accSoft, bd: T.accBord, txt: T.acc },
     M: { bg: T.violetSoft, bd: T.violetBord, txt: T.violet },
     T: { bg: T.greenSoft, bd: T.greenBord, txt: T.green },
     D: { bg: T.amberSoft, bd: T.amberBord, txt: T.amber },
 };
-const levelStyle = (code?: string): React.CSSProperties => {
+
+const levelBadgeStyle = (code?: string): React.CSSProperties => {
     const c = LEVEL_COLOR[code?.[0]?.toUpperCase() ?? ""] ?? {
         bg: T.slateSoft, bd: T.slateBord, txt: T.slate,
     };
     return {
         display: "inline-flex", alignItems: "center",
-        padding: "2px 7px", borderRadius: 5,
+        padding: "2px 6px", borderRadius: 5,
         background: c.bg, border: `1px solid ${c.bd}`,
-        fontSize: 11, fontWeight: 700, color: c.txt,
-        letterSpacing: 0.2, whiteSpace: "nowrap",
+        fontSize: 10, fontWeight: 700, color: c.txt,
+        letterSpacing: 0.3, whiteSpace: "nowrap", lineHeight: "16px",
+        flexShrink: 0,
     };
 };
 
-// ── Icon button ───────────────────────────────────────────────────
-const iconBtnStyle = (variant?: "danger" | "success"): React.CSSProperties => ({
-    width: 28, height: 28, borderRadius: 7, padding: 0,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    border: `1px solid ${variant === "danger" ? T.redBord : variant === "success" ? T.greenBord : T.ink6}`,
-    color: variant === "danger" ? T.red : variant === "success" ? T.green : T.ink4,
-    background: variant === "danger" ? T.redSoft : variant === "success" ? T.greenSoft : T.white,
-});
+// ── Icon action button ────────────────────────────────────────────────
+const IconBtn = ({
+    icon, tooltip, onClick, variant,
+}: {
+    icon: React.ReactNode;
+    tooltip: string;
+    onClick: () => void;
+    variant?: "danger" | "success" | "default";
+}) => {
+    const colors = {
+        danger: { bg: T.redSoft, bd: T.redBord, color: T.red },
+        success: { bg: T.greenSoft, bd: T.greenBord, color: T.green },
+        default: { bg: T.white, bd: T.ink6, color: T.ink4 },
+    }[variant ?? "default"];
+    return (
+        <Tooltip title={tooltip} mouseEnterDelay={0.3}>
+            <button
+                onClick={onClick}
+                style={{
+                    width: 28, height: 28, borderRadius: 7,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    border: `1px solid ${colors.bd}`,
+                    background: colors.bg, color: colors.color,
+                    cursor: "pointer", fontSize: 13,
+                    transition: "opacity 0.15s",
+                }}
+            >
+                {icon}
+            </button>
+        </Tooltip>
+    );
+};
 
-// ── Step chip ─────────────────────────────────────────────────────
+// ── Step chip — chip trung tính, chỉ badge có màu ─────────────────────
 const StepChip = ({ step, isLast }: { step: any; isLast: boolean }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <div style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 10px 3px 6px", borderRadius: 8,
-            background: T.s1, border: `1px solid ${T.line}`,
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "4px 10px 4px 6px", borderRadius: 8,
+            background: T.white,
+            border: `1px solid ${T.ink6}`,   // ← border rõ hơn thay vì T.line
         }}>
             {step.positionLevelCode && (
-                <span style={levelStyle(step.positionLevelCode)}>
+                <span style={levelBadgeStyle(step.positionLevelCode)}>
                     {step.positionLevelCode}
                 </span>
             )}
-            <Text style={{ fontSize: 12.5, fontWeight: 500, color: T.ink2 }}>
+            <Text style={{
+                fontSize: 12.5, fontWeight: 500,
+                color: T.ink2, whiteSpace: "nowrap",
+            }}>
                 {step.jobTitleName}
             </Text>
-            {step.durationMonths && (
+            {/* Thời gian — chỉ hiện nếu không phải bước cuối */}
+            {step.durationMonths && !isLast && (
                 <span style={{
-                    display: "inline-flex", alignItems: "center", gap: 3,
-                    padding: "1px 6px", borderRadius: 5,
-                    background: T.amberSoft, border: `1px solid ${T.amberBord}`,
-                    fontSize: 10, fontWeight: 600, color: T.amber,
+                    padding: "1px 5px", borderRadius: 4,
+                    background: T.s2, border: `1px solid ${T.ink6}`,
+                    fontSize: 10, fontWeight: 600, color: T.ink4,
+                    whiteSpace: "nowrap",
                 }}>
-                    <ClockCircleOutlined style={{ fontSize: 8 }} />
                     {step.durationMonths}th
                 </span>
             )}
         </div>
         {!isLast && (
-            <Text style={{ fontSize: 11, color: T.ink6, userSelect: "none", lineHeight: 1 }}>→</Text>
+            <Text style={{
+                fontSize: 11, color: T.ink5,
+                userSelect: "none", lineHeight: 1, flexShrink: 0,
+            }}>
+                →
+            </Text>
         )}
     </div>
 );
 
-// ── Empty state ───────────────────────────────────────────────────
+// ── Empty state ───────────────────────────────────────────────────────
 const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     <div style={{
         display: "flex", flexDirection: "column", alignItems: "center",
@@ -149,25 +180,19 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
             </Text>
         </div>
         <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={onAdd}
-            style={{
-                borderRadius: 8, fontWeight: 600, height: 36,
-                background: T.acc, borderColor: T.acc,
-            }}
+            type="primary" icon={<PlusOutlined />} onClick={onAdd}
+            style={{ borderRadius: 8, fontWeight: 600, height: 36, background: T.acc, borderColor: T.acc }}
         >
             Tạo lộ trình thăng tiến
         </Button>
     </div>
 );
 
-// ── Template Card ─────────────────────────────────────────────────
+// ── Template card ─────────────────────────────────────────────────────
 const TemplateCard = ({
-    template, onView, onEdit, onDeactivate, onActivate,
+    template, onEdit, onDeactivate, onActivate,
 }: {
     template: ICareerPathTemplate;
-    onView: (t: ICareerPathTemplate) => void;
     onEdit: (t: ICareerPathTemplate) => void;
     onDeactivate: (t: ICareerPathTemplate) => void;
     onActivate: (t: ICareerPathTemplate) => void;
@@ -182,39 +207,37 @@ const TemplateCard = ({
             onMouseLeave={() => setHov(false)}
             style={{
                 background: T.white,
-                border: `1px solid ${hov ? T.ink6 : T.line}`,
-                borderRadius: 14,
+                border: `1px solid ${hov ? T.lineMed : T.line}`,
+                borderRadius: 12,
                 overflow: "hidden",
                 opacity: isActive ? 1 : 0.55,
                 transition: "border-color 0.15s, box-shadow 0.15s",
-                boxShadow: hov ? "0 4px 16px rgba(0,0,0,0.07)" : "0 1px 3px rgba(0,0,0,0.03)",
+                boxShadow: hov ? "0 2px 12px rgba(0,0,0,0.06)" : "none",
             }}
         >
             <div style={{ display: "flex", alignItems: "stretch" }}>
-                {/* Accent bar */}
+                {/* Left accent bar — luôn dùng màu xanh accent, không đổi theo level */}
                 <div style={{
                     width: 3, flexShrink: 0,
-                    background: isActive
-                        ? `linear-gradient(180deg, ${T.acc}, ${T.violet})`
-                        : T.ink6,
+                    background: isActive ? T.acc : T.ink6,
                 }} />
 
-                <div style={{ flex: 1, padding: "14px 18px" }}>
-
-                    {/* ── Header row ── */}
+                <div style={{ flex: 1, padding: "14px 18px", minWidth: 0 }}>
+                    {/* Header */}
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            {/* Tên + số cấp */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
-                                <Text style={{
-                                    fontSize: 14, fontWeight: 600, color: T.ink,
-                                }}>
+                            <div style={{
+                                display: "flex", alignItems: "center",
+                                gap: 8, flexWrap: "wrap", marginBottom: 3,
+                            }}>
+                                <Text style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>
                                     {template.name}
                                 </Text>
+                                {/* Badge cấp bậc — xám trung tính */}
                                 <span style={{
                                     display: "inline-flex", alignItems: "center",
                                     padding: "2px 8px", borderRadius: 6,
-                                    background: T.s2, border: `1px solid ${T.line}`,
+                                    background: T.s2, border: `1px solid ${T.ink6}`,
                                     fontSize: 11, fontWeight: 600, color: T.ink4,
                                 }}>
                                     {steps.length} cấp bậc
@@ -230,15 +253,14 @@ const TemplateCard = ({
                                     </span>
                                 )}
                             </div>
-                            {/* Description */}
                             {template.description && (
-                                <Text style={{ fontSize: 12, color: T.ink4, lineHeight: 1.5 }}>
+                                <Text style={{ fontSize: 12.5, color: T.ink4, lineHeight: 1.5 }}>
                                     {template.description}
                                 </Text>
                             )}
                         </div>
 
-                        {/* Actions */}
+                        {/* Action buttons */}
                         <Space
                             size={4}
                             style={{
@@ -248,42 +270,30 @@ const TemplateCard = ({
                                 pointerEvents: hov ? "auto" : "none",
                             }}
                         >
-                            <Tooltip title="Xem chi tiết" mouseEnterDelay={0.3}>
-                                <Button
-                                    type="text" size="small"
-                                    icon={<EyeOutlined style={{ fontSize: 12 }} />}
-                                    onClick={() => onView(template)}
-                                    style={iconBtnStyle()}
-                                />
-                            </Tooltip>
-                            <Tooltip title="Chỉnh sửa" mouseEnterDelay={0.3}>
-                                <Button
-                                    type="text" size="small"
-                                    icon={<EditOutlined style={{ fontSize: 12 }} />}
-                                    onClick={() => onEdit(template)}
-                                    style={iconBtnStyle()}
-                                />
-                            </Tooltip>
-                            <Tooltip title={isActive ? "Tạm tắt" : "Kích hoạt lại"} mouseEnterDelay={0.3}>
-                                <Button
-                                    type="text" size="small"
-                                    icon={isActive
-                                        ? <StopOutlined style={{ fontSize: 12 }} />
-                                        : <CheckCircleOutlined style={{ fontSize: 12 }} />}
-                                    onClick={() => isActive ? onDeactivate(template) : onActivate(template)}
-                                    style={iconBtnStyle(isActive ? "danger" : "success")}
-                                />
-                            </Tooltip>
+                            <IconBtn
+                                icon={<EditOutlined style={{ fontSize: 12 }} />}
+                                tooltip="Chỉnh sửa"
+                                onClick={() => onEdit(template)}
+                            />
+                            <IconBtn
+                                icon={isActive
+                                    ? <StopOutlined style={{ fontSize: 12 }} />
+                                    : <CheckCircleOutlined style={{ fontSize: 12 }} />}
+                                tooltip={isActive ? "Tạm tắt" : "Kích hoạt lại"}
+                                onClick={() => isActive ? onDeactivate(template) : onActivate(template)}
+                                variant={isActive ? "danger" : "success"}
+                            />
                         </Space>
                     </div>
 
-                    {/* ── Steps ── */}
+                    {/* Steps — nền s1, wrap gọn */}
                     {steps.length > 0 && (
                         <div style={{
                             display: "flex", alignItems: "center",
                             flexWrap: "wrap", gap: 5,
-                            padding: "10px 12px",
-                            background: T.s1, borderRadius: 10,
+                            padding: "9px 11px",
+                            background: T.s1,
+                            borderRadius: 8,
                             border: `1px solid ${T.line}`,
                             marginBottom: 10,
                         }}>
@@ -297,7 +307,7 @@ const TemplateCard = ({
                         </div>
                     )}
 
-                    {/* ── Footer ── */}
+                    {/* Footer */}
                     <div style={{
                         display: "flex", alignItems: "center", gap: 8,
                         paddingTop: 8, borderTop: `1px solid ${T.line}`,
@@ -322,7 +332,7 @@ const TemplateCard = ({
     );
 };
 
-// ── Main ──────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────
 const CareerPathTemplateTab = () => {
     const { departmentId } = useParams();
 
@@ -344,9 +354,7 @@ const CareerPathTemplateTab = () => {
         Modal.confirm({
             title: "Tạm tắt lộ trình thăng tiến?",
             content: `"${template.name}" sẽ không thể dùng để gán cho nhân viên.`,
-            okText: "Xác nhận tắt",
-            okType: "danger",
-            cancelText: "Hủy",
+            okText: "Xác nhận tắt", okType: "danger", cancelText: "Hủy",
             onOk: () => deactivateMutation.mutate(template.id!),
         });
     };
@@ -355,28 +363,18 @@ const CareerPathTemplateTab = () => {
         Modal.confirm({
             title: "Kích hoạt lại lộ trình thăng tiến?",
             content: `"${template.name}" sẽ được kích hoạt và có thể gán cho nhân viên.`,
-            okText: "Kích hoạt",
-            cancelText: "Hủy",
+            okText: "Kích hoạt", cancelText: "Hủy",
             onOk: () => activateMutation.mutate(template.id!),
         });
     };
 
     const openCreate = () => { setSelected(null); setOpenModal(true); };
     const openEdit = (t: ICareerPathTemplate) => { setSelected(t); setOpenModal(true); };
-    const openViewDetail = (t: ICareerPathTemplate) => { setSelected(t); setOpenView(true); };
     const closeModal = () => { setOpenModal(false); setSelected(null); };
 
     return (
         <div>
-            {/* ── Toolbar ── */}
-            <div style={{
-                background: T.white,
-                border: `1px solid ${T.line}`,
-                borderRadius: 12,
-                padding: "10px 14px",
-                marginBottom: 12,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-            }}>
+            <div style={{ marginBottom: 12 }}>
                 <SearchFilter
                     searchPlaceholder="Tìm lộ trình thăng tiến..."
                     addLabel="Tạo lộ trình"
@@ -387,12 +385,11 @@ const CareerPathTemplateTab = () => {
                 />
             </div>
 
-            {/* ── List ── */}
             {isFetching ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {[1, 2, 3].map((i) => (
                         <div key={i} style={{
-                            background: T.white, borderRadius: 14,
+                            background: T.white, borderRadius: 12,
                             border: `1px solid ${T.line}`, padding: "16px 18px",
                         }}>
                             <Skeleton active paragraph={{ rows: 2 }} />
@@ -415,16 +412,20 @@ const CareerPathTemplateTab = () => {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {filtered.map((t) => (
                         <TemplateCard
-                            key={t.id} template={t}
-                            onView={openViewDetail} onEdit={openEdit}
-                            onDeactivate={handleDeactivate} onActivate={handleActivate}
+                            key={t.id}
+                            template={t}
+                            onEdit={openEdit}
+                            onDeactivate={handleDeactivate}
+                            onActivate={handleActivate}
                         />
                     ))}
                 </div>
             )}
 
             <ModalCareerPathTemplate
-                open={openModal} onClose={closeModal} dataInit={selected}
+                open={openModal}
+                onClose={closeModal}
+                dataInit={selected}
                 onSuccess={() => { closeModal(); refetch(); }}
             />
 

@@ -6,21 +6,16 @@ const HomePage = () => {
     return (
         <div
             style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
+                position: "relative",
                 width: "100%",
-                height: "100%",
+                minHeight: "calc(100vh - 117px)",
                 background: "linear-gradient(135deg, #ffffff 0%, #fff5f7 50%, #ffe4e6 100%)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
                 overflow: "hidden",
-                margin: 0,
-                padding: 0,
+                boxSizing: "border-box",
             }}
         >
             {/* Subtle animated grid */}
@@ -176,9 +171,6 @@ const HomePage = () => {
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
 
-                /* ===================== */
-                /*   CSS Custom Props    */
-                /* ===================== */
                 :root {
                     --logo-size: clamp(100px, 20vw, 180px);
                     --orbital-size: clamp(140px, 28vw, 240px);
@@ -187,9 +179,6 @@ const HomePage = () => {
                     --content-gap: clamp(24px, 4vw, 50px);
                 }
 
-                /* ===================== */
-                /*   Main Layout         */
-                /* ===================== */
                 .main-content {
                     position: relative;
                     z-index: 10;
@@ -203,9 +192,6 @@ const HomePage = () => {
                     box-sizing: border-box;
                 }
 
-                /* ===================== */
-                /*   Logo               */
-                /* ===================== */
                 .logo-container {
                     position: relative;
                     width: var(--logo-size);
@@ -238,9 +224,6 @@ const HomePage = () => {
                     z-index: 0;
                 }
 
-                /* ===================== */
-                /*   HRM Text           */
-                /* ===================== */
                 .hrm-text-container {
                     position: relative;
                     padding: 0 clamp(8px, 2vw, 20px);
@@ -280,11 +263,6 @@ const HomePage = () => {
                     white-space: nowrap;
                 }
 
-
-
-                /* ===================== */
-                /*   Keyframes          */
-                /* ===================== */
                 @keyframes fadeInScale {
                     from { opacity: 0; transform: scale(0.7); }
                     to   { opacity: 1; transform: scale(1); }
@@ -336,10 +314,6 @@ const HomePage = () => {
                     50%      { transform: translate(30px, -60px); opacity: 0.4; }
                 }
 
-                /* ===================== */
-                /*   Responsive          */
-                /* ===================== */
-
                 /* Tablet portrait */
                 @media (max-width: 768px) {
                     :root {
@@ -386,7 +360,7 @@ const HomePage = () => {
                     }
                 }
 
-                /* Very small mobile (320px) */
+                /* Very small mobile */
                 @media (max-width: 360px) {
                     :root {
                         --hrm-font-size: 44px;
@@ -396,7 +370,7 @@ const HomePage = () => {
                     }
                 }
 
-                /* Landscape mobile (height constrained) */
+                /* Landscape mobile */
                 @media (max-height: 500px) and (orientation: landscape) {
                     :root {
                         --logo-size: 70px;
@@ -423,7 +397,8 @@ const HomePage = () => {
                         display: none;
                     }
                 }
-                /* Tall narrow screens (e.g. Galaxy Fold) */
+
+                /* Galaxy Fold */
                 @media (max-width: 320px) {
                     :root {
                         --hrm-font-size: 40px;

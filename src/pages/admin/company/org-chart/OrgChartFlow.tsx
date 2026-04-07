@@ -29,12 +29,14 @@ import {
     useDeleteOrgNodeMutation,
 } from "@/hooks/useOrgNodes";
 import Access from "@/components/share/access";
+import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { callFetchOrgNodes, callUpdateOrgNode, callFetchJobDescriptions } from "@/config/api";
 import ModalNode, { type BulkNodeItem } from "./modal.node";
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
+import SearchBar from "./SearchBar";
+import MiniPanel from "./MiniPanel";
 
-// ✅ Import ViewJobDescription thật — chỉnh path cho đúng project của bạn
 import ViewJobDescription, { type EnrichedJD } from "../../job-description/view.job-description/index";
 
 interface Props {
@@ -173,7 +175,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView } = useReactFlow();
 
-    // ✅ Thay jdPosition giả bằng jdRecord thật (chỉ cần id)
+    const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);
+    const canDelete = useAccess(ALL_PERMISSIONS.ORG_NODES.DELETE);
+
     const [jdOpen, setJdOpen] = useState(false);
     const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
 
@@ -192,6 +196,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const [pendingSaves, setPendingSaves] = useState<Map<string, { x: number; y: number }>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
 
+    // ── Search + MiniPanel state ──────────────────────────────────────────────
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
     const nodesRef = useRef<Node[]>([]);
     const edgesRef = useRef<Edge[]>([]);
     nodesRef.current = nodes;
@@ -204,6 +211,17 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         const { nodes: n, edges: e } = applyHighlight(nodesRef.current, edgesRef.current, hoveredId);
         unstable_batchedUpdates(() => { setNodes(n); setEdges(e); });
     }, []);
+
+    // ── Sync isSelected vào node data khi selectedNodeId thay đổi ────────────
+    useEffect(() => {
+        setNodes((prev) =>
+            prev.map((n) => {
+                const shouldBeSelected = n.id === selectedNodeId;
+                if (n.data.isSelected === shouldBeSelected) return n;
+                return { ...n, data: { ...n.data, isSelected: shouldBeSelected } };
+            })
+        );
+    }, [selectedNodeId]);
 
     useEffect(() => {
         callFetchJobDescriptions("filter=status='PUBLISHED'&page=1&pageSize=200")
@@ -223,7 +241,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     }, [nodes.length]); // eslint-disable-line
 
     useEffect(() => {
-        setChartId(null); setNodes([]); setEdges([]); setPendingSaves(new Map());
+        setChartId(null); setNodes([]); setEdges([]);
+        setPendingSaves(new Map());
+        setSelectedNodeId(null); // reset selection khi đổi owner
     }, [ownerId]);
 
     useEffect(() => {
@@ -256,11 +276,11 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 levelCode: n.level ?? "",
                 holderName: n.holderName ?? "",
                 isGoal: n.isGoal ?? false,
-                // ✅ Lưu jobDescriptionId thật từ API vào node.data
                 jobDescriptionId: n.jobDescriptionId ?? null,
                 highlightState: "idle",
+                isSelected: false,
                 onEdit: () => { }, onDelete: () => { }, onJD: () => { },
-                onMouseEnter: () => { }, onMouseLeave: () => { },
+                onSelect: () => { }, onMouseEnter: () => { }, onMouseLeave: () => { },
             } as OrgNodeData,
         }));
 
@@ -278,18 +298,19 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         });
 
         const withCbs = finalNodes.map((node) => {
-            // ✅ Lấy jobDescriptionId từ node.data đã được set ở rfNodes
             const jdId = node.data.jobDescriptionId as number | null;
 
             return {
                 ...node,
                 data: {
                     ...node.data,
+                    allowEdit: canEdit,
+                    allowDelete: canDelete,
+                    // isSelected sẽ được sync qua useEffect bên trên
+                    isSelected: selectedNodeId === node.id,
                     onEdit: () => handleOpenEdit(node),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
-                        // ✅ Nếu node có JD thật → mở ViewJobDescription
-                        // Nếu không có → thông báo
                         if (jdId) {
                             setJdRecord({ id: jdId } as EnrichedJD);
                             setJdOpen(true);
@@ -297,6 +318,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                             message.info("Vị trí này chưa được gắn JD nào.");
                         }
                     },
+                    onSelect: () => setSelectedNodeId((prev) => prev === node.id ? null : node.id),
                     onMouseEnter: () => applyHighlightNow(node.id),
                     onMouseLeave: () => applyHighlightNow(null),
                 } as OrgNodeData,
@@ -304,7 +326,16 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         });
 
         unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(dagreEdges); });
-    }, [ownerType, applyHighlightNow]); // eslint-disable-line
+    }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId]); // eslint-disable-line
+
+    // ── Search: zoom đến node được chọn ──────────────────────────────────────
+    const handleSearchSelect = useCallback((nodeId: string) => {
+        setSelectedNodeId(nodeId);
+        const found = nodesRef.current.find((n) => n.id === nodeId);
+        if (found) {
+            fitView({ nodes: [found], padding: 0.35, duration: 500, maxZoom: 1.2 });
+        }
+    }, [fitView]);
 
     const handleNodeDragStop = useCallback((_: unknown, node: Node) => {
         setPendingSaves((prev) => { const next = new Map(prev); next.set(node.id, { x: node.position.x, y: node.position.y }); return next; });
@@ -351,8 +382,10 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const onEdgesChange = useCallback((changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
     const handleDeleteNode = useCallback(async (nodeId: number, cId: number) => {
+        // Nếu node đang được select thì clear selection
+        if (selectedNodeId === String(nodeId)) setSelectedNodeId(null);
         await deleteNode.mutateAsync(nodeId); loadNodes(cId);
-    }, [deleteNode, loadNodes]);
+    }, [deleteNode, loadNodes, selectedNodeId]);
 
     const handleOpenEdit = useCallback((node: Node) => { setEditingNode(node); setOpenModal(true); }, []);
 
@@ -412,6 +445,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             background: "#f8f9fb", borderRadius: 12,
             position: "relative", border: "1px solid #e8ecf0", overflow: "hidden",
         }}>
+            {/* ── Toolbar (top-right) ── */}
             <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", gap: 8 }}>
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
                     {pendingSaves.size > 0 && (
@@ -436,6 +470,14 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     </Button>
                 </Access>
             </div>
+
+            {/* ── SearchBar (top-left) ── */}
+            <SearchBar
+                nodes={nodes}
+                onSelect={handleSearchSelect}
+                onClear={() => setSelectedNodeId(null)}
+            />
+
             <ReactFlow
                 nodes={nodes} edges={edges}
                 nodeTypes={nodeTypes} edgeTypes={edgeTypes}
@@ -443,11 +485,21 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
                 onNodeDragStop={handleNodeDragStop} onConnect={handleConnect}
                 minZoom={0.2} maxZoom={2} defaultEdgeOptions={EDGE_DEFAULTS}
+                // Click vào background → clear selection
+                onPaneClick={() => setSelectedNodeId(null)}
             >
                 <MiniMap nodeColor="#fda4af" maskColor="rgba(0,0,0,0.04)" style={{ borderRadius: 8 }} />
                 <Controls showInteractive={false} />
                 <Background color="#e5e7eb" gap={20} />
             </ReactFlow>
+
+            {/* ── MiniPanel (bottom-right) ── */}
+            <MiniPanel
+                nodeId={selectedNodeId}
+                nodes={nodes}
+                edges={edges}
+                onClose={() => setSelectedNodeId(null)}
+            />
 
             <ModalNode
                 open={openModal} onClose={handleCloseModal}
@@ -468,7 +520,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 isEditing={!!editingNode}
             />
 
-            {/* ✅ Thay Drawer + JDViewDetail giả bằng ViewJobDescription thật */}
             <ViewJobDescription
                 open={jdOpen}
                 onClose={() => { setJdOpen(false); setJdRecord(null); }}

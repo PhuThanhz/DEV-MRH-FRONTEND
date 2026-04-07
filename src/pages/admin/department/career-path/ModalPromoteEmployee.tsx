@@ -5,40 +5,13 @@ import {
     ProFormDatePicker,
     ProFormTextArea,
 } from "@ant-design/pro-components";
-import { ArrowRightOutlined, RiseOutlined } from "@ant-design/icons";
+import { ArrowRightOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { usePromoteEmployeeMutation } from "@/hooks/useEmployeeCareerPaths";
 import type { IEmployeeCareerPath } from "@/types/backend";
+import { T, Badge } from "./ModalEmployeeDetail";
 
 const { Text } = Typography;
-
-// ── Design tokens: white + soft pink ─────────────────────────────────────────
-const T = {
-    ink: "#1a1a1e",
-    ink2: "#3c3c42",
-    ink3: "#6c6c72",
-    ink4: "#aeaeb4",
-    white: "#ffffff",
-    s1: "#fafafa",
-    s2: "#f5f5f7",
-    line: "rgba(0,0,0,0.07)",
-    lineSub: "rgba(0,0,0,0.04)",
-
-    // Pink accent
-    pinkBg: "#fbeaf0",
-    pinkBord: "#f4c0d1",
-    pinkText: "#72243e",
-    pinkMid: "#993556",
-    pinkStrong: "#d4537e",
-
-    // Warm coral — next step card (no green/blue)
-    coralBg: "#faece7",
-    coralBord: "#f5c4b3",
-    coralText: "#4a1b0c",
-    coralMid: "#993c1d",
-
-    red: "#e24b4a",
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const safeFormatDate = (val: any): string => {
@@ -90,31 +63,7 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
 
     return (
         <ModalForm
-            title={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: "50%",
-                        background: T.pinkBg,
-                        border: `1px solid ${T.pinkBord}`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                    }}>
-                        <RiseOutlined style={{ color: T.pinkMid, fontSize: 15 }} />
-                    </div>
-                    <div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, lineHeight: 1.3 }}>
-                            Thăng tiến nhân viên
-                        </div>
-                        <div style={{ fontSize: 12, color: T.ink3, fontWeight: 400 }}>
-                            Xác nhận bước tiếp theo trong lộ trình
-                        </div>
-                    </div>
-                </div>
-            }
+            title="Thăng tiến nhân viên"
             open={open}
             form={form}
             onFinish={handleFinish}
@@ -142,8 +91,8 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                 submitButtonProps: {
                     disabled: !canPromote,
                     style: {
-                        background: canPromote ? T.pinkMid : "#e8e8ea",
-                        borderColor: canPromote ? T.pinkMid : "#e8e8ea",
+                        background: canPromote ? T.acc : T.s2,
+                        borderColor: canPromote ? T.acc : T.line,
                         color: canPromote ? "#fff" : T.ink4,
                         fontWeight: 500,
                         height: 36,
@@ -174,7 +123,7 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                     <div style={{
                         padding: "13px 16px",
                         background: T.s1,
-                        borderBottom: `1px solid ${T.lineSub}`,
+                        borderBottom: `1px solid ${T.line}`,
                         display: "flex",
                         alignItems: "center",
                         gap: 12,
@@ -183,14 +132,14 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                             width: 40,
                             height: 40,
                             borderRadius: "50%",
-                            background: T.pinkBg,
-                            border: `1px solid ${T.pinkBord}`,
+                            background: T.accSoft,
+                            border: `1px solid ${T.accBord}`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: 13,
                             fontWeight: 600,
-                            color: T.pinkMid,
+                            color: T.acc,
                             flexShrink: 0,
                         }}>
                             {getInitials(dataInit.user?.name)}
@@ -203,19 +152,9 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                 {dataInit.user?.email ?? ""}
                             </Text>
                         </div>
-                        {/* Status badge */}
-                        <div style={{
-                            padding: "3px 10px",
-                            borderRadius: 20,
-                            background: T.pinkBg,
-                            border: `1px solid ${T.pinkBord}`,
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: T.pinkMid,
-                            whiteSpace: "nowrap",
-                        }}>
+                        <Badge color={T.green} bg={T.greenSoft} border={T.greenBord}>
                             Đang hoạt động
-                        </div>
+                        </Badge>
                     </div>
 
                     {/* Career path body */}
@@ -229,7 +168,7 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                 marginBottom: 12,
                             }}>
                                 Lộ trình:{" "}
-                                <span style={{ color: T.pinkMid, fontWeight: 500 }}>
+                                <span style={{ color: T.acc, fontWeight: 500 }}>
                                     {dataInit.template.name}
                                 </span>
                             </Text>
@@ -241,15 +180,15 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                             <div style={{
                                 flex: 1,
                                 padding: "12px 14px",
-                                background: T.pinkBg,
-                                border: `1px solid ${T.pinkBord}`,
+                                background: T.accSoft,
+                                border: `1px solid ${T.accBord}`,
                                 borderRadius: 10,
                             }}>
                                 <Text style={{
                                     display: "block",
                                     fontSize: 10,
                                     fontWeight: 600,
-                                    color: T.pinkMid,
+                                    color: T.acc,
                                     textTransform: "uppercase",
                                     letterSpacing: "0.06em",
                                     marginBottom: 5,
@@ -261,23 +200,15 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                         </span>
                                     )}
                                 </Text>
-                                <Text style={{ fontSize: 14, fontWeight: 600, color: T.pinkText, display: "block" }}>
+                                <Text style={{ fontSize: 14, fontWeight: 600, color: T.ink, display: "block" }}>
                                     {currentStep?.jobTitleName ?? "—"}
                                 </Text>
                                 {currentStep?.positionLevelCode && (
-                                    <span style={{
-                                        display: "inline-block",
-                                        marginTop: 6,
-                                        padding: "2px 8px",
-                                        borderRadius: 4,
-                                        background: T.pinkMid,
-                                        color: "#fff",
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        letterSpacing: "0.04em",
-                                    }}>
-                                        {currentStep.positionLevelCode}
-                                    </span>
+                                    <div style={{ marginTop: 6 }}>
+                                        <Badge color={T.acc} bg={T.accSoft} border={T.accBord}>
+                                            {currentStep.positionLevelCode}
+                                        </Badge>
+                                    </div>
                                 )}
                             </div>
 
@@ -287,28 +218,28 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                 height: 28,
                                 borderRadius: "50%",
                                 background: T.white,
-                                border: `1px solid ${T.pinkBord}`,
+                                border: `1px solid ${T.line}`,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 flexShrink: 0,
                             }}>
-                                <ArrowRightOutlined style={{ fontSize: 11, color: T.pinkStrong }} />
+                                <ArrowRightOutlined style={{ fontSize: 11, color: T.ink4 }} />
                             </div>
 
                             {/* Next step */}
                             <div style={{
                                 flex: 1,
                                 padding: "12px 14px",
-                                background: nextStep ? T.coralBg : T.s2,
-                                border: `1px solid ${nextStep ? T.coralBord : T.line}`,
+                                background: nextStep ? T.violetSoft : T.s2,
+                                border: `1px solid ${nextStep ? T.violetBord : T.line}`,
                                 borderRadius: 10,
                             }}>
                                 <Text style={{
                                     display: "block",
                                     fontSize: 10,
                                     fontWeight: 600,
-                                    color: nextStep ? T.coralMid : T.ink4,
+                                    color: nextStep ? T.violet : T.ink4,
                                     textTransform: "uppercase",
                                     letterSpacing: "0.06em",
                                     marginBottom: 5,
@@ -317,23 +248,15 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                 </Text>
                                 {nextStep ? (
                                     <>
-                                        <Text style={{ fontSize: 14, fontWeight: 600, color: T.coralText, display: "block" }}>
+                                        <Text style={{ fontSize: 14, fontWeight: 600, color: T.ink, display: "block" }}>
                                             {nextStep.jobTitleName}
                                         </Text>
                                         {nextStep.positionLevelCode && (
-                                            <span style={{
-                                                display: "inline-block",
-                                                marginTop: 6,
-                                                padding: "2px 8px",
-                                                borderRadius: 4,
-                                                background: T.coralMid,
-                                                color: "#fff",
-                                                fontSize: 10,
-                                                fontWeight: 700,
-                                                letterSpacing: "0.04em",
-                                            }}>
-                                                {nextStep.positionLevelCode}
-                                            </span>
+                                            <div style={{ marginTop: 6 }}>
+                                                <Badge color={T.violet} bg={T.violetSoft} border={T.violetBord}>
+                                                    {nextStep.positionLevelCode}
+                                                </Badge>
+                                            </div>
                                         )}
                                     </>
                                 ) : (
@@ -362,7 +285,7 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                     <div style={{
                                         width: `${progressPct}%`,
                                         height: "100%",
-                                        background: `linear-gradient(90deg, ${T.pinkBord}, ${T.pinkMid})`,
+                                        background: `linear-gradient(90deg, ${T.acc}, ${T.violet})`,
                                         borderRadius: 99,
                                     }} />
                                 </div>
@@ -413,16 +336,16 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                                     width: 28,
                                     height: 28,
                                     borderRadius: "50%",
-                                    background: T.pinkBg,
-                                    border: `1px solid ${T.pinkBord}`,
+                                    background: T.s2,
+                                    border: `1px solid ${T.line}`,
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     flexShrink: 0,
                                 }}>
                                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                                        <circle cx="7" cy="7" r="5.5" stroke={T.pinkMid} strokeWidth="1.1" />
-                                        <path d="M7 4.5V7L9 9" stroke={T.pinkMid} strokeWidth="1.2" strokeLinecap="round" />
+                                        <circle cx="7" cy="7" r="5.5" stroke={T.ink3} strokeWidth="1.1" />
+                                        <path d="M7 4.5V7L9 9" stroke={T.ink3} strokeWidth="1.2" strokeLinecap="round" />
                                     </svg>
                                 </div>
                                 <div>

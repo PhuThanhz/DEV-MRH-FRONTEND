@@ -20,7 +20,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
-import type { ISection } from "@/types/backend";
+import type { ISection, ICompany, IDepartment } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
 import { useSectionsQuery } from "@/hooks/useSections";
@@ -33,6 +33,7 @@ import useAccess from "@/hooks/useAccess";
 import { useNavigate } from "react-router-dom";
 import { FileTextOutlined } from "@ant-design/icons";
 import SectionJobTitleTab from "./tab.section-job-title";
+
 import { Modal } from "antd";
 const SectionPage = () => {
     const navigate = useNavigate();
@@ -47,6 +48,7 @@ const SectionPage = () => {
     const [resetSignal, setResetSignal] = useState(0);
 
     const tableRef = useRef<ActionType>(null);
+    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(null);
 
     const [query, setQuery] = useState(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
@@ -62,6 +64,7 @@ const SectionPage = () => {
      */
     const buildFilters = (
         search: string,
+        companyId: number | null,   // 👈 thêm
         departmentId: number | null,
         status: number | null,
     ) => {
@@ -69,6 +72,7 @@ const SectionPage = () => {
 
         if (search)
             parts.push(`(name~'${search}' or code~'${search}')`);
+        if (companyId) parts.push(`department.company.id:${companyId}`);  // 👈 thêm
 
         if (departmentId)
             parts.push(`department.id:${departmentId}`);
@@ -89,11 +93,11 @@ const SectionPage = () => {
             sort: "createdAt,desc",
         };
 
-        const filters = buildFilters(searchValue, departmentIdFilter, statusFilter);
+        const filters = buildFilters(searchValue, companyIdFilter, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, departmentIdFilter, statusFilter]);
+    }, [searchValue, companyIdFilter, departmentIdFilter, statusFilter]);
 
     /*
      * ===================== BUILD QUERY FOR TABLE =====================
@@ -104,7 +108,7 @@ const SectionPage = () => {
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
 
-        const filters = buildFilters(searchValue, departmentIdFilter, statusFilter);
+        const filters = buildFilters(searchValue, companyIdFilter, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let sortBy = "sort=createdAt,desc";
@@ -118,6 +122,7 @@ const SectionPage = () => {
      * ===================== RESET =====================
      */
     const handleReset = () => {
+        setCompanyIdFilter(null);   // 👈 thêm
         setSearchValue("");
         setDepartmentIdFilter(null);
         setStatusFilter(null);
@@ -325,12 +330,25 @@ const SectionPage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-
+                                asyncOptions: async () => {
+                                    const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                                    return (res.data?.result ?? []).map((c: ICompany) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
                             },
                             {
                                 key: "departmentId",
                                 label: "Phòng ban",
-
+                                dependsOn: "companyId",
+                                asyncOptions: async (companyId) => {
+                                    const res = await callFetchDepartmentsByCompany(companyId);
+                                    return (res.data ?? []).map((d: IDepartment) => ({
+                                        label: d.name,
+                                        value: d.id,
+                                    }));
+                                },
                             },
                             {
                                 key: "status",
@@ -342,12 +360,9 @@ const SectionPage = () => {
                             },
                         ]}
                         onChange={(val) => {
-                            setDepartmentIdFilter(
-                                val.departmentId !== undefined ? val.departmentId : null
-                            );
-                            setStatusFilter(
-                                val.status !== undefined ? val.status : null
-                            );
+                            setCompanyIdFilter(val.companyId ?? null);      // 👈 thêm
+                            setDepartmentIdFilter(val.departmentId ?? null);
+                            setStatusFilter(val.status ?? null);
                         }}
                     />
                 </div>

@@ -22,7 +22,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
-import type { IDepartment } from "@/types/backend";
+import type { IDepartment, ICompany } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchCompany } from "@/config/api";
 import DepartmentJobTitleTab from "./tab.department-job-title";
@@ -441,7 +441,13 @@ const DepartmentPage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-
+                                asyncOptions: async () => {
+                                    const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                                    return (res.data?.result ?? []).map((c: ICompany) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
                             },
                             {
                                 key: "status",
@@ -453,12 +459,8 @@ const DepartmentPage = () => {
                             },
                         ]}
                         onChange={(val) => {
-                            setCompanyIdFilter(
-                                val.companyId !== undefined ? val.companyId : null
-                            );
-                            setStatusFilter(
-                                val.status !== undefined ? val.status : null
-                            );
+                            setCompanyIdFilter(val.companyId ?? null);
+                            setStatusFilter(val.status ?? null);
                         }}
                     />
                 </div>

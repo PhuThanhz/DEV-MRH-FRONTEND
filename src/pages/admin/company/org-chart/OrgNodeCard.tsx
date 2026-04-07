@@ -16,13 +16,17 @@ export interface OrgNodeData {
     levelCode: string;
     holderName?: string;
     isGoal?: boolean;
-    jobDescriptionId?: number | null; // ← thêm dòng này
+    jobDescriptionId?: number | null;
+    allowEdit?: boolean;
+    allowDelete?: boolean;
     onEdit: () => void;
     onDelete: () => void;
     onJD?: () => void;
+    onSelect?: () => void;       // 👈 click vào thân card
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
     highlightState?: "idle" | "active" | "ancestor" | "descendant" | "dimmed";
+    isSelected?: boolean;        // 👈 đang được chọn bởi search / mini panel
 }
 
 const NODE_W = 220;
@@ -39,6 +43,10 @@ const BORDER_CFG = {
     dimmed: { borderColor: "#e5e7eb", borderStyle: "solid" as const, borderWidth: "1.5px", boxShadow: "none", opacity: 0.3, scale: "scale(1)" },
 } as const;
 
+// selected: hồng nhạt cùng tông app, không nổi
+const SEL_BORDER = "#f9a8b4";
+const SEL_SHADOW = "0 0 0 3px rgba(232,99,122,0.10)";
+
 const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const [cardHover, setCardHover] = useState(false);
     const [jdHover, setJdHover] = useState(false);
@@ -52,17 +60,27 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const hs = data.highlightState ?? "idle";
     const bc = BORDER_CFG[hs];
 
-    const borderColor = hs === "idle" && data.isGoal ? "#e9d8fd" : bc.borderColor;
+    const showEdit = data.allowEdit !== false;
+    const showDelete = data.allowDelete !== false;
+    const showActions = showEdit || showDelete;
 
-    const handleMouseEnter = () => {
-        if (leaveTimer.current) clearTimeout(leaveTimer.current);
-        setCardHover(true);
-    };
-    const handleMouseLeave = () => {
-        leaveTimer.current = setTimeout(() => setCardHover(false), 80);
-    };
+    const borderColor = data.isSelected
+        ? SEL_BORDER
+        : hs === "idle" && data.isGoal
+            ? "#e9d8fd"
+            : bc.borderColor;
+
+    const boxShadow = data.isSelected ? SEL_SHADOW : bc.boxShadow;
+
+    const handleMouseEnter = () => { if (leaveTimer.current) clearTimeout(leaveTimer.current); setCardHover(true); };
+    const handleMouseLeave = () => { leaveTimer.current = setTimeout(() => setCardHover(false), 80); };
     const handleCardMouseEnter = () => { handleMouseEnter(); data.onMouseEnter?.(); };
     const handleCardMouseLeave = () => { handleMouseLeave(); data.onMouseLeave?.(); };
+
+    const handleCardClick = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        data.onSelect?.();
+    };
 
     const headerBar = data.isGoal
         ? "linear-gradient(90deg,#c084fc,#e9d8fd)"
@@ -81,87 +99,88 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                 onMouseEnter={handleCardMouseEnter}
                 onMouseLeave={handleCardMouseLeave}
             >
-                {/* ── Action buttons ── */}
-                <div
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                    style={{
-                        position: "absolute", top: -13, right: -6,
-                        display: "flex", gap: 4, zIndex: 10,
-                        opacity: cardHover ? 1 : 0,
-                        transform: cardHover ? "translateY(0)" : "translateY(5px)",
-                        transition: "opacity 0.15s ease, transform 0.15s ease",
-                        pointerEvents: cardHover ? "auto" : "none",
-                    }}
-                >
-                    <Tooltip title="Chỉnh sửa" placement="top">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); data.onEdit(); }}
-                            onMouseEnter={() => { handleMouseEnter(); setEditHover(true); }}
-                            onMouseLeave={() => { handleMouseLeave(); setEditHover(false); }}
-                            style={{
-                                width: 26, height: 26, borderRadius: "50%",
-                                background: editHover ? "#1e293b" : "#fff",
-                                border: "1.5px solid #e5e7eb", cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                color: editHover ? "#fff" : "#9ca3af",
-                                padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,.10)",
-                                transition: "all 0.15s ease",
-                            }}
-                        >
-                            <EditOutlined style={{ fontSize: 11 }} />
-                        </button>
-                    </Tooltip>
-
-                    <Popconfirm
-                        title="Xóa vị trí này?" description="Các node con sẽ mất liên kết cha."
-                        okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
-                        onConfirm={(e) => { e?.stopPropagation(); data.onDelete(); }}
-                        onPopupClick={(e) => e.stopPropagation()}
+                {showActions && (
+                    <div
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        style={{
+                            position: "absolute", top: -13, right: -6,
+                            display: "flex", gap: 4, zIndex: 10,
+                            opacity: cardHover ? 1 : 0,
+                            transform: cardHover ? "translateY(0)" : "translateY(5px)",
+                            transition: "opacity 0.15s ease, transform 0.15s ease",
+                            pointerEvents: cardHover ? "auto" : "none",
+                        }}
                     >
-                        <button
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseEnter={() => { handleMouseEnter(); setDeleteHover(true); }}
-                            onMouseLeave={() => { handleMouseLeave(); setDeleteHover(false); }}
-                            style={{
-                                width: 26, height: 26, borderRadius: "50%",
-                                background: deleteHover ? "#ef4444" : "#fff",
-                                border: `1.5px solid ${deleteHover ? "#ef4444" : "#e5e7eb"}`,
-                                cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                color: deleteHover ? "#fff" : "#9ca3af",
-                                padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,.10)",
-                                transition: "all 0.15s ease",
-                            }}
-                        >
-                            <DeleteOutlined style={{ fontSize: 11 }} />
-                        </button>
-                    </Popconfirm>
-                </div>
+                        {showEdit && (
+                            <Tooltip title="Chỉnh sửa" placement="top">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); data.onEdit(); }}
+                                    onMouseEnter={() => { handleMouseEnter(); setEditHover(true); }}
+                                    onMouseLeave={() => { handleMouseLeave(); setEditHover(false); }}
+                                    style={{
+                                        width: 26, height: 26, borderRadius: "50%",
+                                        background: editHover ? "#1e293b" : "#fff",
+                                        border: "1.5px solid #e5e7eb", cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: editHover ? "#fff" : "#9ca3af",
+                                        padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,.10)",
+                                        transition: "all 0.15s ease",
+                                    }}
+                                >
+                                    <EditOutlined style={{ fontSize: 11 }} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        {showDelete && (
+                            <Popconfirm
+                                title="Xóa vị trí này?" description="Các node con sẽ mất liên kết cha."
+                                okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}
+                                onConfirm={(e) => { e?.stopPropagation(); data.onDelete(); }}
+                                onPopupClick={(e) => e.stopPropagation()}
+                            >
+                                <button
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseEnter={() => { handleMouseEnter(); setDeleteHover(true); }}
+                                    onMouseLeave={() => { handleMouseLeave(); setDeleteHover(false); }}
+                                    style={{
+                                        width: 26, height: 26, borderRadius: "50%",
+                                        background: deleteHover ? "#ef4444" : "#fff",
+                                        border: `1.5px solid ${deleteHover ? "#ef4444" : "#e5e7eb"}`,
+                                        cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: deleteHover ? "#fff" : "#9ca3af",
+                                        padding: 0, boxShadow: "0 2px 8px rgba(0,0,0,.10)",
+                                        transition: "all 0.15s ease",
+                                    }}
+                                >
+                                    <DeleteOutlined style={{ fontSize: 11 }} />
+                                </button>
+                            </Popconfirm>
+                        )}
+                    </div>
+                )}
 
-                {/* ── Card ── */}
-                <div style={{
-                    width: NODE_W, minHeight: NODE_H,
-                    background: cardBg,
-                    borderRadius: 14,
-                    border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
-                    boxShadow: bc.boxShadow,
-                    overflow: "hidden", cursor: "default",
-                    display: "flex", flexDirection: "column",
-                    opacity: bc.opacity,
-                    transform: bc.scale,
-                    transition: TRANS,
-                    willChange: "transform, opacity",
-                }}>
+                <div
+                    onClick={handleCardClick}
+                    style={{
+                        width: NODE_W, minHeight: NODE_H,
+                        background: cardBg, borderRadius: 14,
+                        border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
+                        boxShadow,
+                        overflow: "hidden",
+                        cursor: data.onSelect ? "pointer" : "default",
+                        display: "flex", flexDirection: "column",
+                        opacity: bc.opacity, transform: bc.scale,
+                        transition: TRANS, willChange: "transform, opacity",
+                    }}>
 
-                    {/* ══ SIMPLE LAYOUT ══ */}
                     {isSimple ? (
                         <div style={{
                             flex: 1, margin: 4, borderRadius: 10,
                             border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            padding: "12px 14px",
-                            transition: `border-color ${T}`,
+                            padding: "12px 14px", transition: `border-color ${T}`,
                         }}>
                             <span style={{
                                 fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
@@ -174,13 +193,10 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                             </span>
                         </div>
                     ) : (
-                        /* ══ FULL LAYOUT ══ */
                         <>
-                            {/* Header bar */}
                             <div style={{ height: 4, flexShrink: 0, background: headerBar }} />
 
                             <div style={{ flex: 1, padding: "10px 12px 8px", display: "flex", flexDirection: "column", gap: 7, overflow: "hidden" }}>
-                                {/* Badge */}
                                 <div style={{ height: 20, flexShrink: 0, display: "flex", alignItems: "center" }}>
                                     {data.isGoal && (
                                         <span style={{
@@ -196,25 +212,18 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                     )}
                                 </div>
 
-                                {/* Title — căn giữa, hiển thị tối đa 3 dòng */}
-                                <div style={{
-                                    flex: 1, overflow: "hidden",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
+                                <div style={{ flex: 1, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                     <span style={{
                                         fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
                                         fontWeight: 600, fontSize: 14.5, color: "#111827",
-                                        lineHeight: 1.5, letterSpacing: "-0.01em",
-                                        textAlign: "center",
+                                        lineHeight: 1.5, letterSpacing: "-0.01em", textAlign: "center",
                                         display: "-webkit-box", WebkitLineClamp: 3,
-                                        WebkitBoxOrient: "vertical", overflow: "hidden",
-                                        width: "100%",
+                                        WebkitBoxOrient: "vertical", overflow: "hidden", width: "100%",
                                     }}>
                                         {data.title}
                                     </span>
                                 </div>
 
-                                {/* Holder */}
                                 {hasHolder ? (
                                     <div style={{
                                         minHeight: 34, flexShrink: 0,
@@ -232,12 +241,9 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                         <span style={{
                                             fontFamily: "'Be Vietnam Pro',sans-serif",
                                             fontSize: 11, fontWeight: 700, color: "#374151",
-                                            overflow: "hidden",
-                                            display: "-webkit-box",
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: "vertical",
-                                            lineHeight: 1.35,
-                                            wordBreak: "break-word",
+                                            overflow: "hidden", display: "-webkit-box",
+                                            WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                                            lineHeight: 1.35, wordBreak: "break-word",
                                         }}>
                                             {data.holderName}
                                         </span>
@@ -266,7 +272,6 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                 )}
                             </div>
 
-                            {/* Footer */}
                             <div style={{
                                 height: 34, flexShrink: 0,
                                 borderTop: "1px solid #f3f4f6",

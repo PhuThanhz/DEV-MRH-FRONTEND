@@ -92,6 +92,8 @@ export interface IUserPosition {
         id: number;
         name: string;
         email: string;
+        employeeCode?: string; // ← THÊM
+
     };
 
     jobTitle?: {

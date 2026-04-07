@@ -125,14 +125,7 @@ const CareerPathTab = () => {
     return (
         <div>
             {/* Toolbar */}
-            <div style={{
-                background: T.white,
-                border: `1px solid ${T.line}`,
-                borderRadius: 12,
-                padding: "14px 18px",
-                marginBottom: 12,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-            }}>
+            <div style={{ marginBottom: 12 }}>
                 <SearchFilter
                     searchPlaceholder="Tìm chức danh, cấp bậc…"
                     addLabel="Thêm mới"

@@ -1,18 +1,21 @@
 import { useState, useMemo } from "react";
-import { Typography, Button, Tooltip, Skeleton, Tag, Badge } from "antd";
+import { Typography, Tooltip, Tag, Badge, Space } from "antd";
 import {
-    RiseOutlined,
     EyeOutlined,
     EditOutlined,
-    ClockCircleOutlined,
     WarningOutlined,
     ArrowRightOutlined,
-    UserOutlined,
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
+import type { ProColumns } from "@ant-design/pro-components";
 
+import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import { PAGINATION_CONFIG } from "@/config/pagination";
+
 import {
     useEmployeeCareerPathsByDepartmentQuery,
     useEmployeeCareerPathByUserQuery,
@@ -22,185 +25,104 @@ import type { IEmployeeCareerPath } from "@/types/backend";
 import ModalAssignCareerPath from "./ModalAssignCareerPath";
 import ModalPromoteEmployee from "./ModalPromoteEmployee";
 import DrawerEmployeeDetail from "./ModalEmployeeDetail";
-import Access from "@/components/share/access";
-import { ALL_PERMISSIONS } from "@/config/permissions";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
-const T = {
-    ink: "#1d1d1f",
-    ink2: "#424245",
-    ink3: "#86868b",
-    ink4: "#aeaeb2",
-    ink5: "#d1d1d6",
-    white: "#ffffff",
-    s1: "#fafafa",
-    s2: "#f5f5f7",
-    line: "rgba(0,0,0,0.04)",
-    lineMed: "rgba(0,0,0,0.08)",
-    acc: "#0066ff",
-    accSoft: "rgba(0,102,255,0.05)",
-    accBord: "rgba(0,102,255,0.12)",
-    green: "#24b24b",
-    greenSoft: "#e8f7ed",
-    greenBord: "#c3e6cb",
-    orange: "#f59e0b",
-    orangeSoft: "#fef3c7",
-    orangeBord: "#fde68a",
-    red: "#ff3b30",
-    redSoft: "#fff1f0",
-    purple: "#af52de",
-    purpleSoft: "#f5ebfa",
-    purpleBord: "#e8d5f2",
-};
-
-const STATUS_CFG = {
-    0: { label: "Đang phát triển", color: T.acc, bg: T.accSoft, border: T.accBord, icon: <ClockCircleOutlined /> },
-};
-const getSt = (s?: number) => STATUS_CFG[0];
-
+// ── Avatar ───────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#0066ff", "#5856d6", "#34aadc", "#1db954", "#ff9500", "#ff3b30", "#af52de"];
 const avatarColor = (name?: string) =>
     name ? AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length] : AVATAR_COLORS[0];
 
-const ColLabel = ({ children }: { children: React.ReactNode }) => (
-    <Text style={{ fontSize: 10, color: T.ink4, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 2 }}>
-        {children}
-    </Text>
-);
+const UserAvatar = ({ name }: { name?: string }) => {
+    const initials = (name ?? "U")
+        .split(" ")
+        .filter(Boolean)
+        .map((w) => w[0]?.toUpperCase())
+        .slice(0, 2)
+        .join("");
+    return (
+        <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: avatarColor(name), color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 600, fontSize: 14, flexShrink: 0,
+            border: "1px solid rgba(0,0,0,0.06)",
+        }}>
+            {initials}
+        </div>
+    );
+};
 
-const LevelBadge = ({ code, color = T.acc, bg = T.accSoft, border = T.accBord }: any) => (
-    <span style={{ padding: "1px 6px", borderRadius: 4, background: bg, border: `1px solid ${border}`, fontSize: 10, fontWeight: 700, color, letterSpacing: 0.2 }}>
-        {code}
-    </span>
-);
+// ── LevelBadge ───────────────────────────────────────────────────────────
+const LevelBadge = ({
+    code,
+    color = "#0066ff",
+    bg = "rgba(0,102,255,0.07)",
+    border = "rgba(0,102,255,0.18)",
+}: {
+    code?: string;
+    color?: string;
+    bg?: string;
+    border?: string;
+}) =>
+    code ? (
+        <span style={{
+            padding: "1px 7px", borderRadius: 4,
+            background: bg, border: `1px solid ${border}`,
+            fontSize: 11, fontWeight: 700, color,
+            letterSpacing: 0.3, whiteSpace: "nowrap",
+        }}>
+            {code}
+        </span>
+    ) : null;
 
+// ── ProgressBar ──────────────────────────────────────────────────────────
 const ProgressBar = ({ current, total }: { current?: number; total?: number }) => {
     if (current === undefined || !total) return null;
     const pct = Math.min(Math.round((current / total) * 100), 100);
     return (
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: 5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                <Text style={{ fontSize: 10, color: T.ink3 }}>Tiến độ</Text>
-                <Text style={{ fontSize: 10, fontWeight: 600, color: T.ink2 }}>{pct}%</Text>
+                <Text style={{ fontSize: 10, color: "#86868b" }}>Tiến độ</Text>
+                <Text style={{ fontSize: 10, fontWeight: 600, color: "#424245" }}>{pct}%</Text>
             </div>
-            <div style={{ height: 4, background: T.s2, borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ width: `${pct}%`, height: "100%", background: T.acc, borderRadius: 2, transition: "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }} />
-            </div>
-        </div>
-    );
-};
-
-const EmployeeCard = ({ item, onView, onEdit, onPromote, isOwn }: any) => {
-    const [hov, setHov] = useState(false);
-    const st = getSt(item.progressStatus);
-
-    const expectedDate = item.stepStartedAt && item.durationMonths
-        ? dayjs(item.stepStartedAt).add(item.durationMonths, "month")
-        : null;
-    const daysLeft = expectedDate ? expectedDate.diff(dayjs(), "day") : null;
-    const isOverdue = item.overdue || (daysLeft !== null && daysLeft < 0);
-
-    return (
-        <div
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
-            style={{
-                background: T.white,
-                borderRadius: 16,
-                padding: "16px 20px",
-                border: `1px solid ${hov ? T.accBord : T.line}`,
-                boxShadow: hov ? "0 8px 24px rgba(0,0,0,0.04)" : "none",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                display: "grid",
-                gridTemplateColumns: "240px 1fr 1fr 140px 130px 40px",
-                alignItems: "center",
-                gap: 20,
-            }}
-        >
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: avatarColor(item.user?.name), color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 15 }}>
-                    {item.user?.name?.charAt(0).toUpperCase()}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                    <Text strong ellipsis style={{ display: "block", color: T.ink, fontSize: 14 }}>{item.user?.name}</Text>
-                    <Text ellipsis style={{ display: "block", color: T.ink3, fontSize: 12 }}>{item.user?.email}</Text>
-                </div>
-            </div>
-
-            <div style={{ minWidth: 0 }}>
-                <ColLabel>Lộ trình hiện tại</ColLabel>
-                <Text strong style={{ fontSize: 13, color: T.ink2 }}>{item.template?.name}</Text>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <LevelBadge code={item.currentStep?.positionLevelCode} />
-                    <Text ellipsis style={{ fontSize: 12, color: T.ink2 }}>{item.currentStep?.jobTitleName}</Text>
-                </div>
-            </div>
-
-            <div>
-                <ColLabel>Vị trí kế tiếp</ColLabel>
-                {item.nextStep ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <ArrowRightOutlined style={{ fontSize: 10, color: T.ink4 }} />
-                        <LevelBadge code={item.nextStep.positionLevelCode} color={T.purple} bg={T.purpleSoft} border={T.purpleBord} />
-                        <Text ellipsis style={{ fontSize: 12, color: T.ink2, fontWeight: 500 }}>{item.nextStep.jobTitleName}</Text>
-                    </div>
-                ) : (
-                    <Text style={{ fontSize: 12, color: T.ink4 }}>—</Text>
-                )}
-                <ProgressBar current={item.currentStepOrder} total={item.totalSteps} />
-            </div>
-
-            <div>
-                <ColLabel>Dự kiến bổ nhiệm</ColLabel>
-                {expectedDate ? (
-                    <>
-                        <Text strong style={{ fontSize: 13, color: isOverdue ? T.red : T.ink }}>{expectedDate.format("DD/MM/YYYY")}</Text>
-                        {isOverdue && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, color: T.red, fontSize: 11, fontWeight: 600 }}>
-                                <WarningOutlined /> Trễ {Math.abs(daysLeft!)} ngày
-                            </div>
-                        )}
-                    </>
-                ) : <Text style={{ color: T.ink5 }}>—</Text>}
-            </div>
-
-            <div style={{ textAlign: "right" }}>
+            <div style={{ height: 4, background: "#f0f0f0", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{
-                    display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20,
-                    background: st.bg, color: st.color, fontSize: 11, fontWeight: 600, border: `1px solid ${st.border}`
-                }}>
-                    <Badge color={st.color} status="processing" style={{ fontSize: 8 }} /> {st.label}
-                </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Tooltip title="Xem chi tiết">
-                    <Button type="text" shape="circle" icon={<EyeOutlined />} onClick={() => onView(item)} style={{ color: T.ink3 }} />
-                </Tooltip>
-
-                {/* Chỉ HR mới thấy nút Sửa và Bổ nhiệm */}
-                {hov && !isOwn && (
-                    <div style={{ position: "absolute", right: 24, background: T.white, border: `1px solid ${T.lineMed}`, borderRadius: 10, padding: 4, display: "flex", gap: 2, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", zIndex: 10 }}>
-                        <Tooltip title="Sửa"><Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(item)} /></Tooltip>
-                        {item.nextStep && (
-                            <Tooltip title="Bổ nhiệm"><Button type="text" size="small" icon={<RiseOutlined />} onClick={() => onPromote(item)} style={{ color: T.green }} /></Tooltip>
-                        )}
-                    </div>
-                )}
+                    width: `${pct}%`, height: "100%",
+                    background: "#0066ff", borderRadius: 2,
+                    transition: "width 0.5s ease",
+                }} />
             </div>
         </div>
     );
 };
 
-// ── Props ─────────────────────────────────────────────
+// ── Promote Button ───────────────────────────────────────────────────────
+const PromoteButton = ({ onClick }: { onClick: () => void }) => (
+    <button
+        onClick={onClick}
+        style={{
+            display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "2px 10px", borderRadius: 4,
+            border: "1px solid #13c2c2", background: "#e6fffb", color: "#13c2c2",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+            lineHeight: "20px", whiteSpace: "nowrap", transition: "all 0.2s ease",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "#13c2c2"; e.currentTarget.style.color = "#fff"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "#e6fffb"; e.currentTarget.style.color = "#13c2c2"; }}
+    >
+        Bổ nhiệm
+    </button>
+);
+
+// ── Props ─────────────────────────────────────────────────────────────────
 interface Props {
     viewMode: "department" | "own";
 }
 
 const EmployeeCareerPathTab = ({ viewMode }: Props) => {
     const { departmentId } = useParams();
-    const currentUser = useAppSelector(state => state.account.user);
+    const currentUser = useAppSelector((state) => state.account.user);
 
     const [searchValue, setSearchValue] = useState("");
     const [openAssign, setOpenAssign] = useState(false);
@@ -208,7 +130,7 @@ const EmployeeCareerPathTab = ({ viewMode }: Props) => {
     const [openDetail, setOpenDetail] = useState(false);
     const [selected, setSelected] = useState<IEmployeeCareerPath | null>(null);
 
-    // ── Queries ──────────────────────────────────────
+    // ── Queries ───────────────────────────────────────────────────────────
     const deptQuery = useEmployeeCareerPathsByDepartmentQuery(
         viewMode === "department" ? Number(departmentId) : undefined
     );
@@ -216,76 +138,236 @@ const EmployeeCareerPathTab = ({ viewMode }: Props) => {
         viewMode === "own" ? currentUser?.id : undefined
     );
 
-    const data: IEmployeeCareerPath[] = viewMode === "department"
-        ? (deptQuery.data ?? [])
-        : (ownQuery.data ? [ownQuery.data] : []);
+    const data: IEmployeeCareerPath[] =
+        viewMode === "department"
+            ? (deptQuery.data ?? [])
+            : ownQuery.data ? [ownQuery.data] : [];
 
     const isFetching = deptQuery.isFetching || ownQuery.isFetching;
     const refetch = viewMode === "department" ? deptQuery.refetch : ownQuery.refetch;
 
-    // ── Stats & filter ───────────────────────────────
-    const stats = useMemo(() => ({
-        total: data.length,
-        overdue: data.filter(d => d.overdue).length,
-    }), [data]);
+    // ── Filter ────────────────────────────────────────────────────────────
+    const filtered = useMemo(
+        () => data.filter((item) =>
+            !searchValue ||
+            [item.user?.name, (item.user as any)?.employeeCode, item.template?.name]
+                .some((s) => s?.toLowerCase().includes(searchValue.toLowerCase()))
+        ),
+        [data, searchValue]
+    );
 
-    const filtered = useMemo(() => data.filter(item => {
-        return !searchValue || [item.user?.name, item.user?.email, item.template?.name]
-            .some(s => s?.toLowerCase().includes(searchValue.toLowerCase()));
-    }), [data, searchValue]);
+    const overdueCount = useMemo(() => data.filter((d) => d.overdue).length, [data]);
 
+    // ── Columns ───────────────────────────────────────────────────────────
+    const columns: ProColumns<IEmployeeCareerPath>[] = [
+        {
+            title: "STT", key: "index", width: 55, align: "center",
+            render: (_text, _record, index) => index + 1,
+        },
+        {
+            title: "Mã NV", key: "employeeCode", width: 100, align: "center",
+            render: (_, record) => {
+                const employeeCode = (record.user as any)?.employeeCode;
+                return employeeCode ? (
+                    <Text style={{ fontSize: 12, fontWeight: 600, color: "#424245", fontFamily: "monospace" }}>
+                        #{employeeCode}
+                    </Text>
+                ) : (
+                    <Text style={{ fontSize: 12, color: "#d1d1d6" }}>—</Text>
+                );
+            },
+        },
+        {
+            title: "Nhân viên", key: "user", width: 200,
+            render: (_, record) => (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <UserAvatar name={record.user?.name} />
+                    <Text strong ellipsis style={{ fontSize: 13, color: "#1d1d1f" }}>
+                        {record.user?.name}
+                    </Text>
+                </div>
+            ),
+        },
+        {
+            title: "Lộ trình", key: "template",
+            render: (_, record) => (
+                <div>
+                    <Text strong style={{ fontSize: 13, color: "#1d1d1f" }}>{record.template?.name}</Text>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                        <LevelBadge code={record.currentStep?.positionLevelCode} />
+                        <Text ellipsis style={{ fontSize: 12, color: "#424245" }}>
+                            {record.currentStep?.jobTitleName}
+                        </Text>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: "Vị trí kế tiếp", key: "nextStep",
+            render: (_, record) =>
+                record.nextStep ? (
+                    <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <ArrowRightOutlined style={{ fontSize: 10, color: "#aeaeb2" }} />
+                            <LevelBadge code={record.nextStep.positionLevelCode} color="#af52de" bg="#f5ebfa" border="#e8d5f2" />
+                            <Text ellipsis style={{ fontSize: 12, color: "#424245", fontWeight: 500 }}>
+                                {record.nextStep.jobTitleName}
+                            </Text>
+                        </div>
+                        <ProgressBar current={record.currentStepOrder} total={record.totalSteps} />
+                    </div>
+                ) : (
+                    <Text style={{ fontSize: 12, color: "#d1d1d6" }}>—</Text>
+                ),
+        },
+        {
+            title: "Dự kiến bổ nhiệm", key: "expectedDate", align: "center", width: 150,
+            render: (_, record) => {
+                const expectedDate = record.stepStartedAt && record.durationMonths
+                    ? dayjs(record.stepStartedAt).add(record.durationMonths, "month")
+                    : null;
+                const daysLeft = expectedDate ? expectedDate.diff(dayjs(), "day") : null;
+                const isOverdue = record.overdue || (daysLeft !== null && daysLeft < 0);
+                if (!expectedDate) return <Text style={{ color: "#d1d1d6" }}>—</Text>;
+                return (
+                    <div>
+                        <Text strong style={{ fontSize: 13, color: isOverdue ? "#ff3b30" : "#1d1d1f" }}>
+                            {expectedDate.format("DD/MM/YYYY")}
+                        </Text>
+                        {isOverdue && (
+                            <div style={{
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                gap: 4, color: "#ff3b30", fontSize: 11, fontWeight: 600, marginTop: 2,
+                            }}>
+                                <WarningOutlined /> Trễ {Math.abs(daysLeft!)} ngày
+                            </div>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
+            title: "Trạng thái", key: "status", align: "center", width: 145,
+            render: (_, record) => {
+                const status = record.progressStatus;
+                const cfg = status === 1
+                    ? { label: "Hoàn thành", color: "#52c41a", bg: "#f6ffed", border: "#b7eb8f" }
+                    : status === 2
+                        ? { label: "Tạm dừng", color: "#fa8c16", bg: "#fff7e6", border: "#ffd591" }
+                        : { label: "Đang phát triển", color: "#0066ff", bg: "rgba(0,102,255,0.05)", border: "rgba(0,102,255,0.2)" };
+                return (
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12, fontWeight: 500,
+                        height: 22, lineHeight: "20px",
+                        border: `1px solid ${cfg.border}`, background: cfg.bg, color: cfg.color,
+                    }}>
+                        <Badge color={cfg.color} status="processing" style={{ fontSize: 8, marginRight: 4 }} />
+                        {cfg.label}
+                    </Tag>
+                );
+            },
+        },
+        {
+            title: "Hành động", align: "center", width: 180,
+            render: (_, entity) => (
+                <Space size={8}>
+                    <Tooltip title="Xem chi tiết">
+                        <EyeOutlined
+                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                            onClick={() => { setSelected(entity); setOpenDetail(true); }}
+                        />
+                    </Tooltip>
+                    {viewMode !== "own" && (
+                        <Access permission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.UPDATE} hideChildren>
+                            <Tooltip title="Chỉnh sửa">
+                                <EditOutlined
+                                    style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                                    onClick={() => { setSelected(entity); setOpenAssign(true); }}
+                                />
+                            </Tooltip>
+                        </Access>
+                    )}
+                    {viewMode !== "own" && entity.nextStep && (
+                        <Access permission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.PROMOTE} hideChildren>
+                            <PromoteButton onClick={() => { setSelected(entity); setOpenPromote(true); }} />
+                        </Access>
+                    )}
+                </Space>
+            ),
+        },
+    ];
+
+    // ── Render ────────────────────────────────────────────────────────────
     return (
-        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-
-            <div style={{ background: T.white, padding: "20px 24px", borderRadius: 20, border: `1px solid ${T.line}`, marginBottom: 20 }}>
+        <div>
+            {/* Toolbar */}
+            <div style={{ marginBottom: 12 }}>
                 <SearchFilter
-                    searchPlaceholder="Tìm tên nhân viên, vị trí hoặc tên lộ trình..."
-                    onSearch={setSearchValue}
-                    // Nút "Gán lộ trình" chỉ hiện nếu có permission ASSIGN
-                    onAddClick={() => { setSelected(null); setOpenAssign(true); }}
+                    searchPlaceholder="Tìm tên nhân viên, mã NV hoặc lộ trình..."
                     addLabel="Gán lộ trình"
+                    showFilterButton={false}
+                    onSearch={(val) => setSearchValue(val)}
+                    onReset={refetch}
+                    onAddClick={() => { setSelected(null); setOpenAssign(true); }}
                     addPermission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.ASSIGN}
                 />
-
-                {stats.overdue > 0 && (
-                    <div style={{ display: "flex", gap: 12, marginTop: 20, alignItems: "center" }}>
-                        <Tag color="error" style={{ borderRadius: 6, padding: "2px 10px", fontWeight: 600, border: "none" }}>
-                            {stats.overdue} NHÂN VIÊN TRỄ HẠN
-                        </Tag>
-                    </div>
+                {overdueCount > 0 && (
+                    <Tag
+                        color="error"
+                        style={{
+                            marginTop: 8, width: "fit-content",
+                            borderRadius: 6, padding: "2px 10px",
+                            fontWeight: 600, border: "none",
+                        }}
+                    >
+                        <WarningOutlined style={{ marginRight: 4 }} />
+                        {overdueCount} nhân viên trễ hạn
+                    </Tag>
                 )}
             </div>
 
-            {isFetching ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {[1, 2, 3, 4].map(k => <Skeleton key={k} active avatar paragraph={{ rows: 1 }} style={{ background: T.white, padding: 20, borderRadius: 16 }} />)}
-                </div>
-            ) : filtered.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {filtered.map(item => (
-                        <EmployeeCard
-                            key={item.id}
-                            item={item}
-                            isOwn={viewMode === "own"}
-                            onView={(r: any) => { setSelected(r); setOpenDetail(true); }}
-                            onEdit={(r: any) => { setSelected(r); setOpenAssign(true); }}
-                            onPromote={(r: any) => { setSelected(r); setOpenPromote(true); }}
-                        />
-                    ))}
-                </div>
-            ) : (
-                <div style={{ textAlign: "center", padding: "100px 0", background: T.s1, borderRadius: 20, border: `1px dashed ${T.lineMed}` }}>
-                    <UserOutlined style={{ fontSize: 40, color: T.ink5, marginBottom: 16 }} />
-                    <Title level={5} style={{ color: T.ink2 }}>Không có dữ liệu</Title>
-                    <Text style={{ color: T.ink4 }}>
-                        {viewMode === "own" ? "Bạn chưa được gán lộ trình thăng tiến" : "Thử thay đổi bộ lọc hoặc thêm lộ trình mới cho nhân viên"}
-                    </Text>
-                </div>
-            )}
+            {/* Table */}
+            <Access permission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.GET_BY_DEPARTMENT}>
+                <DataTable<IEmployeeCareerPath>
+                    rowKey="id"
+                    loading={isFetching}
+                    columns={columns}
+                    dataSource={filtered}
+                    request={async () => Promise.resolve({ data: filtered, success: true, total: filtered.length })}
+                    pagination={{
+                        defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+                        showQuickJumper: true,
+                        showTotal: (total, range) => (
+                            <div style={{ fontSize: 13 }}>
+                                <span style={{ fontWeight: 500 }}>{range[0]}–{range[1]}</span>{" "}
+                                trên{" "}
+                                <span style={{ fontWeight: 600, color: "#1677ff" }}>{total.toLocaleString()}</span>{" "}
+                                lộ trình
+                            </div>
+                        ),
+                    }}
+                    rowSelection={false}
+                />
+            </Access>
 
-            <ModalAssignCareerPath open={openAssign} onClose={() => { setOpenAssign(false); setSelected(null); }} dataInit={selected} departmentId={Number(departmentId)} onSuccess={() => { setOpenAssign(false); refetch(); }} />
-            <ModalPromoteEmployee open={openPromote} onClose={() => { setOpenPromote(false); setSelected(null); }} dataInit={selected} onSuccess={() => { setOpenPromote(false); refetch(); }} />
-            <DrawerEmployeeDetail open={openDetail} onClose={() => { setOpenDetail(false); setSelected(null); }} dataInit={selected} />
+            <ModalAssignCareerPath
+                open={openAssign}
+                onClose={() => { setOpenAssign(false); setSelected(null); }}
+                dataInit={selected}
+                departmentId={Number(departmentId)}
+                onSuccess={() => { setOpenAssign(false); refetch(); }}
+            />
+            <ModalPromoteEmployee
+                open={openPromote}
+                onClose={() => { setOpenPromote(false); setSelected(null); }}
+                dataInit={selected}
+                onSuccess={() => { setOpenPromote(false); refetch(); }}
+            />
+            <DrawerEmployeeDetail
+                open={openDetail}
+                onClose={() => { setOpenDetail(false); setSelected(null); }}
+                dataInit={selected}
+            />
         </div>
     );
 };

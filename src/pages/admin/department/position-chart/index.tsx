@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DeptPageNav from "@/components/common/navigation/DeptPageNav";
 import { useDeptNavPages } from "@/hooks/useDeptNavPages";
@@ -9,13 +9,16 @@ const PositionChartPage = () => {
     const [searchParams] = useSearchParams();
     const departmentName = searchParams.get("departmentName") || "";
     const deptNavPages = useDeptNavPages();
+    const navigate = useNavigate();
 
     return (
         <PageContainer title={`Bản đồ chức danh — ${departmentName}`}>
-            {/* Render nội dung modal thẳng vào trang, không cần open/onClose */}
             <PositionChartModal
                 open={true}
-                onClose={() => { }}
+                onClose={() => navigate(
+                    `/admin/departments/${departmentId}/org-chart?${searchParams.toString()}`,
+                    { replace: true }
+                )}
                 departmentId={Number(departmentId)}
                 departmentName={departmentName}
             />

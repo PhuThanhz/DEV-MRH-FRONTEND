@@ -137,7 +137,12 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                     Lộ trình
                 </span>
             ),
-            children: dataInit ? <TabInfo dataInit={dataInit} /> : null,
+            children: (
+                // ← min-height giữ kích thước ổn định khi đổi tab
+                <div style={{ minHeight: 480, width: "100%" }}>
+                    {dataInit ? <TabInfo dataInit={dataInit} /> : null}
+                </div>
+            ),
         },
         {
             key: "history",
@@ -148,7 +153,10 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                 </span>
             ),
             children: (
-                <TabHistory userId={open && dataInit?.user?.id ? dataInit.user.id : undefined} />
+                // ← cùng min-height, width: 100% để stretch bằng tab kia
+                <div style={{ minHeight: 480, width: "100%" }}>
+                    <TabHistory userId={open && dataInit?.user?.id ? dataInit.user.id : undefined} />
+                </div>
             ),
         },
     ];
@@ -182,8 +190,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                         background: T.white,
                         position: "relative",
                     }}>
-
-
                         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 2 }}>
                             {/* Avatar */}
                             <Avatar
@@ -200,7 +206,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
 
                             {/* Name + info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                {/* Row 1: tên + trạng thái */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 3 }}>
                                     <Title level={4} style={{ margin: 0, color: T.ink, fontSize: 17, fontWeight: 700, lineHeight: 1.2 }}>
                                         {dataInit.user?.name ?? "—"}
@@ -215,12 +220,10 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                     </div>
                                 </div>
 
-                                {/* Row 2: email */}
                                 <Text style={{ fontSize: 12.5, color: T.ink4, display: "block", marginBottom: 8 }}>
                                     {dataInit.user?.email ?? "—"}
                                 </Text>
 
-                                {/* Row 3: vị trí hiện tại → kế tiếp */}
                                 <div style={{
                                     display: "inline-flex", alignItems: "center", gap: 8,
                                     padding: "5px 12px", borderRadius: 8,
@@ -296,7 +299,6 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                     <div style={{
                         padding: "4px 28px 24px",
                         background: T.s1,
-                        minHeight: 380,
                         flex: 1,
                     }}>
                         <Tabs

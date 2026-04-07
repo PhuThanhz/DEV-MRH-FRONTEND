@@ -9,8 +9,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
-import type { IJobTitle } from "@/types/backend";
-import { PAGINATION_CONFIG } from "@/config/pagination";
+import type { IJobTitle, ICompany } from "@/types/backend"; import { PAGINATION_CONFIG } from "@/config/pagination";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { callFetchCompany } from "@/config/api";
 
@@ -214,7 +213,13 @@ const JobTitlePage = () => {
                             {
                                 key: "companyId",
                                 label: "Công ty",
-
+                                asyncOptions: async () => {
+                                    const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                                    return (res.data?.result ?? []).map((c: ICompany) => ({
+                                        label: c.name,
+                                        value: c.id,
+                                    }));
+                                },
                             },
                         ]}
                         onChange={(val) => {

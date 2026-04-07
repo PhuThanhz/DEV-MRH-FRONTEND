@@ -29,7 +29,7 @@ export const TabHistory = ({ userId }: { userId?: number }) => {
     );
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
             {histories.map((h, i) => (
                 <div
                     key={h.id ?? i}
@@ -38,6 +38,7 @@ export const TabHistory = ({ userId }: { userId?: number }) => {
                         background: T.white,
                         border: `1px solid ${T.line}`,
                         borderRadius: 10,
+                        minHeight: 72,
                     }}
                 >
                     {/* From → To */}
