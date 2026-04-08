@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Badge } from "antd";
+import { Space, Tag } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
+import dayjs from "dayjs";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
@@ -16,6 +17,7 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { useUsersQuery } from "@/hooks/useUsers";
 import { useRolesQuery } from "@/hooks/useRoles";
+import { useAppSelector } from "@/redux/hooks";
 
 import ModalUser from "@/pages/admin/user/modal.user";
 import ViewDetailUser from "@/pages/admin/user/view.user";
@@ -33,7 +35,6 @@ const UserPage = () => {
     const [roleOptions, setRoleOptions] = useState<
         { label: string; value: string; color?: string }[]
     >([]);
-
     const [query, setQuery] = useState<string>(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
     );
@@ -42,6 +43,10 @@ const UserPage = () => {
 
     const { data, isFetching, refetch } = useUsersQuery(query);
     const { data: rolesData } = useRolesQuery("page=1&size=100");
+
+    const isSuperAdmin = useAppSelector(
+        (state) => state.account.user.role?.name === "SUPER_ADMIN"
+    );
 
     useEffect(() => {
         if (rolesData?.result) {
@@ -65,13 +70,10 @@ const UserPage = () => {
 
         if (searchValue)
             filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
-
         if (roleFilter)
             filters.push(`role.name='${roleFilter}'`);
-
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
-
         if (createdAtFilter)
             filters.push(createdAtFilter);
 
@@ -98,25 +100,20 @@ const UserPage = () => {
 
         if (searchValue)
             filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
-
         if (roleFilter)
             filters.push(`role.name='${roleFilter}'`);
-
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
-
         if (createdAtFilter)
             filters.push(createdAtFilter);
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let temp = queryString.stringify(q, { encode: false });
-
         let sortBy = "sort=createdAt,desc";
 
         if (sort?.name)
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
-
         else if (sort?.email)
             sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
 
@@ -141,12 +138,10 @@ const UserPage = () => {
             align: "center",
             render: (_, record) => {
                 const backendURL = import.meta.env.VITE_BACKEND_URL;
-
                 const avatarUrl = record.avatar
                     ? `${backendURL}/uploads/avatar/${record.avatar}`
                     : null;
                 const displayName = record.name || record.email || "";
-
                 const initials = displayName
                     .split(" ")
                     .filter(Boolean)
@@ -171,12 +166,9 @@ const UserPage = () => {
                 }
 
                 const bgColors = ["#1677ff", "#fa8c16", "#52c41a", "#13c2c2", "#eb2f96"];
-
-                const bg =
-                    bgColors[
-                    (displayName.charCodeAt(0) + displayName.length) %
-                    bgColors.length
-                    ];
+                const bg = bgColors[
+                    (displayName.charCodeAt(0) + displayName.length) % bgColors.length
+                ];
 
                 return (
                     <div
@@ -200,13 +192,11 @@ const UserPage = () => {
             },
         },
         { title: "Tên hiển thị", dataIndex: "name", sorter: true },
-
         { title: "Email", dataIndex: "email", sorter: true },
-
         {
             title: "Vai trò",
             dataIndex: ["role", "name"],
-            align: "center",  // 👈 thêm dòng này
+            align: "center",
             render: (_, record) =>
                 record.role?.name ? (
                     <Tag color="blue">{record.role.name}</Tag>
@@ -220,7 +210,6 @@ const UserPage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.active;
-
                 return (
                     <Tag
                         style={{
@@ -240,6 +229,39 @@ const UserPage = () => {
                 );
             },
         },
+
+        // 2 cột chỉ hiện với SUPER_ADMIN
+        ...(isSuperAdmin ? [
+            {
+                title: "Truy cập lần cuối",
+                dataIndex: "lastLoginAt",
+                width: 160,
+                align: "center" as const,
+                render: (_: any, record: IUser) =>
+                    record.lastLoginAt ? (
+                        <span style={{ fontSize: 12 }}>
+                            {dayjs(record.lastLoginAt).format("DD/MM/YYYY HH:mm")}
+                        </span>
+                    ) : (
+                        <span style={{ color: "#ccc" }}>—</span>
+                    ),
+            },
+            {
+                title: "IP truy cập",
+                dataIndex: "lastLoginIp",
+                width: 130,
+                align: "center" as const,
+                render: (_: any, record: IUser) =>
+                    record.lastLoginIp ? (
+                        <span style={{ fontSize: 12, fontFamily: "monospace" }}>
+                            {record.lastLoginIp}
+                        </span>
+                    ) : (
+                        <span style={{ color: "#ccc" }}>—</span>
+                    ),
+            },
+        ] : []),
+
         {
             title: "Hành động",
             align: "center",
@@ -255,7 +277,6 @@ const UserPage = () => {
                             }}
                         />
                     </Access>
-
                     <Access permission={ALL_PERMISSIONS.USERS.UPDATE} hideChildren>
                         <EditOutlined
                             style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
@@ -285,10 +306,8 @@ const UserPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.USERS.CREATE}  // 👈 thêm dòng này
-
+                        addPermission={ALL_PERMISSIONS.USERS.CREATE}
                     />
-
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect
                             fields={[
@@ -313,7 +332,6 @@ const UserPage = () => {
                                 );
                             }}
                         />
-
                         <DateRangeFilter
                             fieldName="createdAt"
                             onChange={(filter) => setCreatedAtFilter(filter)}
@@ -332,7 +350,6 @@ const UserPage = () => {
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);
-
                         return Promise.resolve({
                             data: users,
                             success: true,
@@ -368,7 +385,6 @@ const UserPage = () => {
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
-
             <ViewDetailUser
                 onClose={setOpenViewDetail}
                 open={openViewDetail}

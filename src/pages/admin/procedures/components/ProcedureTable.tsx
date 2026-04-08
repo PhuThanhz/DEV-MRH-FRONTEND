@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Space, Tag, Popconfirm, Tooltip } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from "@ant-design/icons";
+import { EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
@@ -9,6 +9,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
+import type { FilterField } from "@/components/common/filter/AdvancedFilterSelect";
 
 import ModalProcedure from "../modal.procedure";
 import ModalRevise from "../components/modal.revise";
@@ -53,11 +54,10 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [createdAtFilter, setCreatedAtFilter] = useState<string | null>(null);
     const [searchValue, setSearchValue] = useState("");
-    const [companyFilter, setCompanyFilter] = useState<string | null>(null);
-    const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
-    const [sectionFilter, setSectionFilter] = useState<string | null>(null);
+    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(companyId ?? null);
+    const [departmentIdFilter, setDepartmentIdFilter] = useState<number | null>(departmentId ?? null);
+    const [sectionIdFilter, setSectionIdFilter] = useState<number | null>(null);
     const [planYearFilter, setPlanYearFilter] = useState<number | null>(null);
-    const [cachedDepartmentId, setCachedDepartmentId] = useState<number | null>(null);
     const [resetSignal, setResetSignal] = useState(0);
 
     const [query, setQuery] = useState(
@@ -75,25 +75,36 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const procedures = data?.result ?? [];
 
     // ===================== BUILD FILTERS =====================
+    // Dùng ID thay vì name để filter chính xác hơn
     const buildFilters = (
         search: string,
         status: string | null,
         createdAt: string | null,
-        company: string | null,
-        department: string | null,
-        section: string | null,
+        cmpId: number | null,
+        deptId: number | null,
+        sectId: number | null,
         planYear: number | null,
     ) => {
         const parts: string[] = [];
+
+        // Props cố định (được truyền từ ngoài vào)
         if (companyId) parts.push(`department.company.id:${companyId}`);
         if (departmentId) parts.push(`department.id:${departmentId}`);
+
+        // Bộ lọc người dùng chọn
         if (search) parts.push(`procedureName~'${search}'`);
         if (status) parts.push(`status='${status}'`);
         if (createdAt) parts.push(createdAt);
-        if (company) parts.push(`department.company.name~'${company}'`);
-        if (department) parts.push(`department.name~'${department}'`);
-        if (section) parts.push(`section.name~'${section}'`);
+
+        // Chỉ filter theo company nếu không bị fix cứng từ props
+        if (!companyId && cmpId) parts.push(`department.company.id:${cmpId}`);
+
+        // Chỉ filter theo department nếu không bị fix cứng từ props
+        if (!departmentId && deptId) parts.push(`department.id:${deptId}`);
+
+        if (sectId) parts.push(`section.id:${sectId}`);
         if (planYear) parts.push(`planYear=${planYear}`);
+
         return parts;
     };
 
@@ -106,13 +117,13 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         };
         const filters = buildFilters(
             searchValue, statusFilter, createdAtFilter,
-            companyFilter, departmentFilter, sectionFilter, planYearFilter
+            companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter
         );
         if (filters.length > 0) q.filter = filters.join(" and ");
         setQuery(queryString.stringify(q, { encode: false }));
     }, [
         searchValue, statusFilter, createdAtFilter,
-        companyFilter, departmentFilter, sectionFilter, planYearFilter,
+        companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter,
         type, companyId, departmentId,
     ]);
 
@@ -124,7 +135,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         };
         const filters = buildFilters(
             searchValue, statusFilter, createdAtFilter,
-            companyFilter, departmentFilter, sectionFilter, planYearFilter
+            companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter
         );
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -142,11 +153,10 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         setSearchValue("");
         setStatusFilter(null);
         setCreatedAtFilter(null);
-        setCompanyFilter(null);
-        setDepartmentFilter(null);
-        setSectionFilter(null);
+        setCompanyIdFilter(companyId ?? null);
+        setDepartmentIdFilter(departmentId ?? null);
+        setSectionIdFilter(null);
         setPlanYearFilter(null);
-        setCachedDepartmentId(null);
         setResetSignal((s) => s + 1);
         refetch();
     };
@@ -222,7 +232,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 <Tag color="geekblue">{record.sectionName || "--"}</Tag>
             ),
         },
-
         {
             title: "Tên quy trình",
             dataIndex: "procedureName",
@@ -256,11 +265,11 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         },
         {
             title: "Ngày ban hành",
-            dataIndex: "issuedDate", // ← đổi từ "createdAt"
+            dataIndex: "issuedDate",
             align: "center",
             width: 120,
             render: (_, record) =>
-                record.issuedDate  // ← đổi từ record.createdAt
+                record.issuedDate
                     ? dayjs(record.issuedDate).format("DD-MM-YYYY")
                     : "--",
         },
@@ -290,7 +299,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         </Tooltip>
                     </Access>
 
-                    {/* 🔁 TẠO PHIÊN BẢN MỚI — dùng Tag thay icon */}
+                    {/* 🔁 TẠO PHIÊN BẢN MỚI */}
                     <Access permission={permission.revise} hideChildren>
                         <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
                             <Tag
@@ -331,58 +340,93 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     ];
 
     // ===================== FILTER FIELDS =====================
-    const filterFields: any[] = [
+    // Đúng với FilterField interface: chỉ dùng options | asyncOptions | dependsOn
+    // Value luôn là ID (number) để filter chính xác, label hiển thị tên
+    const filterFields: FilterField[] = [
+
+        // --- CÔNG TY: chỉ hiện khi không bị fix cứng từ props ---
         ...(!companyId && !departmentId ? [{
-            key: "company",
+            key: "companyId",
             label: "Công ty",
-            type: "async-select",
-            loadOptions: async () => {
-                const res = await callFetchCompany("page=1&size=500");
+            asyncOptions: async () => {
+                const res = await callFetchCompany("page=1&size=500&sort=name,asc");
                 const list: ICompany[] = (res?.data as any)?.result ?? [];
-                return list.map((c) => ({ label: c.name, value: c.name }));
+                return list.map((c) => ({
+                    label: c.name,
+                    value: c.id,          // value = ID
+                    color: "blue",
+                }));
             },
-        }] : []),
+        }] as FilterField[] : []),
+
+        // --- PHÒNG BAN: chỉ hiện khi không bị fix cứng từ props ---
         ...(!departmentId ? [{
-            key: "department",
+            key: "departmentId",
             label: "Phòng ban",
-            type: "async-select",
-            ...(companyId ? {
-                loadOptions: async () => {
-                    const res = await callFetchDepartmentsByCompany(companyId);
-                    const list: IDepartment[] = (res?.data as any) ?? [];
-                    return list.map((d) => ({ label: d.name, value: d.name }));
-                },
-            } : {
-                dependsOn: "company",
-                loadOptionsWithDep: async (companyName: string) => {
-                    const res = await callFetchCompany("page=1&size=500");
-                    const list: ICompany[] = (res?.data as any)?.result ?? [];
-                    const company = list.find((c) => c.name === companyName);
-                    if (!company?.id) return [];
-                    const dRes = await callFetchDepartmentsByCompany(company.id);
-                    const dList: IDepartment[] = (dRes?.data as any) ?? [];
-                    return dList.map((d) => ({ label: d.name, value: d.name }));
-                },
-            }),
-        }] : []),
+            // Nếu đã có companyId từ props → fetch thẳng, không cần dependsOn
+            // Nếu không → phụ thuộc vào companyId người dùng chọn
+            ...(companyId
+                ? {
+                    asyncOptions: async () => {
+                        const res = await callFetchDepartmentsByCompany(companyId);
+                        const list: IDepartment[] = (res?.data as any) ?? [];
+                        return list.map((d) => ({
+                            label: d.name,
+                            value: d.id,
+                            color: "cyan",
+                        }));
+                    },
+                }
+                : {
+                    dependsOn: "companyId",
+                    asyncOptions: async (parentCompanyId: number) => {
+                        if (!parentCompanyId) return [];
+                        const res = await callFetchDepartmentsByCompany(parentCompanyId);
+                        const list: IDepartment[] = (res?.data as any) ?? [];
+                        return list.map((d) => ({
+                            label: d.name,
+                            value: d.id,
+                            color: "cyan",
+                        }));
+                    },
+                }),
+        }] as FilterField[] : []),
+
+        // --- BỘ PHẬN: phụ thuộc vào departmentId ---
+        // Nếu departmentId fix cứng từ props → dùng đó để fetch
+        // Nếu không → phụ thuộc vào departmentId người dùng chọn
         {
-            key: "section",
+            key: "sectionId",
             label: "Bộ phận",
-            type: "async-select",
-            dependsOn: "department",
-            loadOptionsWithDep: async (_: string) => {
-                const id = cachedDepartmentId ?? departmentId;
-                if (!id) return [];
-                const res = await callFetchSectionsByDepartment(id);
-                const list: ISection[] = (res?.data as any) ?? [];
-                return list.map((s) => ({ label: s.name, value: s.name }));
-            },
+            ...(departmentId
+                ? {
+                    // departmentId cố định từ props → fetch thẳng không cần dependsOn
+                    asyncOptions: async () => {
+                        const res = await callFetchSectionsByDepartment(departmentId);
+                        const list: ISection[] = (res?.data as any) ?? [];
+                        return list.map((s) => ({
+                            label: s.name,
+                            value: s.id,
+                            color: "geekblue",
+                        }));
+                    },
+                }
+                : {
+                    dependsOn: "departmentId",
+                    asyncOptions: async (parentDeptId: number) => {
+                        if (!parentDeptId) return [];
+                        const res = await callFetchSectionsByDepartment(parentDeptId);
+                        const list: ISection[] = (res?.data as any) ?? [];
+                        return list.map((s) => ({
+                            label: s.name,
+                            value: s.id,
+                            color: "geekblue",
+                        }));
+                    },
+                }),
         },
-        {
-            key: "planYear",
-            label: "Năm KH",
-            type: "number",
-        },
+
+        // --- TRẠNG THÁI ---
         {
             key: "status",
             label: "Trạng thái",
@@ -392,6 +436,16 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 { label: "Đang cập nhật", value: "NEED_UPDATE", color: "gold" },
                 { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
             ],
+        },
+
+        // --- NĂM KẾ HOẠCH ---
+        {
+            key: "planYear",
+            label: "Năm KH",
+            options: Array.from({ length: 10 }, (_, i) => {
+                const year = new Date().getFullYear() - 2 + i;
+                return { label: String(year), value: year, color: "purple" };
+            }),
         },
     ];
 
@@ -414,33 +468,13 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
                         fields={filterFields}
-                        onChange={async (filters) => {
-                            setCompanyFilter(filters.company || null);
-                            setDepartmentFilter(filters.department || null);
-                            setSectionFilter(filters.section || null);
-                            setPlanYearFilter(filters.planYear || null);
-                            setStatusFilter(filters.status || null);
-
-                            if (filters.department) {
-                                if (companyId) {
-                                    const dRes = await callFetchDepartmentsByCompany(companyId);
-                                    const dList: IDepartment[] = (dRes?.data as any) ?? [];
-                                    const found = dList.find((d) => d.name === filters.department);
-                                    setCachedDepartmentId(found?.id ?? null);
-                                } else if (filters.company) {
-                                    const res = await callFetchCompany("page=1&size=500");
-                                    const list: ICompany[] = (res?.data as any)?.result ?? [];
-                                    const company = list.find((c) => c.name === filters.company);
-                                    if (company?.id) {
-                                        const dRes = await callFetchDepartmentsByCompany(company.id);
-                                        const dList: IDepartment[] = (dRes?.data as any) ?? [];
-                                        const found = dList.find((d) => d.name === filters.department);
-                                        setCachedDepartmentId(found?.id ?? null);
-                                    }
-                                }
-                            } else {
-                                setCachedDepartmentId(null);
-                            }
+                        onChange={(filters) => {
+                            // Value đã là ID (number) nên map thẳng vào state
+                            setCompanyIdFilter(filters.companyId ?? (companyId ?? null));
+                            setDepartmentIdFilter(filters.departmentId ?? (departmentId ?? null));
+                            setSectionIdFilter(filters.sectionId ?? null);
+                            setStatusFilter(filters.status ?? null);
+                            setPlanYearFilter(filters.planYear ?? null);
                         }}
                     />
                     <DateRangeFilter

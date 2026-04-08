@@ -54,7 +54,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             };
             setSelectedRole(roleItem);
             setPreviewUrl(
-                dataInit.avatar ? `${backendURL}/storage/AVATAR/${dataInit.avatar}` : ""
+                dataInit.avatar ? `${backendURL}/storage/avatar/${dataInit.avatar}` : ""
             );
             form.setFieldsValue({
                 email: dataInit.email,
@@ -123,7 +123,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             let avatarFileName = dataInit?.avatar || "";
 
             if (avatarFile) {
-                const uploadRes = await callUploadSingleFile(avatarFile, "AVATAR");
+                const uploadRes = await callUploadSingleFile(avatarFile, "avatar");
                 if (uploadRes?.data?.fileName) avatarFileName = uploadRes.data.fileName;
             }
 

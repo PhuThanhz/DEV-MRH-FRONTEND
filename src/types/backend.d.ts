@@ -62,6 +62,8 @@ export interface IUser {
         name: string;
     };
     active: boolean;
+    lastLoginAt?: string;
+    lastLoginIp?: string;
     userInfo?: {        // ⭐ THÊM
         employeeCode?: string;
         phone?: string;
@@ -70,6 +72,8 @@ export interface IUser {
         startDate?: string;
         contractSignDate?: string;
         contractExpireDate?: string;
+        // ✅ THÊM 2 DÒNG NÀY
+
     };
     createdBy?: string;
     updatedBy?: string;
