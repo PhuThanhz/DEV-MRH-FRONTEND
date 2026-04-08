@@ -1318,6 +1318,7 @@ export interface IProcedure {
     fileUrls?: string[]; // ← đổi từ fileUrl?: string
     status?: string;
     planYear?: number;
+    issuedDate?: string; // ← THÊM
     note?: string;
     version?: number;
 
@@ -1339,6 +1340,8 @@ export interface IProcedureHistory {
     version?: number;
     procedureName?: string;
     status?: string;
+    issuedDate?: string; // ← THÊM
+
     planYear?: number;
     fileUrls?: string[]; // ← đổi từ fileUrl?: string
     note?: string;
@@ -1355,6 +1358,8 @@ export interface IProcedureRequest {
     procedureName: string;
     status?: string;
     planYear?: number;
+    issuedDate?: string; // ← THÊM
+
     fileUrls?: string[]; // ← đổi từ fileUrl?: string
     note?: string;
     active?: boolean;  // ← thêm dòng này

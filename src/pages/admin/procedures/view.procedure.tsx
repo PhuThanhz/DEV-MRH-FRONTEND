@@ -502,6 +502,19 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                             <Text style={{ color: "#999", fontWeight: 400, fontSize: 13 }}>--</Text>
                         )}
                     </Field>
+                    {/* ← THÊM */}
+                    <Field label="Ngày ban hành">
+                        {dataInit.issuedDate ? (
+                            <>
+                                <CalendarOutlined style={{ color: "#eb2f96", fontSize: 12 }} />
+                                <span style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>
+                                    {dayjs(dataInit.issuedDate).format("DD-MM-YYYY")}
+                                </span>
+                            </>
+                        ) : (
+                            <Text style={{ color: "#999", fontWeight: 400, fontSize: 13 }}>--</Text>
+                        )}
+                    </Field>
 
                     <Field label="Trạng thái">
                         <Tag

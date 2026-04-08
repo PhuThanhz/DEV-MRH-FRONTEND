@@ -6,7 +6,7 @@ import {
 } from "@ant-design/pro-components";
 
 import {
-    Col, Form, Row, message, Upload, Button, Input, Tag,
+    Col, Form, Row, message, Upload, Button, Input, Tag, DatePicker,
 } from "antd";
 
 import { UploadOutlined } from "@ant-design/icons";
@@ -23,6 +23,7 @@ import type {
 } from "@/types/backend";
 
 import { useReviseProcedureMutation } from "@/hooks/useProcedure";
+import dayjs from "dayjs";
 
 interface IProps {
     type: ProcedureType;
@@ -50,13 +51,14 @@ const ModalRevise: React.FC<IProps> = ({
         if (!open || !dataInit) return;
 
         const urls = dataInit.fileUrls ?? [];
-        form.setFieldsValue({
-            procedureCode: dataInit.procedureCode ?? "",  // ← THÊM MỚI
+        form.setFieldsValue({  // ← bỏ chữ s thừa
+            procedureCode: dataInit.procedureCode ?? "",
             departmentId: dataInit.departmentId,
             sectionId: dataInit.sectionId,
             procedureName: dataInit.procedureName,
             status: dataInit.status,
             planYear: dataInit.planYear,
+            issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : null,
             note: dataInit.note,
             fileUrls: urls,
         });
@@ -83,10 +85,11 @@ const ModalRevise: React.FC<IProps> = ({
         if (!dataInit?.id) return;
 
         const payload: IProcedureRequest = {
-            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(), // ← THÊM MỚI
+            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(),
             procedureName: values.procedureName,
             status: values.status,
             planYear: values.planYear ? Number(values.planYear) : undefined,
+            issuedDate: values.issuedDate ? dayjs(values.issuedDate).toISOString() : undefined,
             fileUrls: values.fileUrls ?? [],
             note: values.note,
             departmentId: values.departmentId ?? dataInit.departmentId ?? null,
@@ -127,10 +130,7 @@ const ModalRevise: React.FC<IProps> = ({
                 message.error("Chỉ chấp nhận file PDF, Word, Excel!");
                 return Upload.LIST_IGNORE;
             }
-            if (file.size / 1024 / 1024 >= 20) {
-                message.error("File phải nhỏ hơn 20MB!");
-                return Upload.LIST_IGNORE;
-            }
+            // ← XOÁ check 20MB, không giới hạn size
 
             const tempUid = Date.now().toString();
             setFileList((prev) => [...prev, { uid: tempUid, name: file.name, status: "uploading" }]);
@@ -260,7 +260,7 @@ const ModalRevise: React.FC<IProps> = ({
                     </Form.Item>
                 </Col>
 
-                {/* Mã quy trình */}  {/* ← THÊM MỚI */}
+                {/* Mã quy trình */}
                 <Col xs={24} lg={12}>
                     <ProFormText
                         name="procedureCode"
@@ -307,6 +307,17 @@ const ModalRevise: React.FC<IProps> = ({
                         fieldProps={{ type: "number" }}
                         placeholder="VD: 2026"
                     />
+                </Col>
+
+                {/* Ngày ban hành — dùng Form.Item + DatePicker thay ProFormDatePicker */}
+                <Col xs={24} lg={12}>
+                    <Form.Item name="issuedDate" label="Ngày ban hành">
+                        <DatePicker
+                            style={{ width: "100%" }}
+                            format="DD-MM-YYYY"
+                            placeholder="Chọn ngày ban hành"
+                        />
+                    </Form.Item>
                 </Col>
 
                 {/* File quy trình */}

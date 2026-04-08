@@ -227,20 +227,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Tên quy trình",
             dataIndex: "procedureName",
             sorter: true,
-            render: (_, record) =>
-                record.fileUrls && record.fileUrls.length > 0 ? (
-                    <a
-                        href={`/api/v1/files?fileName=${encodeURIComponent(record.fileUrls[0])}&folder=procedures`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "#1677ff", fontWeight: 500 }}
-                    >
-                        <FileTextOutlined style={{ marginRight: 6 }} />
-                        {record.procedureName}
-                    </a>
-                ) : (
-                    <span>{record.procedureName}</span>
-                ),
+            render: (_, record) => <span>{record.procedureName}</span>,
         },
         {
             title: "Trạng thái",
@@ -269,12 +256,12 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         },
         {
             title: "Ngày ban hành",
-            dataIndex: "createdAt",
+            dataIndex: "issuedDate", // ← đổi từ "createdAt"
             align: "center",
             width: 120,
             render: (_, record) =>
-                record.createdAt
-                    ? dayjs(record.createdAt).format("DD-MM-YYYY")
+                record.issuedDate  // ← đổi từ record.createdAt
+                    ? dayjs(record.issuedDate).format("DD-MM-YYYY")
                     : "--",
         },
         {

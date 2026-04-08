@@ -6,7 +6,7 @@ import {
     ProFormSwitch,
 } from "@ant-design/pro-components";
 import {
-    Col, Form, Row, message, Upload, Input,
+    Col, Form, Row, message, Upload, Input, DatePicker,
 } from "antd";
 import {
     UploadOutlined, BankOutlined,
@@ -30,10 +30,11 @@ import {
     useCreateProcedureMutation,
     useUpdateProcedureMutation,
 } from "@/hooks/useProcedure";
-
+import dayjs from "dayjs";
 import UserSelectField from "./components/UserSelectField";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+
 const PINK = "#e91e8c";
 const PINK_HOVER = "#c4177a";
 
@@ -106,6 +107,7 @@ const TypeSelector: React.FC<{
         })}
     </div>
 );
+
 const TYPE_PERMISSION_MAP: Record<ProcedureType, { method: string; apiPath: string; module: string }> = {
     COMPANY: ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE,
     DEPARTMENT: ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE,
@@ -148,6 +150,7 @@ const TypeSelectorFiltered: React.FC<{
 
     return <TypeSelector value={value} onChange={onChange} disabled={disabled} options={visibleOptions} />;
 };
+
 const Divider = () => (
     <div style={{ height: 1, background: "#f5f5f7", margin: "4px 0" }} />
 );
@@ -189,22 +192,22 @@ const ModalProcedure: React.FC<IProps> = ({
         if (dataInit?.id) {
             setProcedureType(defaultType);
             const userIds = (dataInit as any).userIds ?? [];
-            const urls = dataInit.fileUrls ?? []; // ← đổi
+            const urls = dataInit.fileUrls ?? [];
             form.setFieldsValue({
-                procedureCode: dataInit.procedureCode ?? "",  // ← THÊM MỚI
-
+                procedureCode: dataInit.procedureCode ?? "",
                 departmentId: dataInit.departmentId,
                 sectionId: dataInit.sectionId,
                 procedureName: dataInit.procedureName,
                 status: dataInit.status,
                 planYear: dataInit.planYear,
+                issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : null, // ← dayjs object cho DatePicker
                 note: dataInit.note,
-                fileUrls: urls, // ← đổi
+                fileUrls: urls,
                 active: dataInit.active,
                 userIds,
             });
             setFileList(
-                urls.map((name, i) => ({ // ← đổi
+                urls.map((name, i) => ({
                     uid: String(i),
                     name,
                     status: "done" as const,
@@ -223,7 +226,7 @@ const ModalProcedure: React.FC<IProps> = ({
             setSelectedUserCount(0);
             if (fixedDepartmentId) form.setFieldValue("departmentId", fixedDepartmentId);
             form.setFieldValue("active", true);
-            form.setFieldValue("fileUrls", []); // ← đổi
+            form.setFieldValue("fileUrls", []);
         }
     }, [open, dataInit]);
 
@@ -236,7 +239,7 @@ const ModalProcedure: React.FC<IProps> = ({
         form.setFieldValue("departmentId", undefined);
         form.setFieldValue("sectionId", undefined);
         form.setFieldValue("userIds", []);
-        form.setFieldValue("procedureCode", "");  // ← THÊM MỚI        
+        form.setFieldValue("procedureCode", "");
         setFileList([]);
     };
 
@@ -252,12 +255,12 @@ const ModalProcedure: React.FC<IProps> = ({
 
     const submitForm = async (values: any) => {
         const payload: IProcedureRequest = {
-            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(), // ← THÊM MỚI
-
+            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(),
             procedureName: values.procedureName,
             status: values.status,
             planYear: values.planYear ? Number(values.planYear) : undefined,
-            fileUrls: values.fileUrls ?? [], // ← đổi
+            issuedDate: values.issuedDate ? dayjs(values.issuedDate).toISOString() : undefined, // ← THÊM
+            fileUrls: values.fileUrls ?? [],
             note: values.note,
             active: values.active ?? true,
             departmentId: values.departmentId ?? fixedDepartmentId ?? dataInit?.departmentId ?? null,
@@ -292,7 +295,6 @@ const ModalProcedure: React.FC<IProps> = ({
 
     const uploadProps: UploadProps = {
         fileList,
-        // bỏ maxCount: 1 — cho phép nhiều file
         accept: ".pdf,.doc,.docx,.xls,.xlsx",
         beforeUpload: async (file) => {
             const allowed = [
@@ -306,10 +308,7 @@ const ModalProcedure: React.FC<IProps> = ({
                 message.error("Chỉ chấp nhận file PDF, Word, Excel!");
                 return Upload.LIST_IGNORE;
             }
-            if (file.size / 1024 / 1024 >= 20) {
-                message.error("File phải nhỏ hơn 20MB!");
-                return Upload.LIST_IGNORE;
-            }
+
 
             const tempUid = Date.now().toString();
             setFileList((prev) => [...prev, { uid: tempUid, name: file.name, status: "uploading" }]);
@@ -418,7 +417,6 @@ const ModalProcedure: React.FC<IProps> = ({
                     <Input />
                 </Form.Item>
 
-
                 {/* ── Loại quy trình ── */}
                 <Form.Item label="Loại quy trình" style={{ marginBottom: 0 }}>
                     <TypeSelectorFiltered
@@ -495,7 +493,7 @@ const ModalProcedure: React.FC<IProps> = ({
                     </Col>
                 </Row>
 
-                {/* ── Bộ phận + Tên quy trình ── */}
+                {/* ── Bộ phận + Mã + Tên quy trình ── */}
                 <Row gutter={16}>
                     <Col xs={24} lg={12}>
                         <ProFormSelect
@@ -507,7 +505,6 @@ const ModalProcedure: React.FC<IProps> = ({
                         />
                     </Col>
                     <Col xs={24} lg={12}>
-                        {/* THÊM MỚI */}
                         <ProFormText
                             name="procedureCode"
                             label="Mã quy trình"
@@ -526,9 +523,9 @@ const ModalProcedure: React.FC<IProps> = ({
                     </Col>
                 </Row>
 
-                {/* ── Trạng thái + Năm + Kích hoạt ── */}
+                {/* ── Trạng thái + Năm + Ngày ban hành + Kích hoạt ── */}
                 <Row gutter={16}>
-                    <Col xs={24} lg={8}>
+                    <Col xs={24} lg={6}>
                         <ProFormSelect
                             name="status"
                             label="Trạng thái"
@@ -540,7 +537,7 @@ const ModalProcedure: React.FC<IProps> = ({
                             }}
                         />
                     </Col>
-                    <Col xs={24} lg={8}>
+                    <Col xs={24} lg={6}>
                         <ProFormText
                             name="planYear"
                             label="Kế hoạch năm"
@@ -548,7 +545,17 @@ const ModalProcedure: React.FC<IProps> = ({
                             placeholder="VD: 2026"
                         />
                     </Col>
-                    <Col xs={24} lg={8}>
+                    {/* ← THÊM: dùng Form.Item + DatePicker thay ProFormDatePicker */}
+                    <Col xs={24} lg={6}>
+                        <Form.Item name="issuedDate" label="Ngày ban hành">
+                            <DatePicker
+                                style={{ width: "100%" }}
+                                format="DD-MM-YYYY"
+                                placeholder="Chọn ngày ban hành"
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} lg={6}>
                         <ProFormSwitch
                             name="active"
                             label="Kích hoạt"
@@ -592,7 +599,7 @@ const ModalProcedure: React.FC<IProps> = ({
                                 }}>
                                     <UploadOutlined style={{ fontSize: 12 }} />
                                     {uploading ? "Đang upload..." : "Thêm file PDF, Word, Excel"}
-                                    <span style={{ color: "#9ca3af" }}>(tối đa 20MB/file)</span>
+                                    <span style={{ color: "#9ca3af" }}>(PDF, Word, Excel)</span>
                                 </div>
                             </Upload>
                         </Form.Item>
