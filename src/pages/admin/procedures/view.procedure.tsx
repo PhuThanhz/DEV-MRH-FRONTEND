@@ -474,7 +474,14 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                             {dataInit.procedureName || "--"}
                         </Text>
                     </Field>
-
+                    {/* ← THÊM MỚI: ngay sau đây */}
+                    {dataInit.procedureCode && (
+                        <Field label="Mã quy trình">
+                            <Tag color="purple" style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
+                                {dataInit.procedureCode}
+                            </Tag>
+                        </Field>
+                    )}
                     {dataInit.companyName && (
                         <Field label="Công ty">{dataInit.companyName}</Field>
                     )}

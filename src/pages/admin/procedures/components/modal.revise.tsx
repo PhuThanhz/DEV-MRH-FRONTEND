@@ -15,7 +15,7 @@ import type { UploadFile, UploadProps } from "antd";
 import {
     callFetchDepartmentsByCompany,
     callFetchSectionsByDepartment,
-    callUploadSingleFile, // ← thêm
+    callUploadSingleFile,
 } from "@/config/api";
 
 import type {
@@ -41,7 +41,7 @@ const ModalRevise: React.FC<IProps> = ({
 }) => {
     const [form] = Form.useForm();
     const [fileList, setFileList] = useState<UploadFile[]>([]);
-    const [uploading, setUploading] = useState(false); // ← thêm
+    const [uploading, setUploading] = useState(false);
     const [departmentId, setDepartmentId] = useState<number | null>(null);
 
     const reviseMutation = useReviseProcedureMutation(type);
@@ -49,19 +49,20 @@ const ModalRevise: React.FC<IProps> = ({
     useEffect(() => {
         if (!open || !dataInit) return;
 
-        const urls = dataInit.fileUrls ?? []; // ← đổi
+        const urls = dataInit.fileUrls ?? [];
         form.setFieldsValue({
+            procedureCode: dataInit.procedureCode ?? "",  // ← THÊM MỚI
             departmentId: dataInit.departmentId,
             sectionId: dataInit.sectionId,
             procedureName: dataInit.procedureName,
             status: dataInit.status,
             planYear: dataInit.planYear,
             note: dataInit.note,
-            fileUrls: urls, // ← đổi
+            fileUrls: urls,
         });
         setDepartmentId(dataInit.departmentId ?? null);
         setFileList(
-            urls.map((name, i) => ({ // ← đổi
+            urls.map((name, i) => ({
                 uid: String(i),
                 name,
                 status: "done" as const,
@@ -82,10 +83,11 @@ const ModalRevise: React.FC<IProps> = ({
         if (!dataInit?.id) return;
 
         const payload: IProcedureRequest = {
+            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(), // ← THÊM MỚI
             procedureName: values.procedureName,
             status: values.status,
             planYear: values.planYear ? Number(values.planYear) : undefined,
-            fileUrls: values.fileUrls ?? [], // ← đổi
+            fileUrls: values.fileUrls ?? [],
             note: values.note,
             departmentId: values.departmentId ?? dataInit.departmentId ?? null,
             sectionId: values.sectionId ?? null,
@@ -112,7 +114,6 @@ const ModalRevise: React.FC<IProps> = ({
 
     const uploadProps: UploadProps = {
         fileList,
-        // bỏ maxCount: 1 — cho phép nhiều file
         accept: ".pdf,.doc,.docx,.xls,.xlsx",
         beforeUpload: async (file) => {
             const allowed = [
@@ -210,6 +211,7 @@ const ModalRevise: React.FC<IProps> = ({
                 <Input />
             </Form.Item>
 
+            {/* Banner cảnh báo */}
             <div style={{
                 background: "#fffbe6",
                 border: "1px solid #ffe58f",
@@ -246,6 +248,7 @@ const ModalRevise: React.FC<IProps> = ({
                         />
                     </Form.Item>
                 </Col>
+
                 {/* Bộ phận */}
                 <Col xs={24} lg={12}>
                     <Form.Item label="Bộ phận">
@@ -256,6 +259,22 @@ const ModalRevise: React.FC<IProps> = ({
                         />
                     </Form.Item>
                 </Col>
+
+                {/* Mã quy trình */}  {/* ← THÊM MỚI */}
+                <Col xs={24} lg={12}>
+                    <ProFormText
+                        name="procedureCode"
+                        label="Mã quy trình"
+                        rules={[{ required: true, message: "Nhập mã quy trình" }]}
+                        placeholder="VD: QT-001"
+                        fieldProps={{
+                            style: { textTransform: "uppercase" },
+                            onChange: (e) =>
+                                form.setFieldValue("procedureCode", e.target.value.toUpperCase()),
+                        }}
+                    />
+                </Col>
+
                 {/* Tên quy trình */}
                 <Col xs={24} lg={12}>
                     <ProFormText
@@ -279,6 +298,7 @@ const ModalRevise: React.FC<IProps> = ({
                         }}
                     />
                 </Col>
+
                 {/* Năm kế hoạch */}
                 <Col xs={24} lg={12}>
                     <ProFormText
@@ -288,6 +308,7 @@ const ModalRevise: React.FC<IProps> = ({
                         placeholder="VD: 2026"
                     />
                 </Col>
+
                 {/* File quy trình */}
                 <Col xs={24}>
                     <Form.Item
@@ -311,6 +332,7 @@ const ModalRevise: React.FC<IProps> = ({
                         </Upload>
                     </Form.Item>
                 </Col>
+
                 {/* Ghi chú */}
                 <Col xs={24}>
                     <ProFormText

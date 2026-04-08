@@ -143,8 +143,7 @@ const CompanyPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 200,
-            fixed: "right",
+            width: 260, // tăng lên
             render: (_, record) => {
                 const items: MenuProps["items"] = [];
 
@@ -228,21 +227,20 @@ const CompanyPage = () => {
                     });
                 }
                 return (
-                    <Space size="middle">
-                        <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
-                            <Button
-                                type="text"
-                                icon={
-                                    <EyeOutlined
-                                        style={{ color: "#1677ff", fontSize: 18 }}
-                                    />
-                                }
-                                onClick={() => {
-                                    setDataInit(record);
-                                    setOpenView(true);
-                                }}
-                            />
-                        </Access>
+                    <Space size="small" align="center">                     <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
+                        <Button
+                            type="text"
+                            icon={
+                                <EyeOutlined
+                                    style={{ color: "#1677ff", fontSize: 18 }}
+                                />
+                            }
+                            onClick={() => {
+                                setDataInit(record);
+                                setOpenView(true);
+                            }}
+                        />
+                    </Access>
                         <Access
                             permission={ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE}
                             hideChildren

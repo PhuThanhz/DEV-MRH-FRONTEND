@@ -180,6 +180,15 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10),
         },
         {
+            title: "Mã quy trình",
+            dataIndex: "procedureCode",
+            align: "center",
+            width: 130,
+            render: (_, record) => (
+                <Tag color="purple">{record.procedureCode ?? "--"}</Tag>
+            ),
+        },
+        {
             title: "Mã công ty",
             dataIndex: "companyCode",
             align: "center",
@@ -213,6 +222,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 <Tag color="geekblue">{record.sectionName || "--"}</Tag>
             ),
         },
+
         {
             title: "Tên quy trình",
             dataIndex: "procedureName",

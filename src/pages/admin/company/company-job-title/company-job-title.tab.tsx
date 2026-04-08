@@ -113,37 +113,43 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: "space-between",
         gap: 12,
         marginBottom: 16,
-        flexWrap: "wrap",
+        flexWrap: "wrap", // 👈 QUAN TRỌNG
     },
     toolbarLeft: {
         display: "flex",
         alignItems: "center",
         gap: 8,
-        flexWrap: "wrap",
+        flexWrap: "wrap", // 👈 thêm cái này
         flex: 1,
     },
     searchInput: {
-        width: 300,
+        width: "100%",
+        maxWidth: 300,
         borderRadius: 8,
         fontSize: 13,
     },
     selectFilter: {
-        width: 160,
+        width: "100%",
+        maxWidth: 160,
         borderRadius: 8,
     },
+
     assignButton: {
         borderRadius: 8,
         height: 32,
-        paddingLeft: 14,
-        paddingRight: 14,
+        padding: "0 12px",
         fontWeight: 500,
         fontSize: 13,
         background: "linear-gradient(135deg, #eb2f96 0%, #c41d7f 100%)",
         borderColor: "transparent",
         boxShadow: "0 2px 8px rgba(196,29,127,0.25)",
-        display: "flex",
+
+        display: "inline-flex", // 👈 đổi từ flex → inline-flex
         alignItems: "center",
-        gap: 4,
+        gap: 6,
+
+        whiteSpace: "nowrap",   // 👈 không bị xuống dòng
+        maxWidth: "100%",       // 👈 không tràn
     },
     actionBtn: {
         borderRadius: 6,

@@ -191,6 +191,8 @@ const ModalProcedure: React.FC<IProps> = ({
             const userIds = (dataInit as any).userIds ?? [];
             const urls = dataInit.fileUrls ?? []; // ← đổi
             form.setFieldsValue({
+                procedureCode: dataInit.procedureCode ?? "",  // ← THÊM MỚI
+
                 departmentId: dataInit.departmentId,
                 sectionId: dataInit.sectionId,
                 procedureName: dataInit.procedureName,
@@ -234,7 +236,7 @@ const ModalProcedure: React.FC<IProps> = ({
         form.setFieldValue("departmentId", undefined);
         form.setFieldValue("sectionId", undefined);
         form.setFieldValue("userIds", []);
-        form.setFieldValue("fileUrls", []); // ← đổi
+        form.setFieldValue("procedureCode", "");  // ← THÊM MỚI        
         setFileList([]);
     };
 
@@ -250,6 +252,8 @@ const ModalProcedure: React.FC<IProps> = ({
 
     const submitForm = async (values: any) => {
         const payload: IProcedureRequest = {
+            procedureCode: (values.procedureCode ?? "").trim().toUpperCase(), // ← THÊM MỚI
+
             procedureName: values.procedureName,
             status: values.status,
             planYear: values.planYear ? Number(values.planYear) : undefined,
@@ -500,6 +504,16 @@ const ModalProcedure: React.FC<IProps> = ({
                             request={loadSections}
                             params={{ departmentId: departmentId ?? fixedDepartmentId ?? dataInit?.departmentId }}
                             fieldProps={{ allowClear: true }}
+                        />
+                    </Col>
+                    <Col xs={24} lg={12}>
+                        {/* THÊM MỚI */}
+                        <ProFormText
+                            name="procedureCode"
+                            label="Mã quy trình"
+                            rules={[{ required: true, message: "Nhập mã quy trình" }]}
+                            placeholder="VD: QT-001"
+                            fieldProps={{ style: { textTransform: "uppercase" } }}
                         />
                     </Col>
                     <Col xs={24} lg={12}>

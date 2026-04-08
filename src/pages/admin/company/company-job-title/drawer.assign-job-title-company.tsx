@@ -206,8 +206,7 @@ const DrawerAssignCompanyJobTitle = ({
                 title="Gán chức danh vào công ty"
                 open={open}
                 onClose={onClose}
-                width={750}
-                destroyOnClose
+                width={window.innerWidth < 768 ? "100%" : 750} destroyOnClose
                 footer={
                     <div style={{ textAlign: "right" }}>
                         <Button onClick={onClose} disabled={assigning}>
@@ -231,7 +230,7 @@ const DrawerAssignCompanyJobTitle = ({
                         allowClear
                         enterButton="Tìm"
                         onSearch={setSearch}
-                        style={{ maxWidth: 400 }}
+                        style={{ width: "100%" }}
                     />
 
                     <Spin spinning={loading}>

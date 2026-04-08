@@ -1301,6 +1301,7 @@ export interface IJdInbox {
 export type ProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
 export interface IProcedure {
+    procedureCode?: string; // 🔥 THÊM
     id?: number;
     type?: ProcedureType;
 
@@ -1332,6 +1333,7 @@ export interface IProcedure {
 }
 
 export interface IProcedureHistory {
+    procedureCode?: string; // 🔥 THÊM
     id?: number;
     procedureId?: number;
     version?: number;
@@ -1348,6 +1350,8 @@ export interface IProcedureHistory {
 }
 
 export interface IProcedureRequest {
+    procedureCode: string; // 🔥 BẮT BUỘC
+
     procedureName: string;
     status?: string;
     planYear?: number;
