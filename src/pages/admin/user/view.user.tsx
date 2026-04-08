@@ -103,7 +103,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     // ── cùng URL pattern với UserPage ──
     const avatarSrc = dataInit?.avatar
-        ? `${backendURL}/api/v1/files?fileName=${dataInit.avatar}&folder=avatar`
+        ? `${backendURL}/uploads/avatar/${dataInit.avatar}?t=${Date.now()}`
         : undefined;
 
     const info = dataInit?.userInfo;
@@ -194,9 +194,9 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     marginBottom: 16,
                 }}>
                     <Avatar
-                        size={60}
+                        size={80}
                         src={avatarSrc}
-                        icon={<UserOutlined />}
+                        onError={() => true} // fallback nếu lỗi ảnh
                         style={{
                             border: "2px solid #e5e7eb",
                             outline: "3px solid #fff",
@@ -205,7 +205,9 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             color: "#9ca3af",
                             flexShrink: 0,
                         }}
-                    />
+                    >
+                        {dataInit?.name?.charAt(0)?.toUpperCase()}
+                    </Avatar>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
                             <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>

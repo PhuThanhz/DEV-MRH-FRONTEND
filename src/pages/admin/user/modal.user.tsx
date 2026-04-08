@@ -206,7 +206,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     padding: 0 !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    max-height: 90vh !important;
                 }
                 .elegant-modal .ant-modal-header {
                     padding: 22px 28px 0 28px !important;
@@ -402,6 +401,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     maskClosable: false,
                     footer: null,
                     className: "elegant-modal",
+                    style: { top: 40 },
                     styles: {
                         mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.25)" },
                     },
@@ -471,7 +471,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 {/* ===== CONTENT — scrollable ===== */}
                 <div style={{
                     flex: 1,
-                    overflowY: "auto",
                     padding: "4px 28px 0 28px",
                     minHeight: 0,
                 }}>

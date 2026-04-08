@@ -142,7 +142,7 @@ const UserInfoForm = ({
                         { required: !isEdit, message: "Vui lòng nhập email" },
                         { type: "email", message: "Email không hợp lệ" },
                     ]}
-                    placeholder="email@company.com"
+                    placeholder="Nhập email"
                     fieldProps={{ size: "large" }}
                 />
             </Col>
@@ -162,7 +162,7 @@ const UserInfoForm = ({
                     label={<span style={labelStyle}>Tên hiển thị</span>}
                     name="name"
                     rules={[{ required: true, message: "Vui lòng nhập tên" }]}
-                    placeholder="Nguyễn Văn A"
+                    placeholder="Nhập tên hiển thị"
                     fieldProps={{ size: "large" }}
                 />
             </Col>
@@ -177,8 +177,7 @@ const UserInfoForm = ({
                         allowClear
                         showSearch
                         size="large"
-                        placeholder="Tìm và chọn vai trò"
-                        fetchOptions={fetchRoleList}
+                        placeholder="Chọn vai trò" fetchOptions={fetchRoleList}
                         value={selectedRole as any}
                         onChange={(newValue: any) => setSelectedRole(newValue as IRoleSelect)}
                         style={{ width: "100%" }}
@@ -204,8 +203,7 @@ const UserInfoForm = ({
                 <ProFormText
                     label={<span style={labelStyle}>Mã nhân viên</span>}
                     name="employeeCode"
-                    placeholder="NV-001"
-                    fieldProps={{ size: "large" }}
+                    placeholder="Nhập mã nhân viên" fieldProps={{ size: "large" }}
                 />
             </Col>
 
@@ -213,7 +211,7 @@ const UserInfoForm = ({
                 <ProFormText
                     label={<span style={labelStyle}>Số điện thoại</span>}
                     name="phone"
-                    placeholder="0901 234 567"
+                    placeholder="Nhập số điện thoại"
                     fieldProps={{ size: "large" }}
                 />
             </Col>
@@ -276,80 +274,116 @@ const UserInfoForm = ({
     return (
         <>
             <style>{`
-                /* ===== Pill Tabs ===== */
-                .elegant-tabs .ant-tabs-nav::before { border: none !important; }
-                .elegant-tabs .ant-tabs-nav {
-                    background: #f7f7f8;
-                    border-radius: 12px;
-                    padding: 4px;
-                    margin-bottom: 24px;
-                    border: 1.5px solid #efefef;
-                }
-                .elegant-tabs .ant-tabs-nav-wrap { padding: 0; }
-                .elegant-tabs .ant-tabs-ink-bar { display: none !important; }
-                .elegant-tabs .ant-tabs-tab {
-                    border-radius: 8px !important;
-                    padding: 7px 20px !important;
-                    margin: 0 !important;
-                    transition: all 0.22s ease;
-                    gap: 6px;
-                }
-                .elegant-tabs .ant-tabs-tab .ant-tabs-tab-btn {
-                    color: #9ca3af;
-                    font-weight: 400;
-                    font-size: 13px;
-                    letter-spacing: -0.01em;
-                }
-                .elegant-tabs .ant-tabs-tab.ant-tabs-tab-active {
-                    background: #ffffff;
-                    box-shadow: 0 1px 6px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-                }
-                .elegant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-                    color: #111827 !important;
-                    font-weight: 600 !important;
-                }
-                .elegant-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
-                    color: #374151 !important;
-                }
+    /* ===== Pill Tabs ===== */
+    .elegant-tabs .ant-tabs-nav::before { border: none !important; }
 
-                /* ===== Form fields ===== */
-                .elegant-form .ant-input-affix-wrapper,
-                .elegant-form .ant-input,
-                .elegant-form .ant-select-selector,
-                .elegant-form .ant-picker {
-                    border-radius: 10px !important;
-                    border-color: #e5e7eb !important;
-                    background: #fff !important;
-                    transition: all 0.2s;
-                }
-                .elegant-form .ant-input-affix-wrapper:hover,
-                .elegant-form .ant-input:hover,
-                .elegant-form .ant-select-selector:hover,
-                .elegant-form .ant-picker:hover {
-                    border-color: #d1d5db !important;
-                }
-                .elegant-form .ant-input-affix-wrapper:focus-within,
-                .elegant-form .ant-input:focus,
-                .elegant-form .ant-select-focused .ant-select-selector,
-                .elegant-form .ant-picker-focused {
-                    border-color: ${ACCENT} !important;
-                    box-shadow: 0 0 0 3px ${ACCENT_SOFT} !important;
-                }
-                .elegant-form .ant-form-item-label > label {
-                    height: auto !important;
-                    margin-bottom: 4px;
-                }
+    .elegant-tabs .ant-tabs-nav {
+        background: #f7f7f8;
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 24px;
+        border: 1.5px solid #efefef;
+    }
 
-                /* ===== Switch ===== */
-                .ant-switch-checked {
-                    background: ${ACCENT} !important;
-                }
+    .elegant-tabs .ant-tabs-nav-wrap {
+        padding: 0;
+        overflow: hidden !important;
+    }
 
-                /* ===== Upload hover ===== */
-                .ant-upload:hover .ant-avatar {
-                    box-shadow: 0 6px 20px rgba(245,49,127,0.25) !important;
-                }
-            `}</style>
+    .elegant-tabs .ant-tabs-nav-list {
+        display: flex !important;
+        width: 100%;
+        flex-wrap: nowrap !important;
+    }
+
+    .elegant-tabs .ant-tabs-ink-bar {
+        display: none !important;
+    }
+
+    /* ===== FIX CHÍNH Ở ĐÂY ===== */
+    .elegant-tabs .ant-tabs-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+
+        border-radius: 8px !important;
+        padding: 7px 0 !important; /* QUAN TRỌNG: bỏ padding ngang */
+        margin: 0 !important;
+
+        transition: all 0.22s ease;
+        gap: 6px;
+        box-sizing: border-box;
+    }
+
+    .elegant-tabs .ant-tabs-tab-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        color: #9ca3af;
+        font-weight: 400;
+        font-size: 13px;
+        letter-spacing: -0.01em;
+    }
+
+    .elegant-tabs .ant-tabs-tab.ant-tabs-tab-active {
+        background: #ffffff;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    }
+
+    .elegant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: #111827 !important;
+        font-weight: 600 !important;
+    }
+
+    .elegant-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
+        color: #374151 !important;
+    }
+
+    /* ===== Form fields ===== */
+    .elegant-form .ant-input-affix-wrapper,
+    .elegant-form .ant-input,
+    .elegant-form .ant-select-selector,
+    .elegant-form .ant-picker {
+        border-radius: 10px !important;
+        border-color: #e5e7eb !important;
+        background: #fff !important;
+        transition: all 0.2s;
+    }
+
+    .elegant-form .ant-input-affix-wrapper:hover,
+    .elegant-form .ant-input:hover,
+    .elegant-form .ant-select-selector:hover,
+    .elegant-form .ant-picker:hover {
+        border-color: #d1d5db !important;
+    }
+
+    .elegant-form .ant-input-affix-wrapper:focus-within,
+    .elegant-form .ant-input:focus,
+    .elegant-form .ant-select-focused .ant-select-selector,
+    .elegant-form .ant-picker-focused {
+        border-color: ${ACCENT} !important;
+        box-shadow: 0 0 0 3px ${ACCENT_SOFT} !important;
+    }
+
+    .elegant-form .ant-form-item-label > label {
+        height: auto !important;
+        margin-bottom: 4px;
+    }
+
+    /* ===== Switch ===== */
+    .ant-switch-checked {
+        background: ${ACCENT} !important;
+    }
+
+    /* ===== Upload hover ===== */
+    .ant-upload:hover .ant-avatar {
+        box-shadow: 0 6px 20px rgba(245,49,127,0.25) !important;
+    }
+`}</style>
 
             <div className="elegant-form">
                 <Tabs
