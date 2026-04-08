@@ -7,7 +7,7 @@ import ForgotPassword from 'pages/auth/ForgotPassword';
 import LayoutAdmin from '@/components/layout/admin/layout.admin';
 import ProtectedRoute from 'components/share/protected-route.ts';
 import HomePage from 'pages/home';
-import DashboardPage from './pages/admin/dashboard';
+import DashboardPage from './pages/admin/dashboard/dashboard';
 import PermissionPage from './pages/admin/permission/permission';
 import RolePage from './pages/admin/role/role';
 import UserPage from './pages/admin/user/user';
@@ -41,6 +41,7 @@ import DepartmentProceduresPage from "@/pages/admin/department/procedures";
 import WelcomePage from "@/pages/admin/WelcomePage";
 import DashboardOrWelcome from "@/pages/admin/DashboardOrWelcome";
 import PositionChartPage from "@/pages/admin/department/position-chart/index";
+import DepartmentProfilePage from "@/pages/admin/dashboard/department-profile";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -79,6 +80,15 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <DashboardOrWelcome />
+            </ProtectedRoute>
+          ),
+        },
+        // Thêm route vào children của PATHS.ADMIN.ROOT
+        {
+          path: "department-profiles",
+          element: (
+            <ProtectedRoute>
+              <DepartmentProfilePage />
             </ProtectedRoute>
           ),
         },

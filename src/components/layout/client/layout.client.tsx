@@ -14,6 +14,18 @@ const LayoutClient = () => {
         }
     }, [location]);
 
+    // Ẩn scrollbar khi ở trang Home
+    useEffect(() => {
+        if (isHomePage) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [isHomePage]);
+
     return (
         <div
             ref={rootRef}
@@ -23,6 +35,7 @@ const LayoutClient = () => {
                 minHeight: "100vh",
                 backgroundColor: "#f5f5f5",
                 overflowX: "hidden",
+                overflowY: isHomePage ? "hidden" : "auto",
             }}
         >
             <Header />
@@ -36,6 +49,8 @@ const LayoutClient = () => {
                     padding: isHomePage ? 0 : "16px 12px 40px",
                     boxSizing: "border-box",
                     position: "relative",
+                    display: isHomePage ? "flex" : "block",
+                    flexDirection: isHomePage ? "column" : undefined,
                 }}
             >
                 <Outlet />

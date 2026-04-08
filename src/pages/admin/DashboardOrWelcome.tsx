@@ -1,5 +1,5 @@
 import { useAppSelector } from "@/redux/hooks";
-import DashboardPage from "./dashboard";
+import DashboardPage from "./dashboard/dashboard";
 import WelcomePage from "./WelcomePage";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 

@@ -8,14 +8,14 @@ const HomePage = () => {
             style={{
                 position: "relative",
                 width: "100%",
-                minHeight: "calc(100vh - 117px)",
+                minHeight: "calc(100vh - 64px - 45px)",
                 background: "linear-gradient(135deg, #ffffff 0%, #fff5f7 50%, #ffe4e6 100%)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
-                overflow: "hidden",
-                boxSizing: "border-box",
+                margin: 0,
+                padding: 0,
             }}
         >
             {/* Subtle animated grid */}
@@ -314,7 +314,6 @@ const HomePage = () => {
                     50%      { transform: translate(30px, -60px); opacity: 0.4; }
                 }
 
-                /* Tablet portrait */
                 @media (max-width: 768px) {
                     :root {
                         --logo-size: clamp(90px, 22vw, 140px);
@@ -323,19 +322,16 @@ const HomePage = () => {
                         --hrm-letter-spacing: clamp(6px, 2vw, 14px);
                         --content-gap: clamp(20px, 4vw, 36px);
                     }
-
                     .gradient-orb-1,
                     .gradient-orb-2 {
                         width: 250px !important;
                         height: 250px !important;
                     }
-
                     .particle {
                         display: none;
                     }
                 }
 
-                /* Mobile portrait */
                 @media (max-width: 480px) {
                     :root {
                         --logo-size: clamp(80px, 26vw, 120px);
@@ -344,14 +340,12 @@ const HomePage = () => {
                         --hrm-letter-spacing: clamp(5px, 2.5vw, 12px);
                         --content-gap: clamp(18px, 5vw, 28px);
                     }
-
                     .gradient-orb-1 {
                         top: 5% !important;
                         right: 5% !important;
                         width: 180px !important;
                         height: 180px !important;
                     }
-
                     .gradient-orb-2 {
                         bottom: 5% !important;
                         left: 5% !important;
@@ -360,7 +354,6 @@ const HomePage = () => {
                     }
                 }
 
-                /* Very small mobile */
                 @media (max-width: 360px) {
                     :root {
                         --hrm-font-size: 44px;
@@ -370,7 +363,6 @@ const HomePage = () => {
                     }
                 }
 
-                /* Landscape mobile */
                 @media (max-height: 500px) and (orientation: landscape) {
                     :root {
                         --logo-size: 70px;
@@ -379,26 +371,22 @@ const HomePage = () => {
                         --hrm-letter-spacing: 8px;
                         --content-gap: 12px;
                     }
-
                     .main-content {
                         flex-direction: row;
                         flex-wrap: wrap;
                         justify-content: center;
                         padding: 8px 20px;
                     }
-
                     .gradient-orb-1,
                     .gradient-orb-2 {
                         width: 150px !important;
                         height: 150px !important;
                     }
-
                     .particle {
                         display: none;
                     }
                 }
 
-                /* Galaxy Fold */
                 @media (max-width: 320px) {
                     :root {
                         --hrm-font-size: 40px;

@@ -389,12 +389,12 @@ const SectionPage = () => {
                     total: meta.total,
                 }}
             />
-
             <ModalSection
                 openModal={openModal}
                 setOpenModal={setOpenModal}
                 dataInit={dataInit}
                 setDataInit={setDataInit}
+                onSuccess={() => refetch()}   // ⭐ thêm dòng này
             />
 
             <ViewDetailSection

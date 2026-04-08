@@ -12,7 +12,7 @@ import type {
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
-    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness
 
 
 } from '@/types/backend';
@@ -1645,5 +1645,10 @@ export const callChangePassword = (data: IReqChangePasswordDTO) => {
 export const callFetchDashboardSummary = () => {
     return axios.get<IBackendRes<IDashboardSummary>>(
         "/api/v1/dashboard/summary"
+    );
+};
+export const callFetchDepartmentCompleteness = () => {
+    return axios.get<IBackendRes<IDepartmentCompleteness[]>>(
+        "/api/v1/dashboard/department-completeness"
     );
 };

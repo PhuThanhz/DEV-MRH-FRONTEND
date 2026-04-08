@@ -1364,6 +1364,21 @@ export interface IDashboardSummary {
     totalDepartment: number;
     totalSection: number;
 }
+
+// THÊM interface này vào:
+export interface IDepartmentCompleteness {
+    departmentId: number;
+    departmentName: string;
+    companyName: string;
+    orgChart: boolean;
+    objectives: boolean;
+    departmentProcedure: boolean;
+    permissions: boolean;
+    careerPath: boolean;
+    salaryGrade: boolean;
+    jobTitleMap: boolean;
+    score: number;
+}
 /* ===================== EMPLOYEE ===================== */
 
 export interface IEmployee {
@@ -1432,3 +1447,6 @@ export interface IUpdateEmployeeReq {
     contractSignDate?: string;
     contractExpireDate?: string;
 }
+
+
+// hoàn thiện bộ hồ sơ 
