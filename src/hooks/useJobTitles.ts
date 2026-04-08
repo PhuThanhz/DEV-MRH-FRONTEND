@@ -37,6 +37,9 @@ export const useCreateJobTitleMutation = () => {
             notify.created("Tạo chức danh thành công");
             client.invalidateQueries({ queryKey: ["job-titles"] });
         },
+        onError: (err: any) => {
+            notify.error(err?.message || "Lỗi khi tạo chức danh");
+        },
     });
 };
 

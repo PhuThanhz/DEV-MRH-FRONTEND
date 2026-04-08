@@ -44,6 +44,10 @@ export const useCreatePositionLevelMutation = () => {
             notify.created("Tạo bậc chức danh thành công");
             client.invalidateQueries({ queryKey: ["position-levels"] });
         },
+        // ✅ THÊM DÒNG NÀY
+        onError: (err: any) => {
+            notify.error(err?.message || "Lỗi khi cập nhật bậc chức danh");
+        },
     });
 };
 

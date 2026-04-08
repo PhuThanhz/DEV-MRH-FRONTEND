@@ -125,6 +125,14 @@ const JobTitlePage = () => {
             dataIndex: ["positionLevel", "code"],
             render: (_) => <Tag color="purple">{_}</Tag>,
         },
+        // ✅ THÊM CỘT CÔNG TY
+        {
+            title: "Công ty",
+            render: (_, record) =>
+                record.positionLevel?.companyName
+                    ? <Tag color="blue">{record.positionLevel.companyName}</Tag>
+                    : <span style={{ color: "#bbb" }}>—</span>,
+        },
         {
             title: "Trạng thái",
             align: "center",
@@ -195,8 +203,7 @@ const JobTitlePage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.JOB_TITLES.CREATE}  // 👈 thêm dòng này
-
+                        addPermission={ALL_PERMISSIONS.JOB_TITLES.CREATE}
                     />
 
                     <AdvancedFilterSelect

@@ -124,7 +124,7 @@ instance.interceptors.response.use(
             });
         }
 
-        return error?.response?.data ?? Promise.reject(error);
+        return Promise.reject(error?.response?.data ?? error);
     }
 );
 

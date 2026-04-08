@@ -143,7 +143,7 @@ const UserPage = () => {
                 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
                 const avatarUrl = record.avatar
-                    ? `${backendURL}/api/v1/files?fileName=${record.avatar}&folder=avatar`
+                    ? `${backendURL}/uploads/avatar/${record.avatar}`
                     : null;
                 const displayName = record.name || record.email || "";
 
