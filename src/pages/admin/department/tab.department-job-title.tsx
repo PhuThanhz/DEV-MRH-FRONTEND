@@ -24,7 +24,7 @@ import DataTable from "@/components/common/data-table";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { notify } from "@/components/common/notification/notify";
-
+import SearchFilter from "@/components/common/filter/SearchFilter";
 import {
     callFetchCompanyJobTitlesOfDepartment,
     callDeleteDepartmentJobTitle,
@@ -307,31 +307,15 @@ const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
                     }
                 `}</style>
 
-                <div style={styles.toolbarWrapper}>
-                    <div style={styles.toolbarLeft}>
-                        <Input
-                            placeholder="Tìm chức danh..."
-                            prefix={<SearchOutlined style={{ color: "#bbb", fontSize: 13 }} />}
-                            allowClear
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                            style={styles.searchInput}
-                            disabled={!departmentId || loading}
-                        />
-                    </div>
-
-                    <Access permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => setOpenDrawer(true)}
-                            disabled={!departmentId || loading}
-                            style={styles.assignButton}
-                        >
-                            Gán chức danh
-                        </Button>
-                    </Access>
-                </div>
+                <SearchFilter
+                    searchPlaceholder="Tìm chức danh..."
+                    showFilterButton={false}
+                    showResetButton={false}
+                    addLabel="Gán chức danh"
+                    onSearch={(val) => setSearchText(val)}
+                    onAddClick={() => setOpenDrawer(true)}
+                    addPermission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}
+                />
 
                 <DataTable<IDepartmentJobTitle>
                     actionRef={tableRef}

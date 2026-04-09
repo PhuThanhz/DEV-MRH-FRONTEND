@@ -320,25 +320,34 @@ export const ALL_PERMISSIONS = {
     /* ===================== COMPANY JOB - TITLES ===================== */
 
     COMPANY_JOB_TITLES: {
+        GET_PAGINATE: {   // 👈 THÊM DÒNG NÀY
+            method: "GET",
+            apiPath: "/api/v1/company-job-titles",
+            module: "COMPANY_JOB_TITLES",
+        },
+
         GET_BY_COMPANY: {
             method: "GET",
             apiPath: "/api/v1/companies/{companyId}/job-titles",
             module: "COMPANY_JOB_TITLES",
         },
+
         CREATE: {
             method: "POST",
             apiPath: "/api/v1/company-job-titles",
             module: "COMPANY_JOB_TITLES",
         },
+
         DELETE: {
             method: "DELETE",
             apiPath: "/api/v1/company-job-titles/{id}",
             module: "COMPANY_JOB_TITLES",
         },
-        RESTORE: {
-            method: "PUT",
-            apiPath: "/api/v1/company-salary-grades/{id}/restore",
-            module: "COMPANY_SALARY_GRADES"
+
+        RESTORE: {   // ⚠️ tiện sửa luôn cái này
+            method: "PATCH",   // hoặc PUT tùy BE
+            apiPath: "/api/v1/company-job-titles/{id}/restore",
+            module: "COMPANY_JOB_TITLES"
         },
     },
 

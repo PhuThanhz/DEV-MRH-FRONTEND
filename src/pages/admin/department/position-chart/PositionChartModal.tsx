@@ -207,15 +207,13 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
 
                 <div style={{ position: "relative", zIndex: 1, flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                        <BankOutlined style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }} />
                         <span style={{
                             fontSize: 11, fontWeight: 600,
                             textTransform: "uppercase", letterSpacing: "1.5px",
                             color: "rgba(255,255,255,0.75)",
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         }}>
-                            {companyName || "—"}
-                        </span>
+                            {companyName}                        </span>
                     </div>
                     <div style={{
                         fontSize: isMobile ? 20 : 24, fontWeight: 800,

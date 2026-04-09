@@ -9,8 +9,7 @@ type Permission = {
 
 export type TabItem<T extends string = string> = {
     key: T;
-    label: string;
-    icon?: React.ReactNode;
+    label: React.ReactNode; icon?: React.ReactNode;
     permission?: Permission;
     hidden?: boolean;
 };

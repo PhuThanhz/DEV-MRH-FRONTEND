@@ -15,9 +15,9 @@ import {
     Form,
     InputNumber,
 } from "antd";
-
+import { useEffect } from "react";
 import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
-
+import AppButton from "@/components/common/ui/AppButton";
 import {
     useDepartmentSalaryGradesQuery,
     useCreateDepartmentSalaryGradeMutation,
@@ -33,17 +33,7 @@ import type { ColumnsType } from "antd/es/table";
 
 const { Title, Text } = Typography;
 
-const pinkButtonStyle: React.CSSProperties = {
-    backgroundColor: "#ff5fa2",
-    color: "#fff",
-    border: "none",
-    borderRadius: 10,
-    padding: "10px 22px",
-    fontSize: 16,
-    fontWeight: 600,
-    boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
-    transition: "all 0.2s ease",
-};
+
 
 interface Props {
     open: boolean;
@@ -232,18 +222,9 @@ const DrawerDepartmentSalaryGrade = ({
                             justifyContent: "flex-end",
                         }}
                     >
-                        <Button
-                            style={pinkButtonStyle}
-                            onClick={() => setOpenModal(true)}
-                            onMouseEnter={(e) =>
-                                (e.currentTarget.style.backgroundColor = "#ff4b97")
-                            }
-                            onMouseLeave={(e) =>
-                                (e.currentTarget.style.backgroundColor = "#ff5fa2")
-                            }
-                        >
-                            + Thêm bậc lương
-                        </Button>
+                        <AppButton onClick={() => setOpenModal(true)}>
+                            Thêm bậc lương
+                        </AppButton>
                     </div>
                 </Access>
             </Drawer>
@@ -255,10 +236,28 @@ const DrawerDepartmentSalaryGrade = ({
                     form.resetFields();
                     setOpenModal(false);
                 }}
-                onOk={() => form.submit()}
-                confirmLoading={creating}
-                okText="Tạo mới"
-                cancelText="Huỷ"
+                destroyOnClose
+                centered
+                footer={[
+                    <AppButton
+                        key="cancel"
+                        appVariant="outline"
+                        onClick={() => {
+                            form.resetFields();
+                            setOpenModal(false);
+                        }}
+                    >
+                        Huỷ
+                    </AppButton>,
+
+                    <AppButton
+                        key="submit"
+                        loading={creating}
+                        onClick={() => form.submit()}
+                    >
+                        Tạo mới
+                    </AppButton>,
+                ]}
             >
                 <Form
                     layout="vertical"

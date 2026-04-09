@@ -41,7 +41,7 @@ const SearchableSubmenu: React.FC<{
     );
 
     return (
-        <div style={{ width: 290 }}>
+        <div style={{ minWidth: 180, maxWidth: 320, width: "max-content" }}>
             {/* Search box */}
             <div style={{ padding: "8px 10px", borderBottom: "1px solid #f0f0f0" }}>
                 <Input
@@ -291,7 +291,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
 
     return (
         <Space wrap>
-            <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+            <Dropdown menu={{ items: menuItems, triggerSubMenuAction: "click" }} trigger={["click"]}>
                 <Button
                     icon={<FilterOutlined />}
                     style={activeCount > 0 ? { borderColor: "#1677ff", color: "#1677ff" } : {}}

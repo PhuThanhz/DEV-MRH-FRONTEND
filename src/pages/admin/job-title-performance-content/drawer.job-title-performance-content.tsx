@@ -13,11 +13,13 @@ import {
     Empty,
     Spin,
     Typography,
+    Tooltip,
 } from "antd";
-import { EyeOutlined, EditOutlined } from "@ant-design/icons";
+import { EyeOutlined, EditOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons";
 
 import ModalJobTitlePerformanceContent from "./modal.job-title-performance-content";
 import ViewJobTitlePerformanceContentModal from "./modal.view-job-title-performance-content";
+import SearchFilter from "@/components/common/filter/SearchFilter"; // 👈 đường dẫn tuỳ project bạn
 
 import {
     useJobTitlePerformanceContentQuery,
@@ -38,7 +40,6 @@ import type {
 } from "@/types/backend";
 
 import type { ColumnsType } from "antd/es/table";
-import { notify } from "@/components/common/notification/notify";
 
 const { Title, Text } = Typography;
 
@@ -90,12 +91,10 @@ const DrawerJobTitlePerformanceContent = ({
             { ...values, ownerLevel, ownerJobTitleId },
             {
                 onSuccess: () => {
-                    notify.created("Đã tạo tiêu chí");
                     setOpenCreate(false);
                     refetch();
                     onSuccess?.();
                 },
-                onError: (err) => notify.error(err?.message),
             }
         );
     };
@@ -106,41 +105,21 @@ const DrawerJobTitlePerformanceContent = ({
             { id: selected.id, payload: { ...values, ownerLevel, ownerJobTitleId } },
             {
                 onSuccess: () => {
-                    notify.updated("Đã cập nhật tiêu chí");
                     setOpenUpdate(false);
                     setSelected(null);
                     refetch();
                     onSuccess?.();
                 },
-                onError: (err) => notify.error(err?.message),
             }
         );
     };
 
     const handleDisable = (id: number) => {
-        disableItem(
-            { id },
-            {
-                onSuccess: () => {
-                    notify.deleted("Đã vô hiệu tiêu chí");
-                    refetch();
-                },
-                onError: (err) => notify.error(err?.message),
-            }
-        );
+        disableItem({ id }, { onSuccess: () => refetch() });
     };
 
     const handleRestore = (id: number) => {
-        restoreItem(
-            { id },
-            {
-                onSuccess: () => {
-                    notify.success("Đã khôi phục tiêu chí");
-                    refetch();
-                },
-                onError: (err) => notify.error(err?.message),
-            }
-        );
+        restoreItem({ id }, { onSuccess: () => refetch() });
     };
 
     const columns: ColumnsType<IJobTitlePerformanceContent> = [
@@ -148,13 +127,19 @@ const DrawerJobTitlePerformanceContent = ({
             title: "STT",
             width: 60,
             align: "center",
-            render: (_, __, index) => index + 1,
+            render: (_, __, index) => (
+                <Text type="secondary" style={{ fontSize: 13 }}>{index + 1}</Text>
+            ),
         },
         {
             title: "Bậc lương",
             dataIndex: "salaryGradeNumber",
             width: 140,
-            render: (v) => <Tag color="blue">Bậc {v}</Tag>,
+            render: (v) => (
+                <Tag color="blue" style={{ fontWeight: 600, fontSize: 13 }}>
+                    Bậc {v}
+                </Tag>
+            ),
         },
         {
             title: "Trạng thái",
@@ -163,54 +148,67 @@ const DrawerJobTitlePerformanceContent = ({
             align: "center",
             render: (active) =>
                 active ? (
-                    <Badge status="success" text="Hoạt động" />
+                    <Badge status="success" text={<Text style={{ fontSize: 13 }}>Hoạt động</Text>} />
                 ) : (
-                    <Badge status="error" text="Vô hiệu" />
+                    <Badge status="error" text={<Text type="secondary" style={{ fontSize: 13 }}>Vô hiệu</Text>} />
                 ),
         },
         {
             title: "Thao tác",
-            width: 240,
+            width: 160,
             align: "center",
             render: (_, record) => (
-                <Space>
-                    {/* Xem chi tiết */}
-                    <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            style={{ fontSize: 16, color: "#1677ff", cursor: "pointer" }}
-                            onClick={() => {
-                                setSelectedView(record);
-                                setOpenView(true);
-                            }}
-                        />
-                    </Access>
-
-                    {/* Sửa */}
+                <Space size={4}>
                     <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.UPDATE} hideChildren>
-                        <EditOutlined
-                            style={{ fontSize: 16, color: "#fa8c16", cursor: "pointer" }}
-                            onClick={() => {
-                                setSelected(record);
-                                setOpenUpdate(true);
-                            }}
-                        />
+                        <Tooltip title="Chỉnh sửa">
+                            <Button
+                                type="text"
+                                icon={<EditOutlined />}
+                                style={{ color: "#fa8c16" }}
+                                onClick={() => {
+                                    setSelected(record);
+                                    setOpenUpdate(true);
+                                }}
+                            />
+                        </Tooltip>
                     </Access>
 
-                    {/* Vô hiệu / Khôi phục */}
                     {record.active ? (
-                        <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.DISABLE} hideChildren>                            <Popconfirm title="Vô hiệu?" onConfirm={() => handleDisable(record.id)}>
-                            <Button size="small" danger loading={disabling}>
-                                Vô hiệu
-                            </Button>
-                        </Popconfirm>
+                        <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.DISABLE} hideChildren>
+                            <Tooltip title="Vô hiệu hoá">
+                                <Popconfirm
+                                    title="Xác nhận vô hiệu hoá tiêu chí này?"
+                                    okText="Vô hiệu"
+                                    cancelText="Huỷ"
+                                    okButtonProps={{ danger: true }}
+                                    onConfirm={() => handleDisable(record.id)}
+                                >
+                                    <Button
+                                        type="text"
+                                        icon={<DeleteOutlined />}
+                                        danger
+                                        loading={disabling}
+                                    />
+                                </Popconfirm>
+                            </Tooltip>
                         </Access>
                     ) : (
                         <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.RESTORE} hideChildren>
-                            <Popconfirm title="Khôi phục?" onConfirm={() => handleRestore(record.id)}>
-                                <Button size="small" type="primary" loading={restoring}>
-                                    Khôi phục
-                                </Button>
-                            </Popconfirm>
+                            <Tooltip title="Khôi phục">
+                                <Popconfirm
+                                    title="Khôi phục tiêu chí này?"
+                                    okText="Khôi phục"
+                                    cancelText="Huỷ"
+                                    onConfirm={() => handleRestore(record.id)}
+                                >
+                                    <Button
+                                        type="text"
+                                        icon={<RedoOutlined />}
+                                        style={{ color: "#52c41a" }}
+                                        loading={restoring}
+                                    />
+                                </Popconfirm>
+                            </Tooltip>
                         </Access>
                     )}
                 </Space>
@@ -226,13 +224,31 @@ const DrawerJobTitlePerformanceContent = ({
                 width={1000}
                 destroyOnClose
                 title={
-                    <>
-                        <Title level={4}>Tiêu chí đánh giá hiệu suất</Title>
-                        <Text type="secondary">Chức danh: {ownerJobTitleName}</Text>
-                    </>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <Title level={4} style={{ margin: 0 }}>
+                            Tiêu chí đánh giá hiệu suất
+                        </Title>
+                        <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>
+                            Chức danh: {ownerJobTitleName}
+                        </Text>
+                    </div>
                 }
             >
-                <Card>
+                {/* Thanh SearchFilter thay thế nút Thêm ở extra */}
+                <div style={{ marginBottom: 16 }}>
+                    <SearchFilter
+                        searchPlaceholder="Tìm theo bậc lương..."
+                        showFilterButton={false}
+                        showResetButton
+                        onSearch={(val) => console.log("search", val)}
+                        onReset={() => refetch()}
+                        onAddClick={() => setOpenCreate(true)}
+                        addLabel="Thêm tiêu chí"
+                        addPermission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.CREATE}
+                    />
+                </div>
+
+                <Card styles={{ body: { padding: 0 } }} style={{ borderRadius: 10, overflow: "hidden" }}>
                     {isLoading || isFetching ? (
                         <div style={{ textAlign: "center", padding: 60 }}>
                             <Spin size="large" />
@@ -243,44 +259,70 @@ const DrawerJobTitlePerformanceContent = ({
                             dataSource={data}
                             columns={columns}
                             pagination={false}
-                            locale={{ emptyText: <Empty description="Chưa có tiêu chí nào" /> }}
+                            locale={{
+                                emptyText: (
+                                    <Empty
+                                        description="Chưa có tiêu chí nào"
+                                        style={{ padding: "40px 0" }}
+                                    />
+                                ),
+                            }}
+                            rowClassName={(record) => (!record.active ? "row-disabled" : "")}
                             expandable={{
+                                expandIcon: ({ expanded, onExpand, record }) => (
+                                    <Tooltip title={expanded ? "Ẩn nội dung" : "Xem nội dung"}>
+                                        <Button
+                                            type="text"
+                                            size="small"
+                                            icon={<EyeOutlined />}
+                                            style={{ color: expanded ? "#1677ff" : "#8c8c8c" }}
+                                            onClick={(e) => onExpand(record, e)}
+                                        />
+                                    </Tooltip>
+                                ),
                                 expandedRowRender: (record) => (
-                                    <div
-                                        style={{
-                                            padding: "24px 40px",
-                                            background: "#fafbfc",
-                                            borderRadius: 12,
-                                            margin: "16px 0",
-                                        }}
-                                    >
+                                    <div style={{ padding: "20px 32px", background: "#fafbfc" }}>
                                         <div
                                             style={{
                                                 display: "grid",
                                                 gridTemplateColumns: "1fr 1fr",
-                                                gap: 24,
-                                                maxWidth: "100%",
+                                                gap: 16,
                                             }}
                                         >
                                             {["A", "B", "C", "D"].map((label) => (
                                                 <div key={label}>
-                                                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1890ff", marginBottom: 8 }}>
+                                                    <Text
+                                                        strong
+                                                        style={{
+                                                            color: "#1890ff",
+                                                            display: "block",
+                                                            marginBottom: 6,
+                                                            fontSize: 13,
+                                                        }}
+                                                    >
                                                         Nội dung {label}
-                                                    </div>
+                                                    </Text>
                                                     <div
                                                         style={{
                                                             whiteSpace: "pre-line",
                                                             wordBreak: "break-word",
                                                             lineHeight: 1.7,
-                                                            padding: 16,
+                                                            padding: "12px 14px",
                                                             background: "#fff",
                                                             border: "1px solid #e8e8e8",
                                                             borderRadius: 8,
-                                                            minHeight: 100,
-                                                            fontSize: 14,
+                                                            minHeight: 80,
+                                                            fontSize: 13,
+                                                            color: "#444",
                                                         }}
                                                     >
-                                                        {record[`content${label}` as keyof IJobTitlePerformanceContent] as string || "—"}
+                                                        {(record[
+                                                            `content${label}` as keyof IJobTitlePerformanceContent
+                                                        ] as string) || (
+                                                                <Text type="secondary" italic>
+                                                                    Chưa có nội dung
+                                                                </Text>
+                                                            )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -292,13 +334,11 @@ const DrawerJobTitlePerformanceContent = ({
                     )}
                 </Card>
 
-                <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.CREATE} hideChildren>
-                    <div style={{ textAlign: "right", marginTop: 16 }}>
-                        <Button type="primary" onClick={() => setOpenCreate(true)}>
-                            Thêm tiêu chí mới
-                        </Button>
-                    </div>
-                </Access>
+                <style>{`
+                    .row-disabled td {
+                        opacity: 0.45;
+                    }
+                `}</style>
             </Drawer>
 
             <ModalJobTitlePerformanceContent

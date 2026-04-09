@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Modal, Form, Typography, ConfigProvider } from "antd";
 import { ProFormDigit } from "@ant-design/pro-components";
+import AppButton from "@/components/common/ui/AppButton";
 
 const { Text } = Typography;
 
@@ -50,12 +51,28 @@ const ModalCreateDepartmentSalaryGrade = ({
                     onClose();
                     form.resetFields();
                 }}
-                onOk={handleOk}
-                okText="Tạo"
-                cancelText="Hủy"
-                confirmLoading={isCreating}
                 destroyOnClose
                 centered
+                footer={[
+                    <AppButton
+                        key="cancel"
+                        appVariant="outline"
+                        onClick={() => {
+                            onClose();
+                            form.resetFields();
+                        }}
+                    >
+                        Hủy
+                    </AppButton>,
+
+                    <AppButton
+                        key="submit"
+                        loading={isCreating}
+                        onClick={handleOk}
+                    >
+                        Tạo
+                    </AppButton>,
+                ]}
             >
                 <Form form={form} layout="vertical">
                     <Form.Item

@@ -242,7 +242,7 @@ const CompanyPage = () => {
                         />
                     </Access>
                         <Access
-                            permission={ALL_PERMISSIONS.JOB_TITLES.GET_PAGINATE}
+                            permission={ALL_PERMISSIONS.COMPANY_JOB_TITLES.GET_PAGINATE}
                             hideChildren
                         >
                             <Tag
