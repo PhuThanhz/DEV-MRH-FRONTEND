@@ -14,7 +14,8 @@ import type { FilterField } from "@/components/common/filter/AdvancedFilterSelec
 import ModalProcedure from "../modal.procedure";
 import ModalRevise from "../components/modal.revise";
 import ViewProcedure from "../view.procedure";
-
+import { Dropdown, Grid } from "antd";
+import { MoreOutlined } from "@ant-design/icons";
 import {
     useProceduresQuery,
     useDeleteProcedureMutation,
@@ -276,66 +277,104 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         {
             title: "Hành động",
             align: "center",
-            width: 200,
-            render: (_, record) => (
-                <Space size="small">
-                    {/* 👁️ XEM */}
-                    <Access permission={permission.view} hideChildren>
-                        <Tooltip title="Xem chi tiết">
-                            <EyeOutlined
-                                style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                onClick={() => { setDataInit(record); setOpenView(true); }}
-                            />
-                        </Tooltip>
-                    </Access>
+            width: 100, fixed: "right",   // ✅ THÊM DÒNG NÀY
+            render: (_, record) => {
 
-                    {/* ✏️ SỬA */}
-                    <Access permission={permission.update} hideChildren>
-                        <Tooltip title="Chỉnh sửa">
-                            <EditOutlined
-                                style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                                onClick={() => { setDataInit(record); setOpenModal(true); }}
-                            />
-                        </Tooltip>
-                    </Access>
-
-                    {/* 🔁 TẠO PHIÊN BẢN MỚI */}
-                    <Access permission={permission.revise} hideChildren>
-                        <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
+                const menuItems = [
+                    {
+                        key: "edit",
+                        icon: <EditOutlined style={{ color: "#fa8c16" }} />,
+                        label: (
+                            <Access permission={permission.update} hideChildren>
+                                <Tooltip title="Chỉnh sửa">
+                                    <span
+                                        onClick={() => {
+                                            setDataInit(record);
+                                            setOpenModal(true);
+                                        }}
+                                    >
+                                        Chỉnh sửa
+                                    </span>
+                                </Tooltip>
+                            </Access>
+                        ),
+                    },
+                    {
+                        key: "revise",
+                        icon: (
                             <Tag
                                 color="green"
                                 style={{
-                                    cursor: "pointer",
-                                    borderRadius: 6,
-                                    padding: "2px 8px",
-                                    fontWeight: 500,
                                     margin: 0,
+                                    borderRadius: 6,
+                                    padding: "0 6px",
+                                    fontSize: 12,
                                 }}
-                                onClick={() => { setDataInit(record); setOpenRevise(true); }}
                             >
                                 v{(record.version ?? 1) + 1}
                             </Tag>
-                        </Tooltip>
-                    </Access>
+                        ),
+                        label: (
+                            <Access permission={permission.revise} hideChildren>
+                                <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
+                                    <span
+                                        onClick={() => {
+                                            setDataInit(record);
+                                            setOpenRevise(true);
+                                        }}
+                                    >
+                                        Tạo version v{(record.version ?? 1) + 1}
+                                    </span>
+                                </Tooltip>
+                            </Access>
+                        ),
+                    },
+                    {
+                        key: "delete",
+                        icon: <DeleteOutlined style={{ color: "red" }} />,
+                        label: (
+                            <Access permission={permission.delete} hideChildren>
+                                <Popconfirm
+                                    title="Xác nhận xoá quy trình này?"
+                                    onConfirm={() => deleteMutation.mutateAsync(record.id!)}
+                                    okText="Xoá"
+                                    cancelText="Huỷ"
+                                    placement="topRight"
+                                >
+                                    <Tooltip title="Xóa">
+                                        <span style={{ color: "red" }}>Xóa</span>
+                                    </Tooltip>
+                                </Popconfirm>
+                            </Access>
+                        ),
+                    },
+                ];
 
-                    {/* 🗑️ XOÁ */}
-                    <Access permission={permission.delete} hideChildren>
-                        <Popconfirm
-                            title="Xác nhận xoá quy trình này?"
-                            onConfirm={() => deleteMutation.mutateAsync(record.id!)}
-                            okText="Xoá"
-                            cancelText="Huỷ"
-                            placement="topRight"
-                        >
-                            <Tooltip title="Xóa">
-                                <DeleteOutlined
-                                    style={{ fontSize: 18, color: "red", cursor: "pointer" }}
+                return (
+                    <Space size="small">
+                        {/* 👁️ GIỮ NGUYÊN */}
+                        <Access permission={permission.view} hideChildren>
+                            <Tooltip title="Xem chi tiết">
+                                <EyeOutlined
+                                    style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                                    onClick={() => {
+                                        setDataInit(record);
+                                        setOpenView(true);
+                                    }}
                                 />
                             </Tooltip>
-                        </Popconfirm>
-                    </Access>
-                </Space>
-            ),
+                        </Access>
+
+                        {/* ... MENU */}
+                        <Dropdown
+                            menu={{ items: menuItems }}
+                            trigger={["click"]}
+                        >
+                            <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+                        </Dropdown>
+                    </Space>
+                );
+            }
         },
     ];
 
@@ -490,7 +529,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={procedures}
-                request={async (params, sort) => {
+                scroll={{ x: 1200 }} request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);
                     return { data: procedures, success: true, total: meta.total };
