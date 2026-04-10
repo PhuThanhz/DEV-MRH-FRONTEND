@@ -76,7 +76,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const procedures = data?.result ?? [];
 
     // ===================== BUILD FILTERS =====================
-    // Dùng ID thay vì name để filter chính xác hơn
     const buildFilters = (
         search: string,
         status: string | null,
@@ -88,19 +87,14 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     ) => {
         const parts: string[] = [];
 
-        // Props cố định (được truyền từ ngoài vào)
         if (companyId) parts.push(`department.company.id:${companyId}`);
         if (departmentId) parts.push(`department.id:${departmentId}`);
 
-        // Bộ lọc người dùng chọn
         if (search) parts.push(`procedureName~'${search}'`);
         if (status) parts.push(`status='${status}'`);
         if (createdAt) parts.push(createdAt);
 
-        // Chỉ filter theo company nếu không bị fix cứng từ props
         if (!companyId && cmpId) parts.push(`department.company.id:${cmpId}`);
-
-        // Chỉ filter theo department nếu không bị fix cứng từ props
         if (!departmentId && deptId) parts.push(`department.id:${deptId}`);
 
         if (sectId) parts.push(`section.id:${sectId}`);
@@ -185,7 +179,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const columns: ProColumns<IProcedure>[] = [
         {
             title: "STT",
-            width: 60,
+            width: 55,
             align: "center",
             render: (_, __, index) =>
                 index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10),
@@ -194,24 +188,24 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Mã quy trình",
             dataIndex: "procedureCode",
             align: "center",
-            width: 130,
+            width: 150,
             render: (_, record) => (
                 <Tag color="purple">{record.procedureCode ?? "--"}</Tag>
             ),
         },
         {
-            title: "Mã công ty",
+            title: <span style={{ whiteSpace: "nowrap" }}>Mã công ty</span>,
             dataIndex: "companyCode",
             align: "center",
-            width: 120,
+            width: 100,
             hideInTable: !!companyId || !!departmentId,
             render: (_, record) => <Tag color="blue">{record.companyCode}</Tag>,
         },
         {
             title: "Công ty",
             dataIndex: "companyName",
-            align: "center",
-            width: 180,
+            width: 220,                     // ← bỏ align: "center"
+            ellipsis: { showTitle: true },
             hideInTable: !!companyId || !!departmentId,
         },
         {
@@ -228,7 +222,8 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Bộ phận",
             dataIndex: "sectionName",
             align: "center",
-            width: 160,
+            width: 150,
+            hideInTable: type === "COMPANY",
             render: (_, record) => (
                 <Tag color="geekblue">{record.sectionName || "--"}</Tag>
             ),
@@ -237,12 +232,19 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Tên quy trình",
             dataIndex: "procedureName",
             sorter: true,
-            render: (_, record) => <span>{record.procedureName}</span>,
+            width: 250,                     // ← bỏ align: "center"
+            ellipsis: { showTitle: true },
+            render: (_, record) => (
+                <Tooltip title={record.procedureName}>
+                    <span>{record.procedureName}</span>
+                </Tooltip>
+            ),
         },
         {
             title: "Trạng thái",
             dataIndex: "status",
             align: "center",
+            width: 140,
             render: (_, record) => {
                 const s = statusMap[record.status ?? ""] ?? {
                     label: record.status,
@@ -255,20 +257,21 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Năm KH",
             dataIndex: "planYear",
             align: "center",
-            width: 100,
+            width: 85,
         },
         {
             title: "Version",
             dataIndex: "version",
             align: "center",
             width: 80,
+            hideInTable: type === "COMPANY",
             render: (_, record) => <Tag color="blue">v{record.version ?? 1}</Tag>,
         },
         {
             title: "Ngày ban hành",
             dataIndex: "issuedDate",
             align: "center",
-            width: 120,
+            width: 130,
             render: (_, record) =>
                 record.issuedDate
                     ? dayjs(record.issuedDate).format("DD-MM-YYYY")
@@ -277,7 +280,8 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         {
             title: "Hành động",
             align: "center",
-            width: 100, fixed: "right",   // ✅ THÊM DÒNG NÀY
+            width: 100,
+            fixed: "right",
             render: (_, record) => {
 
                 const menuItems = [
@@ -352,7 +356,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
 
                 return (
                     <Space size="small">
-                        {/* 👁️ GIỮ NGUYÊN */}
                         <Access permission={permission.view} hideChildren>
                             <Tooltip title="Xem chi tiết">
                                 <EyeOutlined
@@ -365,7 +368,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                             </Tooltip>
                         </Access>
 
-                        {/* ... MENU */}
                         <Dropdown
                             menu={{ items: menuItems }}
                             trigger={["click"]}
@@ -379,11 +381,8 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     ];
 
     // ===================== FILTER FIELDS =====================
-    // Đúng với FilterField interface: chỉ dùng options | asyncOptions | dependsOn
-    // Value luôn là ID (number) để filter chính xác, label hiển thị tên
     const filterFields: FilterField[] = [
 
-        // --- CÔNG TY: chỉ hiện khi không bị fix cứng từ props ---
         ...(!companyId && !departmentId ? [{
             key: "companyId",
             label: "Công ty",
@@ -392,18 +391,15 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 const list: ICompany[] = (res?.data as any)?.result ?? [];
                 return list.map((c) => ({
                     label: c.name,
-                    value: c.id,          // value = ID
+                    value: c.id,
                     color: "blue",
                 }));
             },
         }] as FilterField[] : []),
 
-        // --- PHÒNG BAN: chỉ hiện khi không bị fix cứng từ props ---
         ...(!departmentId ? [{
             key: "departmentId",
             label: "Phòng ban",
-            // Nếu đã có companyId từ props → fetch thẳng, không cần dependsOn
-            // Nếu không → phụ thuộc vào companyId người dùng chọn
             ...(companyId
                 ? {
                     asyncOptions: async () => {
@@ -431,15 +427,11 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 }),
         }] as FilterField[] : []),
 
-        // --- BỘ PHẬN: phụ thuộc vào departmentId ---
-        // Nếu departmentId fix cứng từ props → dùng đó để fetch
-        // Nếu không → phụ thuộc vào departmentId người dùng chọn
         {
             key: "sectionId",
             label: "Bộ phận",
             ...(departmentId
                 ? {
-                    // departmentId cố định từ props → fetch thẳng không cần dependsOn
                     asyncOptions: async () => {
                         const res = await callFetchSectionsByDepartment(departmentId);
                         const list: ISection[] = (res?.data as any) ?? [];
@@ -465,7 +457,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 }),
         },
 
-        // --- TRẠNG THÁI ---
         {
             key: "status",
             label: "Trạng thái",
@@ -477,7 +468,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             ],
         },
 
-        // --- NĂM KẾ HOẠCH ---
         {
             key: "planYear",
             label: "Năm KH",
@@ -508,7 +498,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         resetSignal={resetSignal}
                         fields={filterFields}
                         onChange={(filters) => {
-                            // Value đã là ID (number) nên map thẳng vào state
                             setCompanyIdFilter(filters.companyId ?? (companyId ?? null));
                             setDepartmentIdFilter(filters.departmentId ?? (departmentId ?? null));
                             setSectionIdFilter(filters.sectionId ?? null);
@@ -529,7 +518,8 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={procedures}
-                scroll={{ x: 1200 }} request={async (params, sort) => {
+                scroll={{ x: 1400 }}
+                request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);
                     return { data: procedures, success: true, total: meta.total };
