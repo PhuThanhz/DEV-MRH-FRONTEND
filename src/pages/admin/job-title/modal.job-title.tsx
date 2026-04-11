@@ -255,6 +255,7 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
                             label="Công ty"
                             options={companies}
                             fieldProps={{
+                                disabled: true, // 👈 THÊM DÒNG NÀY
                                 showSearch: true,
                                 optionFilterProp: "label",
                                 loading: loadingCompany,
@@ -274,6 +275,7 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
                             label="Bậc chức danh"
                             options={positionLevels}
                             fieldProps={{
+                                disabled: true, // 👈 THÊM DÒNG NÀY
                                 showSearch: true,
                                 optionFilterProp: "label",
                                 loading: loadingPL,

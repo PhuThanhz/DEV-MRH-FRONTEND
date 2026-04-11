@@ -36,7 +36,7 @@ const UserPage = () => {
         { label: string; value: string; color?: string }[]
     >([]);
     const [query, setQuery] = useState<string>(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
+        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=lastLoginAt,desc`
     );
 
     const tableRef = useRef<ActionType>(null);
@@ -63,7 +63,7 @@ const UserPage = () => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
+            sort: "lastLoginAt,desc",
         };
 
         const filters: string[] = [];
@@ -110,12 +110,13 @@ const UserPage = () => {
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let temp = queryString.stringify(q, { encode: false });
-        let sortBy = "sort=createdAt,desc";
-
+        let sortBy = "sort=lastLoginAt,desc";
         if (sort?.name)
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
         else if (sort?.email)
             sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
+        else if (sort?.lastLoginAt) // ← THÊM
+            sortBy = sort.lastLoginAt === "ascend" ? "sort=lastLoginAt,asc" : "sort=lastLoginAt,desc";
 
         return `${temp}&${sortBy}`;
     };
@@ -237,6 +238,8 @@ const UserPage = () => {
                 dataIndex: "lastLoginAt",
                 width: 160,
                 align: "center" as const,
+                sorter: true, // ← THÊM DÒNG NÀY
+
                 render: (_: any, record: IUser) =>
                     record.lastLoginAt ? (
                         <span style={{ fontSize: 12 }}>

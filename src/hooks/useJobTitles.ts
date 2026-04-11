@@ -9,6 +9,16 @@ import {
 import type { IBackendRes, IModelPaginate, IJobTitle } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
+const getErrorMessage = (err: any) => {
+    return (
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.response?.data?.errors?.[0] || // nếu backend trả array
+        err?.message ||
+        "Có lỗi từ server"
+    );
+};
+
 /* ===================== GET PAGINATE ===================== */
 export const useJobTitlesQuery = (query: string) => {
     return useQuery({
@@ -38,8 +48,8 @@ export const useCreateJobTitleMutation = () => {
             client.invalidateQueries({ queryKey: ["job-titles"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi tạo chức danh");
-        },
+            notify.error(getErrorMessage(err));
+        }
     });
 };
 
@@ -56,6 +66,9 @@ export const useUpdateJobTitleMutation = () => {
             notify.updated("Cập nhật chức danh thành công");
             client.invalidateQueries({ queryKey: ["job-titles"] });
         },
+        onError: (err: any) => {
+            notify.error(getErrorMessage(err));
+        }
     });
 };
 
@@ -67,9 +80,15 @@ export const useDeleteJobTitleMutation = () => {
         mutationFn: async (id: number) => {
             await callDeleteJobTitle(id);
         },
+
         onSuccess: () => {
             notify.deleted("Ngừng kích hoạt chức danh");
             client.invalidateQueries({ queryKey: ["job-titles"] });
         },
+
+        // 👇 THÊM ĐOẠN NÀY
+        onError: (err: any) => {
+            notify.error(getErrorMessage(err));
+        }
     });
 };
