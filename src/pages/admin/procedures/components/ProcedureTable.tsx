@@ -187,14 +187,14 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         {
             title: "Mã quy trình",
             dataIndex: "procedureCode",
-            align: "center",
-            width: 150,
+            align: "left",
+            width: 160,
             render: (_, record) => (
                 <Tag color="purple">{record.procedureCode ?? "--"}</Tag>
             ),
         },
         {
-            title: <span style={{ whiteSpace: "nowrap" }}>Mã công ty</span>,
+            title: "Mã công ty",
             dataIndex: "companyCode",
             align: "center",
             width: 100,
@@ -204,26 +204,28 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         {
             title: "Công ty",
             dataIndex: "companyName",
-            width: 220,                     // ← bỏ align: "center"
+            align: "left",
+            width: 220,
             ellipsis: { showTitle: true },
             hideInTable: !!companyId || !!departmentId,
         },
         {
             title: "Phòng ban",
             dataIndex: "departmentName",
+            align: "left",
             width: 180,
-            align: "center",
             hideInTable: !!departmentId,
             render: (_, record) => (
                 <Tag color="cyan">{record.departmentName || "--"}</Tag>
             ),
         },
         {
+            // Ẩn cột Bộ phận ở cả 3 loại bảng
             title: "Bộ phận",
             dataIndex: "sectionName",
-            align: "center",
+            align: "left",
             width: 150,
-            hideInTable: type === "COMPANY",
+            hideInTable: true,
             render: (_, record) => (
                 <Tag color="geekblue">{record.sectionName || "--"}</Tag>
             ),
@@ -232,12 +234,12 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             title: "Tên quy trình",
             dataIndex: "procedureName",
             sorter: true,
-            width: 250,                     // ← bỏ align: "center"
-            ellipsis: { showTitle: true },
+            align: "left",
+            // Không đặt width cố định để cột tự giãn, hiển thị đầy đủ nội dung
             render: (_, record) => (
-                <Tooltip title={record.procedureName}>
-                    <span>{record.procedureName}</span>
-                </Tooltip>
+                <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                    {record.procedureName}
+                </span>
             ),
         },
         {
@@ -258,6 +260,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             dataIndex: "planYear",
             align: "center",
             width: 85,
+            hideInTable: true,
         },
         {
             title: "Version",
@@ -268,7 +271,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             render: (_, record) => <Tag color="blue">v{record.version ?? 1}</Tag>,
         },
         {
-            title: "Ngày ban hành",
+            title: <span style={{ whiteSpace: "nowrap" }}>Ngày ban hành</span>,
             dataIndex: "issuedDate",
             align: "center",
             width: 130,
@@ -283,7 +286,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             width: 100,
             fixed: "right",
             render: (_, record) => {
-
                 const menuItems = [
                     {
                         key: "edit",
@@ -518,7 +520,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={procedures}
-                scroll={{ x: 1400 }}
+                scroll={{ x: "max-content" }}
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);
