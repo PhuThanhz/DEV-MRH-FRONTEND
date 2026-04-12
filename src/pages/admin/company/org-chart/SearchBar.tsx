@@ -4,8 +4,11 @@ import type { Node } from "reactflow";
 
 interface Props {
     nodes: Node[];
-    onSelect: (nodeId: string) => void;   // zoom + highlight node được chọn
-    onClear: () => void;                  // xóa selection
+    onSelect: (nodeId: string) => void;
+    onSelectWithPos?: (nodeId: string, pos: { x: number; y: number } | null) => void;
+    onClear: () => void;
+    isMobile?: boolean;
+    isTablet?: boolean;
 }
 
 interface Result {
@@ -15,15 +18,19 @@ interface Result {
     levelCode?: string;
 }
 
-const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
+const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false, isTablet = false }: Props) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<Result[]>([]);
     const [open, setOpen] = useState(false);
     const [activeIdx, setActiveIdx] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const wrapRef = useRef<HTMLDivElement>(null);
 
-    // filter nodes theo query
+    const barW = isMobile ? 180 : isTablet ? 220 : 260;
+    const barH = isMobile ? 30 : 34;
+    const fontSize = isMobile ? 11 : 12;
+
     useEffect(() => {
         const q = query.trim().toLowerCase();
         if (!q) { setResults([]); setOpen(false); return; }
@@ -48,12 +55,34 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
         setActiveIdx(-1);
     }, [query, nodes]);
 
-    const handleSelect = (id: string) => {
-        onSelect(id);
-        setQuery("");
-        setOpen(false);
+    // ── Tính anchorPos từ DOM node của ReactFlow ──────────────────────────────
+    const getNodePos = (nodeId: string): { x: number; y: number } | null => {
+        const el = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`);
+        const container = el?.closest(".react-flow");
+        if (!el || !container) return null;
+        const elRect = el.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return {
+            x: elRect.right - containerRect.left + 8,
+            y: elRect.top - containerRect.top,
+        };
     };
 
+    const handleSelect = (id: string) => {
+        setQuery("");
+        setOpen(false);
+
+        if (onSelectWithPos) {
+            const posImmediate = getNodePos(id);
+            onSelectWithPos(id, posImmediate);
+            setTimeout(() => {
+                const posAfter = getNodePos(id);
+                onSelectWithPos(id, posAfter);
+            }, 600);
+        } else {
+            onSelect(id);
+        }
+    };
     const handleClear = () => {
         setQuery("");
         setOpen(false);
@@ -61,7 +90,6 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
         inputRef.current?.focus();
     };
 
-    // keyboard navigation
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (!open) return;
         if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx((i) => Math.min(i + 1, results.length - 1)); }
@@ -70,7 +98,6 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
         if (e.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
     };
 
-    // highlight matched text
     const highlight = (text: string, q: string) => {
         if (!q) return <>{text}</>;
         const idx = text.toLowerCase().indexOf(q.toLowerCase());
@@ -78,7 +105,10 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
         return (
             <>
                 {text.slice(0, idx)}
-                <mark style={{ background: "#fde68a", color: "#92400e", borderRadius: 2, padding: "0 1px" }}>
+                <mark style={{
+                    background: "#fde68a", color: "#92400e",
+                    borderRadius: 2, padding: "0 1px",
+                }}>
                     {text.slice(idx, idx + q.length)}
                 </mark>
                 {text.slice(idx + q.length)}
@@ -89,19 +119,28 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
     const q = query.trim().toLowerCase();
 
     return (
-        <div style={{ position: "absolute", top: 12, left: 12, zIndex: 20, width: 260 }}>
-            {/* Input */}
+        <div
+            ref={wrapRef}
+            style={{
+                position: "absolute",
+                top: isMobile ? 8 : 12,
+                left: isMobile ? 8 : 12,
+                zIndex: 20,
+                width: barW,
+            }}
+        >
+            {/* ── Input ── */}
             <div style={{
-                display: "flex", alignItems: "center", gap: 7,
+                display: "flex", alignItems: "center", gap: isMobile ? 5 : 7,
                 background: "#ffffff",
-                border: "1px solid #e8ecf0",
-                borderRadius: 10,
-                padding: "0 10px",
-                height: 34,
+                border: "1px solid #e2e8f0",
+                borderRadius: isMobile ? 8 : 10,
+                padding: isMobile ? "0 8px" : "0 10px",
+                height: barH,
                 boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
                 transition: "border-color 0.15s, box-shadow 0.15s",
             }}>
-                <SearchOutlined style={{ fontSize: 13, color: "#9ca3af", flexShrink: 0 }} />
+                <SearchOutlined style={{ fontSize: isMobile ? 11 : 13, color: "#9ca3af", flexShrink: 0 }} />
                 <input
                     ref={inputRef}
                     value={query}
@@ -109,111 +148,195 @@ const SearchBar = ({ nodes, onSelect, onClear }: Props) => {
                     onKeyDown={handleKeyDown}
                     onFocus={() => { if (results.length > 0) setOpen(true); }}
                     onBlur={() => setTimeout(() => setOpen(false), 150)}
-                    placeholder="Tìm vị trí, tên người..."
+                    placeholder={isMobile ? "Tìm vị trí..." : "Tìm vị trí, tên người..."}
                     style={{
                         flex: 1, border: "none", outline: "none",
-                        fontSize: 12, color: "#374151",
+                        fontSize: fontSize,
+                        color: "#374151",
                         fontFamily: "'Be Vietnam Pro',sans-serif",
                         background: "transparent",
+                        minWidth: 0,
                     }}
                 />
                 {query && (
                     <button
                         onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
                         style={{
-                            background: "none", border: "none", cursor: "pointer",
-                            color: "#9ca3af", padding: 0, display: "flex",
-                            alignItems: "center", flexShrink: 0,
+                            background: "#f1f5f9",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "#94a3b8",
+                            padding: 0,
+                            width: 16, height: 16,
+                            borderRadius: 4,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                            transition: "background 0.1s",
                         }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                     >
-                        <CloseOutlined style={{ fontSize: 10 }} />
+                        <CloseOutlined style={{ fontSize: 8 }} />
                     </button>
                 )}
             </div>
 
-            {/* Dropdown kết quả */}
+            {/* ── Dropdown kết quả ── */}
             {open && results.length > 0 && (
                 <div
                     ref={listRef}
                     style={{
-                        position: "absolute", top: 38, left: 0, right: 0,
+                        position: "absolute",
+                        top: barH + 5,
+                        left: 0, right: 0,
                         background: "#ffffff",
-                        border: "1px solid #e8ecf0",
-                        borderRadius: 10,
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: isMobile ? 8 : 10,
+                        boxShadow: "0 8px 24px rgba(15,23,42,0.10), 0 2px 6px rgba(15,23,42,0.06)",
                         overflow: "hidden",
+                        maxHeight: isMobile ? 200 : 260,
+                        overflowY: "auto",
                     }}
                 >
+                    {/* Header count */}
+                    <div style={{
+                        padding: isMobile ? "5px 10px 4px" : "6px 12px 5px",
+                        borderBottom: "1px solid #f1f5f9",
+                        background: "#fafafa",
+                        fontSize: isMobile ? 9 : 10,
+                        color: "#94a3b8",
+                        fontFamily: "'Be Vietnam Pro',sans-serif",
+                        fontWeight: 500,
+                    }}>
+                        {results.length} kết quả
+                    </div>
+
                     {results.map((r, i) => (
                         <div
                             key={r.id}
                             onMouseDown={() => handleSelect(r.id)}
                             style={{
-                                padding: "8px 12px",
+                                padding: isMobile ? "7px 10px" : "8px 12px",
                                 cursor: "pointer",
-                                background: i === activeIdx ? "#fff5f6" : "transparent",
-                                borderBottom: i < results.length - 1 ? "1px solid #f3f4f6" : "none",
+                                background: i === activeIdx ? "#fff5f6" : "#fff",
+                                borderBottom: i < results.length - 1 ? "1px solid #f8fafc" : "none",
                                 transition: "background 0.1s",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
                             }}
                             onMouseEnter={() => setActiveIdx(i)}
                         >
-                            {/* Tên vị trí */}
+                            {/* Icon tròn nhỏ */}
                             <div style={{
-                                fontSize: 12, fontWeight: 600,
-                                fontFamily: "'Be Vietnam Pro',sans-serif",
-                                color: "#111827",
-                                lineHeight: 1.4,
+                                width: isMobile ? 28 : 32,
+                                height: isMobile ? 28 : 32,
+                                borderRadius: isMobile ? 7 : 8,
+                                flexShrink: 0,
+                                background: i === activeIdx
+                                    ? "linear-gradient(135deg,#f43f5e,#fb923c)"
+                                    : "#f1f5f9",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transition: "background 0.15s",
                             }}>
-                                {highlight(r.title, q)}
+                                <span style={{
+                                    fontSize: isMobile ? 9 : 10,
+                                    fontWeight: 700,
+                                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                                    color: i === activeIdx ? "#fff" : "#94a3b8",
+                                    textTransform: "uppercase",
+                                }}>
+                                    {r.title.charAt(0)}
+                                </span>
                             </div>
 
-                            {/* Holder + level */}
-                            {(r.holderName || r.levelCode) && (
+                            {/* Text */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{
-                                    display: "flex", alignItems: "center", gap: 6, marginTop: 2,
+                                    fontSize: isMobile ? 11.5 : 12.5,
+                                    fontWeight: 700,
+                                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                                    color: "#0f172a",
+                                    lineHeight: 1.3,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                }}>
+                                    {highlight(r.title, q)}
+                                </div>
+
+                                <div style={{
+                                    display: "flex", alignItems: "center",
+                                    gap: 5, marginTop: 2, flexWrap: "wrap",
                                 }}>
                                     {r.holderName && (
                                         <span style={{
-                                            fontSize: 10.5, color: "#6b7280",
+                                            fontSize: isMobile ? 9.5 : 10.5,
+                                            color: "#64748b",
                                             fontFamily: "'Be Vietnam Pro',sans-serif",
+                                            fontWeight: 500,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            maxWidth: isMobile ? 90 : 120,
                                         }}>
                                             {highlight(r.holderName, q)}
                                         </span>
                                     )}
                                     {r.levelCode && (
                                         <span style={{
-                                            fontSize: 9, fontWeight: 600,
+                                            fontSize: isMobile ? 8 : 8.5,
+                                            fontWeight: 700,
                                             fontFamily: "'JetBrains Mono',monospace",
                                             color: "#e8637a",
                                             background: "#fff0f3",
-                                            border: "1px solid #ffd6e0",
-                                            borderRadius: 4, padding: "1px 5px",
+                                            border: "1px solid #fecdd3",
+                                            borderRadius: 4,
+                                            padding: "1px 5px",
                                             textTransform: "uppercase",
+                                            flexShrink: 0,
                                         }}>
                                             {r.levelCode}
                                         </span>
                                     )}
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Arrow hint */}
+                            <div style={{
+                                fontSize: 10, color: "#cbd5e1",
+                                flexShrink: 0,
+                                opacity: i === activeIdx ? 1 : 0,
+                                transition: "opacity 0.1s",
+                            }}>
+                                ↗
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Không tìm thấy */}
+            {/* ── Không tìm thấy ── */}
             {open && results.length === 0 && query.trim() && (
                 <div style={{
-                    position: "absolute", top: 38, left: 0, right: 0,
+                    position: "absolute",
+                    top: barH + 5,
+                    left: 0, right: 0,
                     background: "#ffffff",
-                    border: "1px solid #e8ecf0",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-                    fontSize: 12, color: "#9ca3af",
-                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: isMobile ? 8 : 10,
+                    padding: isMobile ? "10px" : "12px",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.07)",
                     textAlign: "center",
                 }}>
-                    Không tìm thấy kết quả
+                    <div style={{ fontSize: isMobile ? 18 : 20, marginBottom: 4 }}>🔍</div>
+                    <div style={{
+                        fontSize: isMobile ? 11 : 12,
+                        color: "#94a3b8",
+                        fontFamily: "'Be Vietnam Pro',sans-serif",
+                    }}>
+                        Không tìm thấy kết quả
+                    </div>
                 </div>
             )}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag } from "antd";
+import { Space, Tag, Button, Popconfirm } from "antd";  // ← thêm Button, Popconfirm
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -62,6 +62,7 @@ const EmployeePage = () => {
     };
 
     const employees = data?.result ?? [];
+
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
@@ -79,7 +80,6 @@ const EmployeePage = () => {
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         let temp = queryString.stringify(q, { encode: false });
-
         let sortBy = "sort=createdAt,desc";
 
         if (sort?.name)
@@ -115,7 +115,8 @@ const EmployeePage = () => {
                 const avatarUrl = record.avatar
                     ? `${backendURL}/api/v1/files?fileName=${record.avatar}&folder=avatar`
                     : null;
-                const displayName = record.name || record.email || "NV"; const initials = displayName
+                const displayName = record.name || record.email || "NV";
+                const initials = displayName
                     .split(" ")
                     .filter(Boolean)
                     .map((w: string) => w[0]?.toUpperCase())
@@ -271,12 +272,15 @@ const EmployeePage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 160,
+            width: 120,
+            fixed: "right",                             // ← đồng bộ
             render: (_, entity) => (
-                <Space>
+                <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenViewDetail(true);
@@ -285,8 +289,10 @@ const EmployeePage = () => {
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.UPDATE} hideChildren>
-                        <EditOutlined
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
@@ -294,10 +300,22 @@ const EmployeePage = () => {
                         />
                     </Access>
 
-                    <Access permission={ALL_PERMISSIONS.EMPLOYEES.DELETE} hideChildren>                        <DeleteOutlined
-                        style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
-                        onClick={() => handleDelete(Number(entity.id))}
-                    />
+                    <Access permission={ALL_PERMISSIONS.EMPLOYEES.DELETE} hideChildren>
+                        <Popconfirm
+                            title="Xác nhận xóa nhân viên"
+                            description="Hành động này không thể hoàn tác."
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                            placement="topRight"
+                            onConfirm={() => handleDelete(Number(entity.id))}
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                            />
+                        </Popconfirm>
                     </Access>
                 </Space>
             ),
@@ -319,8 +337,8 @@ const EmployeePage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.EMPLOYEES.CREATE} />
-
+                        addPermission={ALL_PERMISSIONS.EMPLOYEES.CREATE}
+                    />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect
                             fields={[
@@ -343,40 +361,42 @@ const EmployeePage = () => {
                 </div>
             }
         >
-            <Access permission={ALL_PERMISSIONS.EMPLOYEES.GET_PAGINATE}>                <DataTable<IEmployee>
-                actionRef={tableRef}
-                rowKey="id"
-                loading={isFetching}
-                columns={columns}
-                dataSource={employees}
-                request={async (params, sort) => {
-                    const q = buildQuery(params, sort);
-                    setQuery(q);
-                    return Promise.resolve({
-                        data: employees,
-                        success: true,
+            <Access permission={ALL_PERMISSIONS.EMPLOYEES.GET_PAGINATE}>
+                <DataTable<IEmployee>
+                    actionRef={tableRef}
+                    rowKey="id"
+                    loading={isFetching}
+                    columns={columns}
+                    dataSource={employees}
+                    scroll={{ x: "max-content" }}       // ← đồng bộ
+                    request={async (params, sort) => {
+                        const q = buildQuery(params, sort);
+                        setQuery(q);
+                        return Promise.resolve({
+                            data: employees,
+                            success: true,
+                            total: meta.total,
+                        });
+                    }}
+                    pagination={{
+                        defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+                        current: meta.page,
+                        pageSize: meta.pageSize,
                         total: meta.total,
-                    });
-                }}
-                pagination={{
-                    defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-                    current: meta.page,
-                    pageSize: meta.pageSize,
-                    total: meta.total,
-                    showQuickJumper: true,
-                    showTotal: (total, range) => (
-                        <div style={{ fontSize: 13 }}>
-                            <span style={{ fontWeight: 500 }}>{range[0]}–{range[1]}</span>{" "}
-                            trên{" "}
-                            <span style={{ fontWeight: 600, color: "#1677ff" }}>
-                                {total.toLocaleString()}
-                            </span>{" "}
-                            nhân viên
-                        </div>
-                    ),
-                }}
-                rowSelection={false}
-            />
+                        showQuickJumper: true,
+                        showTotal: (total, range) => (
+                            <div style={{ fontSize: 13 }}>
+                                <span style={{ fontWeight: 500 }}>{range[0]}–{range[1]}</span>{" "}
+                                trên{" "}
+                                <span style={{ fontWeight: 600, color: "#1677ff" }}>
+                                    {total.toLocaleString()}
+                                </span>{" "}
+                                nhân viên
+                            </div>
+                        ),
+                    }}
+                    rowSelection={false}
+                />
             </Access>
 
             <ModalEmployee

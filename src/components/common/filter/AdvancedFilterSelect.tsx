@@ -1,39 +1,45 @@
+// ============================================================
+//  AdvancedFilterSelect.tsx  (Main + Desktop)
+//  Giao diện DESKTOP — Dropdown submenu
+//  Chỉnh sửa UI/UX desktop tại đây (SearchableSubmenu)
+//  Logic chung (filter, cache, state) cũng nằm ở đây
+// ============================================================
+
 import React from "react";
-import { Dropdown, Tag, Space, Button, Spin, Input, Tooltip } from "antd";
-import { FilterOutlined, CloseCircleOutlined, SearchOutlined, LockOutlined, CheckOutlined } from "@ant-design/icons";
+import { Dropdown, Tag, Button, Spin, Input, Tooltip } from "antd";  // ← bỏ Space
+import {
+    FilterOutlined,
+    CloseCircleOutlined,
+    SearchOutlined,
+    LockOutlined,
+} from "@ant-design/icons";
 import type { MenuProps } from "antd";
+import type { FilterField, FilterOption } from "./AdvancedFilterSelect.types";
+import MobileBottomSheet from "./AdvancedFilterSelect.mobile";
 
-export interface FilterOption {
-    label: string;
-    value: any;
-    color?: string;
-}
+export type { FilterField, FilterOption } from "./AdvancedFilterSelect.types";
 
-export interface FilterField {
-    key: string;
-    label: string;
-    icon?: React.ReactNode;
-    options?: FilterOption[];
-    dependsOn?: string;
-    asyncOptions?: (dependValue: any) => Promise<FilterOption[]>;
-    searchable?: boolean;
-}
+// ─── Hook detect mobile (< 768px) ────────────────────────────────────────────
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = React.useState(
+        typeof window !== "undefined" && window.innerWidth < 768
+    );
+    React.useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+    return isMobile;
+};
 
-interface Props {
-    fields: FilterField[];
-    onChange: (filters: Record<string, any>) => void;
-    resetSignal?: number;
-    buttonLabel?: string;
-}
-
-// Component submenu có ô search
+// ─── Desktop: Submenu có ô tìm kiếm ──────────────────────────────────────────
 const SearchableSubmenu: React.FC<{
     field: FilterField;
     options: FilterOption[];
     isLoading: boolean;
     onSelect: (fieldKey: string, value: any) => void;
     selectedValue?: any;
-}> = ({ field, options, isLoading, onSelect, selectedValue }) => {
+}> = ({ field, options, isLoading, onSelect }) => {
     const [searchText, setSearchText] = React.useState("");
 
     const filteredOptions = options.filter((opt) =>
@@ -41,8 +47,7 @@ const SearchableSubmenu: React.FC<{
     );
 
     return (
-        <div style={{ minWidth: 180, maxWidth: 320, width: "max-content" }}>
-            {/* Search box */}
+        <div style={{ minWidth: 200, maxWidth: 320, width: "max-content" }}>
             <div style={{ padding: "8px 10px", borderBottom: "1px solid #f0f0f0" }}>
                 <Input
                     prefix={<SearchOutlined style={{ color: "#bfbfbf", fontSize: 13 }} />}
@@ -58,7 +63,6 @@ const SearchableSubmenu: React.FC<{
                 />
             </div>
 
-            {/* Options list */}
             <div style={{ maxHeight: 260, overflowY: "auto", overflowX: "hidden", padding: "4px 0" }}>
                 {isLoading ? (
                     <div style={{ textAlign: "center", padding: "16px 0" }}>
@@ -69,67 +73,58 @@ const SearchableSubmenu: React.FC<{
                         Không tìm thấy kết quả
                     </div>
                 ) : (
-                    filteredOptions.map((opt) => {
-                        const isSelected = selectedValue === opt.value;
-                        return (
-                            <div
-                                key={opt.value}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSelect(field.key, opt.value);
-                                }}
+                    filteredOptions.map((opt) => (
+                        <div
+                            key={opt.value}
+                            onClick={(e) => { e.stopPropagation(); onSelect(field.key, opt.value); }}
+                            style={{ padding: "6px 12px", cursor: "pointer", transition: "background 0.15s" }}
+                            onMouseEnter={(e) =>
+                                ((e.currentTarget as HTMLDivElement).style.background = "#f5f5f5")
+                            }
+                            onMouseLeave={(e) =>
+                                ((e.currentTarget as HTMLDivElement).style.background = "transparent")
+                            }
+                        >
+                            <Tag
+                                color={opt.color || "blue"}
                                 style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    padding: "6px 12px",
-                                    cursor: "pointer",
-                                    background: isSelected ? "#e6f4ff" : "transparent",
-                                    transition: "background 0.15s",
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isSelected)
-                                        (e.currentTarget as HTMLDivElement).style.background = "#f5f5f5";
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isSelected)
-                                        (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                                    margin: 0, cursor: "pointer",
+                                    whiteSpace: "normal", wordBreak: "break-word",
+                                    lineHeight: "1.4", maxWidth: "100%", display: "inline-block",
                                 }}
                             >
-                                <Tag
-                                    color={opt.color || "blue"}
-                                    style={{
-                                        margin: 0,
-                                        cursor: "pointer",
-                                        whiteSpace: "normal",
-                                        wordBreak: "break-word",
-                                        lineHeight: "1.4",
-                                        maxWidth: "90%",
-                                    }}
-                                >
-                                    {opt.label}
-                                </Tag>
-                                {isSelected && (
-                                    <CheckOutlined style={{ color: "#1677ff", fontSize: 12, flexShrink: 0 }} />
-                                )}
-                            </div>
-                        );
-                    })
+                                {opt.label}
+                            </Tag>
+                        </div>
+                    ))
                 )}
             </div>
         </div>
     );
 };
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+interface Props {
+    fields: FilterField[];
+    onChange: (filters: Record<string, any>) => void;
+    resetSignal?: number;
+    buttonLabel?: string;
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const AdvancedFilterSelect: React.FC<Props> = ({
     fields,
     onChange,
     resetSignal,
     buttonLabel = "Bộ lọc",
 }) => {
+    const isMobile = useIsMobile();
+
     const [activeFilters, setActiveFilters] = React.useState<Record<string, any>>({});
     const [cache, setCache] = React.useState<Record<string, FilterOption[]>>({});
     const [loading, setLoading] = React.useState<Record<string, boolean>>({});
+    const [dropdownOpen, setDropdownOpen] = React.useState(false);
+    const [sheetOpen, setSheetOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (resetSignal !== undefined) {
@@ -157,8 +152,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
             const cacheKey = getCacheKey(field);
             if (cache[cacheKey]) return;
             setLoading((prev) => ({ ...prev, [field.key]: true }));
-            field
-                .asyncOptions!(parentVal)
+            field.asyncOptions!(parentVal)
                 .then((opts) => setCache((prev) => ({ ...prev, [cacheKey]: opts })))
                 .finally(() => setLoading((prev) => ({ ...prev, [field.key]: false })));
         });
@@ -171,8 +165,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
         if (cache[cacheKey]) return;
         const dependValue = field.dependsOn ? activeFilters[field.dependsOn] : null;
         setLoading((prev) => ({ ...prev, [field.key]: true }));
-        field
-            .asyncOptions!(dependValue)
+        field.asyncOptions!(dependValue)
             .then((opts) => setCache((prev) => ({ ...prev, [cacheKey]: opts })))
             .finally(() => setLoading((prev) => ({ ...prev, [field.key]: false })));
     };
@@ -184,6 +177,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
         });
         setActiveFilters(newFilters);
         onChange(newFilters);
+        setDropdownOpen(false);
     };
 
     const handleClear = (fieldKey: string) => {
@@ -205,6 +199,12 @@ const AdvancedFilterSelect: React.FC<Props> = ({
         onChange(newFilters);
     };
 
+    const handleClearAll = () => {
+        setActiveFilters({});
+        setCache({});
+        onChange({});
+    };
+
     const menuItems: MenuProps["items"] = fields.map((field) => {
         const isDisabled = !!field.dependsOn && !activeFilters[field.dependsOn];
         const parentField = fields.find((f) => f.key === field.dependsOn);
@@ -212,7 +212,6 @@ const AdvancedFilterSelect: React.FC<Props> = ({
         const isLoading = loading[field.key];
         const isSearchable = field.searchable !== false;
 
-        // Label gọn gàng: disabled thì icon khoá + tooltip, không hiện text xấu
         const labelNode = isDisabled ? (
             <Tooltip
                 title={`Vui lòng chọn ${parentField?.label ?? "mục cha"} trước`}
@@ -229,16 +228,10 @@ const AdvancedFilterSelect: React.FC<Props> = ({
                 {field.icon && <span>{field.icon}</span>}
                 <span>{field.label}</span>
                 {activeFilters[field.key] !== undefined && (
-                    <span
-                        style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: "50%",
-                            background: "#1677ff",
-                            display: "inline-block",
-                            flexShrink: 0,
-                        }}
-                    />
+                    <span style={{
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#1677ff", display: "inline-block", flexShrink: 0,
+                    }} />
                 )}
             </span>
         );
@@ -248,26 +241,23 @@ const AdvancedFilterSelect: React.FC<Props> = ({
                 key: field.key,
                 disabled: isDisabled,
                 label: labelNode,
-                children: [
-                    {
-                        key: `${field.key}__searchable_panel`,
-                        label: (
-                            <SearchableSubmenu
-                                field={field}
-                                options={opts}
-                                isLoading={isLoading}
-                                onSelect={handleSelect}
-                                selectedValue={activeFilters[field.key]}
-                            />
-                        ),
-                        style: { padding: 0, margin: 0, background: "transparent" },
-                    },
-                ],
+                children: [{
+                    key: `${field.key}__searchable_panel`,
+                    label: (
+                        <SearchableSubmenu
+                            field={field}
+                            options={opts}
+                            isLoading={isLoading}
+                            onSelect={handleSelect}
+                            selectedValue={activeFilters[field.key]}
+                        />
+                    ),
+                    style: { padding: 0, margin: 0, background: "transparent" },
+                }],
                 onTitleClick: () => fetchIfNeeded(field),
             };
         }
 
-        // Fallback: submenu không có search
         const children: MenuProps["items"] = isLoading
             ? [{ key: `${field.key}__loading`, label: <div style={{ textAlign: "center", padding: "8px 0" }}><Spin size="small" /></div>, disabled: true }]
             : opts.length === 0
@@ -278,84 +268,108 @@ const AdvancedFilterSelect: React.FC<Props> = ({
                     onClick: () => handleSelect(field.key, opt.value),
                 }));
 
-        return {
-            key: field.key,
-            disabled: isDisabled,
-            label: labelNode,
-            children,
-            onTitleClick: () => fetchIfNeeded(field),
-        };
+        return { key: field.key, disabled: isDisabled, label: labelNode, children, onTitleClick: () => fetchIfNeeded(field) };
     });
 
     const activeCount = Object.keys(activeFilters).length;
 
+    const FilterBtn = (
+        <Button
+            icon={<FilterOutlined />}
+            style={activeCount > 0 ? { borderColor: "#1677ff", color: "#1677ff" } : {}}
+            onClick={isMobile ? () => setSheetOpen(true) : undefined}
+        >
+            {buttonLabel}
+            {activeCount > 0 && (
+                <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: 18, height: 18, borderRadius: "50%",
+                    background: "#1677ff", color: "#fff",
+                    fontSize: 11, fontWeight: 600, marginLeft: 4,
+                }}>
+                    {activeCount}
+                </span>
+            )}
+        </Button>
+    );
+
     return (
-        <Space wrap>
-            <Dropdown menu={{ items: menuItems, triggerSubMenuAction: "click" }} trigger={["click"]}>
-                <Button
-                    icon={<FilterOutlined />}
-                    style={activeCount > 0 ? { borderColor: "#1677ff", color: "#1677ff" } : {}}
-                >
-                    {buttonLabel}
-                    {activeCount > 0 && (
-                        <span
+        <>
+            {/* ← đổi <Space wrap> thành div flex, các thứ khác giữ nguyên */}
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                {isMobile ? FilterBtn : (
+                    <Dropdown
+                        menu={{ items: menuItems, triggerSubMenuAction: "click" }}
+                        trigger={["click"]}
+                        open={dropdownOpen}
+                        onOpenChange={(open) => setDropdownOpen(open)}
+                        overlayStyle={{ maxWidth: "calc(100vw - 16px)" }}
+                    >
+                        {FilterBtn}
+                    </Dropdown>
+                )}
+
+                {Object.entries(activeFilters).map(([key, val]) => {
+                    const field = fields.find((f) => f.key === key);
+                    if (!field) return null;
+                    const option = getOptions(field).find((o) => o.value === val);
+                    const labelText = option?.label ?? val;
+                    const MAX_LEN = 24;
+                    const displayLabel = String(labelText).length > MAX_LEN
+                        ? String(labelText).slice(0, MAX_LEN) + "…"
+                        : labelText;
+                    return (
+                        <Tag
+                            key={key}
+                            closable
+                            onClose={() => handleClear(key)}
+                            color={option?.color || "blue"}
+                            title={String(labelText)}
                             style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                background: "#1677ff",
-                                color: "#fff",
-                                fontSize: 11,
-                                fontWeight: 600,
-                                marginLeft: 4,
+                                padding: "3px 8px", fontSize: 13, borderRadius: 6,
+                                maxWidth: "calc(100vw - 80px)",
+                                display: "inline-flex", alignItems: "center",
                             }}
                         >
-                            {activeCount}
-                        </span>
-                    )}
-                </Button>
-            </Dropdown>
+                            <span style={{ opacity: 0.7, marginRight: 3, fontSize: 12, flexShrink: 0 }}>
+                                {field.label}:
+                            </span>
+                            <strong style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                            }}>
+                                {displayLabel}
+                            </strong>
+                        </Tag>
+                    );
+                })}
 
-            {/* Tags filter đã chọn */}
-            {Object.entries(activeFilters).map(([key, val]) => {
-                const field = fields.find((f) => f.key === key);
-                if (!field) return null;
-                const option = getOptions(field).find((o) => o.value === val);
-                return (
-                    <Tag
-                        key={key}
-                        closable
-                        onClose={() => handleClear(key)}
-                        color={option?.color || "blue"}
-                        style={{ padding: "3px 8px", fontSize: 13, borderRadius: 6 }}
+                {activeCount > 0 && (
+                    <Button
+                        size="small"
+                        type="text"
+                        icon={<CloseCircleOutlined />}
+                        style={{ color: "#ff4d4f" }}
+                        onClick={handleClearAll}
                     >
-                        <span style={{ opacity: 0.7, marginRight: 3, fontSize: 12 }}>
-                            {field.label}:
-                        </span>
-                        <strong>{option?.label ?? val}</strong>
-                    </Tag>
-                );
-            })}
+                        Xóa tất cả
+                    </Button>
+                )}
+            </div>
 
-            {activeCount > 0 && (
-                <Button
-                    size="small"
-                    type="text"
-                    icon={<CloseCircleOutlined />}
-                    style={{ color: "#ff4d4f" }}
-                    onClick={() => {
-                        setActiveFilters({});
-                        setCache({});
-                        onChange({});
-                    }}
-                >
-                    Xóa tất cả
-                </Button>
-            )}
-        </Space>
+            <MobileBottomSheet
+                open={sheetOpen}
+                onClose={() => setSheetOpen(false)}
+                fields={fields}
+                activeFilters={activeFilters}
+                onSelect={handleSelect}
+                onClearAll={handleClearAll}
+                getOptions={getOptions}
+                loading={loading}
+                fetchIfNeeded={fetchIfNeeded}
+            />
+        </>
     );
 };
 

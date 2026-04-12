@@ -3,7 +3,6 @@ import { Button, Popconfirm, Space } from "antd";
 import {
     EditOutlined,
     DeleteOutlined,
-    EyeOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -29,7 +28,6 @@ const PermissionPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IPermission | null>(null);
     const [openViewDetail, setOpenViewDetail] = useState(false);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
 
     const [query, setQuery] = useState<string>(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=${PAGINATION_CONFIG.DEFAULT_SORT}`
@@ -47,7 +45,6 @@ const PermissionPage = () => {
     };
     const permissions = data?.result ?? [];
 
-    /** Xử lý xóa quyền */
     const handleDelete = async (id?: string) => {
         if (!id) return;
         await deleteMutation.mutateAsync(id, {
@@ -55,14 +52,12 @@ const PermissionPage = () => {
         });
     };
 
-    /** Reload bảng */
     const reloadTable = () => {
         setQuery(
             `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=${PAGINATION_CONFIG.DEFAULT_SORT}`
         );
     };
 
-    /** Build query cho sort/pagination */
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
@@ -81,8 +76,7 @@ const PermissionPage = () => {
         if (sort) {
             for (const field of sortableFields) {
                 if (sort[field]) {
-                    sortBy = `sort=${field},${sort[field] === "ascend" ? "asc" : "desc"
-                        }`;
+                    sortBy = `sort=${field},${sort[field] === "ascend" ? "asc" : "desc"}`;
                     break;
                 }
             }
@@ -94,7 +88,6 @@ const PermissionPage = () => {
         return temp;
     };
 
-    /** Cấu hình cột */
     const columns: ProColumns<IPermission>[] = [
         {
             title: "STT",
@@ -102,10 +95,7 @@ const PermissionPage = () => {
             width: 60,
             align: "center",
             render: (_text, _record, index) =>
-                index +
-                1 +
-                ((meta.page || 1) - 1) *
-                (meta.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE),
+                index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE),
             hideInSearch: true,
         },
         {
@@ -123,17 +113,11 @@ const PermissionPage = () => {
             dataIndex: "method",
             sorter: true,
             render: (_, record) => (
-                <span
-                    style={{
-                        fontWeight: 600,
-                        color: colorMethod(record.method || ""),
-                    }}
-                >
+                <span style={{ fontWeight: 600, color: colorMethod(record.method || "") }}>
                     {record.method || "-"}
                 </span>
             ),
         },
-
         {
             title: "Module",
             dataIndex: "module",
@@ -144,20 +128,14 @@ const PermissionPage = () => {
             hideInSearch: true,
             width: 120,
             align: "center",
+            fixed: "right",                             // ← đồng bộ
             render: (_, entity) => (
-                <Space>
-
-
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSIONS.UPDATE}
-                        hideChildren
-                    >
-                        <EditOutlined
-                            style={{
-                                fontSize: 18,
-                                color: "#fa8c16",
-                                cursor: "pointer",
-                            }}
+                <Space size={4} align="center">
+                    <Access permission={ALL_PERMISSIONS.PERMISSIONS.UPDATE} hideChildren>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
@@ -165,23 +143,20 @@ const PermissionPage = () => {
                         />
                     </Access>
 
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSIONS.DELETE}
-                        hideChildren
-                    >
+                    <Access permission={ALL_PERMISSIONS.PERMISSIONS.DELETE} hideChildren>
                         <Popconfirm
                             title="Xác nhận xóa quyền"
                             description="Bạn có chắc chắn muốn xóa quyền này không?"
                             okText="Xóa"
                             cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                            placement="topRight"                // ← đồng bộ
                             onConfirm={() => handleDelete(entity.id!)}
                         >
-                            <DeleteOutlined
-                                style={{
-                                    fontSize: 18,
-                                    color: "#ff4d4f",
-                                    cursor: "pointer",
-                                }}
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>
@@ -189,6 +164,7 @@ const PermissionPage = () => {
             ),
         },
     ];
+
     return (
         <PageContainer
             title="Quản lý quyền hạn"
@@ -217,6 +193,7 @@ const PermissionPage = () => {
                     loading={isFetching}
                     columns={columns}
                     dataSource={permissions}
+                    scroll={{ x: "max-content" }}       // ← đồng bộ
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);
@@ -239,12 +216,7 @@ const PermissionPage = () => {
                                     {range[0]}–{range[1]}
                                 </span>{" "}
                                 trên{" "}
-                                <span
-                                    style={{
-                                        fontWeight: 600,
-                                        color: "#1677ff",
-                                    }}
-                                >
+                                <span style={{ fontWeight: 600, color: "#1677ff" }}>
                                     {total.toLocaleString()}
                                 </span>{" "}
                                 quyền
@@ -255,7 +227,6 @@ const PermissionPage = () => {
                 />
             </Access>
 
-            {/* Modal thêm/sửa */}
             <ModalPermission
                 openModal={openModal}
                 setOpenModal={setOpenModal}
@@ -264,7 +235,6 @@ const PermissionPage = () => {
                 setDataInit={setDataInit}
             />
 
-            {/* Drawer xem chi tiết */}
             <ViewDetailPermission
                 onClose={setOpenViewDetail}
                 open={openViewDetail}

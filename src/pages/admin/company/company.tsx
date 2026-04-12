@@ -18,6 +18,7 @@ import {
     MoreOutlined,
     ApartmentOutlined,
     FileTextOutlined,
+    SettingOutlined,
 } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
@@ -69,12 +70,15 @@ const CompanyPage = () => {
     const canViewCompanyOrgChart = useAccess(
         ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE
     );
-
     const canViewCompanyProcedures = useAccess(
         ALL_PERMISSIONS.COMPANY_PROCEDURES.GET_PAGINATE
     );
-    const canInactive = useAccess(ALL_PERMISSIONS.COMPANIES.INACTIVE); // ← thêm
-    const canActive = useAccess(ALL_PERMISSIONS.COMPANIES.ACTIVE);   // ← thêm
+    const canViewJobTitles = useAccess(
+        ALL_PERMISSIONS.COMPANY_JOB_TITLES.GET_PAGINATE
+    );
+    const canInactive = useAccess(ALL_PERMISSIONS.COMPANIES.INACTIVE);
+    const canActive = useAccess(ALL_PERMISSIONS.COMPANIES.ACTIVE);
+
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -120,7 +124,6 @@ const CompanyPage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.status === 1;
-
                 return (
                     <Tag
                         style={{
@@ -143,11 +146,25 @@ const CompanyPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 260, // tăng lên
+            width: 120,
+            fixed: "right",          // ← sticky bên phải khi scroll ngang
             render: (_, record) => {
                 const items: MenuProps["items"] = [];
 
-                // Sơ đồ tổ chức công ty
+                // ── Cấu hình chức danh ── (chuyển vào dropdown)
+                if (canViewJobTitles) {
+                    items.push({
+                        key: "job-title",
+                        icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
+                        label: "Cấu hình chức danh",
+                        onClick: () => {
+                            setDataInit(record);
+                            setOpenJobTitle(true);
+                        },
+                    });
+                }
+
+                // ── Sơ đồ tổ chức ──
                 if (canViewCompanyOrgChart) {
                     items.push({
                         key: "org-chart",
@@ -162,7 +179,7 @@ const CompanyPage = () => {
                     });
                 }
 
-                // Quy trình công ty
+                // ── Quy trình công ty ──
                 if (canViewCompanyProcedures) {
                     items.push({
                         key: "procedures",
@@ -179,13 +196,13 @@ const CompanyPage = () => {
                     });
                 }
 
-                // Divider chỉ hiển thị khi có item phía trên
-                if (items.length > 0) {
+                // Divider trước nhóm kích hoạt / vô hiệu hóa
+                if (items.length > 0 && (canInactive || canActive)) {
                     items.push({ type: "divider" });
                 }
 
-                // Kích hoạt / Vô hiệu hóa
-                if (record.status === 1 && canInactive) {   // ← thêm && canInactive
+                // ── Kích hoạt / Vô hiệu hóa ──
+                if (record.status === 1 && canInactive) {
                     items.push({
                         key: "inactive",
                         icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
@@ -205,7 +222,7 @@ const CompanyPage = () => {
                             </Popconfirm>
                         ),
                     });
-                } else if (record.status !== 1 && canActive) {  // ← else if + && canActive
+                } else if (record.status !== 1 && canActive) {
                     items.push({
                         key: "active",
                         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
@@ -226,55 +243,28 @@ const CompanyPage = () => {
                         ),
                     });
                 }
+
                 return (
-                    <Space size="small" align="center">                     <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
-                        <Button
-                            type="text"
-                            icon={
-                                <EyeOutlined
-                                    style={{ color: "#1677ff", fontSize: 18 }}
-                                />
-                            }
-                            onClick={() => {
-                                setDataInit(record);
-                                setOpenView(true);
-                            }}
-                        />
-                    </Access>
-                        <Access
-                            permission={ALL_PERMISSIONS.COMPANY_JOB_TITLES.GET_PAGINATE}
-                            hideChildren
-                        >
-                            <Tag
-                                color="cyan"
-                                style={{
-                                    cursor: "pointer",
-                                    borderRadius: 6,
-                                    padding: "2px 10px",
-                                    fontWeight: 500,
-                                }}
-                                onClick={() => {
-                                    setDataInit(record);
-                                    setOpenJobTitle(true);
-                                }}
-                            >
-                                Cấu hình chức danh
-                            </Tag>
-                        </Access>
-                        <Access
-                            permission={ALL_PERMISSIONS.COMPANIES.UPDATE}
-                            hideChildren
-                        >
+                    <Space size={4} align="center">
+                        {/* Xem chi tiết */}
+                        <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
                             <Button
                                 type="text"
-                                icon={
-                                    <EditOutlined
-                                        style={{
-                                            color: "#fa8c16",
-                                            fontSize: 18,
-                                        }}
-                                    />
-                                }
+                                size="small"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                onClick={() => {
+                                    setDataInit(record);
+                                    setOpenView(true);
+                                }}
+                            />
+                        </Access>
+
+                        {/* Chỉnh sửa */}
+                        <Access permission={ALL_PERMISSIONS.COMPANIES.UPDATE} hideChildren>
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
@@ -282,7 +272,7 @@ const CompanyPage = () => {
                             />
                         </Access>
 
-                        {/* Dropdown chỉ hiển thị khi có ít nhất một quyền */}
+                        {/* Dropdown 3 chấm — chứa tất cả action còn lại */}
                         {items.length > 0 && (
                             <Dropdown
                                 menu={{ items }}
@@ -291,14 +281,8 @@ const CompanyPage = () => {
                             >
                                 <Button
                                     type="text"
-                                    icon={
-                                        <MoreOutlined
-                                            style={{
-                                                color: "#595959",
-                                                fontSize: 18,
-                                            }}
-                                        />
-                                    }
+                                    size="small"
+                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
                                 />
                             </Dropdown>
                         )}
@@ -325,8 +309,7 @@ const CompanyPage = () => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
-                    addPermission={ALL_PERMISSIONS.COMPANIES.CREATE}  // 👈 thêm dòng này
-
+                    addPermission={ALL_PERMISSIONS.COMPANIES.CREATE}
                 />
             }
         >
@@ -337,6 +320,7 @@ const CompanyPage = () => {
                     loading={isFetching}
                     columns={columns}
                     dataSource={companies}
+                    scroll={{ x: "max-content" }}   // ← cho phép scroll ngang, fixed: "right" mới hoạt động
                     pagination={{
                         current: meta.page,
                         pageSize: meta.pageSize,
@@ -358,6 +342,7 @@ const CompanyPage = () => {
                 onClose={() => setOpenView(false)}
                 companyId={dataInit?.id}
             />
+
             {openJobTitle && dataInit?.id && (
                 <Modal
                     title={`Chức danh công ty: ${dataInit.name}`}
@@ -367,8 +352,10 @@ const CompanyPage = () => {
                     width="80vw"
                     destroyOnClose
                 >
-                    <CompanyJobTitleTab companyId={dataInit.id} companyName={dataInit.name}   // 👈 thêm dòng này
-                        hideTitle={true}   // 👈 thêm dòng này
+                    <CompanyJobTitleTab
+                        companyId={dataInit.id}
+                        companyName={dataInit.name}
+                        hideTitle={true}
                     />
                 </Modal>
             )}

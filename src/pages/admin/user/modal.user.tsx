@@ -22,12 +22,9 @@ interface IProps {
 }
 
 const ACCENT = "#f5317f";
-const ACCENT_SOFT = "#fff0f6";
-const ACCENT_HOVER = "#d4206a";
 const CONNECTOR_COLOR = "#e5e7eb";
 
 const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) => {
-
     const [selectedRole, setSelectedRole] = useState<IRoleSelect | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -183,13 +180,13 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             try {
                 await form.validateFields(["email", "password", "name", "role"]);
                 setActiveTab("hr");
-            } catch { /* validation errors shown inline */ }
+            } catch { }
             return;
         }
         try {
             const values = await form.validateFields();
             await submitUser(values);
-        } catch { /* validation errors shown inline */ }
+        } catch { }
     };
 
     const submitConfig = getSubmitConfig();
@@ -200,22 +197,24 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             <style>{`
                 /* ===== Modal ===== */
                 .elegant-modal .ant-modal-content {
-                    border-radius: 20px !important;
+                    border-radius: ${isMobile ? "16px 16px 0 0" : "20px"} !important;
                     box-shadow: 0 24px 64px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06) !important;
                     overflow: hidden;
                     padding: 0 !important;
                     display: flex !important;
                     flex-direction: column !important;
+                    /* Mobile: chiếm toàn màn hình theo chiều cao */
+                    ${isMobile ? "max-height: 95dvh !important; height: 95dvh !important;" : ""}
                 }
                 .elegant-modal .ant-modal-header {
-                    padding: 22px 28px 0 28px !important;
+                    padding: ${isMobile ? "16px 16px 0 16px" : "22px 28px 0 28px"} !important;
                     border-bottom: none !important;
                     background: #fff !important;
                     margin-bottom: 0 !important;
                     flex-shrink: 0 !important;
                 }
                 .elegant-modal .ant-modal-title {
-                    font-size: 18px !important;
+                    font-size: ${isMobile ? "16px" : "18px"} !important;
                     font-weight: 700 !important;
                     color: #111827 !important;
                     letter-spacing: -0.03em !important;
@@ -236,8 +235,8 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     overflow: hidden !important;
                 }
                 .elegant-modal .ant-modal-close {
-                    top: 20px !important;
-                    right: 22px !important;
+                    top: ${isMobile ? "14px" : "20px"} !important;
+                    right: ${isMobile ? "14px" : "22px"} !important;
                     width: 32px !important;
                     height: 32px !important;
                     border-radius: 8px !important;
@@ -281,7 +280,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     color: #9ca3af !important;
                 }
 
-                /* ===== Steps connector — nuke the blue, all states ===== */
+                /* ===== Steps connector ===== */
                 .elegant-steps *[class*="ant-steps-item"] .ant-steps-item-tail::after,
                 .elegant-steps .ant-steps-item-tail::after,
                 .elegant-steps .ant-steps-item-tail::before,
@@ -297,7 +296,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     background-image: none !important;
                     border-color: ${CONNECTOR_COLOR} !important;
                     opacity: 1 !important;
-                    /* Override Ant Design v5 CSS variable */
                     --ant-color-primary: ${CONNECTOR_COLOR} !important;
                 }
 
@@ -305,10 +303,10 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 .elegant-steps .ant-steps-item-process .ant-steps-item-title {
                     color: #111827 !important;
                     font-weight: 600 !important;
-                    font-size: 13px !important;
+                    font-size: ${isMobile ? "12px" : "13px"} !important;
                 }
                 .elegant-steps .ant-steps-item-title {
-                    font-size: 13px !important;
+                    font-size: ${isMobile ? "12px" : "13px"} !important;
                     letter-spacing: -0.01em !important;
                 }
                 .elegant-steps .ant-steps-item-wait .ant-steps-item-title {
@@ -317,6 +315,8 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 .elegant-steps .ant-steps-item-finish .ant-steps-item-title {
                     color: #374151 !important;
                 }
+                /* Ẩn description trên mobile để tiết kiệm không gian */
+                ${isMobile ? ".elegant-steps .ant-steps-item-description { display: none !important; }" : ""}
 
                 /* ===== Buttons ===== */
                 .btn-cancel {
@@ -327,7 +327,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     font-size: 13px !important;
                     font-weight: 500 !important;
                     height: 40px !important;
-                    padding: 0 18px !important;
+                    padding: 0 ${isMobile ? "12px" : "18px"} !important;
                     transition: all 0.2s !important;
                 }
                 .btn-cancel:hover {
@@ -343,7 +343,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     font-size: 13px !important;
                     font-weight: 500 !important;
                     height: 40px !important;
-                    padding: 0 16px !important;
+                    padding: 0 ${isMobile ? "10px" : "16px"} !important;
                     display: flex !important;
                     align-items: center !important;
                     gap: 6px !important;
@@ -361,7 +361,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     font-size: 13px !important;
                     font-weight: 600 !important;
                     height: 40px !important;
-                    padding: 0 22px !important;
+                    padding: 0 ${isMobile ? "14px" : "22px"} !important;
                     display: flex !important;
                     align-items: center !important;
                     gap: 7px !important;
@@ -385,7 +385,24 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     font-weight: 500 !important;
                     color: #374151 !important;
                 }
+
+                /* ===== Mobile: modal bottom sheet style ===== */
+                ${isMobile ? `
+                .elegant-modal {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    max-width: 100vw !important;
+                    top: auto !important;
+                    bottom: 0 !important;
+                    position: fixed !important;
+                }
+                .elegant-modal .ant-modal-wrap {
+                    display: flex !important;
+                    align-items: flex-end !important;
+                }
+                ` : ""}
             `}</style>
+
             <ModalForm
                 title={
                     <span style={{ letterSpacing: "-0.03em" }}>
@@ -401,7 +418,10 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     maskClosable: false,
                     footer: null,
                     className: "elegant-modal",
-                    style: { top: 40 },
+                    // Mobile: bottom sheet, Desktop: top: 40
+                    style: isMobile
+                        ? { top: "auto", bottom: 0, margin: 0, padding: 0, maxWidth: "100vw" }
+                        : { top: 40 },
                     styles: {
                         mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.25)" },
                     },
@@ -410,9 +430,9 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 submitter={false}
                 onFinish={async () => true}
             >
-                {/* ===== STEPS — sticky top ===== */}
+                {/* ===== STEPS ===== */}
                 <div style={{
-                    padding: "16px 28px 0 28px",
+                    padding: isMobile ? "12px 16px 0 16px" : "16px 28px 0 28px",
                     background: "#fff",
                     flexShrink: 0,
                 }}>
@@ -420,23 +440,19 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                         background: "#fafafa",
                         border: "1.5px solid #f0f0f0",
                         borderRadius: 14,
-                        padding: "12px 20px",
-                        marginBottom: 16,
+                        padding: isMobile ? "10px 14px" : "12px 20px",
+                        marginBottom: isMobile ? 12 : 16,
                     }}>
-                        {/* ConfigProvider để override colorPrimary cho Steps connector */}
                         <ConfigProvider
                             theme={{
                                 components: {
                                     Steps: {
                                         colorPrimary: ACCENT,
-                                        /* Connector line color khi finish */
                                         colorSplit: CONNECTOR_COLOR,
-                                        /* Ant v5.x token cho tail */
                                         colorBorderSecondary: CONNECTOR_COLOR,
                                     },
                                 },
                                 token: {
-                                    /* Override global primary chỉ trong scope này */
                                     colorPrimaryBorder: CONNECTOR_COLOR,
                                 },
                             }}
@@ -448,7 +464,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                                 items={[
                                     {
                                         title: "Thông tin người dùng",
-                                        description: (
+                                        description: isMobile ? undefined : (
                                             <span style={{ fontSize: 11, color: "#9ca3af" }}>
                                                 Tài khoản & nhân sự
                                             </span>
@@ -456,7 +472,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                                     },
                                     {
                                         title: "Gán chức danh",
-                                        description: (
+                                        description: isMobile ? undefined : (
                                             <span style={{ fontSize: 11, color: "#9ca3af" }}>
                                                 Vị trí công việc
                                             </span>
@@ -471,9 +487,11 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 {/* ===== CONTENT — scrollable ===== */}
                 <div style={{
                     flex: 1,
-                    padding: "4px 28px 0 28px",
+                    padding: isMobile ? "4px 16px 0 16px" : "4px 28px 0 28px",
                     minHeight: 0,
-                }}>
+                    overflowY: "auto",
+                    WebkitOverflowScrolling: "touch",
+                } as React.CSSProperties}>
                     {currentStep === 0 && (
                         <UserInfoForm
                             isEdit={isEdit}
@@ -492,28 +510,43 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     )}
                 </div>
 
-                {/* ===== FOOTER — sticky bottom ===== */}
+                {/* ===== FOOTER ===== */}
                 <div style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: "16px 28px 22px 28px",
+                    padding: isMobile ? "12px 16px 20px 16px" : "16px 28px 22px 28px",
                     borderTop: "1.5px solid #f3f4f6",
                     background: "#fff",
                     flexShrink: 0,
+                    paddingBottom: isMobile ? "calc(20px + env(safe-area-inset-bottom))" : "22px",
+                    // Đảm bảo footer luôn nằm trên icon emoji
+                    position: "relative",
+                    zIndex: 10,
                 }}>
-                    <Text style={{ fontSize: 12, color: "#9ca3af", letterSpacing: "-0.01em" }}>
+                    <Text style={{
+                        fontSize: 12,
+                        color: "#9ca3af",
+                        letterSpacing: "-0.01em",
+                        whiteSpace: "nowrap", // ← fix "Bướ c 1/ 2"
+                        flexShrink: 0,
+                    }}>
                         Bước {currentStep + 1} / 2
                     </Text>
 
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div style={{
+                        display: "flex",
+                        gap: isMobile ? 6 : 8,
+                        alignItems: "center",
+                        flexShrink: 0,
+                    }}>
                         {currentStep === 0 && activeTab === "hr" && (
                             <Button
                                 className="btn-back"
                                 onClick={() => setActiveTab("account")}
                                 icon={<ArrowLeftOutlined style={{ fontSize: 12 }} />}
                             >
-                                Quay lại
+                                {!isMobile && "Quay lại"}
                             </Button>
                         )}
 

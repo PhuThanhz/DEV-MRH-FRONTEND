@@ -80,32 +80,21 @@ const JobDescriptionPage = () => {
 
     return (
         <PageContainer title="Quản lý Mô Tả Công Việc">
-            <div
-                style={{
-                    background: "#fff",
-                    borderRadius: 12,
-                    border: "0.5px solid #e8e8e8",
-                    overflow: "hidden",
-                }}
-            >
-                {/* TAB BAR */}
-                <div style={{ padding: "12px 14px", borderBottom: "0.5px solid #e8e8e8" }}>
-                    <TabBar
-                        tabs={tabItems}
-                        activeKey={activeTab}
-                        onChange={setActiveTab}
-                    />
-                </div>
-
-                {/* TAB CONTENT */}
-                <div style={{ padding: 24 }}>
-                    {activeTab === "my" && canMy && <MyJobDescriptionsTab />}
-                    {activeTab === "inbox" && canInbox && <JdInboxTab />}
-                    {activeTab === "published" && canPublished && <PublishedJdTab />}
-                    {activeTab === "rejected" && canRejected && <RejectedJdTab />}
-                    {activeTab === "all" && canAll && <AllJobDescriptionsTab />}
-                </div>
+            {/* TAB BAR */}
+            <div style={{ marginBottom: 24 }}>
+                <TabBar
+                    tabs={tabItems}
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                />
             </div>
+
+            {/* TAB CONTENT */}
+            {activeTab === "my" && canMy && <MyJobDescriptionsTab />}
+            {activeTab === "inbox" && canInbox && <JdInboxTab />}
+            {activeTab === "published" && canPublished && <PublishedJdTab />}
+            {activeTab === "rejected" && canRejected && <RejectedJdTab />}
+            {activeTab === "all" && canAll && <AllJobDescriptionsTab />}
 
             <ModalJobDescription
                 open={openModal}

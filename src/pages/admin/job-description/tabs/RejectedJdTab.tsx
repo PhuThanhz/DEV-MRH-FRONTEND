@@ -1,17 +1,50 @@
+import { useState, useEffect } from "react";
+import queryString from "query-string";
 import JobDescriptionTable from "../components/JobDescriptionTable";
 import { useJobDescriptionsQuery } from "@/hooks/useJobDescriptions";
+import { PAGINATION_CONFIG } from "@/config/pagination";
 
 const RejectedJdTab = () => {
+    const [searchValue, setSearchValue] = useState("");
+    const [dateFilter, setDateFilter] = useState<string | null>(null);
+    const [resetSignal, setResetSignal] = useState(0);
 
-    const { data, isFetching } = useJobDescriptionsQuery(
-        "filter=status='REJECTED'&page=1&pageSize=20&sort=updatedAt,desc"
+    const [query, setQuery] = useState(
+        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=updatedAt,desc&filter=status='REJECTED'`
     );
+
+    const { data, isFetching, refetch } = useJobDescriptionsQuery(query);
+
+    useEffect(() => {
+        const q: any = {
+            page: PAGINATION_CONFIG.DEFAULT_PAGE,
+            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+            sort: "updatedAt,desc",
+        };
+        const filters: string[] = [`status='REJECTED'`];
+        if (searchValue) filters.push(`code~'${searchValue}'`);
+        if (dateFilter) filters.push(dateFilter);
+        q.filter = filters.join(" and ");
+        setQuery(queryString.stringify(q, { encode: false }));
+    }, [searchValue, dateFilter]);
 
     return (
         <JobDescriptionTable
             records={data?.result ?? []}
             loading={isFetching}
-            mode="MY"
+            meta={data?.meta}
+            onQueryChange={setQuery}
+            onSearch={setSearchValue}
+            onReset={() => {
+                setSearchValue("");
+                setDateFilter(null);
+                setResetSignal(s => s + 1);
+                refetch();
+            }}
+            onDateChange={setDateFilter}
+            resetSignal={resetSignal}
+            hideStatusFilter={true}
+            mode="ALL"
         />
     );
 };

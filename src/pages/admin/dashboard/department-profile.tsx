@@ -15,7 +15,7 @@ import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelec
 
 import type { IDepartmentCompleteness } from "@/types/backend";
 import { useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
-import ViewDepartmentCompleteness from "./view.departmentcompleteness"; // tạo modal xem chi tiết nếu có
+import ViewDepartmentCompleteness from "./view.departmentcompleteness";
 
 /* ─────────────────────────────────────────────────────────────
    Constants
@@ -54,6 +54,7 @@ const ScoreBadge = ({ score }: { score: number }) => {
                 fontSize: 12,
                 margin: 0,
                 lineHeight: "22px",
+                whiteSpace: "nowrap",
             }}
         >
             {score}/7
@@ -136,35 +137,32 @@ const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
 
 /** Cột mức ưu tiên */
 const PriorityCell = ({ score }: { score: number }) => {
-    if (score === 7) {
+    if (score === 7)
         return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#f6ffed", color: "#389e0d", border: "1px solid #b7eb8f", margin: 0 }}>
+            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#f6ffed", color: "#389e0d", border: "1px solid #b7eb8f", margin: 0, whiteSpace: "nowrap" }}>
                 Đủ hồ sơ
             </Tag>
         );
-    }
-    if (score === 0) {
+    if (score === 0)
         return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#cf1322", border: "1px solid #ffccc7", margin: 0 }}>
+            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#cf1322", border: "1px solid #ffccc7", margin: 0, whiteSpace: "nowrap" }}>
                 Khẩn
             </Tag>
         );
-    }
-    if (score < 4) {
+    if (score < 4)
         return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#d46b08", border: "1px solid #ffd591", margin: 0 }}>
+            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#d46b08", border: "1px solid #ffd591", margin: 0, whiteSpace: "nowrap" }}>
                 Cần bổ sung
             </Tag>
         );
-    }
     return (
-        <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fffbe6", color: "#d48806", border: "1px solid #ffe58f", margin: 0 }}>
+        <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fffbe6", color: "#d48806", border: "1px solid #ffe58f", margin: 0, whiteSpace: "nowrap" }}>
             Bổ sung thêm
         </Tag>
     );
 };
 
-/** Stat card nhỏ */
+/** Stat card nhỏ — responsive: flex-1, minWidth 0, wrap từ parent */
 const StatCard = ({
     label,
     value,
@@ -182,11 +180,13 @@ const StatCard = ({
             border: "0.5px solid #f0f0f0",
             borderRadius: 10,
             padding: "12px 16px",
-            minWidth: 120,
-            flex: 1,
+            flex: "1 1 100px",   // ← co giãn, min 100px, wrap khi cần
+            minWidth: 0,          // ← cho phép shrink dưới content width
         }}
     >
-        <div style={{ fontSize: 11, color: "#8c8c8c", marginBottom: 4 }}>{label}</div>
+        <div style={{ fontSize: 11, color: "#8c8c8c", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {label}
+        </div>
         {loading ? (
             <Skeleton.Input active size="small" style={{ width: 48, height: 24 }} />
         ) : (
@@ -227,6 +227,8 @@ const ScoreChip = ({
             height: 32,
             cursor: "pointer",
             transition: "all .15s",
+            whiteSpace: "nowrap",   // ← chip không bị xuống dòng giữa chừng
+            flexShrink: 0,
             ...(active
                 ? activeStyle
                 : {
@@ -283,7 +285,6 @@ const DepartmentProfilePage = () => {
     const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>("all");
     const [resetSignal, setResetSignal] = useState(0);
 
-    // Modal xem chi tiết
     const [openView, setOpenView] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IDepartmentCompleteness | null>(null);
 
@@ -300,7 +301,7 @@ const DepartmentProfilePage = () => {
         }, []);
     }, [completeness]);
 
-    /* ── Count theo từng bucket để hiển thị trên chip ── */
+    /* ── Count theo từng bucket ── */
     const countFull = useMemo(() => completeness?.filter((d) => d.score === 7).length ?? 0, [completeness]);
     const countPartial = useMemo(() => completeness?.filter((d) => d.score > 0 && d.score < 7).length ?? 0, [completeness]);
     const countEmpty = useMemo(() => completeness?.filter((d) => d.score === 0).length ?? 0, [completeness]);
@@ -325,12 +326,12 @@ const DepartmentProfilePage = () => {
         return list;
     }, [completeness, searchValue, companyFilter, scoreFilter]);
 
-    /* ── Stats (luôn tính trên toàn bộ data, không bị ảnh hưởng bởi filter) ── */
+    /* ── Stats (toàn bộ data) ── */
     const totalDept = completeness?.length ?? 0;
     const totalFull = countFull;
     const missingCount = totalDept - totalFull;
 
-    /* ── Reset all filters ── */
+    /* ── Reset ── */
     const handleReset = () => {
         setSearchValue("");
         setCompanyFilter(null);
@@ -372,6 +373,7 @@ const DepartmentProfilePage = () => {
         {
             title: "Hạng mục còn thiếu",
             key: "missing",
+            width: 320,            // ← đặt width cố định tránh cột co quá hẹp
             render: (_, record) => <MissingTagsCell record={record} />,
         },
         {
@@ -394,7 +396,7 @@ const DepartmentProfilePage = () => {
             key: "action",
             align: "center",
             width: 100,
-            fixed: "right",
+            fixed: "right",        // ← sticky bên phải
             render: (_, record) => (
                 <Tooltip title="Xem chi tiết hồ sơ">
                     <Button
@@ -418,6 +420,7 @@ const DepartmentProfilePage = () => {
             title="Hồ sơ phòng ban"
             filter={
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
                     {/* Back button */}
                     <button
                         onClick={() => navigate("/admin")}
@@ -440,8 +443,14 @@ const DepartmentProfilePage = () => {
                         Về Dashboard
                     </button>
 
-                    {/* Stat cards */}
-                    <div style={{ display: "flex", gap: 8 }}>
+                    {/* Stat cards — wrap khi màn nhỏ */}
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",   // ← xuống hàng khi không đủ chỗ
+                        }}
+                    >
                         <StatCard label="Tổng phòng ban" value={totalDept} loading={isLoading} />
                         <StatCard label="Hoàn chỉnh (7/7)" value={totalFull} color="#389e0d" loading={isLoading} />
                         <StatCard label="Còn thiếu hạng mục" value={missingCount} color="#cf1322" loading={isLoading} />
@@ -456,8 +465,15 @@ const DepartmentProfilePage = () => {
                         onReset={handleReset}
                     />
 
-                    {/* Score filter chips */}
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {/* Score filter chips — wrap khi màn nhỏ */}
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",   // ← chip tự xuống hàng
+                            alignItems: "center",
+                        }}
+                    >
                         <ScoreChip
                             label="Tất cả"
                             active={scoreFilter === "all"}
@@ -507,14 +523,13 @@ const DepartmentProfilePage = () => {
                 </div>
             }
         >
-            {/* ── Table ── */}
             <DataTable<IDepartmentCompleteness>
                 actionRef={tableRef}
                 rowKey="departmentId"
                 loading={isLoading}
                 columns={columns}
                 dataSource={dataSource}
-                // Client-side filter → không dùng request, truyền dataSource trực tiếp
+                scroll={{ x: "max-content" }}  // ← scroll ngang thay vì vỡ layout
                 pagination={{
                     defaultPageSize: 10,
                     showQuickJumper: true,
@@ -534,11 +549,8 @@ const DepartmentProfilePage = () => {
                     ),
                 }}
                 rowSelection={false}
-            // Không truyền `request` khi dùng client-side filter
-            // DataTable sẽ tự paginate từ dataSource
             />
 
-            {/* ── Modal xem chi tiết ── */}
             {selectedRecord && (
                 <ViewDepartmentCompleteness
                     open={openView}

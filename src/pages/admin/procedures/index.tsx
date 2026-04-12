@@ -4,8 +4,8 @@ import ProcedureTable from "./components/ProcedureTable";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import useAccess from "@/hooks/useAccess";
-import TabBar from "@/components/common/tabs/TabBar";        // ← thêm
-import type { TabItem } from "@/components/common/tabs/TabBar";  // ← thêm
+import TabBar from "@/components/common/tabs/TabBar";
+import type { TabItem } from "@/components/common/tabs/TabBar";
 
 type TabType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
@@ -16,7 +16,7 @@ const ProcedureAdminPage = () => {
     const canViewConfidential = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.GET_PAGINATE);
 
     // ===================== BUILD TABS =====================
-    const tabs = useMemo<TabItem<TabType>[]>(() => {       // ← đổi type
+    const tabs = useMemo<TabItem<TabType>[]>(() => {
         return [
             canViewCompany && {
                 key: "COMPANY" as TabType,
@@ -33,7 +33,7 @@ const ProcedureAdminPage = () => {
                 label: "Quy trình bảo mật",
                 icon: <LockOutlined />,
             },
-        ].filter(Boolean) as TabItem<TabType>[];           // ← đổi type
+        ].filter(Boolean) as TabItem<TabType>[];
     }, [canViewCompany, canViewDepartment, canViewConfidential]);
 
     // ===================== ACTIVE TAB =====================
@@ -60,28 +60,21 @@ const ProcedureAdminPage = () => {
 
     return (
         <PageContainer title="Quản lý quy trình">
-            {/* TAB — dùng TabBar chung */}
+            {/* TAB */}
             <div style={{ marginBottom: 24 }}>
                 <TabBar tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
             </div>
 
             {/* CONTENT */}
-            <div style={{
-                background: "#fff",
-                borderRadius: 12,
-                border: "1px solid #e5e5ea",
-                padding: 20,
-            }}>
-                {activeTab === "COMPANY" && canViewCompany && (
-                    <ProcedureTable type="COMPANY" />
-                )}
-                {activeTab === "DEPARTMENT" && canViewDepartment && (
-                    <ProcedureTable type="DEPARTMENT" />
-                )}
-                {activeTab === "CONFIDENTIAL" && canViewConfidential && (
-                    <ProcedureTable type="CONFIDENTIAL" />
-                )}
-            </div>
+            {activeTab === "COMPANY" && canViewCompany && (
+                <ProcedureTable type="COMPANY" />
+            )}
+            {activeTab === "DEPARTMENT" && canViewDepartment && (
+                <ProcedureTable type="DEPARTMENT" />
+            )}
+            {activeTab === "CONFIDENTIAL" && canViewConfidential && (
+                <ProcedureTable type="CONFIDENTIAL" />
+            )}
         </PageContainer>
     );
 };

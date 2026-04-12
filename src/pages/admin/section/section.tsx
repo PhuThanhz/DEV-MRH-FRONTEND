@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Badge, Button, Dropdown } from "antd";
+import { Space, Tag, Button, Dropdown } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
     MoreOutlined,
-    DollarOutlined,
-    ApartmentOutlined,
-    RiseOutlined,
-    AimOutlined,
-    LockOutlined,
+    SettingOutlined,
 } from "@ant-design/icons";
 
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -30,25 +26,22 @@ import ViewDetailSection from "./view.section";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
-import { useNavigate } from "react-router-dom";
-import { FileTextOutlined } from "@ant-design/icons";
 import SectionJobTitleTab from "./tab.section-job-title";
-
 import { Modal } from "antd";
-const SectionPage = () => {
-    const navigate = useNavigate();
 
+const SectionPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<ISection | null>(null);
     const [openViewDetail, setOpenViewDetail] = useState(false);
+    const [openJobTitle, setOpenJobTitle] = useState(false);
 
     const [searchValue, setSearchValue] = useState("");
+    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(null);
     const [departmentIdFilter, setDepartmentIdFilter] = useState<number | null>(null);
     const [statusFilter, setStatusFilter] = useState<number | null>(null);
     const [resetSignal, setResetSignal] = useState(0);
 
     const tableRef = useRef<ActionType>(null);
-    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(null);
 
     const [query, setQuery] = useState(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
@@ -58,56 +51,43 @@ const SectionPage = () => {
 
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const sections = data?.result ?? [];
-    const [openJobTitle, setOpenJobTitle] = useState(false);
-    /*
-     * ===================== BUILD FILTERS =====================
-     */
+
+    // ===================== PERMISSION CHECKS =====================
+    const canViewJobTitles = useAccess(ALL_PERMISSIONS.SECTION_JOB_TITLES.GET_PAGINATE);
+
+    // ===================== BUILD FILTERS =====================
     const buildFilters = (
         search: string,
-        companyId: number | null,   // 👈 thêm
+        companyId: number | null,
         departmentId: number | null,
         status: number | null,
     ) => {
         const parts: string[] = [];
-
-        if (search)
-            parts.push(`(name~'${search}' or code~'${search}')`);
-        if (companyId) parts.push(`department.company.id:${companyId}`);  // 👈 thêm
-
-        if (departmentId)
-            parts.push(`department.id:${departmentId}`);
-
-        if (status !== null)
-            parts.push(`status=${status}`);
-
+        if (search) parts.push(`(name~'${search}' or code~'${search}')`);
+        if (companyId) parts.push(`department.company.id:${companyId}`);
+        if (departmentId) parts.push(`department.id:${departmentId}`);
+        if (status !== null) parts.push(`status=${status}`);
         return parts;
     };
 
-    /*
-     * ===================== AUTO BUILD QUERY =====================
-     */
+    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-
         const filters = buildFilters(searchValue, companyIdFilter, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
-
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, companyIdFilter, departmentIdFilter, statusFilter]);
 
-    /*
-     * ===================== BUILD QUERY FOR TABLE =====================
-     */
+    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
-
         const filters = buildFilters(searchValue, companyIdFilter, departmentIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -118,21 +98,17 @@ const SectionPage = () => {
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    /*
-     * ===================== RESET =====================
-     */
+    // ===================== RESET =====================
     const handleReset = () => {
-        setCompanyIdFilter(null);   // 👈 thêm
         setSearchValue("");
+        setCompanyIdFilter(null);
         setDepartmentIdFilter(null);
         setStatusFilter(null);
         setResetSignal((s) => s + 1);
         refetch();
     };
 
-    /*
-     * ===================== COLUMNS =====================
-     */
+    // ===================== COLUMNS =====================
     const columns: ProColumns<ISection>[] = [
         {
             title: "STT",
@@ -175,7 +151,6 @@ const SectionPage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.active;
-
                 return (
                     <Tag
                         style={{
@@ -198,63 +173,32 @@ const SectionPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 240,
-            fixed: "right",
+            width: 120,
+            fixed: "right",             // ← sticky bên phải khi scroll ngang
             render: (_, record) => {
-                const items: MenuProps["items"] = [
-                    // {
-                    //     key: "salary",
-                    //     icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
-                    //     label: "Khung lương",
-                    //     onClick: () =>
-                    //         navigate(
-                    //             `/admin/sections/${record.id}/salary-range?sectionName=${encodeURIComponent(record.name)}`
-                    //         ),
-                    // },
-                    // {
-                    //     key: "org-chart",
-                    //     icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
-                    //     label: "Sơ đồ tổ chức",
-                    //     onClick: () =>
-                    //         navigate(
-                    //             `/admin/sections/${record.id}/org-chart?sectionName=${encodeURIComponent(record.name)}`
-                    //         ),
-                    // },
-                    // {
-                    //     key: "career-paths",
-                    //     icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
-                    //     label: "Lộ trình thăng tiến",
-                    //     onClick: () =>
-                    //         navigate(
-                    //             `/admin/sections/${record.id}/career-paths?sectionName=${encodeURIComponent(record.name)}`
-                    //         ),
-                    // },
-                    // {
-                    //     key: "objectives-tasks",
-                    //     icon: <AimOutlined style={{ color: "#eb2f96" }} />,
-                    //     label: "Mục tiêu nhiệm vụ",
-                    //     onClick: () =>
-                    //         navigate(
-                    //             `/admin/sections/${record.id}/objectives-tasks?sectionName=${encodeURIComponent(record.name)}`
-                    //         ),
-                    // },
-                    // {
-                    //     key: "permissions",
-                    //     icon: <LockOutlined style={{ color: "#eb2f96" }} />,
-                    //     label: "Bản phân quyền",
-                    //     onClick: () =>
-                    //         navigate(
-                    //             `/admin/sections/${record.id}/permissions?sectionName=${encodeURIComponent(record.name)}`
-                    //         ),
-                    // },
-                ];
+                const items: MenuProps["items"] = [];
+
+                // ── Cấu hình chức danh ── (vào dropdown)
+                if (canViewJobTitles) {
+                    items.push({
+                        key: "job-title",
+                        icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
+                        label: "Cấu hình chức danh",
+                        onClick: () => {
+                            setDataInit(record);
+                            setOpenJobTitle(true);
+                        },
+                    });
+                }
 
                 return (
-                    <Space size="middle">
+                    <Space size={4} align="center">
+                        {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.GET_BY_ID} hideChildren>
                             <Button
                                 type="text"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
+                                size="small"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenViewDetail(true);
@@ -262,43 +206,33 @@ const SectionPage = () => {
                             />
                         </Access>
 
-                        <Access
-                            permission={ALL_PERMISSIONS.SECTION_JOB_TITLES.GET_PAGINATE}
-                            hideChildren
-                        >
-                            <Tag
-                                color="cyan"
-                                style={{
-                                    cursor: "pointer",
-                                    borderRadius: 6,
-                                    padding: "2px 10px",
-                                    fontWeight: 500,
-                                }}
-                                onClick={() => {
-                                    setDataInit(record);
-                                    setOpenJobTitle(true);
-                                }}
-                            >
-                                Cấu hình chức danh
-                            </Tag>
-                        </Access>
+                        {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
                             <Button
                                 type="text"
-                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
+                                size="small"
+                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
                                 }}
                             />
                         </Access>
-                        {/* <Dropdown menu={{ items }} trigger={["click"]} placement="bottomRight">
-                            <Button
-                                type="text"
-                                icon={<MoreOutlined style={{ color: "#595959", fontSize: 18 }} />}
-                                className="hover:bg-pink-50 hover:text-pink-600"
-                            />
-                        </Dropdown> */}
+
+                        {/* Dropdown 3 chấm */}
+                        {items.length > 0 && (
+                            <Dropdown
+                                menu={{ items }}
+                                trigger={["click"]}
+                                placement="bottomRight"
+                            >
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
+                                />
+                            </Dropdown>
+                        )}
                     </Space>
                 );
             },
@@ -320,10 +254,8 @@ const SectionPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.SECTIONS.CREATE}  // 👈 thêm dòng này
-
+                        addPermission={ALL_PERMISSIONS.SECTIONS.CREATE}
                     />
-
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
                         fields={[
@@ -360,7 +292,7 @@ const SectionPage = () => {
                             },
                         ]}
                         onChange={(val) => {
-                            setCompanyIdFilter(val.companyId ?? null);      // 👈 thêm
+                            setCompanyIdFilter(val.companyId ?? null);
                             setDepartmentIdFilter(val.departmentId ?? null);
                             setStatusFilter(val.status ?? null);
                         }}
@@ -374,6 +306,7 @@ const SectionPage = () => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={sections}
+                scroll={{ x: "max-content" }}   // ← bắt buộc để fixed: "right" hoạt động
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);
@@ -389,12 +322,13 @@ const SectionPage = () => {
                     total: meta.total,
                 }}
             />
+
             <ModalSection
                 openModal={openModal}
                 setOpenModal={setOpenModal}
                 dataInit={dataInit}
                 setDataInit={setDataInit}
-                onSuccess={() => refetch()}   // ⭐ thêm dòng này
+                onSuccess={() => refetch()}
             />
 
             <ViewDetailSection
@@ -403,6 +337,7 @@ const SectionPage = () => {
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
+
             {openJobTitle && dataInit?.id && (
                 <Modal
                     title={`Chức danh bộ phận: ${dataInit.name}`}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm } from "antd";
+import { Space, Tag, Popconfirm, Button } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -22,6 +22,7 @@ import ModalPositionLevel from "./modal.position-level";
 import ViewDetailPositionLevel from "./view.position-level";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import Access from "@/components/share/access";
+
 const PositionLevelPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IPositionLevel | null>(null);
@@ -42,37 +43,32 @@ const PositionLevelPage = () => {
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const levels = data?.result ?? [];
 
+    // ===================== BUILD FILTERS =====================
     const buildFilters = (search: string, filters: Record<string, any>) => {
         const parts: string[] = [];
-
-        if (search)
-            parts.push(`(code~'${search}' or band~'${search}')`);
-
-        if (filters.companyId)
-            parts.push(`company.id:'${filters.companyId}'`);
-
+        if (search) parts.push(`(code~'${search}' or band~'${search}')`);
+        if (filters.companyId) parts.push(`company.id:'${filters.companyId}'`);
         return parts;
     };
 
+    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: ["bandOrder,asc", "code,asc"],
         };
-
         const filters = buildFilters(searchValue, filterValues);
         if (filters.length > 0) q.filter = filters.join(" and ");
-
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, filterValues]);
 
+    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize ?? PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
-
         const filters = buildFilters(searchValue, filterValues);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -83,6 +79,7 @@ const PositionLevelPage = () => {
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
+    // ===================== HANDLERS =====================
     const handleDelete = async (id: number) => {
         try {
             await deleteMutation.mutateAsync(id);
@@ -99,6 +96,7 @@ const PositionLevelPage = () => {
         refetch();
     };
 
+    // ===================== COLUMNS =====================
     const columns: ProColumns<IPositionLevel>[] = [
         {
             title: "STT",
@@ -139,27 +137,37 @@ const PositionLevelPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 160,
+            width: 120,
+            fixed: "right",             // ← sticky bên phải khi scroll ngang
             render: (_, record) => (
-                <Space size="middle">
+                <Space size={4} align="center">
+                    {/* Xem chi tiết */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenViewDetail(true);
                             }}
                         />
                     </Access>
+
+                    {/* Chỉnh sửa */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.UPDATE} hideChildren>
-                        <EditOutlined
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenModal(true);
                             }}
                         />
                     </Access>
+
+                    {/* Xóa */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.DELETE} hideChildren>
                         <Popconfirm
                             title="Xác nhận xóa bậc chức danh này?"
@@ -168,9 +176,12 @@ const PositionLevelPage = () => {
                             okText="Xóa"
                             cancelText="Hủy"
                             okButtonProps={{ danger: true }}
+                            placement="topRight"
                         >
-                            <DeleteOutlined
-                                style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>
@@ -183,7 +194,7 @@ const PositionLevelPage = () => {
         <PageContainer
             title="Quản lý bậc chức danh"
             filter={
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <div className="flex flex-col gap-3">
                     <SearchFilter
                         searchPlaceholder="Tìm theo mã bậc hoặc nhóm bậc..."
                         addLabel="Thêm bậc chức danh"
@@ -194,13 +205,11 @@ const PositionLevelPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.POSITION_LEVELS.CREATE}  // 👈 thêm dòng này
-
+                        addPermission={ALL_PERMISSIONS.POSITION_LEVELS.CREATE}
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
                         onChange={(filters) => setFilterValues(filters)}
-                        // ✅ SỬA
                         fields={[
                             {
                                 key: "companyId",
@@ -224,6 +233,7 @@ const PositionLevelPage = () => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={levels}
+                scroll={{ x: "max-content" }}   // ← bắt buộc để fixed: "right" hoạt động
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);

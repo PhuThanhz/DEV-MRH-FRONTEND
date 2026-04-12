@@ -1,5 +1,4 @@
 import React from "react";
-import Breadcrumb from "@/components/navigation/Breadcrumb";
 
 interface PageContainerProps {
     title: string;
@@ -8,25 +7,27 @@ interface PageContainerProps {
     children?: React.ReactNode;
 }
 
-const PageContainer: React.FC<PageContainerProps> = ({
-    title,
-    filter,
-    children,
-}) => {
+const PageContainer: React.FC<PageContainerProps> = ({ title, filter, children }) => {
     return (
         <div className="min-h-screen w-full bg-gray-50">
-            {/* Header Section */}
-            <div className="bg-gray-50 border-b border-gray-100 px-6 pt-2 pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 leading-tight">
+            {/* Header */}
+            <div className="bg-gray-50 border-b border-gray-100 px-3 sm:px-6 pt-2 pb-2">
+                <h1 className="text-lg sm:text-2xl font-semibold text-gray-900 leading-tight">
                     {title}
                 </h1>
-
             </div>
 
-            {filter && <div className="px-6 pb-4">{filter}</div>}
+            {/* Filter */}
+            {filter && (
+                <div className="px-2 sm:px-6 pt-3 pb-2">
+                    {filter}
+                </div>
+            )}
 
-            {/* Main Content */}
-            <div className="px-6 pb-8">{children}</div>
+            {/* Content */}
+            <div className="px-1 sm:px-6 pb-6">
+                {children}
+            </div>
         </div>
     );
 };

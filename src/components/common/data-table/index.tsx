@@ -28,7 +28,7 @@ const DataTable = <
 }: ProTableProps<T, U, ValueType>) => {
     return (
         <ConfigProvider locale={vi_VN}>
-            <div className="datatable-wrapper">
+            <div className="datatable-wrapper w-full">
                 <ProTable<T, U, ValueType>
                     columns={columns}
                     defaultData={defaultData}
@@ -44,7 +44,7 @@ const DataTable = <
                     rowKey={rowKey}
                     scroll={
                         scroll ?? {
-                            x: "max-content",
+                            x: true, // ✅ tốt hơn max-content cho mobile
                         }
                     }
                     params={params}
@@ -57,8 +57,10 @@ const DataTable = <
                     dateFormatter={dateFormatter}
                     rowSelection={rowSelection}
                     tableLayout="auto"
-                    sticky={{ offsetHeader: 64 }}
+                    sticky={{ offsetHeader: 48 }} // giảm cho mobile
                     options={false}
+                    size="small" // ✅ bảng gọn hơn → nhìn rộng hơn
+                    style={{ width: "100%" }} // ✅ full width
                     className="custom-pro-table no-scrollbar"
                 />
             </div>

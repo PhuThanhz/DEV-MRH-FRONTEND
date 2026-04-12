@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag } from "antd";
+import { Space, Tag, Button } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -9,7 +9,7 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
-import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
+// ← bỏ import DateRangeFilter
 
 import type { IUser } from "@/types/backend";
 import Access from "@/components/share/access";
@@ -22,6 +22,8 @@ import { useAppSelector } from "@/redux/hooks";
 import ModalUser from "@/pages/admin/user/modal.user";
 import ViewDetailUser from "@/pages/admin/user/view.user";
 
+type RoleOption = { label: string; value: string; color?: string };
+
 const UserPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IUser | null>(null);
@@ -29,12 +31,10 @@ const UserPage = () => {
 
     const [roleFilter, setRoleFilter] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<boolean | null>(null);
-    const [createdAtFilter, setCreatedAtFilter] = useState<string | null>(null);
+    // ← bỏ state createdAtFilter
     const [searchValue, setSearchValue] = useState<string>("");
 
-    const [roleOptions, setRoleOptions] = useState<
-        { label: string; value: string; color?: string }[]
-    >([]);
+    const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
     const [query, setQuery] = useState<string>(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=lastLoginAt,desc`
     );
@@ -74,13 +74,12 @@ const UserPage = () => {
             filters.push(`role.name='${roleFilter}'`);
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
-        if (createdAtFilter)
-            filters.push(createdAtFilter);
+        // ← bỏ createdAtFilter
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, roleFilter, activeFilter, createdAtFilter]);
+    }, [searchValue, roleFilter, activeFilter]); // ← bỏ createdAtFilter khỏi deps
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -104,8 +103,7 @@ const UserPage = () => {
             filters.push(`role.name='${roleFilter}'`);
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
-        if (createdAtFilter)
-            filters.push(createdAtFilter);
+        // ← bỏ createdAtFilter
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -115,7 +113,7 @@ const UserPage = () => {
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
         else if (sort?.email)
             sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
-        else if (sort?.lastLoginAt) // ← THÊM
+        else if (sort?.lastLoginAt)
             sortBy = sort.lastLoginAt === "ascend" ? "sort=lastLoginAt,asc" : "sort=lastLoginAt,desc";
 
         return `${temp}&${sortBy}`;
@@ -156,8 +154,7 @@ const UserPage = () => {
                             src={avatarUrl}
                             alt="avatar"
                             style={{
-                                width: 40,
-                                height: 40,
+                                width: 40, height: 40,
                                 borderRadius: "50%",
                                 objectFit: "cover",
                                 border: "1px solid #ddd",
@@ -172,21 +169,14 @@ const UserPage = () => {
                 ];
 
                 return (
-                    <div
-                        style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            backgroundColor: bg,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#fff",
-                            fontWeight: 600,
-                            textTransform: "uppercase",
-                            fontSize: 14,
-                        }}
-                    >
+                    <div style={{
+                        width: 40, height: 40,
+                        borderRadius: "50%",
+                        backgroundColor: bg,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", fontWeight: 600,
+                        textTransform: "uppercase", fontSize: 14,
+                    }}>
                         {initials || "U"}
                     </div>
                 );
@@ -212,34 +202,27 @@ const UserPage = () => {
             render: (_, record) => {
                 const isActive = record.active;
                 return (
-                    <Tag
-                        style={{
-                            borderRadius: 4,
-                            padding: "0px 8px",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            height: 22,
-                            lineHeight: "20px",
-                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
-                            background: isActive ? "#f6ffed" : "#fff2f0",
-                            color: isActive ? "#389e0d" : "#cf1322",
-                        }}
-                    >
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px",
+                        fontSize: 12, fontWeight: 500,
+                        height: 22, lineHeight: "20px",
+                        border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                        background: isActive ? "#f6ffed" : "#fff2f0",
+                        color: isActive ? "#389e0d" : "#cf1322",
+                    }}>
                         {isActive ? "Hoạt động" : "Ngừng hoạt động"}
                     </Tag>
                 );
             },
         },
 
-        // 2 cột chỉ hiện với SUPER_ADMIN
         ...(isSuperAdmin ? [
             {
                 title: "Truy cập lần cuối",
                 dataIndex: "lastLoginAt",
                 width: 160,
                 align: "center" as const,
-                sorter: true, // ← THÊM DÒNG NÀY
-
+                sorter: true,
                 render: (_: any, record: IUser) =>
                     record.lastLoginAt ? (
                         <span style={{ fontSize: 12 }}>
@@ -268,25 +251,22 @@ const UserPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 140,
+            width: 120,
+            fixed: "right",
             render: (_, entity) => (
-                <Space>
+                <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.USERS.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                            onClick={() => {
-                                setDataInit(entity);
-                                setOpenViewDetail(true);
-                            }}
+                        <Button
+                            type="text" size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
                         />
                     </Access>
                     <Access permission={ALL_PERMISSIONS.USERS.UPDATE} hideChildren>
-                        <EditOutlined
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                            onClick={() => {
-                                setDataInit(entity);
-                                setOpenModal(true);
-                            }}
+                        <Button
+                            type="text" size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            onClick={() => { setDataInit(entity); setOpenModal(true); }}
                         />
                     </Access>
                 </Space>
@@ -305,41 +285,29 @@ const UserPage = () => {
                         showFilterButton={false}
                         onSearch={(val) => setSearchValue(val)}
                         onReset={reloadTable}
-                        onAddClick={() => {
-                            setDataInit(null);
-                            setOpenModal(true);
-                        }}
+                        onAddClick={() => { setDataInit(null); setOpenModal(true); }}
                         addPermission={ALL_PERMISSIONS.USERS.CREATE}
                     />
-                    <div className="flex flex-wrap gap-3 items-center">
-                        <AdvancedFilterSelect
-                            fields={[
-                                {
-                                    key: "role",
-                                    label: "Vai trò",
-                                    options: roleOptions,
-                                },
-                                {
-                                    key: "active",
-                                    label: "Trạng thái",
-                                    options: [
-                                        { label: "Đang hoạt động", value: true, color: "green" },
-                                        { label: "Ngừng hoạt động", value: false, color: "red" },
-                                    ],
-                                },
-                            ]}
-                            onChange={(filters) => {
-                                setRoleFilter(filters.role || null);
-                                setActiveFilter(
-                                    filters.active !== undefined ? filters.active : null
-                                );
-                            }}
-                        />
-                        <DateRangeFilter
-                            fieldName="createdAt"
-                            onChange={(filter) => setCreatedAtFilter(filter)}
-                        />
-                    </div>
+                    {/* ← bỏ div wrapper thừa, chỉ còn AdvancedFilterSelect */}
+                    <AdvancedFilterSelect
+                        fields={[
+                            { key: "role", label: "Vai trò", options: roleOptions },
+                            {
+                                key: "active",
+                                label: "Trạng thái",
+                                options: [
+                                    { label: "Đang hoạt động", value: true, color: "green" },
+                                    { label: "Ngừng hoạt động", value: false, color: "red" },
+                                ],
+                            },
+                        ]}
+                        onChange={(filters) => {
+                            setRoleFilter(filters.role || null);
+                            setActiveFilter(
+                                filters.active !== undefined ? filters.active : null
+                            );
+                        }}
+                    />
                 </div>
             }
         >
@@ -350,14 +318,11 @@ const UserPage = () => {
                     loading={isFetching}
                     columns={columns}
                     dataSource={users}
+                    scroll={{ x: "max-content" }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);
-                        return Promise.resolve({
-                            data: users,
-                            success: true,
-                            total: meta.total,
-                        });
+                        return Promise.resolve({ data: users, success: true, total: meta.total });
                     }}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
@@ -367,9 +332,7 @@ const UserPage = () => {
                         showQuickJumper: true,
                         showTotal: (total, range) => (
                             <div style={{ fontSize: 13 }}>
-                                <span style={{ fontWeight: 500 }}>
-                                    {range[0]}–{range[1]}
-                                </span>{" "}
+                                <span style={{ fontWeight: 500 }}>{range[0]}–{range[1]}</span>{" "}
                                 trên{" "}
                                 <span style={{ fontWeight: 600, color: "#1677ff" }}>
                                     {total.toLocaleString()}

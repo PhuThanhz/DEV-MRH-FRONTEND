@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Button, message } from "antd";
-import { PlusOutlined, ReloadOutlined, ApartmentOutlined } from "@ant-design/icons";
+import { Button, message, Tooltip } from "antd";
+import { PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined } from "@ant-design/icons";
 import { unstable_batchedUpdates } from "react-dom";
 
 import ReactFlow, {
@@ -56,6 +56,25 @@ interface IOrgNode {
     jobDescriptionId?: number | null;
 }
 
+// ── Responsive hook ───────────────────────────────────────────────────────────
+const useWindowSize = () => {
+    const [width, setWidth] = useState(
+        typeof window !== "undefined" ? window.innerWidth : 1280
+    );
+    useEffect(() => {
+        const handler = () => setWidth(window.innerWidth);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+    return {
+        width,
+        isMobile: width < 640,
+        isTablet: width >= 640 && width < 1024,
+        isSmallDesktop: width >= 1024 && width < 1280,
+        isDesktop: width >= 1280,
+    };
+};
+
 // ── Edge renderer ─────────────────────────────────────────────────────────────
 const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) => {
     const midY = (sourceY + targetY) / 2;
@@ -78,20 +97,22 @@ const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) =>
 };
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-const NODE_W = 200;
-const NODE_H = 130;
-
-const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+const getLayoutedElements = (
+    nodes: Node[],
+    edges: Edge[],
+    nodeW = 200,
+    nodeH = 130,
+) => {
     const g = new dagre.graphlib.Graph();
-    g.setGraph({ rankdir: "TB", ranksep: 100, nodesep: 60 });
+    g.setGraph({ rankdir: "TB", ranksep: 80, nodesep: 40 });
     g.setDefaultEdgeLabel(() => ({}));
-    nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+    nodes.forEach((n) => g.setNode(n.id, { width: nodeW, height: nodeH }));
     edges.forEach((e) => g.setEdge(e.source, e.target));
     dagre.layout(g);
     return {
         nodes: nodes.map((n) => {
             const pos = g.node(n.id);
-            return { ...n, position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 } };
+            return { ...n, position: { x: pos.x - nodeW / 2, y: pos.y - nodeH / 2 } };
         }),
         edges,
     };
@@ -174,6 +195,8 @@ const applyHighlight = (
 const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView } = useReactFlow();
+    const { width, isMobile, isTablet } = useWindowSize();
+    const isCompact = isMobile || isTablet; // < 1024px
 
     const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);
     const canDelete = useAccess(ALL_PERMISSIONS.ORG_NODES.DELETE);
@@ -198,11 +221,18 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     // ── Search + MiniPanel state ──────────────────────────────────────────────
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [selectedNodePos, setSelectedNodePos] = useState<{ x: number; y: number } | null>(null);
 
     const nodesRef = useRef<Node[]>([]);
     const edgesRef = useRef<Edge[]>([]);
     nodesRef.current = nodes;
     edgesRef.current = edges;
+
+    // Node size responsive theo màn hình
+    const nodeW = isMobile ? 160 : isTablet ? 185 : 220;
+    const nodeH = isMobile ? 120 : isTablet ? 150 : 185;
+    const layoutNodeW = isMobile ? 150 : isTablet ? 175 : 200;
+    const layoutNodeH = isMobile ? 110 : isTablet ? 140 : 130;
 
     const nodeTypes = useMemo(() => ({ orgNode: OrgNodeCard }), []);
     const edgeTypes = useMemo(() => ({ orgEdge: OrgEdge }), []);
@@ -236,14 +266,14 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     useEffect(() => {
         if (nodes.length === 0) return;
-        const t = setTimeout(() => fitView({ padding: 0.08, minZoom: 0.75, maxZoom: 0.9, duration: 400 }), 50);
+        const t = setTimeout(() => fitView({ padding: isMobile ? 0.05 : 0.08, minZoom: 0.5, maxZoom: 0.9, duration: 400 }), 50);
         return () => clearTimeout(t);
     }, [nodes.length]); // eslint-disable-line
 
     useEffect(() => {
         setChartId(null); setNodes([]); setEdges([]);
         setPendingSaves(new Map());
-        setSelectedNodeId(null); // reset selection khi đổi owner
+        setSelectedNodeId(null);
     }, [ownerId]);
 
     useEffect(() => {
@@ -289,7 +319,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             ...EDGE_DEFAULTS, data: { edgeType: "none", dimmed: false },
         }));
 
-        const { nodes: dagreNodes, edges: dagreEdges } = getLayoutedElements(rfNodes, rfEdges);
+        const { nodes: dagreNodes, edges: dagreEdges } = getLayoutedElements(rfNodes, rfEdges, layoutNodeW, layoutNodeH);
         const finalNodes = dagreNodes.map((node) => {
             const saved = nodeList.find((n) => String(n.id) === node.id);
             return saved?.posX != null && saved?.posY != null
@@ -306,8 +336,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     ...node.data,
                     allowEdit: canEdit,
                     allowDelete: canDelete,
-                    // isSelected sẽ được sync qua useEffect bên trên
                     isSelected: selectedNodeId === node.id,
+                    isMobile,
+                    isTablet,
                     onEdit: () => handleOpenEdit(node),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
@@ -318,7 +349,29 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                             message.info("Vị trí này chưa được gắn JD nào.");
                         }
                     },
-                    onSelect: () => setSelectedNodeId((prev) => prev === node.id ? null : node.id),
+                    onSelect: () => {
+                        setSelectedNodeId((prev) => {
+                            const next = prev === node.id ? null : node.id;
+                            if (next) {
+                                // Lấy DOM element của node để tính vị trí tương đối trong container
+                                const el = document.querySelector(
+                                    `.react-flow__node[data-id="${node.id}"]`
+                                );
+                                const container = el?.closest(".react-flow");
+                                if (el && container) {
+                                    const elRect = el.getBoundingClientRect();
+                                    const containerRect = container.getBoundingClientRect();
+                                    setSelectedNodePos({
+                                        x: elRect.right - containerRect.left + 8,
+                                        y: elRect.top - containerRect.top,
+                                    });
+                                }
+                            } else {
+                                setSelectedNodePos(null);
+                            }
+                            return next;
+                        });
+                    },
                     onMouseEnter: () => applyHighlightNow(node.id),
                     onMouseLeave: () => applyHighlightNow(null),
                 } as OrgNodeData,
@@ -326,11 +379,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         });
 
         unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(dagreEdges); });
-    }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId]); // eslint-disable-line
+    }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet]); // eslint-disable-line
 
     // ── Search: zoom đến node được chọn ──────────────────────────────────────
-    const handleSearchSelect = useCallback((nodeId: string) => {
+    const handleSearchSelect = useCallback((nodeId: string, pos: { x: number; y: number } | null = null) => {
         setSelectedNodeId(nodeId);
+        setSelectedNodePos(pos);
         const found = nodesRef.current.find((n) => n.id === nodeId);
         if (found) {
             fitView({ nodes: [found], padding: 0.35, duration: 500, maxZoom: 1.2 });
@@ -364,12 +418,17 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const handleAutoLayout = useCallback(() => {
         if (nodes.length === 0) return;
-        const { nodes: laid } = getLayoutedElements(nodes.map((n) => ({ ...n, position: { x: 0, y: 0 } })), edges);
+        const { nodes: laid } = getLayoutedElements(
+            nodes.map((n) => ({ ...n, position: { x: 0, y: 0 } })),
+            edges,
+            layoutNodeW,
+            layoutNodeH,
+        );
         setNodes(laid.map((node) => ({ ...node, data: nodesRef.current.find((n) => n.id === node.id)?.data ?? node.data })));
         setPendingSaves((prev) => { const next = new Map(prev); laid.forEach((n) => next.set(n.id, { x: n.position.x, y: n.position.y })); return next; });
-        setTimeout(() => fitView({ padding: 0.08, minZoom: 0.75, maxZoom: 0.9, duration: 400 }), 50);
+        setTimeout(() => fitView({ padding: 0.08, minZoom: 0.5, maxZoom: 0.9, duration: 400 }), 50);
         message.success("Đã căn chỉnh sơ đồ!");
-    }, [nodes, edges, fitView]);
+    }, [nodes, edges, fitView, layoutNodeW, layoutNodeH]);
 
     const handleConnect = useCallback(async (connection: Connection) => {
         if (!chartId || !connection.source || !connection.target) return;
@@ -382,8 +441,10 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const onEdgesChange = useCallback((changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
     const handleDeleteNode = useCallback(async (nodeId: number, cId: number) => {
-        // Nếu node đang được select thì clear selection
-        if (selectedNodeId === String(nodeId)) setSelectedNodeId(null);
+        if (selectedNodeId === String(nodeId)) {
+            setSelectedNodeId(null);
+            setSelectedNodePos(null);
+        }
         await deleteNode.mutateAsync(nodeId); loadNodes(cId);
     }, [deleteNode, loadNodes, selectedNodeId]);
 
@@ -439,66 +500,203 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const handleCloseModal = useCallback(() => { setOpenModal(false); setEditingNode(null); }, []);
 
+    // ── Container height responsive ───────────────────────────────────────────
+    const containerHeight = isMobile
+        ? "calc(100vh - 100px)"
+        : isTablet
+            ? "calc(100vh - 130px)"
+            : "calc(100vh - 160px)";
+
+    const containerMinHeight = isMobile ? 360 : isTablet ? 480 : 600;
+
+    // ── Toolbar button style ──────────────────────────────────────────────────
+    const btnBase: React.CSSProperties = {
+        borderColor: "#d1d5db",
+        color: "#6b7280",
+        fontWeight: 500,
+        padding: isMobile ? "0 8px" : undefined,
+        fontSize: isMobile ? 12 : 14,
+    };
+
     return (
         <div style={{
-            height: "calc(100vh - 160px)", minHeight: 600,
-            background: "#f8f9fb", borderRadius: 12,
-            position: "relative", border: "1px solid #e8ecf0", overflow: "hidden",
+            height: containerHeight,
+            minHeight: containerMinHeight,
+            background: "#f8f9fb",
+            borderRadius: isMobile ? 8 : 12,
+            position: "relative",
+            border: "1px solid #e8ecf0",
+            overflow: "hidden",
         }}>
             {/* ── Toolbar (top-right) ── */}
-            <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", gap: 8 }}>
+            <div style={{
+                position: "absolute",
+                top: isMobile ? 8 : 12,
+                right: isMobile ? 8 : 12,
+                zIndex: 10,
+                display: "flex",
+                gap: isMobile ? 4 : 8,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+                // Đảm bảo không đè SearchBar: SearchBar rộng ~180px bên trái
+                maxWidth: isMobile ? "calc(100% - 160px)" : isTablet ? "calc(100% - 200px)" : "auto",
+            }}>
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
                     {pendingSaves.size > 0 && (
-                        <Button loading={isSaving} onClick={handleSavePositions}
-                            style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}>
-                            Lưu vị trí ({pendingSaves.size})
+                        isMobile ? (
+                            <Tooltip title={`Lưu vị trí (${pendingSaves.size})`}>
+                                <Button
+                                    loading={isSaving}
+                                    icon={<SaveOutlined />}
+                                    onClick={handleSavePositions}
+                                    size="small"
+                                    style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
+                                />
+                            </Tooltip>
+                        ) : (
+                            <Button
+                                loading={isSaving}
+                                onClick={handleSavePositions}
+                                style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
+                            >
+                                {isTablet ? `Lưu (${pendingSaves.size})` : `Lưu vị trí (${pendingSaves.size})`}
+                            </Button>
+                        )
+                    )}
+                </Access>
+
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                    {isMobile ? (
+                        <Tooltip title="Hoàn tác">
+                            <Button
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetPositions}
+                                size="small"
+                                style={btnBase}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Button
+                            icon={<ReloadOutlined />}
+                            onClick={handleResetPositions}
+                            style={btnBase}
+                        >
+                            {isTablet ? "" : "Hoàn tác"}
                         </Button>
                     )}
                 </Access>
+
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
-                    <Button icon={<ReloadOutlined />} onClick={handleResetPositions}
-                        style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Hoàn tác</Button>
+                    {isMobile ? (
+                        <Tooltip title="Tự căn chỉnh">
+                            <Button
+                                icon={<ApartmentOutlined />}
+                                onClick={handleAutoLayout}
+                                size="small"
+                                style={btnBase}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Button
+                            icon={<ApartmentOutlined />}
+                            onClick={handleAutoLayout}
+                            style={btnBase}
+                        >
+                            {isTablet ? "" : "Tự căn chỉnh"}
+                        </Button>
+                    )}
                 </Access>
-                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
-                    <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout}
-                        style={{ borderColor: "#d1d5db", color: "#6b7280", fontWeight: 500 }}>Tự căn chỉnh</Button>
-                </Access>
+
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
-                    <Button icon={<PlusOutlined />} onClick={() => { setEditingNode(null); setOpenModal(true); }}
-                        style={{ background: "#e8637a", borderColor: "#e8637a", color: "#fff", fontWeight: 600, boxShadow: "0 2px 8px rgba(232,99,122,.3)" }}>
-                        Thêm vị trí
-                    </Button>
+                    {isMobile ? (
+                        <Tooltip title="Thêm vị trí">
+                            <Button
+                                icon={<PlusOutlined />}
+                                onClick={() => { setEditingNode(null); setOpenModal(true); }}
+                                size="small"
+                                style={{
+                                    background: "#e8637a",
+                                    borderColor: "#e8637a",
+                                    color: "#fff",
+                                    fontWeight: 600,
+                                    boxShadow: "0 2px 8px rgba(232,99,122,.3)",
+                                }}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Button
+                            icon={<PlusOutlined />}
+                            onClick={() => { setEditingNode(null); setOpenModal(true); }}
+                            style={{
+                                background: "#e8637a",
+                                borderColor: "#e8637a",
+                                color: "#fff",
+                                fontWeight: 600,
+                                boxShadow: "0 2px 8px rgba(232,99,122,.3)",
+                                fontSize: isTablet ? 13 : 14,
+                            }}
+                        >
+                            {isTablet ? "Thêm" : "Thêm vị trí"}
+                        </Button>
+                    )}
                 </Access>
             </div>
 
             {/* ── SearchBar (top-left) ── */}
             <SearchBar
                 nodes={nodes}
-                onSelect={handleSearchSelect}
-                onClear={() => setSelectedNodeId(null)}
+                onSelect={(id) => handleSearchSelect(id, null)}            // fallback không có pos
+                onSelectWithPos={(id, pos) => handleSearchSelect(id, pos)} // có pos thì dùng cái này
+                onClear={() => { setSelectedNodeId(null); setSelectedNodePos(null); }}
+                isMobile={isMobile}
+                isTablet={isTablet}
             />
-
             <ReactFlow
                 nodes={nodes} edges={edges}
                 nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-                nodesDraggable nodesConnectable elementsSelectable
-                onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-                onNodeDragStop={handleNodeDragStop} onConnect={handleConnect}
-                minZoom={0.2} maxZoom={2} defaultEdgeOptions={EDGE_DEFAULTS}
-                // Click vào background → clear selection
-                onPaneClick={() => setSelectedNodeId(null)}
+                nodesDraggable={!isMobile}
+                nodesConnectable={!isMobile}
+                elementsSelectable
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeDragStop={handleNodeDragStop}
+                onConnect={handleConnect}
+                minZoom={0.15}
+                maxZoom={2}
+                defaultEdgeOptions={EDGE_DEFAULTS}
+                onPaneClick={() => { setSelectedNodeId(null); setSelectedNodePos(null); }}
             >
-                <MiniMap nodeColor="#fda4af" maskColor="rgba(0,0,0,0.04)" style={{ borderRadius: 8 }} />
-                <Controls showInteractive={false} />
+                {/* MiniMap ẩn trên mobile để tiết kiệm không gian */}
+                {!isMobile && (
+                    <MiniMap
+                        nodeColor="#fda4af"
+                        maskColor="rgba(0,0,0,0.04)"
+                        style={{
+                            borderRadius: 8,
+                            bottom: 20,
+                        }}
+                    />
+                )}
+                <Controls
+                    showInteractive={false}
+                    style={{
+                        bottom: isMobile ? 8 : 20,
+                        left: isMobile ? 8 : 20,
+                    }}
+                />
                 <Background color="#e5e7eb" gap={20} />
             </ReactFlow>
 
-            {/* ── MiniPanel (bottom-right) ── */}
+
+            {/* ── MiniPanel (float gần node) ── */}
             <MiniPanel
                 nodeId={selectedNodeId}
                 nodes={nodes}
                 edges={edges}
-                onClose={() => setSelectedNodeId(null)}
+                anchorPos={selectedNodePos}
+                isMobile={isMobile}
+                isTablet={isTablet}
+                onClose={() => { setSelectedNodeId(null); setSelectedNodePos(null); }}
             />
 
             <ModalNode

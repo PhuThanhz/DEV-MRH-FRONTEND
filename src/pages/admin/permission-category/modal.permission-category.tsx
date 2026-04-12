@@ -1,11 +1,13 @@
 import { Modal, Form, Input, Select, Switch } from "antd";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
     useCreatePermissionCategoryMutation,
     useUpdatePermissionCategoryMutation,
 } from "@/hooks/usePermissionCategory";
-import { useDepartmentsQuery } from "@/hooks/useDepartments";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+
+import { callFetchDepartmentsByCompany } from "@/config/api";
 
 import type { IPermissionCategory } from "@/types/backend";
 
@@ -14,58 +16,124 @@ interface IProps {
     setOpen: (v: boolean) => void;
     dataInit: IPermissionCategory | null;
     setDataInit: (v: IPermissionCategory | null) => void;
+    onSuccess?: () => void;  // ✅ thêm dòng này
+
 }
 
-const ModalCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
+const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IProps) => {
     const [form] = Form.useForm();
+
+    const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+    const [deptOptions, setDeptOptions] = useState<any[]>([]);
+    const [loadingDept, setLoadingDept] = useState(false);
 
     const createMutation = useCreatePermissionCategoryMutation();
     const updateMutation = useUpdatePermissionCategoryMutation();
 
-    const { data: departmentData, isFetching } =
-        useDepartmentsQuery("page=1&size=100");
+    /* ================= COMPANY ================= */
+    const { data: companyData } = useCompaniesQuery("page=1&size=100");
 
-    const departmentOptions = useMemo(
+    const companyOptions = useMemo(
         () =>
-            departmentData?.result?.map((d: any) => ({
-                label: d.name,
-                value: d.id,
+            companyData?.result?.map((c: any) => ({
+                label: c.name,
+                value: c.id,
             })) || [],
-        [departmentData]
+        [companyData]
     );
 
+    /* ================= LOAD DEPARTMENT ================= */
+    const fetchDepartments = async (companyId: number) => {
+        setLoadingDept(true);
+        try {
+            const res = await callFetchDepartmentsByCompany(companyId);
+
+            const options =
+                res?.data?.map((d: any) => ({
+                    label: d.name,
+                    value: d.id,
+                })) || [];
+
+            setDeptOptions(options);
+        } finally {
+            setLoadingDept(false);
+        }
+    };
+
+    /* ================= CHANGE COMPANY ================= */
+    const handleCompanyChange = async (value: number) => {
+        setSelectedCompanyId(value);
+        form.setFieldsValue({ departmentId: undefined });
+        setDeptOptions([]);
+
+        if (value) {
+            await fetchDepartments(value);
+        }
+    };
+
+    /* ================= PREFILL EDIT ================= */
     useEffect(() => {
+        if (!open) return;
+
         if (dataInit) {
-            form.setFieldsValue(dataInit);
+            const companyId = dataInit.companyId ?? null;
+
+            setSelectedCompanyId(companyId);
+
+            form.setFieldsValue({
+                code: dataInit.code,
+                name: dataInit.name,
+                companyId: dataInit.companyId,
+                departmentId: dataInit.departmentId,
+                active: dataInit.active,
+            });
+
+            // 🔥 load department khi edit
+            if (companyId) {
+                fetchDepartments(companyId);
+            }
         } else {
             form.resetFields();
             form.setFieldsValue({ active: true });
+            setSelectedCompanyId(null);
+            setDeptOptions([]);
         }
-    }, [dataInit, form]);
+    }, [open, dataInit]);
 
+    /* ================= SUBMIT ================= */
     const handleSubmit = async () => {
         const values = await form.validateFields();
 
-        if (!values.departmentId) return;
-
         if (dataInit?.id) {
-            updateMutation.mutate({
-                id: dataInit.id,
-                data: values,
-            });
+            updateMutation.mutate(
+                { id: dataInit.id, data: values },
+                {
+                    onSuccess: () => {
+                        onSuccess?.();  // ✅ thêm
+                        handleClose();
+                    },
+                }
+            );
         } else {
-            createMutation.mutate(values);
+            createMutation.mutate(values, {
+                onSuccess: () => {
+                    onSuccess?.();  // ✅ thêm
+                    handleClose();
+                },
+            });
         }
-
-        handleClose();
     };
 
+    /* ================= CLOSE ================= */
     const handleClose = () => {
         form.resetFields();
+        setSelectedCompanyId(null);
+        setDeptOptions([]);
         setDataInit(null);
         setOpen(false);
     };
 
+    /* ================= UI ================= */
     return (
         <Modal
             title={dataInit ? "Cập nhật danh mục" : "Thêm danh mục phân quyền"}
@@ -74,9 +142,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
             onOk={handleSubmit}
             okText="Lưu"
             cancelText="Hủy"
-            confirmLoading={
-                createMutation.isPending || updateMutation.isPending
-            }
+            confirmLoading={createMutation.isPending || updateMutation.isPending}
             destroyOnClose
         >
             <Form layout="vertical" form={form}>
@@ -96,16 +162,42 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
                     <Input />
                 </Form.Item>
 
+                {/* COMPANY */}
+                <Form.Item
+                    label="Công ty"
+                    name="companyId"
+                    rules={[{ required: true, message: "Chọn công ty" }]}
+                >
+                    <Select
+                        options={companyOptions}
+                        showSearch
+                        optionFilterProp="label"
+                        onChange={handleCompanyChange}
+                        placeholder="Chọn công ty trước"
+                    />
+                </Form.Item>
+
+                {/* DEPARTMENT */}
                 <Form.Item
                     label="Phòng ban"
                     name="departmentId"
                     rules={[{ required: true, message: "Chọn phòng ban" }]}
                 >
                     <Select
-                        options={departmentOptions}
-                        loading={isFetching}
+                        options={deptOptions}
+                        loading={loadingDept}
                         showSearch
                         optionFilterProp="label"
+                        disabled={!selectedCompanyId || loadingDept}
+                        placeholder={
+                            !selectedCompanyId
+                                ? "Vui lòng chọn công ty trước"
+                                : loadingDept
+                                    ? "Đang tải phòng ban..."
+                                    : deptOptions.length === 0
+                                        ? "Công ty chưa có phòng ban"
+                                        : "Chọn phòng ban"
+                        }
                     />
                 </Form.Item>
 

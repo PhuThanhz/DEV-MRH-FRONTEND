@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Badge } from "antd";
+import { Space, Tag, Button } from "antd";              // ← thêm Button, bỏ Badge
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -9,7 +9,8 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
-import type { IJobTitle, ICompany } from "@/types/backend"; import { PAGINATION_CONFIG } from "@/config/pagination";
+import type { IJobTitle, ICompany } from "@/types/backend";
+import { PAGINATION_CONFIG } from "@/config/pagination";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { callFetchCompany } from "@/config/api";
 
@@ -40,53 +41,40 @@ const JobTitlePage = () => {
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const list = data?.result ?? [];
 
-    /*
-     * ===================== BUILD FILTERS =====================
-     */
+    // ===================== BUILD FILTERS =====================
     const buildFilters = (
         search: string,
         active: boolean | null,
         companyId: number | null,
     ) => {
         const parts: string[] = [];
-
         if (search)
             parts.push(`(nameVi~'${search}' or nameEn~'${search}')`);
-
         if (active !== null)
             parts.push(`active=${active}`);
-
         if (companyId)
             parts.push(`positionLevel.company.id:${companyId}`);
-
         return parts;
     };
 
-    /*
-     * ===================== AUTO BUILD QUERY =====================
-     */
+    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-
         const filters = buildFilters(searchValue, activeFilter, companyIdFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
-
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, activeFilter, companyIdFilter]);
 
-    /*
-     * ===================== BUILD QUERY FOR TABLE =====================
-     */
+    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize,
         };
-
         const filters = buildFilters(searchValue, activeFilter, companyIdFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -97,9 +85,7 @@ const JobTitlePage = () => {
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    /*
-     * ===================== RESET =====================
-     */
+    // ===================== RESET =====================
     const handleReset = () => {
         setSearchValue("");
         setActiveFilter(null);
@@ -108,9 +94,7 @@ const JobTitlePage = () => {
         refetch();
     };
 
-    /*
-     * ===================== COLUMNS =====================
-     */
+    // ===================== COLUMNS =====================
     const columns: ProColumns<IJobTitle>[] = [
         {
             title: "STT",
@@ -125,7 +109,6 @@ const JobTitlePage = () => {
             dataIndex: ["positionLevel", "code"],
             render: (_) => <Tag color="purple">{_}</Tag>,
         },
-        // ✅ THÊM CỘT CÔNG TY
         {
             title: "Công ty",
             render: (_, record) =>
@@ -138,7 +121,6 @@ const JobTitlePage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.active;
-
                 return (
                     <Tag
                         style={{
@@ -162,11 +144,14 @@ const JobTitlePage = () => {
             title: "Hành động",
             align: "center",
             width: 120,
+            fixed: "right",
             render: (_, record) => (
-                <Space>
+                <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.GET_BY_ID} hideChildren>
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenViewDetail(true);
@@ -175,8 +160,10 @@ const JobTitlePage = () => {
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.UPDATE} hideChildren>
-                        <EditOutlined
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenModal(true);
@@ -205,7 +192,6 @@ const JobTitlePage = () => {
                         }}
                         addPermission={ALL_PERMISSIONS.JOB_TITLES.CREATE}
                     />
-
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
                         fields={[
@@ -230,12 +216,8 @@ const JobTitlePage = () => {
                             },
                         ]}
                         onChange={(val) => {
-                            setActiveFilter(
-                                val.active !== undefined ? val.active : null
-                            );
-                            setCompanyIdFilter(
-                                val.companyId !== undefined ? val.companyId : null
-                            );
+                            setActiveFilter(val.active !== undefined ? val.active : null);
+                            setCompanyIdFilter(val.companyId !== undefined ? val.companyId : null);
                         }}
                     />
                 </div>
@@ -247,6 +229,7 @@ const JobTitlePage = () => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={list}
+                scroll={{ x: "max-content" }}           // ← bắt buộc để fixed: "right" hoạt động
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);

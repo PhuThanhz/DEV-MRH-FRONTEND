@@ -12,6 +12,7 @@ import {
     LockOutlined,
     FileTextOutlined,
     TeamOutlined,
+    SettingOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -51,6 +52,7 @@ const DepartmentPage = () => {
 
     const [openPermissionModal, setOpenPermissionModal] = useState(false);
     const [openPositionChartModal, setOpenPositionChartModal] = useState(false);
+    const [openJobTitle, setOpenJobTitle] = useState(false);
 
     const [selectedDepartment, setSelectedDepartment] = useState<{
         id: number;
@@ -71,19 +73,19 @@ const DepartmentPage = () => {
 
     const { data, isFetching, refetch } = useDepartmentsQuery(query);
     const deleteMutation = useDeleteDepartmentMutation();
-    const [openJobTitle, setOpenJobTitle] = useState(false);
+
     // ===================== PERMISSION CHECKS =====================
     const canViewOrgChart = useAccess(ALL_PERMISSIONS.ORG_CHARTS.GET_PAGINATE);
     const canViewObjectives = useAccess(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW);
-    const canViewProcedures = useAccess(
-        ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_PAGINATE
-    ); const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
+    const canViewProcedures = useAccess(ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_PAGINATE);
+    const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
     const canViewCareerPaths = useAccess(ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT);
     const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW)
-        || useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW_MY); const canViewPositionChart = useAccess(
-            ALL_PERMISSIONS.POSITION_CHART.VIEW
-        );
+        || useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW_MY);
+    const canViewPositionChart = useAccess(ALL_PERMISSIONS.POSITION_CHART.VIEW);
+    const canViewJobTitles = useAccess(ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.GET_PAGINATE);
     const canDeleteDepartment = useAccess(ALL_PERMISSIONS.DEPARTMENTS.DELETE);
+
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
         pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
@@ -92,53 +94,37 @@ const DepartmentPage = () => {
 
     const departments = data?.result ?? [];
 
-    /*
-     * ===================== BUILD FILTERS =====================
-     */
+    // ===================== BUILD FILTERS =====================
     const buildFilters = (
         search: string,
         companyId: number | null,
         status: number | null,
     ) => {
         const parts: string[] = [];
-
-        if (search)
-            parts.push(`(code~'${search}' or name~'${search}')`);
-
-        if (companyId)
-            parts.push(`company.id:${companyId}`);
-
-        if (status !== null)
-            parts.push(`status=${status}`);
-
+        if (search) parts.push(`(code~'${search}' or name~'${search}')`);
+        if (companyId) parts.push(`company.id:${companyId}`);
+        if (status !== null) parts.push(`status=${status}`);
         return parts;
     };
 
-    /*
-     * ===================== AUTO BUILD QUERY =====================
-     */
+    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-
         const filters = buildFilters(searchValue, companyIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
-
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, companyIdFilter, statusFilter]);
 
-    /*
-     * ===================== BUILD QUERY FOR TABLE =====================
-     */
+    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
-
         const filters = buildFilters(searchValue, companyIdFilter, statusFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
@@ -151,9 +137,7 @@ const DepartmentPage = () => {
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    /*
-     * ===================== RESET =====================
-     */
+    // ===================== RESET =====================
     const handleReset = () => {
         setSearchValue("");
         setCompanyIdFilter(null);
@@ -169,11 +153,20 @@ const DepartmentPage = () => {
         } catch { }
     };
 
-    /*
-     * ===================== BUILD DROPDOWN ITEMS =====================
-     */
+    // ===================== BUILD DROPDOWN ITEMS =====================
     const buildDropdownItems = (record: IDepartment) => {
         const items: any[] = [];
+
+        // ── Cấu hình chức danh ── (chuyển vào đây)
+        if (canViewJobTitles) items.push({
+            key: "job-title",
+            icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
+            label: <span>Cấu hình chức danh</span>,
+            onClick: () => {
+                setDataInit(record);
+                setOpenJobTitle(true);
+            },
+        });
 
         if (canViewOrgChart) items.push({
             key: "org-chart",
@@ -250,12 +243,11 @@ const DepartmentPage = () => {
             },
         });
 
-        // Chỉ thêm divider khi có item phía trên và có quyền xóa
+        // Divider trước nhóm nguy hiểm
         if (items.length > 0 && canDeleteDepartment) {
             items.push({ type: "divider" });
         }
 
-        // Nút xóa chỉ hiển thị khi có quyền DELETE
         if (canDeleteDepartment) {
             items.push({
                 key: "delete",
@@ -278,9 +270,7 @@ const DepartmentPage = () => {
         return items;
     };
 
-    /*
-     * ===================== COLUMNS =====================
-     */
+    // ===================== COLUMNS =====================
     const columns: ProColumns<IDepartment>[] = [
         {
             title: "STT",
@@ -348,57 +338,40 @@ const DepartmentPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 180,
-            fixed: "right",
+            width: 120,
+            fixed: "right",             // ← sticky bên phải khi scroll ngang
             render: (_, record) => {
                 const dropdownItems = buildDropdownItems(record);
 
                 return (
-                    <Space size="middle">
-
+                    <Space size={4} align="center">
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.GET_BY_ID} hideChildren>
                             <Button
                                 type="text"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 18 }} />}
+                                size="small"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenView(true);
                                 }}
                             />
                         </Access>
-                        <Access
-                            permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.GET_PAGINATE}
-                            hideChildren
-                        >
-                            <Tag
-                                color="cyan"
-                                style={{
-                                    cursor: "pointer",
-                                    borderRadius: 6,
-                                    padding: "2px 10px",
-                                    fontWeight: 500,
-                                }}
-                                onClick={() => {
-                                    setDataInit(record);
-                                    setOpenJobTitle(true);
-                                }}
-                            >
-                                Cấu hình chức danh
-                            </Tag>
-                        </Access>
-                        {/* Sửa */}
+
+                        {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
                             <Button
                                 type="text"
-                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 18 }} />}
+                                size="small"
+                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
                                 }}
                             />
                         </Access>
-                        {/* Dropdown chỉ hiển thị khi có ít nhất một quyền */}
+
+                        {/* Dropdown 3 chấm — chứa tất cả action còn lại */}
                         {dropdownItems.length > 0 && (
                             <Dropdown
                                 menu={{ items: dropdownItems }}
@@ -406,8 +379,9 @@ const DepartmentPage = () => {
                                 placement="bottomRight"
                             >
                                 <Button
-                                    icon={<MoreOutlined style={{ fontSize: 18 }} />}
                                     type="text"
+                                    size="small"
+                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
                                 />
                             </Dropdown>
                         )}
@@ -432,8 +406,7 @@ const DepartmentPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
-                        addPermission={ALL_PERMISSIONS.DEPARTMENTS.CREATE}  // 👈 thêm dòng này
-
+                        addPermission={ALL_PERMISSIONS.DEPARTMENTS.CREATE}
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
@@ -472,6 +445,7 @@ const DepartmentPage = () => {
                 loading={isFetching}
                 columns={columns}
                 dataSource={departments}
+                scroll={{ x: "max-content" }}   // ← bắt buộc để fixed: "right" hoạt động
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);
@@ -502,6 +476,7 @@ const DepartmentPage = () => {
                 dataInit={dataInit}
                 setDataInit={setDataInit}
             />
+
             {openJobTitle && dataInit?.id && (
                 <Modal
                     title={`Chức danh phòng ban: ${dataInit.name}`}
@@ -518,7 +493,6 @@ const DepartmentPage = () => {
                 </Modal>
             )}
 
-
             {selectedDepartment && (
                 <Modal
                     open={openPermissionModal}
@@ -529,12 +503,12 @@ const DepartmentPage = () => {
                     title={`Phân quyền — ${selectedDepartment.name}`}
                 >
                     <PermissionViewModal
-                        departmentId={selectedDepartment.id}   // ✅ QUAN TRỌNG
+                        departmentId={selectedDepartment.id}
                         departmentName={selectedDepartment.name}
                     />
                 </Modal>
             )}
-            {/* ← THÊM ĐOẠN NÀY */}
+
             {selectedDepartment && (
                 <PositionChartModal
                     open={openPositionChartModal}

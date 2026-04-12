@@ -797,7 +797,8 @@ export interface IPermissionCategory {
     code: string;
     name: string;
     active?: boolean;
-
+    companyId?: number;      // ← THÊM
+    companyName?: string;    // ← THÊM
     departmentId: number;
     departmentName?: string;
 
