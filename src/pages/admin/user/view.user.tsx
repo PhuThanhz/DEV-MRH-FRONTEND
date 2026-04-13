@@ -36,6 +36,7 @@ const sourceTagConfig: Record<string, { antColor: string; label: string }> = {
 const genderLabel: Record<string, string> = {
     MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác",
 };
+
 // ── InfoRow ───────────────────────────────────────────────────────────────────
 const InfoRow = ({
     icon, label, value, highlight = false, noBorder = false,
@@ -70,6 +71,7 @@ const InfoRow = ({
         </div>
     </div>
 );
+
 // ── SectionTitle ──────────────────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
@@ -82,7 +84,8 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
         <div style={{ flex: 1, height: 1, background: BORDER }} />
     </div>
 );
-// ── SquareBadge dùng Ant Tag ──────────────────────────────────────────────────
+
+// ── SquareBadge ───────────────────────────────────────────────────────────────
 const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) => (
     <Tag
         color={antColor}
@@ -91,6 +94,164 @@ const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) =
         {label}
     </Tag>
 );
+
+// ── Positions Table (desktop) ─────────────────────────────────────────────────
+const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; isLoading: boolean }) => (
+    <table style={{
+        width: "100%", borderCollapse: "collapse",
+        borderRadius: 12, overflow: "hidden",
+        border: `1.5px solid ${BORDER_MED}`,
+    }}>
+        <thead>
+            <tr style={{ background: BG_SUBTLE }}>
+                {["Chức danh", "Mã bậc", "Cấp", "Công ty", "Phòng ban", "Bộ phận"].map(h => (
+                    <th key={h} style={{
+                        padding: "10px 14px", textAlign: "left",
+                        fontSize: 11, fontWeight: 700, color: TEXT_LABEL,
+                        textTransform: "uppercase", letterSpacing: "0.05em",
+                        borderBottom: `1.5px solid ${BORDER_MED}`,
+                    }}>{h}</th>
+                ))}
+            </tr>
+        </thead>
+        <tbody>
+            {isLoading ? (
+                <tr>
+                    <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                        Đang tải...
+                    </td>
+                </tr>
+            ) : positions.length === 0 ? (
+                <tr>
+                    <td colSpan={6} style={{ padding: "32px", textAlign: "center" }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                            <div style={{
+                                width: 40, height: 40, borderRadius: 10,
+                                background: BG_SUBTLE, display: "flex",
+                                alignItems: "center", justifyContent: "center",
+                                border: `1px solid ${BORDER_MED}`,
+                            }}>
+                                <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
+                            </div>
+                            <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có chức danh nào</Text>
+                        </div>
+                    </td>
+                </tr>
+            ) : positions.map((r: IUserPosition, idx: number) => {
+                const cfg = sourceTagConfig[r.source];
+                return (
+                    <tr
+                        key={r.id}
+                        className="detail-pos-row"
+                        style={{
+                            borderBottom: idx < positions.length - 1 ? `1px solid ${BORDER}` : "none",
+                            background: "#fff",
+                        }}
+                    >
+                        <td style={{ padding: "11px 14px" }}>
+                            <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
+                                {r.jobTitle?.nameVi ?? "--"}
+                            </Text>
+                        </td>
+                        <td style={{ padding: "11px 14px" }}>
+                            <SquareBadge label={r.jobTitle?.positionCode ?? "--"} antColor="purple" />
+                        </td>
+                        <td style={{ padding: "11px 14px" }}>
+                            {cfg
+                                ? <SquareBadge label={cfg.label} antColor={cfg.antColor} />
+                                : <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>--</Text>
+                            }
+                        </td>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_LABEL }}>
+                            {r.company?.name ?? "--"}
+                        </td>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                            {r.department?.name ?? "--"}
+                        </td>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                            {r.section?.name ?? "--"}
+                        </td>
+                    </tr>
+                );
+            })}
+        </tbody>
+    </table>
+);
+
+// ── Positions Cards (mobile) ──────────────────────────────────────────────────
+const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; isLoading: boolean }) => {
+    if (isLoading) {
+        return (
+            <div style={{ padding: "24px", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                Đang tải...
+            </div>
+        );
+    }
+    if (positions.length === 0) {
+        return (
+            <div style={{ padding: "32px", textAlign: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                    <div style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        background: BG_SUBTLE, display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        border: `1px solid ${BORDER_MED}`,
+                    }}>
+                        <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
+                    </div>
+                    <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có chức danh nào</Text>
+                </div>
+            </div>
+        );
+    }
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {positions.map((r: IUserPosition) => {
+                const cfg = sourceTagConfig[r.source];
+                return (
+                    <div key={r.id} style={{
+                        border: `1.5px solid ${BORDER_MED}`,
+                        borderRadius: 12,
+                        padding: "12px 14px",
+                        background: "#fff",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                    }}>
+                        {/* Title row */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                            <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
+                                {r.jobTitle?.nameVi ?? "--"}
+                            </Text>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                <SquareBadge label={r.jobTitle?.positionCode ?? "--"} antColor="purple" />
+                                {cfg && <SquareBadge label={cfg.label} antColor={cfg.antColor} />}
+                            </div>
+                        </div>
+                        {/* Meta row */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
+                            {r.company?.name && (
+                                <Text style={{ fontSize: 12, color: TEXT_LABEL }}>
+                                    🏢 {r.company.name}
+                                </Text>
+                            )}
+                            {r.department?.name && (
+                                <Text style={{ fontSize: 12, color: TEXT_MUTED }}>
+                                    📂 {r.department.name}
+                                </Text>
+                            )}
+                            {r.section?.name && (
+                                <Text style={{ fontSize: 12, color: TEXT_MUTED }}>
+                                    📌 {r.section.name}
+                                </Text>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
@@ -101,7 +262,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const handleClose = () => { onClose(false); setDataInit(null); };
 
-    // ── cùng URL pattern với UserPage ──
     const avatarSrc = dataInit?.avatar
         ? `${backendURL}/uploads/avatar/${dataInit.avatar}?t=${Date.now()}`
         : undefined;
@@ -125,9 +285,11 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
             value: info?.contractSignDate ? dayjs(info.contractSignDate).format("DD/MM/YYYY") : undefined,
         },
     ].filter((f) => f.value && f.value !== "--");
+
     return (
         <>
             <style>{`
+                /* ── Modal chrome ── */
                 .detail-modal .ant-modal-content {
                     border-radius: 20px !important;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05) !important;
@@ -171,13 +333,55 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
                 /* zebra row hover */
                 .detail-pos-row:hover td { background: #fafafa !important; }
+
+                /* ── Responsive ── */
+
+                /* Tablet: stack two columns */
+                @media (max-width: 768px) {
+                    .detail-modal .ant-modal-body {
+                        padding: 12px 16px 20px !important;
+                    }
+                    .detail-two-col {
+                        grid-template-columns: 1fr !important;
+                    }
+                    /* Hide table, show cards */
+                    .pos-table-wrap { display: none !important; }
+                    .pos-cards-wrap { display: block !important; }
+                }
+
+                /* Mobile: tighter profile header */
+                @media (max-width: 480px) {
+                    .detail-modal .ant-modal-content {
+                        border-radius: 16px !important;
+                    }
+                    .detail-modal .ant-modal-body {
+                        padding: 10px 12px 16px !important;
+                    }
+                    .detail-profile-header {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 12px !important;
+                        padding: 12px !important;
+                    }
+                    .detail-profile-header .ant-avatar {
+                        width: 60px !important;
+                        height: 60px !important;
+                        line-height: 60px !important;
+                    }
+                }
+
+                /* Show cards by default only on mobile; hide on desktop */
+                .pos-cards-wrap { display: none; }
+                .pos-table-wrap { display: block; }
             `}</style>
+
             <Modal
                 title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết người dùng</span>}
                 open={open}
                 onCancel={handleClose}
                 footer={null}
                 width="72vw"
+                style={{ maxWidth: 960, minWidth: 320 }}
                 centered
                 className="detail-modal"
                 styles={{
@@ -185,18 +389,21 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                 }}
             >
                 {/* ══ PROFILE HEADER ══════════════════════════════════════════ */}
-                <div style={{
-                    display: "flex", alignItems: "center", gap: 16,
-                    padding: "14px 18px",
-                    background: BG_SUBTLE,
-                    border: `1.5px solid ${BORDER_MED}`,
-                    borderRadius: 14,
-                    marginBottom: 16,
-                }}>
+                <div
+                    className="detail-profile-header"
+                    style={{
+                        display: "flex", alignItems: "center", gap: 16,
+                        padding: "14px 18px",
+                        background: BG_SUBTLE,
+                        border: `1.5px solid ${BORDER_MED}`,
+                        borderRadius: 14,
+                        marginBottom: 16,
+                    }}
+                >
                     <Avatar
                         size={80}
                         src={avatarSrc}
-                        onError={() => true} // fallback nếu lỗi ảnh
+                        onError={() => true}
                         style={{
                             border: "2px solid #e5e7eb",
                             outline: "3px solid #fff",
@@ -263,11 +470,15 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         </div>
                     </div>
                 </div>
+
                 {/* ══ TWO-COLUMN ══════════════════════════════════════════════ */}
-                <div style={{
-                    display: "grid", gridTemplateColumns: "1fr 1fr",
-                    gap: 14, marginBottom: 16, alignItems: "start",
-                }}>
+                <div
+                    className="detail-two-col"
+                    style={{
+                        display: "grid", gridTemplateColumns: "1fr 1fr",
+                        gap: 14, marginBottom: 16, alignItems: "start",
+                    }}
+                >
                     {/* ── Tài khoản ── */}
                     <div style={{
                         background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
@@ -297,7 +508,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             }}>
                                 <UserAddOutlined style={{ fontSize: 12, color: TEXT_MUTED }} />
                             </div>
-                            <div style={{ display: "flex", gap: 20 }}>
+                            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                                 <div>
                                     <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người tạo</Text>
                                     <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{dataInit?.createdBy || "--"}</Text>
@@ -309,10 +520,10 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                 </div>
                             </div>
                         </div>
-                        {/* Ngày tạo / sửa — dùng nền xám cực nhạt, không có màu */}
-                        <div style={{ display: "flex", gap: 10, paddingTop: 10 }}>
+                        {/* Ngày tạo / sửa */}
+                        <div style={{ display: "flex", gap: 10, paddingTop: 10, flexWrap: "wrap" }}>
                             <div style={{
-                                flex: 1, background: BG_SUBTLE, borderRadius: 8,
+                                flex: 1, minWidth: 100, background: BG_SUBTLE, borderRadius: 8,
                                 padding: "7px 10px", border: `1px solid ${BORDER}`,
                             }}>
                                 <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày tạo</Text>
@@ -321,7 +532,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                 </Text>
                             </div>
                             <div style={{
-                                flex: 1, background: BG_SUBTLE, borderRadius: 8,
+                                flex: 1, minWidth: 100, background: BG_SUBTLE, borderRadius: 8,
                                 padding: "7px 10px", border: `1px solid ${BORDER}`,
                             }}>
                                 <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày sửa</Text>
@@ -331,6 +542,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             </div>
                         </div>
                     </div>
+
                     {/* ── Nhân sự ── */}
                     <div style={{
                         background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
@@ -355,7 +567,8 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         )}
                     </div>
                 </div>
-                {/* ══ POSITIONS TABLE ══════════════════════════════════════════ */}
+
+                {/* ══ POSITIONS SECTION ════════════════════════════════════════ */}
                 <div>
                     <div style={{
                         display: "flex", alignItems: "center",
@@ -378,85 +591,15 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         )}
                     </div>
 
-                    <table style={{
-                        width: "100%", borderCollapse: "collapse",
-                        borderRadius: 12, overflow: "hidden",
-                        border: `1.5px solid ${BORDER_MED}`,
-                    }}>
-                        <thead>
-                            <tr style={{ background: BG_SUBTLE }}>
-                                {["Chức danh", "Mã bậc", "Cấp", "Công ty", "Phòng ban", "Bộ phận"].map(h => (
-                                    <th key={h} style={{
-                                        padding: "10px 14px", textAlign: "left",
-                                        fontSize: 11, fontWeight: 700, color: TEXT_LABEL,
-                                        textTransform: "uppercase", letterSpacing: "0.05em",
-                                        borderBottom: `1.5px solid ${BORDER_MED}`,
-                                    }}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
-                                        Đang tải...
-                                    </td>
-                                </tr>
-                            ) : positions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} style={{ padding: "32px", textAlign: "center" }}>
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                                            <div style={{
-                                                width: 40, height: 40, borderRadius: 10,
-                                                background: BG_SUBTLE, display: "flex",
-                                                alignItems: "center", justifyContent: "center",
-                                                border: `1px solid ${BORDER_MED}`,
-                                            }}>
-                                                <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
-                                            </div>
-                                            <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có chức danh nào</Text>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : positions.map((r: IUserPosition, idx: number) => {
-                                const cfg = sourceTagConfig[r.source];
-                                return (
-                                    <tr
-                                        key={r.id}
-                                        className="detail-pos-row"
-                                        style={{
-                                            borderBottom: idx < positions.length - 1 ? `1px solid ${BORDER}` : "none",
-                                            background: "#fff",
-                                        }}
-                                    >
-                                        <td style={{ padding: "11px 14px" }}>
-                                            <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
-                                                {r.jobTitle?.nameVi ?? "--"}
-                                            </Text>
-                                        </td>
-                                        <td style={{ padding: "11px 14px" }}>
-                                            <SquareBadge label={r.jobTitle?.positionCode ?? "--"} antColor="purple" />
-                                        </td>
-                                        <td style={{ padding: "11px 14px" }}>
-                                            {cfg
-                                                ? <SquareBadge label={cfg.label} antColor={cfg.antColor} />
-                                                : <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>--</Text>
-                                            }
-                                        </td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_LABEL }}>
-                                            {r.company?.name ?? "--"}
-                                        </td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
-                                            {r.department?.name ?? "--"}
-                                        </td>
-                                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
-                                            {r.section?.name ?? "--"}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                    {/* Desktop: table */}
+                    <div className="pos-table-wrap">
+                        <PositionsTable positions={positions} isLoading={isLoading} />
+                    </div>
+
+                    {/* Mobile: cards */}
+                    <div className="pos-cards-wrap">
+                        <PositionCards positions={positions} isLoading={isLoading} />
+                    </div>
                 </div>
             </Modal>
         </>
