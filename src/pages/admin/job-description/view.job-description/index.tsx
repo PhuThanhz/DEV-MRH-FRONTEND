@@ -69,11 +69,25 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const normStr = (s?: string | null) => (s ?? "").toLowerCase().trim();
 
+// ── Responsive hook ──
+function useIsMobile(breakpoint = 640) {
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== "undefined" ? window.innerWidth < breakpoint : false
+    );
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < breakpoint);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, [breakpoint]);
+    return isMobile;
+}
+
 export default function ViewJobDescription({ open, onClose, record }: Props) {
     const [activeTab, setActiveTab] = useState("1");
     const [rfNodes, setRfNodes] = useState<Node[]>([]);
     const [rfEdges, setRfEdges] = useState<Edge[]>([]);
     const [loadingChart, setLoadingChart] = useState(false);
+    const isMobile = useIsMobile();
 
     // ── Permission check ──
     const canViewHistory = useAccess(ALL_PERMISSIONS.JD_FLOW.FETCH_LOGS);
@@ -162,12 +176,38 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
         setRfEdges([]);
     };
 
+    // ── Modal width: full trên mobile, giới hạn trên desktop ──
+    const modalWidth = typeof window !== "undefined"
+        ? (window.innerWidth < 640
+            ? window.innerWidth - 24   // mobile: cách mép 12px mỗi bên
+            : Math.min(900, window.innerWidth - 32))
+        : 900;
+
     return (
         <Modal
-            open={open} onCancel={handleClose} footer={null}
-            width={900} style={{ top: 20 }}
-            styles={{ body: { padding: 0, background: "#f5f6fa", borderRadius: 12, overflow: "hidden" } }}
-            title={null} destroyOnClose
+            open={open}
+            onCancel={handleClose}
+            footer={null}
+            width={modalWidth}
+            style={{
+                top: isMobile ? 16 : 20,   // cách top 16px thay vì 0
+                maxWidth: "calc(100vw - 24px)",
+            }}
+            styles={{
+                body: {
+                    padding: 0,
+                    background: "#f5f6fa",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                },
+                content: {
+                    borderRadius: 12,       // luôn có bo góc, kể cả mobile
+                    padding: 0,
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                },
+            }}
+            title={null}
+            destroyOnClose
             getContainer={document.body}
         >
             {isLoading ? (
@@ -177,66 +217,102 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
             ) : !jd ? (
                 <div style={{ textAlign: "center", color: "#9ca3af", padding: 60 }}>Không có dữ liệu</div>
             ) : (
-                <div style={{ fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif", background: "#f5f6fa", borderRadius: 12 }}>
+                <div style={{
+                    fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                    background: "#f5f6fa",
+                    borderRadius: 12,
+                }}>
 
-                    {/* HEADER */}
+                    {/* ── HEADER ── */}
                     <div style={{
-                        background: "#fff", padding: "22px 28px 18px",
+                        background: "#fff",
+                        padding: isMobile ? "14px 14px 12px" : "18px 24px 14px",
                         borderBottom: "1px solid #eef0f5",
-                        display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20,
                     }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <span style={{
-                                display: "inline-flex", alignItems: "center", gap: 6,
-                                background: ACCENT_LIGHT, border: `1px solid ${ACCENT_BORDER}`,
-                                borderRadius: 20, padding: "3px 12px",
-                                fontSize: 10, fontWeight: 700, color: ACCENT,
-                                letterSpacing: "0.08em", textTransform: "uppercase", width: "fit-content",
+                        {/* Badge */}
+                        <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            background: ACCENT_LIGHT, border: `1px solid ${ACCENT_BORDER}`,
+                            borderRadius: 20, padding: "3px 10px",
+                            fontSize: 10, fontWeight: 700, color: ACCENT,
+                            letterSpacing: "0.08em", textTransform: "uppercase",
+                            marginBottom: 8,
+                        }}>
+                            <FileTextOutlined style={{ fontSize: 10 }} /> Mô tả công việc
+                        </span>
+
+                        {/* Title */}
+                        <h2 style={{
+                            fontSize: isMobile ? 17 : 20,
+                            fontWeight: 800,
+                            color: "#111827",
+                            margin: "0 0 6px",
+                            lineHeight: 1.3,
+                            wordBreak: "break-word",
+                        }}>
+                            {record?.jobTitleName ?? jd?.jobTitleName ?? "—"}
+                        </h2>
+
+                        {/* Company › Department */}
+                        {(record?.companyName || record?.departmentName) && (
+                            <div style={{
+                                display: "flex", alignItems: "center", gap: 5,
+                                fontSize: 12, flexWrap: "wrap", marginBottom: 8,
                             }}>
-                                <FileTextOutlined /> Mô tả công việc
-                            </span>
-
-                            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", margin: 0, lineHeight: 1.3 }}>
-                                {record?.jobTitleName ?? jd?.jobTitleName ?? "—"}
-                            </h2>
-
-                            {(record?.companyName || record?.departmentName) && (
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                                    {record?.companyName && <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.companyName}</span>}
-                                    {record?.companyName && record?.departmentName && <span style={{ color: "#d1d5db" }}>›</span>}
-                                    {record?.departmentName && <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.departmentName}</span>}
-                                </div>
-                            )}
-
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                <span style={{
-                                    fontSize: 12, fontWeight: 700, color: "#1677ff",
-                                    background: "#e6f4ff", border: "1px solid #91caff",
-                                    borderRadius: 20, padding: "2px 12px", fontFamily: "monospace",
-                                }}>
-                                    {jd.code ?? "—"}
-                                </span>
-                                {statusInfo && (
-                                    <span style={{
-                                        fontSize: 12, fontWeight: 700,
-                                        color: statusInfo.color, background: statusInfo.bg,
-                                        border: `1px solid ${statusInfo.border}`,
-                                        borderRadius: 20, padding: "2px 12px",
-                                    }}>
-                                        {statusInfo.label}
-                                    </span>
+                                {record?.companyName && (
+                                    <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.companyName}</span>
                                 )}
-                                {jd.reportTo && (
-                                    <span style={{ fontSize: 13, color: "#6b7280" }}>
-                                        Báo cáo: <b style={{ color: "#374151" }}>{jd.reportTo}</b>
-                                    </span>
+                                {record?.companyName && record?.departmentName && (
+                                    <span style={{ color: "#d1d5db" }}>›</span>
+                                )}
+                                {record?.departmentName && (
+                                    <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.departmentName}</span>
                                 )}
                             </div>
+                        )}
+
+                        {/* Code + Status + ReportTo */}
+                        <div style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            flexWrap: "wrap", marginBottom: 10,
+                        }}>
+                            <span style={{
+                                fontSize: 12, fontWeight: 700, color: "#1677ff",
+                                background: "#e6f4ff", border: "1px solid #91caff",
+                                borderRadius: 20, padding: "2px 10px", fontFamily: "monospace",
+                            }}>
+                                {jd.code ?? "—"}
+                            </span>
+                            {statusInfo && (
+                                <span style={{
+                                    fontSize: 12, fontWeight: 700,
+                                    color: statusInfo.color, background: statusInfo.bg,
+                                    border: `1px solid ${statusInfo.border}`,
+                                    borderRadius: 20, padding: "2px 10px",
+                                }}>
+                                    {statusInfo.label}
+                                </span>
+                            )}
+                            {jd.reportTo && (
+                                <span style={{ fontSize: 12, color: "#6b7280" }}>
+                                    Báo cáo: <b style={{ color: "#374151" }}>{jd.reportTo}</b>
+                                </span>
+                            )}
                         </div>
 
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                        {/* Version + Date + Export button */}
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexWrap: "wrap",
+                        }}>
                             {jd.version != null && (
-                                <span style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "4px 12px" }}>
+                                <span style={{
+                                    fontSize: 11, fontWeight: 600, color: "#9ca3af",
+                                    background: "#f9fafb", border: "1px solid #e5e7eb",
+                                    borderRadius: 8, padding: "3px 10px",
+                                }}>
                                     Phiên bản: {jd.version}
                                 </span>
                             )}
@@ -255,13 +331,13 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                                 size="small"
                                 onClick={() => exportJdToExcel(jd, logs ?? [])}
                                 style={{
-                                    marginTop: 4,
-                                    background: "#e8637a",
-                                    borderColor: "#e8637a",
+                                    background: ACCENT,
+                                    borderColor: ACCENT,
                                     color: "#fff",
                                     fontWeight: 600,
                                     borderRadius: 8,
                                     fontSize: 12,
+                                    marginLeft: "auto", // đẩy button về cuối dòng
                                 }}
                             >
                                 Xuất Excel
@@ -269,32 +345,58 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                         </div>
                     </div>
 
-                    {/* BODY */}
-                    <div style={{ padding: "20px 28px 28px" }}>
+                    {/* ── BODY ── */}
+                    <div style={{ padding: isMobile ? "12px 10px 24px" : "16px 20px 24px" }}>
 
-                        {/* Tab bar */}
+                        {/* Tab bar — scroll ngang, không bị cắt */}
                         <div style={{
-                            display: "flex", gap: 4, marginBottom: 20,
-                            background: "#fff", borderRadius: 12, padding: 6,
-                            border: "1px solid #eef0f5", boxShadow: "0 1px 4px rgba(0,0,0,.04)",
-                        }}>
+                            display: "flex",
+                            gap: 4,
+                            marginBottom: 16,
+                            background: "#fff",
+                            borderRadius: 12,
+                            padding: 5,
+                            border: "1px solid #eef0f5",
+                            boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+                            overflowX: "auto",
+                            WebkitOverflowScrolling: "touch",
+                            // Ẩn scrollbar nhưng vẫn scroll được
+                            scrollbarWidth: "none",          // Firefox
+                            msOverflowStyle: "none",         // IE/Edge
+                        } as React.CSSProperties}>
                             {TABS.map((tab) => {
                                 const isActive = activeTab === tab.key;
                                 return (
-                                    <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                                        flex: 1, padding: "9px 12px", borderRadius: 8,
-                                        fontSize: 13, fontWeight: isActive ? 700 : 500,
-                                        color: isActive ? "#fff" : "#6b7280",
-                                        background: isActive ? ACCENT : "transparent",
-                                        border: "none", cursor: "pointer",
-                                        transition: "all 0.18s ease",
-                                        boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
-                                    }}>
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key)}
+                                        style={{
+                                            // Không dùng flex:1 khi mobile vì sẽ ép tab quá hẹp
+                                            flex: isMobile ? "0 0 auto" : "1",
+                                            padding: isMobile ? "8px 14px" : "9px 10px",
+                                            borderRadius: 8,
+                                            fontSize: isMobile ? 12 : 13,
+                                            fontWeight: isActive ? 700 : 500,
+                                            color: isActive ? "#fff" : "#6b7280",
+                                            background: isActive ? ACCENT : "transparent",
+                                            border: "none",
+                                            cursor: "pointer",
+                                            transition: "all 0.18s ease",
+                                            boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
+                                            whiteSpace: "nowrap",
+                                            minWidth: "fit-content",
+                                        }}
+                                    >
                                         {tab.label}
                                     </button>
                                 );
                             })}
                         </div>
+
+                        {/* CSS để ẩn scrollbar trên webkit */}
+                        <style>{`
+                            div::-webkit-scrollbar { display: none; }
+                        `}</style>
 
                         {activeTab === "1" && <Tab1General jd={jd} statusInfo={statusInfo} />}
                         {activeTab === "2" && (
@@ -305,7 +407,6 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                         {activeTab === "3" && <Tab3Tasks tasks={jd.tasks} />}
                         {activeTab === "4" && <Tab4Requirements requirements={jd.requirements} />}
                         {activeTab === "5" && canViewHistory && <Tab5History logs={logs} />}
-
                     </div>
                 </div>
             )}

@@ -1,4 +1,4 @@
-import { Modal, Typography, Avatar, Tabs } from "antd";
+import { Modal, Typography, Avatar, Tabs, Grid } from "antd";
 import {
     ProfileOutlined,
     HistoryOutlined,
@@ -13,6 +13,7 @@ import { TabInfo } from "./Tabinfo";
 import { TabHistory } from "./Tabhistory";
 
 const { Text, Title } = Typography;
+const { useBreakpoint } = Grid;
 
 // ── Design tokens ────────────────────────────────────────────────────
 export const T = {
@@ -126,7 +127,13 @@ interface IProps {
 }
 
 const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
+    const screens = useBreakpoint();
+    const isMobile = !screens.md;
     const st = getStatus(dataInit?.progressStatus);
+
+    const headerPadding = isMobile ? "14px 16px 12px" : "22px 28px 18px";
+    const bodyPadding = isMobile ? "4px 12px 16px" : "4px 28px 24px";
+    const footerPadding = isMobile ? "8px 16px" : "10px 28px";
 
     const tabItems = [
         {
@@ -138,8 +145,7 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                 </span>
             ),
             children: (
-                // ← min-height giữ kích thước ổn định khi đổi tab
-                <div style={{ minHeight: 480, width: "100%" }}>
+                <div style={{ minHeight: isMobile ? 320 : 480, width: "100%" }}>
                     {dataInit ? <TabInfo dataInit={dataInit} /> : null}
                 </div>
             ),
@@ -153,8 +159,7 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                 </span>
             ),
             children: (
-                // ← cùng min-height, width: 100% để stretch bằng tab kia
-                <div style={{ minHeight: 480, width: "100%" }}>
+                <div style={{ minHeight: isMobile ? 320 : 480, width: "100%" }}>
                     <TabHistory userId={open && dataInit?.user?.id ? dataInit.user.id : undefined} />
                 </div>
             ),
@@ -166,37 +171,48 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
             open={open}
             onCancel={onClose}
             footer={null}
-            width={980}
-            centered
-            destroyOnClose
+            width={isMobile ? "100%" : 980}
+            style={isMobile ? { top: 0, margin: 0, maxWidth: "100vw", padding: 0 } : undefined}
             styles={{
                 content: {
                     padding: 0,
-                    borderRadius: 18,
+                    borderRadius: isMobile ? 0 : 18,
                     overflow: "hidden",
                     boxShadow: "0 24px 64px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.08)",
                 },
-                body: { padding: 0 },
+                body: {
+                    padding: 0,
+                    ...(isMobile ? { maxHeight: "100dvh", overflowY: "auto" } : {}),
+                },
                 mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.35)" },
             }}
+            centered={!isMobile}
+            destroyOnClose
         >
             {!dataInit ? null : (
                 <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
 
                     {/* ── Header ── */}
                     <div style={{
-                        padding: "22px 28px 18px",
+                        padding: headerPadding,
                         borderBottom: `1px solid ${T.line}`,
                         background: T.white,
                         position: "relative",
                     }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 2 }}>
+                        <div style={{
+                            display: "flex",
+                            alignItems: isMobile ? "flex-start" : "center",
+                            gap: isMobile ? 12 : 16,
+                            paddingTop: 2,
+                        }}>
                             {/* Avatar */}
                             <Avatar
-                                size={54}
+                                size={isMobile ? 44 : 54}
                                 style={{
                                     background: `linear-gradient(135deg, ${avatarColor(dataInit.user?.name)}, ${avatarColor(dataInit.user?.name)}cc)`,
-                                    fontSize: 20, fontWeight: 700, flexShrink: 0,
+                                    fontSize: isMobile ? 17 : 20,
+                                    fontWeight: 700,
+                                    flexShrink: 0,
                                     borderRadius: 14,
                                     boxShadow: `0 4px 12px ${avatarColor(dataInit.user?.name)}40`,
                                 }}
@@ -206,8 +222,23 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
 
                             {/* Name + info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 3 }}>
-                                    <Title level={4} style={{ margin: 0, color: T.ink, fontSize: 17, fontWeight: 700, lineHeight: 1.2 }}>
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    flexWrap: "wrap",
+                                    marginBottom: 3,
+                                }}>
+                                    <Title
+                                        level={4}
+                                        style={{
+                                            margin: 0,
+                                            color: T.ink,
+                                            fontSize: isMobile ? 15 : 17,
+                                            fontWeight: 700,
+                                            lineHeight: 1.2,
+                                        }}
+                                    >
                                         {dataInit.user?.name ?? "—"}
                                     </Title>
                                     <div style={{
@@ -220,17 +251,32 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                     </div>
                                 </div>
 
-                                <Text style={{ fontSize: 12.5, color: T.ink4, display: "block", marginBottom: 8 }}>
+                                <Text style={{
+                                    fontSize: 12.5,
+                                    color: T.ink4,
+                                    display: "block",
+                                    marginBottom: 8,
+                                }}>
                                     {dataInit.user?.email ?? "—"}
                                 </Text>
 
+                                {/* Current → next position row */}
                                 <div style={{
-                                    display: "inline-flex", alignItems: "center", gap: 8,
-                                    padding: "5px 12px", borderRadius: 8,
-                                    background: T.s1, border: `1px solid ${T.ink6}`,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "5px 10px",
+                                    borderRadius: 8,
+                                    background: T.s1,
+                                    border: `1px solid ${T.ink6}`,
                                     flexWrap: "wrap",
+                                    maxWidth: "100%",
                                 }}>
-                                    <Text style={{ fontSize: 11, color: T.ink5, fontWeight: 600, letterSpacing: 0.4, textTransform: "uppercase" }}>
+                                    <Text style={{
+                                        fontSize: 11, color: T.ink5,
+                                        fontWeight: 600, letterSpacing: 0.4,
+                                        textTransform: "uppercase",
+                                    }}>
                                         Hiện tại
                                     </Text>
                                     <Text style={{ fontSize: 13, fontWeight: 600, color: T.ink2 }}>
@@ -244,7 +290,11 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                     {dataInit.nextStep?.jobTitleName && (
                                         <>
                                             <span style={{ fontSize: 11, color: T.ink5 }}>→</span>
-                                            <Text style={{ fontSize: 12.5, color: T.ink4, fontWeight: 500 }}>
+                                            <Text style={{
+                                                fontSize: 12.5,
+                                                color: T.ink4,
+                                                fontWeight: 500,
+                                            }}>
                                                 {dataInit.nextStep.jobTitleName}
                                             </Text>
                                             {dataInit.nextStep?.positionLevelCode && (
@@ -257,8 +307,8 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                 </div>
                             </div>
 
-                            {/* Progress pill */}
-                            {dataInit.currentStepOrder && dataInit.totalSteps && (
+                            {/* Progress pill — ẩn trên mobile, hiện dưới dạng inline */}
+                            {!isMobile && dataInit.currentStepOrder && dataInit.totalSteps && (
                                 <div style={{
                                     flexShrink: 0, textAlign: "center",
                                     padding: "8px 18px", borderRadius: 12,
@@ -267,19 +317,45 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                                 }}>
                                     <Text style={{
                                         fontSize: 22, fontWeight: 800, color: T.acc,
-                                        lineHeight: 1, display: "block", fontVariantNumeric: "tabular-nums",
+                                        lineHeight: 1, display: "block",
+                                        fontVariantNumeric: "tabular-nums",
                                     }}>
                                         {dataInit.currentStepOrder}
                                         <Text style={{ fontSize: 14, color: `${T.acc}99`, fontWeight: 500 }}>
                                             /{dataInit.totalSteps}
                                         </Text>
                                     </Text>
-                                    <Text style={{ fontSize: 10, color: T.acc, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase" }}>
+                                    <Text style={{
+                                        fontSize: 10, color: T.acc,
+                                        fontWeight: 600, letterSpacing: 0.6,
+                                        textTransform: "uppercase",
+                                    }}>
                                         Vị trí
                                     </Text>
                                 </div>
                             )}
                         </div>
+
+                        {/* Progress pill dạng nhỏ trên mobile */}
+                        {isMobile && dataInit.currentStepOrder && dataInit.totalSteps && (
+                            <div style={{
+                                marginTop: 10,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "4px 12px",
+                                borderRadius: 8,
+                                background: T.accSoft,
+                                border: `1px solid ${T.accBord}`,
+                            }}>
+                                <Text style={{ fontSize: 11, color: T.acc, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                    Vị trí
+                                </Text>
+                                <Text style={{ fontSize: 13, fontWeight: 800, color: T.acc, fontVariantNumeric: "tabular-nums" }}>
+                                    {dataInit.currentStepOrder}/{dataInit.totalSteps}
+                                </Text>
+                            </div>
+                        )}
 
                         {/* Overdue banner */}
                         {dataInit.overdue && (
@@ -297,7 +373,7 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
 
                     {/* ── Tabs body ── */}
                     <div style={{
-                        padding: "4px 28px 24px",
+                        padding: bodyPadding,
                         background: T.s1,
                         flex: 1,
                     }}>
@@ -311,11 +387,14 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
 
                     {/* ── Audit footer ── */}
                     <div style={{
-                        padding: "10px 28px",
+                        padding: footerPadding,
                         borderTop: `1px solid ${T.line}`,
                         background: T.white,
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        flexWrap: "wrap", gap: 4,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 4,
                     }}>
                         <Text style={{ fontSize: 11, color: T.ink5 }}>
                             Tạo bởi{" "}

@@ -20,8 +20,20 @@ import SegmentedControl from "./components/SegmentedControl";
 const { Text } = Typography;
 type ViewMode = "department" | "band";
 
+// ── Hook detect mobile ────────────────────────────────────────────
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+    useState(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    });
+    return isMobile;
+};
+
 const CareerPathTab = () => {
     const { departmentId } = useParams();
+    const isMobile = useIsMobile();
 
     const [openModal, setOpenModal] = useState(false);
     const [openViewDetail, setOpenViewDetail] = useState(false);
@@ -99,8 +111,9 @@ const CareerPathTab = () => {
                 <div style={{
                     background: T.white,
                     border: `1px solid ${T.line}`,
-                    borderRadius: 14,
-                    padding: "20px 20px 16px",
+                    borderRadius: isMobile ? 10 : 14,
+                    // Padding nhỏ hơn trên mobile
+                    padding: isMobile ? "12px 10px 10px" : "20px 20px 16px",
                     boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
                 }}>
                     <CareerLadderFlat
@@ -136,12 +149,20 @@ const CareerPathTab = () => {
                     addPermission={ALL_PERMISSIONS.CAREER_PATHS.CREATE}
                 />
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 10,
+                    // Trên mobile cho wrap nếu cần
+                    flexWrap: "wrap",
+                }}>
                     <button
                         onClick={() => setShowFilter(!showFilter)}
                         style={{
                             display: "flex", alignItems: "center", gap: 5,
-                            padding: "5px 11px",
+                            // Trên mobile padding dọc lớn hơn cho dễ tap
+                            padding: isMobile ? "7px 13px" : "5px 11px",
                             borderRadius: 7,
                             border: `1px solid ${showFilter ? T.lineMed : T.line}`,
                             background: showFilter ? T.s2 : "transparent",
@@ -172,7 +193,10 @@ const CareerPathTab = () => {
                         }}>
                             Hiển thị theo
                         </Text>
-                        <SegmentedControl value={viewMode} onChange={setViewMode} />
+                        {/* SegmentedControl tự co giãn theo container */}
+                        <div style={{ overflowX: "auto" }}>
+                            <SegmentedControl value={viewMode} onChange={setViewMode} />
+                        </div>
                     </div>
                 )}
             </div>

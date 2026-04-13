@@ -1,4 +1,4 @@
-import { Typography, Skeleton } from "antd";
+import { Typography, Skeleton, Grid } from "antd";
 import {
     HistoryOutlined,
     ClockCircleOutlined,
@@ -10,8 +10,12 @@ import { useEmployeeCareerPathHistoryQuery } from "@/hooks/useEmployeeCareerPath
 import { T, Badge } from "./ModalEmployeeDetail";
 
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 export const TabHistory = ({ userId }: { userId?: number }) => {
+    const screens = useBreakpoint();
+    const isMobile = !screens.md;
+
     const { data: histories = [], isFetching } =
         useEmployeeCareerPathHistoryQuery(userId);
 
@@ -34,7 +38,7 @@ export const TabHistory = ({ userId }: { userId?: number }) => {
                 <div
                     key={h.id ?? i}
                     style={{
-                        padding: "12px 14px",
+                        padding: isMobile ? "10px 12px" : "12px 14px",  // ← compact hơn trên mobile
                         background: T.white,
                         border: `1px solid ${T.line}`,
                         borderRadius: 10,

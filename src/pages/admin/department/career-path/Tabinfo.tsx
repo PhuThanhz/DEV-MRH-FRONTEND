@@ -1,4 +1,4 @@
-import { Typography } from "antd";
+import { Typography, Grid } from "antd";
 import {
     CheckOutlined,
     WarningOutlined,
@@ -10,6 +10,7 @@ import type { IEmployeeCareerPath, IEmployeeCareerPathStepProgress } from "@/typ
 import { T, Badge, Card, SectionLabel } from "./ModalEmployeeDetail";
 
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 // ── Info row ─────────────────────────────────────────────────────────
 const InfoRow = ({
@@ -103,14 +104,10 @@ const StepNode = ({
                         </Badge>
                     )}
                     {isCurrent && (
-                        <Badge color={T.acc} bg={T.accSoft} border={T.accBord}>
-                            Hiện tại
-                        </Badge>
+                        <Badge color={T.acc} bg={T.accSoft} border={T.accBord}>Hiện tại</Badge>
                     )}
                     {isCompleted && (
-                        <Badge color={T.green} bg={T.greenSoft} border={T.greenBord}>
-                            ✓ Đã bổ nhiệm
-                        </Badge>
+                        <Badge color={T.green} bg={T.greenSoft} border={T.greenBord}>✓ Đã bổ nhiệm</Badge>
                     )}
                 </div>
 
@@ -171,17 +168,31 @@ const ProgressBar = ({ current, total }: { current: number; total: number }) => 
     );
 };
 
-// ── Tab Info — 2 cột ─────────────────────────────────────────────────
+// ── Tab Info ─────────────────────────────────────────────────────────
 export const TabInfo = ({ dataInit }: { dataInit: IEmployeeCareerPath }) => {
+    const screens = useBreakpoint();
+    const isMobile = !screens.md;
+
     const expectedDate = dataInit.stepStartedAt && dataInit.durationMonths
         ? dayjs(dataInit.stepStartedAt).add(dataInit.durationMonths, "month")
         : null;
 
     return (
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+        <div style={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",  // ← stack trên mobile
+            gap: 14,
+            alignItems: "flex-start",
+        }}>
 
             {/* ── Cột trái: thông tin ── */}
-            <div style={{ flex: "0 0 348px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{
+                flex: isMobile ? "unset" : "0 0 348px",
+                width: isMobile ? "100%" : undefined,      // ← full-width trên mobile
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+            }}>
                 {/* Card: Lộ trình & vị trí */}
                 <Card>
                     <SectionLabel>Lộ trình & vị trí</SectionLabel>
@@ -198,7 +209,7 @@ export const TabInfo = ({ dataInit }: { dataInit: IEmployeeCareerPath }) => {
                         label="Vị trí hiện tại"
                         value={
                             dataInit.currentStep ? (
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                                     <Text style={{ fontSize: 13, color: T.ink2, fontWeight: 500 }}>
                                         {dataInit.currentStep.jobTitleName}
                                     </Text>
@@ -215,7 +226,7 @@ export const TabInfo = ({ dataInit }: { dataInit: IEmployeeCareerPath }) => {
                         label="Vị trí kế tiếp"
                         value={
                             dataInit.nextStep ? (
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                                     <RightOutlined style={{ fontSize: 10, color: T.ink5 }} />
                                     <Text style={{ fontSize: 13, color: T.ink2, fontWeight: 500 }}>
                                         {dataInit.nextStep.jobTitleName}
@@ -303,7 +314,8 @@ export const TabInfo = ({ dataInit }: { dataInit: IEmployeeCareerPath }) => {
                     }}>
                         <Text style={{
                             fontSize: 10, color: T.ink5, fontWeight: 700,
-                            display: "block", marginBottom: 5, letterSpacing: 0.9, textTransform: "uppercase",
+                            display: "block", marginBottom: 5,
+                            letterSpacing: 0.9, textTransform: "uppercase",
                         }}>
                             Ghi chú
                         </Text>
@@ -315,10 +327,10 @@ export const TabInfo = ({ dataInit }: { dataInit: IEmployeeCareerPath }) => {
             </div>
 
             {/* ── Cột phải: timeline ── */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, width: isMobile ? "100%" : undefined }}>
                 {dataInit.allSteps && dataInit.allSteps.length > 0 && (
                     <Card style={{
-                        maxHeight: 500,
+                        maxHeight: isMobile ? 360 : 500,  // ← thấp hơn trên mobile
                         overflowY: "auto",
                         scrollbarWidth: "thin",
                         scrollbarColor: `${T.ink6} transparent`,

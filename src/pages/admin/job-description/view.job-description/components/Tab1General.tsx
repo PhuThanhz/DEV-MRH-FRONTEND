@@ -16,7 +16,12 @@ const Tab1General = ({ jd, statusInfo }: Props) => (
         border: "1px solid #eef0f5", overflow: "hidden",
         boxShadow: "0 2px 10px rgba(0,0,0,.045)",
     }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#f3f4f6" }}>
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", // ← chỉnh
+            gap: 1,
+            background: "#f3f4f6",
+        }}>
             {[
                 { label: "Mã JD", value: jd.code },
                 { label: "Trạng thái", value: statusInfo?.label },

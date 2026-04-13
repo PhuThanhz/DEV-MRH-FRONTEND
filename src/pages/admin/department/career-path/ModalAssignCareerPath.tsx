@@ -12,7 +12,7 @@ import {
     useAssignCareerPathMutation,
     useUpdateEmployeeCareerPathMutation,
 } from "@/hooks/useEmployeeCareerPaths";
-import { callFetchUser, callFetchUserPositions, callGetCareerPathTemplatesByDepartment } from "@/config/api";
+import { callFetchUsersUnassignedCareerPath, callFetchUserPositions, callGetCareerPathTemplatesByDepartment } from "@/config/api";
 import type { ICareerPathTemplate, IEmployeeCareerPath } from "@/types/backend";
 
 const { Text } = Typography;
@@ -144,21 +144,21 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
             }
         };
 
-        // Load users với positions
+
+        // Load users với positions - chỉ lấy user thuộc phòng ban này
         const loadUsers = async () => {
             setLoadingUsers(true);
             try {
-                const res = await callFetchUser("page=1&size=200");
-                const users = res?.data?.result ?? [];
-                // Map sang IUserOption, lấy position đầu tiên active
+                const res = await callFetchUsersUnassignedCareerPath(departmentId); // ← đổi
+                const users = res?.data ?? []; // ← không cần .result vì là List, không phải paginate
                 const opts: IUserOption[] = users.map((u: any) => {
                     const activePos = u.positions?.find((p: any) => p.active) ?? u.positions?.[0];
                     return {
                         id: u.id,
                         name: u.name,
                         email: u.email,
-                        jobTitleName: activePos?.jobTitleNameVi ?? activePos?.jobTitle?.nameVi,
-                        positionCode: activePos?.positionCode ?? activePos?.jobTitle?.positionCode,
+                        jobTitleName: activePos?.jobTitleNameVi,
+                        positionCode: activePos?.positionCode,
                     };
                 });
                 setUserOptions(opts);

@@ -1652,3 +1652,8 @@ export const callFetchDepartmentCompleteness = () => {
         "/api/v1/dashboard/department-completeness"
     );
 };
+export const callFetchUsersUnassignedCareerPath = (departmentId: number) => {
+    return axios.get<IBackendRes<IUser[]>>(
+        `/api/v1/departments/${departmentId}/users/unassigned-career-path`
+    );
+};

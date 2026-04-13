@@ -1,5 +1,5 @@
 import { Drawer, Table, Tag, Space, Popconfirm, Button } from "antd";
-import { useState } from "react";
+import { useState, useEffect } from "react"; {/* ← thêm useEffect */ }
 import type { Dispatch, SetStateAction } from "react";
 import { EyeOutlined, EditOutlined, DeleteOutlined, SafetyOutlined, PlusOutlined } from "@ant-design/icons";
 
@@ -34,14 +34,17 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
     const [openView, setOpenView] = useState(false);
     const [openMatrix, setOpenMatrix] = useState(false);
 
-    const [dataForm, setDataForm] =
-        useState<IPermissionContentForm | null>(null);
+    const [dataForm, setDataForm] = useState<IPermissionContentForm | null>(null);
+    const [dataView, setDataView] = useState<IPermissionContentDetail | null>(null);
+    const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
 
-    const [dataView, setDataView] =
-        useState<IPermissionContentDetail | null>(null);
-
-    const [selectedContentId, setSelectedContentId] =
-        useState<number | null>(null);
+    // ── Detect mobile ──────────────────────────────────────────────────────────
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
 
     /* ===================== QUERY ===================== */
     const query =
@@ -57,11 +60,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
     /* ===================== HANDLERS ===================== */
     const handleAdd = () => {
         if (!category?.id) return;
-
-        setDataForm({
-            name: "",
-            categoryId: category.id,
-        });
+        setDataForm({ name: "", categoryId: category.id });
         setOpenModal(true);
     };
 
@@ -70,7 +69,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
         {
             title: "STT",
             key: "index",
-            width: 60,
+            width: 55,
             align: "center" as const,
             render: (_: any, __: any, index: number) => index + 1,
         },
@@ -84,7 +83,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
         {
             title: "Trạng thái",
             dataIndex: "active",
-            width: 130,
+            width: 120,
             align: "center" as const,
             render: (v: boolean) =>
                 v ? (
@@ -95,21 +94,15 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
         },
         {
             title: "Hành động",
-            width: 200,
+            width: 160,
             align: "center" as const,
             render: (_: any, record: IPermissionContent) => (
-                <Space>
-                    {/* ===== VIEW ===== */}
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSION_CONTENT.GET_BY_ID}
-                        hideChildren
-                    >
-                        <EyeOutlined
-                            style={{
-                                fontSize: 18,
-                                color: "#1677ff",
-                                cursor: "pointer",
-                            }}
+                <Space size={4}>
+                    <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.GET_BY_ID} hideChildren>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                             onClick={() => {
                                 if (!record.id) return;
                                 setDataView(record as IPermissionContentDetail);
@@ -118,20 +111,13 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         />
                     </Access>
 
-                    {/* ===== EDIT ===== */}
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSION_CONTENT.UPDATE}
-                        hideChildren
-                    >
-                        <EditOutlined
-                            style={{
-                                fontSize: 18,
-                                color: "#fa8c16",
-                                cursor: "pointer",
-                            }}
+                    <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.UPDATE} hideChildren>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => {
                                 if (!record.id || !category?.id) return;
-
                                 setDataForm({
                                     id: record.id,
                                     name: record.name,
@@ -142,13 +128,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         />
                     </Access>
 
-                    {/* ===== PERMISSION MATRIX ===== */}
-                    <SafetyOutlined
-                        style={{
-                            fontSize: 18,
-                            color: "#52c41a",
-                            cursor: "pointer",
-                        }}
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<SafetyOutlined style={{ color: "#52c41a", fontSize: 16 }} />}
                         onClick={() => {
                             if (!record.id) return;
                             setSelectedContentId(record.id);
@@ -156,27 +139,19 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         }}
                     />
 
-                    {/* ===== DELETE ===== */}
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSION_CONTENT.DELETE}
-                        hideChildren
-                    >
+                    <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.DELETE} hideChildren>
                         <Popconfirm
                             title="Xoá nội dung này?"
                             description="Bạn có chắc chắn muốn xoá nội dung này không?"
                             okText="Xác nhận"
                             cancelText="Hủy"
                             okButtonProps={{ danger: true }}
-                            onConfirm={() =>
-                                record.id && deleteMutation.mutate(record.id)
-                            }
+                            onConfirm={() => record.id && deleteMutation.mutate(record.id)}
                         >
-                            <DeleteOutlined
-                                style={{
-                                    fontSize: 18,
-                                    color: "#ff4d4f",
-                                    cursor: "pointer",
-                                }}
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>
@@ -196,36 +171,26 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         </Tag>
                     </span>
                 }
-                width={900}
+                width={isMobile ? "100vw" : Math.min(900, window.innerWidth - 48)}
                 open={open}
                 onClose={() => setOpen(false)}
                 destroyOnClose
-                styles={{
-                    body: { padding: "16px 24px" },
-                }}
+                styles={{ body: { padding: "16px 24px" } }}
             >
-                {/* ===== ADD BUTTON ===== */}
                 <div style={{ marginBottom: 16, textAlign: "right" }}>
-                    <Access
-                        permission={ALL_PERMISSIONS.PERMISSION_CONTENT.CREATE}
-                        hideChildren
-                    >
+                    <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.CREATE} hideChildren>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={handleAdd}
                             disabled={!category?.id}
-                            style={{
-                                backgroundColor: "#eb2f96",
-                                borderColor: "#eb2f96",
-                            }}
+                            style={{ backgroundColor: "#eb2f96", borderColor: "#eb2f96" }}
                         >
                             Thêm nội dung
                         </Button>
                     </Access>
                 </div>
 
-                {/* ===== TABLE ===== */}
                 <Table<IPermissionContent>
                     rowKey="id"
                     loading={isFetching}
@@ -234,10 +199,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                     pagination={false}
                     bordered
                     size="middle"
+                    scroll={{ x: "max-content" }}
                 />
             </Drawer>
 
-            {/* ===== CREATE / UPDATE ===== */}
             <ModalPermissionContent
                 open={openModal}
                 setOpen={setOpenModal}
@@ -245,14 +210,12 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                 setDataInit={setDataForm}
             />
 
-            {/* ===== VIEW ===== */}
             <ViewPermissionContent
                 open={openView}
                 setOpen={setOpenView}
                 dataInit={dataView}
             />
 
-            {/* ===== PERMISSION MATRIX ===== */}
             <PermissionMatrixDrawer
                 open={openMatrix}
                 setOpen={setOpenMatrix}

@@ -46,10 +46,13 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
     return (
         <Modal
             open={open}
-            width={1200}
+            width={Math.min(1200, window.innerWidth - 48)}
             title={
                 <div style={{ fontSize: 16, fontWeight: 600, color: "#262626" }}>
-                    Ma trận phân quyền: <span style={{ color: "#eb2f96", fontWeight: 500 }}>{matrix.contentName}</span>
+                    Ma trận phân quyền:{" "}
+                    <span style={{ color: "#eb2f96", fontWeight: 500 }}>
+                        {matrix.contentName}
+                    </span>
                 </div>
             }
             onCancel={() => setOpen(false)}
@@ -99,13 +102,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                     justifyContent: "space-between",
                                 }}
                             >
-                                <span
-                                    style={{
-                                        fontSize: 14,
-                                        fontWeight: 600,
-                                        color: "#262626",
-                                    }}
-                                >
+                                <span style={{ fontSize: 14, fontWeight: 600, color: "#262626" }}>
                                     {dept.departmentName}
                                 </span>
                                 <span
@@ -129,6 +126,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                 dataSource={dept.jobTitles}
                                 pagination={false}
                                 size="small"
+                                scroll={{ x: "max-content" }}
                                 showHeader={dept === matrix.departments[0]}
                                 columns={[
                                     {
@@ -145,11 +143,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                         title: "Chức danh",
                                         dataIndex: "jobTitleName",
                                         render: (text) => (
-                                            <span
-                                                style={{
-                                                    color: "#262626",
-                                                }}
-                                            >
+                                            <span style={{ color: "#262626" }}>
                                                 {text}
                                             </span>
                                         ),
@@ -159,19 +153,14 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                         width: 320,
                                         render: (_, record) => (
                                             <Select
-                                                style={{ width: 300 }}
+                                                style={{ width: "100%" }}
                                                 placeholder="Chọn quyền"
                                                 allowClear
-                                                value={
-                                                    record.processActionId ??
-                                                    null
-                                                }
+                                                value={record.processActionId ?? null}
                                                 loading={isLoadingActions}
                                                 optionLabelProp="label"
                                                 onChange={(processActionId) => {
-                                                    if (!processActionId)
-                                                        return;
-
+                                                    if (!processActionId) return;
                                                     assignMutation.mutate(
                                                         {
                                                             contentId,
@@ -182,24 +171,20 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                                             },
                                                         },
                                                         {
-                                                            onSuccess: () =>
-                                                                refetch(),
+                                                            onSuccess: () => refetch(),
                                                         }
                                                     );
                                                 }}
                                             >
-                                                {actionPage?.result.map(
-                                                    (action) => (
-                                                        <Select.Option
-                                                            key={action.id}
-                                                            value={action.id}
-                                                            label={`${action.code} - ${action.name}`}
-                                                        >
-                                                            {action.code} -{" "}
-                                                            {action.name}
-                                                        </Select.Option>
-                                                    )
-                                                )}
+                                                {actionPage?.result.map((action) => (
+                                                    <Select.Option
+                                                        key={action.id}
+                                                        value={action.id}
+                                                        label={`${action.code} - ${action.name}`}
+                                                    >
+                                                        {action.code} - {action.name}
+                                                    </Select.Option>
+                                                ))}
                                             </Select>
                                         ),
                                     },
@@ -240,6 +225,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                             dataSource={actionPage.result}
                             rowKey="id"
                             bordered
+                            scroll={{ x: "max-content" }}
                             columns={[
                                 {
                                     title: "Mã",
@@ -267,12 +253,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                     dataIndex: "name",
                                     width: 180,
                                     render: (v) => (
-                                        <span
-                                            style={{
-                                                fontWeight: 500,
-                                                color: "#262626",
-                                            }}
-                                        >
+                                        <span style={{ fontWeight: 500, color: "#262626" }}>
                                             {v}
                                         </span>
                                     ),
@@ -282,12 +263,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                     dataIndex: "shortDescription",
                                     width: 280,
                                     render: (v) => (
-                                        <span
-                                            style={{
-                                                fontSize: 13,
-                                                color: "#595959",
-                                            }}
-                                        >
+                                        <span style={{ fontSize: 13, color: "#595959" }}>
                                             {v || "—"}
                                         </span>
                                     ),
@@ -296,13 +272,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
                                     title: "Mô tả chi tiết",
                                     dataIndex: "description",
                                     render: (v) => (
-                                        <span
-                                            style={{
-                                                fontSize: 13,
-                                                color: "#8c8c8c",
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
+                                        <span style={{ fontSize: 13, color: "#8c8c8c", lineHeight: 1.6 }}>
                                             {v || "—"}
                                         </span>
                                     ),

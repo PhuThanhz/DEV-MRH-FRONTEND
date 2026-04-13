@@ -10,6 +10,11 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/dashboard/summary",
             module: "DASHBOARD",
         },
+        GET_DEPARTMENT_COMPLETENESS: {  // ← THÊM
+            method: "GET",
+            apiPath: "/api/v1/dashboard/department-completeness",
+            module: "DASHBOARD",
+        },
     },
 
     /* ===================== PERMISSIONS ===================== */
@@ -97,6 +102,11 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/departments/{id}", module: "DEPARTMENTS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/departments/{id}", module: "DEPARTMENTS" },
         GET_BY_COMPANY: { method: "GET", apiPath: "/api/v1/departments/by-company/{companyId}", module: "DEPARTMENTS" },
+        GET_USERS_UNASSIGNED_CAREER_PATH: {
+            method: "GET",
+            apiPath: "/api/v1/departments/{departmentId}/users/unassigned-career-path",
+            module: "DEPARTMENTS",
+        },
 
     },
     /* ===================== DEPARTMENT JOB TITLES ===================== */

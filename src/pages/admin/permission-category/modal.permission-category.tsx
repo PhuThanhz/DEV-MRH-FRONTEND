@@ -6,9 +6,7 @@ import {
     useUpdatePermissionCategoryMutation,
 } from "@/hooks/usePermissionCategory";
 import { useCompaniesQuery } from "@/hooks/useCompanies";
-
 import { callFetchDepartmentsByCompany } from "@/config/api";
-
 import type { IPermissionCategory } from "@/types/backend";
 
 interface IProps {
@@ -16,8 +14,7 @@ interface IProps {
     setOpen: (v: boolean) => void;
     dataInit: IPermissionCategory | null;
     setDataInit: (v: IPermissionCategory | null) => void;
-    onSuccess?: () => void;  // ✅ thêm dòng này
-
+    onSuccess?: () => void;
 }
 
 const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IProps) => {
@@ -30,7 +27,6 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
     const createMutation = useCreatePermissionCategoryMutation();
     const updateMutation = useUpdatePermissionCategoryMutation();
 
-    /* ================= COMPANY ================= */
     const { data: companyData } = useCompaniesQuery("page=1&size=100");
 
     const companyOptions = useMemo(
@@ -42,44 +38,34 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
         [companyData]
     );
 
-    /* ================= LOAD DEPARTMENT ================= */
     const fetchDepartments = async (companyId: number) => {
         setLoadingDept(true);
         try {
             const res = await callFetchDepartmentsByCompany(companyId);
-
             const options =
                 res?.data?.map((d: any) => ({
                     label: d.name,
                     value: d.id,
                 })) || [];
-
             setDeptOptions(options);
         } finally {
             setLoadingDept(false);
         }
     };
 
-    /* ================= CHANGE COMPANY ================= */
     const handleCompanyChange = async (value: number) => {
         setSelectedCompanyId(value);
         form.setFieldsValue({ departmentId: undefined });
         setDeptOptions([]);
-
-        if (value) {
-            await fetchDepartments(value);
-        }
+        if (value) await fetchDepartments(value);
     };
 
-    /* ================= PREFILL EDIT ================= */
     useEffect(() => {
         if (!open) return;
 
         if (dataInit) {
             const companyId = dataInit.companyId ?? null;
-
             setSelectedCompanyId(companyId);
-
             form.setFieldsValue({
                 code: dataInit.code,
                 name: dataInit.name,
@@ -87,11 +73,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                 departmentId: dataInit.departmentId,
                 active: dataInit.active,
             });
-
-            // 🔥 load department khi edit
-            if (companyId) {
-                fetchDepartments(companyId);
-            }
+            if (companyId) fetchDepartments(companyId);
         } else {
             form.resetFields();
             form.setFieldsValue({ active: true });
@@ -100,7 +82,6 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
         }
     }, [open, dataInit]);
 
-    /* ================= SUBMIT ================= */
     const handleSubmit = async () => {
         const values = await form.validateFields();
 
@@ -109,7 +90,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                 { id: dataInit.id, data: values },
                 {
                     onSuccess: () => {
-                        onSuccess?.();  // ✅ thêm
+                        onSuccess?.();
                         handleClose();
                     },
                 }
@@ -117,14 +98,13 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
         } else {
             createMutation.mutate(values, {
                 onSuccess: () => {
-                    onSuccess?.();  // ✅ thêm
+                    onSuccess?.();
                     handleClose();
                 },
             });
         }
     };
 
-    /* ================= CLOSE ================= */
     const handleClose = () => {
         form.resetFields();
         setSelectedCompanyId(null);
@@ -133,7 +113,6 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
         setOpen(false);
     };
 
-    /* ================= UI ================= */
     return (
         <Modal
             title={dataInit ? "Cập nhật danh mục" : "Thêm danh mục phân quyền"}
@@ -151,7 +130,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                     name="code"
                     rules={[{ required: true, message: "Nhập mã danh mục" }]}
                 >
-                    <Input />
+                    <Input placeholder="Ví dụ: CAT001" />  {/* ← thêm */}
                 </Form.Item>
 
                 <Form.Item
@@ -159,10 +138,9 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                     name="name"
                     rules={[{ required: true, message: "Nhập tên danh mục" }]}
                 >
-                    <Input />
+                    <Input placeholder="Ví dụ: Quyền quản lý nhân sự" />  {/* ← thêm */}
                 </Form.Item>
 
-                {/* COMPANY */}
                 <Form.Item
                     label="Công ty"
                     name="companyId"
@@ -177,7 +155,6 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                     />
                 </Form.Item>
 
-                {/* DEPARTMENT */}
                 <Form.Item
                     label="Phòng ban"
                     name="departmentId"

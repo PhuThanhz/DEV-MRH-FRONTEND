@@ -5,7 +5,7 @@ import {
     ProFormSwitch,
     ProFormSelect,
 } from "@ant-design/pro-components";
-import { Col, Form, Row, message, Card } from "antd"; // ⭐ Thêm Card để nhóm đẹp
+import { Col, Form, Row, message, Card } from "antd";
 import { useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
@@ -13,7 +13,6 @@ import {
     useCreateCareerPathMutation,
     useUpdateCareerPathMutation,
 } from "@/hooks/useCareerPaths";
-
 import { useDepartmentJobTitlesQuery } from "@/hooks/useDepartmentJobTitles";
 import type { ICareerPath } from "@/types/backend";
 
@@ -23,6 +22,12 @@ interface IProps {
     dataInit?: ICareerPath | null;
     setDataInit: (v: any) => void;
 }
+
+const cardStyle: React.CSSProperties = {
+    marginBottom: 12,
+    borderRadius: 8,
+    border: "1px solid #f0f0f0",
+};
 
 const ModalCareerPath = ({
     openModal,
@@ -94,162 +99,157 @@ const ModalCareerPath = ({
                 onCancel: handleReset,
                 afterClose: handleReset,
                 destroyOnClose: true,
-                width: 1000, // ⭐ Rộng hơn để nằm ngang thoải mái
+                // Responsive width: trên mobile dùng 95vw, desktop dùng 900px
+                width: "min(900px, 95vw)",
                 maskClosable: false,
                 confirmLoading: isCreating || isUpdating,
+                styles: {
+                    body: {
+                        maxHeight: "75vh",
+                        overflowY: "auto",
+                        padding: "16px 16px 0",
+                    },
+                },
             }}
         >
-            <Row gutter={[16, 16]}>
-                {/* Nhóm 1: Thông tin cơ bản - nằm ngang */}
-                <Col span={24}>
-                    <Card title="Thông tin cơ bản" bordered={false} className="mb-4 shadow-sm">
-                        <Row gutter={16}>
-                            <Col span={8}>
-                                {/* Tên phòng ban đẹp, không viền */}
-                                <ProFormText
-                                    label="Phòng ban"
-                                    name="departmentNameDisplay"
-                                    initialValue={departmentName}
-                                    disabled
-                                    fieldProps={{
-                                        bordered: false,
-                                        style: {
-                                            background: "#f0f5ff",
-                                            padding: "8px 12px",
-                                            borderRadius: 6,
-                                            color: "#1890ff",
-                                            fontWeight: "500",
-                                        },
-                                    }}
-                                />
-                                <ProFormText name="departmentId" hidden />
-                            </Col>
+            {/* Nhóm 1: Thông tin cơ bản */}
+            <Card title="Thông tin cơ bản" bordered={false} style={cardStyle}>
+                <Row gutter={[12, 0]}>
+                    <Col xs={24} sm={8}>
+                        <ProFormText
+                            label="Phòng ban"
+                            name="departmentNameDisplay"
+                            initialValue={departmentName}
+                            disabled
+                            fieldProps={{
+                                style: {
+                                    background: "#f0f5ff",
+                                    borderRadius: 6,
+                                    color: "#1890ff",
+                                    fontWeight: 500,
+                                },
+                            }}
+                        />
+                        <ProFormText name="departmentId" hidden />
+                    </Col>
 
-                            <Col span={8}>
-                                <ProFormSelect
-                                    name="jobTitleId"
-                                    label="Chức danh"
-                                    placeholder="Chọn chức danh"
-                                    disabled={isEdit}
-                                    rules={[{ required: true, message: "Vui lòng chọn chức danh" }]}
-                                    fieldProps={{
-                                        loading: loadingJobTitles,
-                                        showSearch: true,
-                                        filterOption: (input, option) =>
-                                            (option?.label ?? "").toLowerCase().includes(input.toLowerCase()),
-                                    }}
-                                    options={jobTitles.map((jt: any) => ({
-                                        label: jt.jobTitle?.nameVi,
-                                        value: jt.jobTitle?.id,
-                                    }))}
-                                />
-                            </Col>
+                    <Col xs={24} sm={8}>
+                        <ProFormSelect
+                            name="jobTitleId"
+                            label="Chức danh"
+                            placeholder="Chọn chức danh"
+                            disabled={isEdit}
+                            rules={[{ required: true, message: "Vui lòng chọn chức danh" }]}
+                            fieldProps={{
+                                loading: loadingJobTitles,
+                                showSearch: true,
+                                filterOption: (input, option) =>
+                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase()),
+                            }}
+                            options={jobTitles.map((jt: any) => ({
+                                label: jt.jobTitle?.nameVi,
+                                value: jt.jobTitle?.id,
+                            }))}
+                        />
+                    </Col>
 
-                            <Col span={8}>
-                                <ProFormText
-                                    name="requiredTime"
-                                    label="Thời gian giữ vị trí (tháng)"
-                                    placeholder="Ví dụ: 12, 24..."
-                                />
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
+                    <Col xs={24} sm={8}>
+                        <ProFormText
+                            name="requiredTime"
+                            label="Thời gian giữ vị trí (tháng)"
+                            placeholder="Ví dụ: 12, 24..."
+                        />
+                    </Col>
+                </Row>
+            </Card>
 
-                {/* Nhóm 2: Yêu cầu & Tiêu chuẩn */}
-                <Col span={24}>
-                    <Card title="Yêu cầu & Tiêu chuẩn" bordered={false} className="mb-4 shadow-sm">
-                        <Row gutter={16}>
-                            <Col span={12}>
-                                <ProFormTextArea
-                                    name="jobStandard"
-                                    label="Tiêu chuẩn chức danh"
-                                    placeholder="Mô tả tiêu chuẩn cần đạt..."
-                                    fieldProps={{ rows: 4 }}
-                                />
-                            </Col>
-                            <Col span={12}>
-                                <ProFormTextArea
-                                    name="trainingRequirement"
-                                    label="Yêu cầu đào tạo"
-                                    placeholder="Các khóa học, kỹ năng cần đào tạo..."
-                                    fieldProps={{ rows: 4 }}
-                                />
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
+            {/* Nhóm 2: Yêu cầu & Tiêu chuẩn */}
+            <Card title="Yêu cầu & Tiêu chuẩn" bordered={false} style={cardStyle}>
+                <Row gutter={[12, 0]}>
+                    <Col xs={24} sm={12}>
+                        <ProFormTextArea
+                            name="jobStandard"
+                            label="Tiêu chuẩn chức danh"
+                            placeholder="Mô tả tiêu chuẩn cần đạt..."
+                            fieldProps={{ rows: 4 }}
+                        />
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <ProFormTextArea
+                            name="trainingRequirement"
+                            label="Yêu cầu đào tạo"
+                            placeholder="Các khóa học, kỹ năng cần đào tạo..."
+                            fieldProps={{ rows: 4 }}
+                        />
+                    </Col>
+                </Row>
+            </Card>
 
-                {/* Nhóm 3: Đánh giá & Kết quả */}
-                <Col span={24}>
-                    <Card title="Đánh giá & Kết quả mong đợi" bordered={false} className="mb-4 shadow-sm">
-                        <Row gutter={16}>
-                            <Col span={8}>
-                                <ProFormTextArea
-                                    name="evaluationMethod"
-                                    label="Phương pháp đánh giá"
-                                    placeholder="KPI, 360 độ, phỏng vấn..."
-                                    fieldProps={{ rows: 4 }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <ProFormTextArea
-                                    name="trainingOutcome"
-                                    label="Kết quả đào tạo mong đợi"
-                                    placeholder="Kỹ năng đạt được sau đào tạo..."
-                                    fieldProps={{ rows: 4 }}
-                                />
-                            </Col>
-                            <Col span={8}>
-                                <ProFormTextArea
-                                    name="performanceRequirement"
-                                    label="Yêu cầu hiệu quả công việc"
-                                    placeholder="Mức KPI, chỉ số hiệu suất..."
-                                    fieldProps={{ rows: 4 }}
-                                />
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
+            {/* Nhóm 3: Đánh giá & Kết quả */}
+            <Card title="Đánh giá & Kết quả mong đợi" bordered={false} style={cardStyle}>
+                <Row gutter={[12, 0]}>
+                    <Col xs={24} sm={8}>
+                        <ProFormTextArea
+                            name="evaluationMethod"
+                            label="Phương pháp đánh giá"
+                            placeholder="KPI, 360 độ, phỏng vấn..."
+                            fieldProps={{ rows: 4 }}
+                        />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                        <ProFormTextArea
+                            name="trainingOutcome"
+                            label="Kết quả đào tạo mong đợi"
+                            placeholder="Kỹ năng đạt được sau đào tạo..."
+                            fieldProps={{ rows: 4 }}
+                        />
+                    </Col>
+                    <Col xs={24} sm={8}>
+                        <ProFormTextArea
+                            name="performanceRequirement"
+                            label="Yêu cầu hiệu quả công việc"
+                            placeholder="Mức KPI, chỉ số hiệu suất..."
+                            fieldProps={{ rows: 4 }}
+                        />
+                    </Col>
+                </Row>
+            </Card>
 
-                {/* Nhóm 4: Ghi chú & Trạng thái - nằm ngang */}
-                <Col span={24}>
-                    <Card title="Ghi chú & Trạng thái" bordered={false} className="shadow-sm">
-                        <Row gutter={16} align="middle">
-                            <Col span={12}>
-                                <ProFormTextArea
-                                    name="salaryNote"
-                                    label="Ghi chú về lương"
-                                    placeholder="Lương, phụ cấp, thưởng theo lộ trình..."
-                                    fieldProps={{ rows: 3 }}
-                                />
-                            </Col>
+            {/* Nhóm 4: Ghi chú & Trạng thái */}
+            <Card title="Ghi chú & Trạng thái" bordered={false} style={{ ...cardStyle, marginBottom: 0 }}>
+                <Row gutter={[12, 0]} align="middle">
+                    <Col xs={24} sm={12}>
+                        <ProFormTextArea
+                            name="salaryNote"
+                            label="Ghi chú về lương"
+                            placeholder="Lương, phụ cấp, thưởng theo lộ trình..."
+                            fieldProps={{ rows: 3 }}
+                        />
+                    </Col>
 
-                            <Col span={6}>
-                                <ProFormSwitch
-                                    name="active"
-                                    label="Kích hoạt lộ trình"
-                                    checkedChildren="Bật"
-                                    unCheckedChildren="Tắt"
-                                />
-                            </Col>
+                    <Col xs={12} sm={6}>
+                        <ProFormSwitch
+                            name="active"
+                            label="Kích hoạt lộ trình"
+                            checkedChildren="Bật"
+                            unCheckedChildren="Tắt"
+                        />
+                    </Col>
 
-                            <Col span={6}>
-                                <ProFormSelect
-                                    name="status"
-                                    label="Trạng thái phê duyệt"
-                                    initialValue={1}
-                                    options={[
-                                        { label: "Draft (Nháp)", value: 0 },
-                                        { label: "Approved (Đã duyệt)", value: 1 },
-                                        { label: "Archived (Lưu trữ)", value: 2 },
-                                    ]}
-                                />
-                            </Col>
-                        </Row>
-                    </Card>
-                </Col>
-            </Row>
+                    <Col xs={12} sm={6}>
+                        <ProFormSelect
+                            name="status"
+                            label="Trạng thái phê duyệt"
+                            initialValue={1}
+                            options={[
+                                { label: "Draft (Nháp)", value: 0 },
+                                { label: "Approved (Đã duyệt)", value: 1 },
+                                { label: "Archived (Lưu trữ)", value: 2 },
+                            ]}
+                        />
+                    </Col>
+                </Row>
+            </Card>
         </ModalForm>
     );
 };

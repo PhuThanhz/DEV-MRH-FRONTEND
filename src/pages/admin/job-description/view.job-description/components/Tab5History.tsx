@@ -57,9 +57,7 @@ const Tab5History = ({ logs }: Props) => {
             width: 160,
             render: (_, record) => (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Badge
-                        status={ACTION_CONFIG[record.action]?.badgeStatus ?? "default"}
-                    />
+                    <Badge status={ACTION_CONFIG[record.action]?.badgeStatus ?? "default"} />
                     <span style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>
                         {record.fromUser?.name ?? "—"}
                     </span>
@@ -71,9 +69,7 @@ const Tab5History = ({ logs }: Props) => {
             width: 160,
             render: (_, record) => (
                 record.toUser ? (
-                    <span style={{ fontSize: 13, color: "#374151" }}>
-                        {record.toUser.name}
-                    </span>
+                    <span style={{ fontSize: 13, color: "#374151" }}>{record.toUser.name}</span>
                 ) : (
                     <span style={{ color: "#d9d9d9" }}>—</span>
                 )
@@ -84,9 +80,7 @@ const Tab5History = ({ logs }: Props) => {
             width: 150,
             render: (_, record) => (
                 <span style={{ fontSize: 12, color: "#6b7280" }}>
-                    {record.createdAt
-                        ? dayjs(record.createdAt).format("DD/MM/YYYY HH:mm")
-                        : "—"}
+                    {record.createdAt ? dayjs(record.createdAt).format("DD/MM/YYYY HH:mm") : "—"}
                 </span>
             ),
         },
@@ -95,13 +89,9 @@ const Tab5History = ({ logs }: Props) => {
             render: (_, record) => (
                 record.comment ? (
                     <span style={{
-                        fontSize: 12, color: "#6b7280",
-                        fontStyle: "italic",
-                        background: "#fafafa",
-                        border: "1px solid #f0f0f0",
-                        borderRadius: 6,
-                        padding: "3px 10px",
-                        display: "inline-block",
+                        fontSize: 12, color: "#6b7280", fontStyle: "italic",
+                        background: "#fafafa", border: "1px solid #f0f0f0",
+                        borderRadius: 6, padding: "3px 10px", display: "inline-block",
                     }}>
                         {record.comment}
                     </span>
@@ -115,8 +105,7 @@ const Tab5History = ({ logs }: Props) => {
     return (
         <div style={{
             background: "#fff", borderRadius: 14,
-            border: "1px solid #f0f0f0",
-            overflow: "hidden",
+            border: "1px solid #f0f0f0", overflow: "hidden",
             boxShadow: "0 2px 10px rgba(0,0,0,.04)",
         }}>
             <Table
@@ -125,10 +114,9 @@ const Tab5History = ({ logs }: Props) => {
                 rowKey="id"
                 pagination={false}
                 size="middle"
+                scroll={{ x: "max-content" }} // ← thêm
                 style={{ fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif" }}
-                rowClassName={(_, index) =>
-                    index % 2 === 0 ? "" : "ant-table-row-striped"
-                }
+                rowClassName={(_, index) => index % 2 === 0 ? "" : "ant-table-row-striped"}
             />
         </div>
     );

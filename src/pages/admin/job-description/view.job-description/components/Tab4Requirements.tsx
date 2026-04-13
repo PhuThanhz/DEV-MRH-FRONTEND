@@ -64,8 +64,14 @@ const Tab4Requirements = ({ requirements }: Props) => {
             {rows.length === 0 ? (
                 <div style={{ padding: 40, textAlign: "center", color: "#9ca3af" }}>Chưa có yêu cầu nào</div>
             ) : (
-                <Table bordered={false} pagination={false} columns={columns} dataSource={rows}
-                    style={{ fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif" }} />
+                <Table
+                    bordered={false}
+                    pagination={false}
+                    columns={columns}
+                    dataSource={rows}
+                    scroll={{ x: "max-content" }} // ← thêm
+                    style={{ fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif" }}
+                />
             )}
         </div>
     );

@@ -1,4 +1,5 @@
 import { Typography } from "antd";
+import { useState } from "react";
 import type { ICareerPath } from "@/types/backend";
 import { T, getHue, compareLevelCode } from "../constants";
 import StairCard from "./StairCard";
@@ -6,6 +7,17 @@ import Connector from "./Connector";
 import EmptyState from "./EmptyState";
 
 const { Text } = Typography;
+
+// ── Hook detect mobile ────────────────────────────────────────────
+const useIsMobile = () => {
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+    useState(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    });
+    return isMobile;
+};
 
 interface CareerLadderFlatProps {
     paths: ICareerPath[];
@@ -16,6 +28,8 @@ interface CareerLadderFlatProps {
 }
 
 const CareerLadderFlat = ({ paths, onView, onEdit, onDelete, showHeader = true }: CareerLadderFlatProps) => {
+    const isMobile = useIsMobile();
+
     if (paths.length === 0) return <EmptyState label="Chưa có lộ trình nào" />;
 
     const uniqueCodes = Array.from(new Set(paths.map(p => p.positionLevelCode ?? "")))
@@ -31,7 +45,9 @@ const CareerLadderFlat = ({ paths, onView, onEdit, onDelete, showHeader = true }
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    marginBottom: 16,
+                    // Trên mobile margin nhỏ hơn
+                    marginBottom: isMobile ? 10 : 16,
+                    gap: 8,
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 20, height: 1, background: T.lineStr }} />
@@ -41,11 +57,18 @@ const CareerLadderFlat = ({ paths, onView, onEdit, onDelete, showHeader = true }
                             color: T.ink4,
                             letterSpacing: 0.8,
                             textTransform: "uppercase",
+                            // Không wrap trên mobile
+                            whiteSpace: "nowrap",
                         }}>
                             Cấp cao nhất
                         </Text>
                     </div>
-                    <Text style={{ fontSize: 11, color: T.ink5, fontWeight: 500 }}>
+                    <Text style={{
+                        fontSize: 11,
+                        color: T.ink5,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                    }}>
                         {paths.length} cấp bậc
                     </Text>
                 </div>
@@ -74,10 +97,15 @@ const CareerLadderFlat = ({ paths, onView, onEdit, onDelete, showHeader = true }
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    marginTop: 14,
+                    marginTop: isMobile ? 10 : 14,
                 }}>
                     <div style={{ width: 20, height: 1, background: T.line }} />
-                    <Text style={{ fontSize: 11, color: T.ink5, fontWeight: 500 }}>
+                    <Text style={{
+                        fontSize: 11,
+                        color: T.ink5,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
+                    }}>
                         Cấp khởi đầu
                     </Text>
                 </div>

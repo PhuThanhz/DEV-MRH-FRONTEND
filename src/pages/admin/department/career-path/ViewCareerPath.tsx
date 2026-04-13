@@ -1,8 +1,10 @@
-import { Modal, Descriptions, Tag } from "antd";
+import { Modal, Descriptions, Tag, Grid } from "antd";
 import { useEffect } from "react";
 import dayjs from "dayjs";
 
 import type { ICareerPath } from "@/types/backend";
+
+const { useBreakpoint } = Grid;
 
 interface IProps {
     open: boolean;
@@ -12,6 +14,8 @@ interface IProps {
 }
 
 const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
+    const screens = useBreakpoint();
+    const column = screens.md ? 2 : 1;
 
     useEffect(() => {
         if (!open) setDataInit(null);
@@ -23,51 +27,75 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
             open={open}
             onCancel={onClose}
             footer={null}
-            width={1000}
+            width={screens.md ? 1000 : "100%"}
+            style={
+                screens.md
+                    ? undefined
+                    : {
+                        top: 20,          // cách đỉnh 20px
+                        margin: "0 auto",
+                        maxWidth: "100vw",
+                        paddingBottom: 40, // ← thêm khoảng thở ở đáy
+                    }
+            }
+            styles={
+                screens.md
+                    ? undefined
+                    : {
+                        body: {
+                            padding: "12px 8px",
+                            maxHeight: "80vh",   // giới hạn chiều cao
+                            overflowY: "auto",   // cuộn nội dung thay vì tràn
+                        },
+                    }
+            }
             destroyOnClose
         >
             {dataInit ? (
-                <Descriptions bordered column={2}>
-                    <Descriptions.Item label="Phòng ban" span={2}>
+                <Descriptions
+                    bordered
+                    column={column}
+                    size={screens.md ? "default" : "small"}
+                >
+                    <Descriptions.Item label="Phòng ban" span={column}>
                         {dataInit.departmentName}
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Chức danh" span={2}>
+                    <Descriptions.Item label="Chức danh" span={column}>
                         {dataInit.jobTitleName} ({dataInit.positionLevelCode})
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Tiêu chuẩn chức danh" span={2}>
+                    <Descriptions.Item label="Tiêu chuẩn chức danh" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.jobStandard || "—"}
                         </div>
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Yêu cầu đào tạo" span={2}>
+                    <Descriptions.Item label="Yêu cầu đào tạo" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.trainingRequirement || "—"}
                         </div>
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Phương pháp đánh giá" span={2}>
+                    <Descriptions.Item label="Phương pháp đánh giá" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.evaluationMethod || "—"}
                         </div>
                     </Descriptions.Item>
 
-                    {/* THÊM MỚI */}
-                    <Descriptions.Item label="Kết quả đào tạo" span={2}>
+                    <Descriptions.Item label="Kết quả đào tạo" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.trainingOutcome || "—"}
                         </div>
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Yêu cầu hiệu quả công việc" span={2}>
+                    <Descriptions.Item label="Yêu cầu hiệu quả công việc" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.performanceRequirement || "—"}
                         </div>
                     </Descriptions.Item>
 
-                    <Descriptions.Item label="Ghi chú về lương" span={2}>
+                    <Descriptions.Item label="Ghi chú về lương" span={column}>
                         <div style={{ whiteSpace: "pre-wrap" }}>
                             {dataInit.salaryNote || "—"}
                         </div>
@@ -112,4 +140,4 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     );
 };
 
-export default ViewCareerPath; 
+export default ViewCareerPath;

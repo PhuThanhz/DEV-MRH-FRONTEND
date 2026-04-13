@@ -2,6 +2,7 @@
 
 import { Modal, Descriptions, Badge } from "antd";
 import dayjs from "dayjs";
+import { useState, useEffect } from "react";
 import type { IProcessAction } from "@/types/backend";
 
 interface IProps {
@@ -11,12 +12,15 @@ interface IProps {
     setDataInit: (v: IProcessAction | null) => void;
 }
 
-const ViewProcessAction = ({
-    open,
-    onClose,
-    dataInit,
-    setDataInit,
-}: IProps) => {
+const ViewProcessAction = ({ open, onClose, dataInit, setDataInit }: IProps) => {
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+
     const handleClose = () => {
         onClose(false);
         setDataInit(null);
@@ -28,10 +32,15 @@ const ViewProcessAction = ({
             open={open}
             onCancel={handleClose}
             footer={null}
-            width="50vw"
+            width={isMobile ? "95vw" : "50vw"}
             centered
         >
-            <Descriptions bordered column={2} layout="vertical">
+            <Descriptions
+                bordered
+                column={isMobile ? 1 : 2}
+                layout="vertical"
+                size={isMobile ? "small" : "middle"}
+            >
                 <Descriptions.Item label="Mã hành động">
                     {dataInit?.code || "--"}
                 </Descriptions.Item>
@@ -40,11 +49,11 @@ const ViewProcessAction = ({
                     {dataInit?.name || "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Mô tả ngắn">
+                <Descriptions.Item label="Mô tả ngắn" span={isMobile ? 1 : 2}>
                     {dataInit?.shortDescription || "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Mô tả chi tiết">
+                <Descriptions.Item label="Mô tả chi tiết" span={isMobile ? 1 : 2}>
                     {dataInit?.description || "--"}
                 </Descriptions.Item>
 
@@ -62,7 +71,7 @@ const ViewProcessAction = ({
                         : "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Ngày cập nhật">
+                <Descriptions.Item label="Ngày cập nhật" span={isMobile ? 1 : 2}>
                     {dataInit?.updatedAt
                         ? dayjs(dataInit.updatedAt).format("DD-MM-YYYY HH:mm:ss")
                         : "--"}

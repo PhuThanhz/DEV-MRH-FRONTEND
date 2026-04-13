@@ -25,27 +25,21 @@ const T = {
     s2: "#efeff4",
     line: "rgba(0,0,0,0.06)",
     lineMed: "rgba(0,0,0,0.10)",
-
     acc: "#2563eb",
     accSoft: "rgba(37,99,235,0.06)",
     accBord: "rgba(37,99,235,0.16)",
-
     violet: "#6d28d9",
     violetSoft: "rgba(109,40,217,0.06)",
     violetBord: "rgba(109,40,217,0.16)",
-
     green: "#16a34a",
     greenSoft: "rgba(22,163,74,0.06)",
     greenBord: "rgba(22,163,74,0.16)",
-
     amber: "#b45309",
     amberSoft: "rgba(180,83,9,0.06)",
     amberBord: "rgba(180,83,9,0.18)",
-
     slate: "#475569",
     slateSoft: "rgba(71,85,105,0.06)",
     slateBord: "rgba(71,85,105,0.16)",
-
     red: "#dc2626",
     redSoft: "rgba(220,38,38,0.06)",
     redBord: "rgba(220,38,38,0.16)",
@@ -195,12 +189,22 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                     setSteps([{ careerPathId: undefined }]);
                 },
                 destroyOnClose: true,
-                width: 780,
+                // Responsive: desktop 780px, mobile 95vw
+                width: "min(780px, 95vw)",
                 maskClosable: false,
                 confirmLoading: isPending,
                 styles: {
-                    header: { borderBottom: `1px solid ${T.line}`, paddingBottom: 16, marginBottom: 0 },
-                    body: { paddingTop: 20 },
+                    header: {
+                        borderBottom: `1px solid ${T.line}`,
+                        paddingBottom: 16,
+                        marginBottom: 0,
+                    },
+                    body: {
+                        paddingTop: 20,
+                        // Scroll nội dung bên trong modal trên mobile
+                        maxHeight: "80vh",
+                        overflowY: "auto",
+                    },
                 },
             }}
             submitter={{
@@ -224,9 +228,10 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
             }}
         >
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                {/* ── Tên + mô tả ── */}
+
+                {/* ── Tên + mô tả: mobile xếp dọc, desktop nằm ngang ── */}
                 <Row gutter={[16, 0]}>
-                    <Col span={14}>
+                    <Col xs={24} sm={14}>
                         <ProFormText
                             name="name"
                             label="Tên lộ trình"
@@ -235,7 +240,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                             fieldProps={{ size: "middle" }}
                         />
                     </Col>
-                    <Col span={10}>
+                    <Col xs={24} sm={10}>
                         <ProFormTextArea
                             name="description"
                             label="Mô tả"
@@ -254,9 +259,11 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                             alignItems: "center",
                             justifyContent: "space-between",
                             marginBottom: 10,
+                            flexWrap: "wrap",
+                            gap: 8,
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Text style={{ fontSize: 13, fontWeight: 600, color: T.ink2 }}>
                                 Các vị trí
                             </Text>
@@ -290,6 +297,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                 height: 30,
                                 paddingInline: 12,
                                 fontWeight: 500,
+                                flexShrink: 0,
                             }}
                         >
                             Thêm vị trí
@@ -324,11 +332,11 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                     style={{
                                         display: "flex",
                                         alignItems: "center",
-                                        gap: 10,
-                                        padding: "10px 14px",
+                                        gap: 8,
+                                        // Mobile: padding nhỏ hơn chút
+                                        padding: "10px 10px",
                                         background: T.white,
                                         borderBottom: isLast ? "none" : `1px solid ${T.line}`,
-                                        // ← fix: đảm bảo row không bị overflow
                                         minWidth: 0,
                                         overflow: "hidden",
                                     }}
@@ -353,7 +361,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                         {index + 1}
                                     </div>
 
-                                    {/* Select — fix: minWidth:0 + overflow:hidden để không đẩy row */}
+                                    {/* Select — chiếm phần còn lại */}
                                     <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                                         <Select
                                             style={{ width: "100%" }}
@@ -394,7 +402,6 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                         </span>
                                                     );
                                                 return (
-                                                    // ← fix: width:100% + overflow:hidden ngăn badge+text tràn ra ngoài trigger
                                                     <div
                                                         style={{
                                                             display: "flex",
@@ -405,9 +412,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                         }}
                                                     >
                                                         {found.positionLevelCode && (
-                                                            <span
-                                                                style={getLevelStyle(found.positionLevelCode)}
-                                                            >
+                                                            <span style={getLevelStyle(found.positionLevelCode)}>
                                                                 {found.positionLevelCode}
                                                             </span>
                                                         )}
@@ -416,7 +421,6 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                                 fontSize: 13,
                                                                 color: T.ink2,
                                                                 fontWeight: 500,
-                                                                // ← fix: truncate tên dài thay vì wrap xuống dòng
                                                                 overflow: "hidden",
                                                                 textOverflow: "ellipsis",
                                                                 whiteSpace: "nowrap",
@@ -433,14 +437,14 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                         />
                                     </div>
 
-                                    {/* Duration */}
+                                    {/* Duration — mobile: thu nhỏ còn 90px */}
                                     {showDuration && (
-                                        <div style={{ flexShrink: 0, width: 110 }}>
+                                        <div style={{ flexShrink: 0, width: "clamp(80px, 15vw, 110px)" }}>
                                             <InputNumber
                                                 style={{ width: "100%" }}
                                                 min={1}
                                                 max={120}
-                                                placeholder="Số tháng"
+                                                placeholder="Tháng"
                                                 value={step.durationMonths}
                                                 addonAfter={
                                                     <span style={{ fontSize: 11, color: T.ink4 }}>
@@ -505,6 +509,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                             >
                                 Xem trước lộ trình
                             </Text>
+                            {/* flexWrap để preview tự xuống dòng trên mobile */}
                             <div
                                 style={{
                                     display: "flex",
@@ -531,6 +536,8 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                     borderRadius: 8,
                                                     background: T.white,
                                                     border: `1px solid ${T.line}`,
+                                                    // Ngăn badge bị co trên mobile
+                                                    flexShrink: 0,
                                                 }}
                                             >
                                                 {cp.positionLevelCode && (
@@ -543,6 +550,11 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                         fontSize: 12,
                                                         fontWeight: 500,
                                                         color: T.ink2,
+                                                        // Truncate tên dài trên mobile
+                                                        maxWidth: "clamp(80px, 25vw, 160px)",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        whiteSpace: "nowrap",
                                                     }}
                                                 >
                                                     {cp.jobTitleName}
@@ -557,6 +569,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                             fontSize: 10,
                                                             fontWeight: 600,
                                                             color: T.amber,
+                                                            flexShrink: 0,
                                                         }}
                                                     >
                                                         {step.durationMonths}th
@@ -569,6 +582,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                                                         fontSize: 10,
                                                         color: T.ink6,
                                                         lineHeight: 1,
+                                                        flexShrink: 0,
                                                     }}
                                                 >
                                                     →
