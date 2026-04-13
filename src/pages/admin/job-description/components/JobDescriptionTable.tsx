@@ -1,6 +1,17 @@
 import { useRef, useState } from "react";
 import { Space, Tag, Popconfirm, Button, Dropdown } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from "@ant-design/icons";
+import {
+    EyeOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    MoreOutlined,
+    SendOutlined,
+    CheckCircleOutlined,
+    CloseCircleOutlined,
+    FileDoneOutlined,
+    ReloadOutlined,
+    RollbackOutlined,
+} from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import dayjs from "dayjs";
 import DataTable from "@/components/common/data-table";
@@ -125,6 +136,13 @@ interface Props {
     hideStatusFilter?: boolean;
 }
 
+// Shared icon style for dropdown menu items
+const menuIconStyle: React.CSSProperties = {
+    fontSize: 14,
+    marginRight: 8,
+    verticalAlign: "middle",
+};
+
 const JobDescriptionTable = ({
     records = [],
     loading,
@@ -198,18 +216,33 @@ const JobDescriptionTable = ({
         const items: any[] = [];
 
         // ── Gửi duyệt / Gửi lại duyệt (mode MY) ──
-        if (mode === "MY" &&
+        if (
+            mode === "MY" &&
             (record.status === "DRAFT" || record.status === "REJECTED") &&
-            record.id) {
+            record.id
+        ) {
             items.push({
                 key: "submit",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                        <span onClick={() => {
-                            setFlowRecord({ id: record.id, status: record.status, isApprover: false });
-                            setOpenFlowModal(true);
-                        }}>
-                            {record.status === "REJECTED" ? "Gửi lại duyệt" : "Gửi duyệt"}
+                        <span
+                            style={{ display: "inline-flex", alignItems: "center" }}
+                            onClick={() => {
+                                setFlowRecord({ id: record.id, status: record.status, isApprover: false });
+                                setOpenFlowModal(true);
+                            }}
+                        >
+                            {record.status === "REJECTED" ? (
+                                <>
+                                    <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
+                                    Gửi lại duyệt
+                                </>
+                            ) : (
+                                <>
+                                    <SendOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
+                                    Gửi duyệt
+                                </>
+                            )}
                         </span>
                     </Access>
                 ),
@@ -222,10 +255,18 @@ const JobDescriptionTable = ({
                 key: "resubmit",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                        <span onClick={() => {
-                            setFlowRecord({ id: record.jdId ?? record.id, status: record.status, isApprover: false });
-                            setOpenFlowModal(true);
-                        }}>
+                        <span
+                            style={{ display: "inline-flex", alignItems: "center" }}
+                            onClick={() => {
+                                setFlowRecord({
+                                    id: record.jdId ?? record.id,
+                                    status: record.status,
+                                    isApprover: false,
+                                });
+                                setOpenFlowModal(true);
+                            }}
+                        >
+                            <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
                             Gửi lại duyệt
                         </span>
                     </Access>
@@ -239,10 +280,22 @@ const JobDescriptionTable = ({
                 key: "approve",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>
-                        <span style={{ color: "#0f8a5f" }} onClick={() => {
-                            setFlowRecord({ id: record.jdId ?? record.id, status: record.status, isApprover: true });
-                            setOpenFlowModal(true);
-                        }}>
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                color: "#0f8a5f",
+                            }}
+                            onClick={() => {
+                                setFlowRecord({
+                                    id: record.jdId ?? record.id,
+                                    status: record.status,
+                                    isApprover: true,
+                                });
+                                setOpenFlowModal(true);
+                            }}
+                        >
+                            <CheckCircleOutlined style={{ ...menuIconStyle, color: "#0f8a5f" }} />
                             Duyệt
                         </span>
                     </Access>
@@ -256,10 +309,18 @@ const JobDescriptionTable = ({
                 key: "issue",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.ISSUE} hideChildren>
-                        <span style={{ color: "#7c3abf" }} onClick={() => {
-                            setIssueRecord(record);
-                            setOpenIssueModal(true);
-                        }}>
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                color: "#7c3abf",
+                            }}
+                            onClick={() => {
+                                setIssueRecord(record);
+                                setOpenIssueModal(true);
+                            }}
+                        >
+                            <FileDoneOutlined style={{ ...menuIconStyle, color: "#7c3abf" }} />
                             Ban hành
                         </span>
                     </Access>
@@ -273,11 +334,19 @@ const JobDescriptionTable = ({
                 key: "reject",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
-                        <span style={{ color: "#c4621a" }} onClick={() => {
-                            setRejectRecord(record);
-                            setIsResubmitReject(false);
-                            setOpenRejectModal(true);
-                        }}>
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                color: "#c4621a",
+                            }}
+                            onClick={() => {
+                                setRejectRecord(record);
+                                setIsResubmitReject(false);
+                                setOpenRejectModal(true);
+                            }}
+                        >
+                            <CloseCircleOutlined style={{ ...menuIconStyle, color: "#c4621a" }} />
                             Từ chối
                         </span>
                     </Access>
@@ -291,11 +360,19 @@ const JobDescriptionTable = ({
                 key: "hoantra",
                 label: (
                     <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
-                        <span style={{ color: "#c4621a" }} onClick={() => {
-                            setRejectRecord(record);
-                            setIsResubmitReject(true);
-                            setOpenRejectModal(true);
-                        }}>
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                color: "#c4621a",
+                            }}
+                            onClick={() => {
+                                setRejectRecord(record);
+                                setIsResubmitReject(true);
+                                setOpenRejectModal(true);
+                            }}
+                        >
+                            <RollbackOutlined style={{ ...menuIconStyle, color: "#c4621a" }} />
                             Hoàn trả
                         </span>
                     </Access>
@@ -319,7 +396,10 @@ const JobDescriptionTable = ({
                             okButtonProps={{ danger: true }}
                             onConfirm={() => deleteMutation.mutate(record.id)}
                         >
-                            <span>Xóa JD</span>
+                            <span style={{ display: "inline-flex", alignItems: "center" }}>
+                                <DeleteOutlined style={{ ...menuIconStyle, color: "#ff4d4f" }} />
+                                Xóa JD
+                            </span>
                         </Popconfirm>
                     </Access>
                 ),
@@ -452,9 +532,11 @@ const JobDescriptionTable = ({
                         </Access>
 
                         {/* Chỉnh sửa */}
-                        {(mode === "MY" || mode === "ALL" ||
+                        {(mode === "MY" ||
+                            mode === "ALL" ||
                             (mode === "INBOX" && record.status === "RETURNED")) &&
-                            (record.status === "DRAFT" || record.status === "REJECTED" ||
+                            (record.status === "DRAFT" ||
+                                record.status === "REJECTED" ||
                                 record.status === "RETURNED") &&
                             (record.id ?? record.jdId) && (
                                 <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.UPDATE} hideChildren>

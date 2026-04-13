@@ -10,8 +10,15 @@ import {
     useSubmitJdFlowMutation, useApproveJdFlowMutation,
     useRejectJdFlowMutation, useIssueJdFlowMutation,
 } from "@/hooks/useJdFlow";
+
 import ModalRejectJd from "../job-description/components/modal-reject-jd";
 
+const backendURL = import.meta.env.VITE_BACKEND_URL;
+
+const getAvatarUrl = (avatar?: string) => {
+    if (!avatar) return undefined;
+    return `${backendURL}/uploads/avatar/${avatar}?t=${Date.now()}`;
+};
 interface Props {
     open: boolean;
     onClose: () => void;
@@ -80,7 +87,8 @@ const ApproverCard = ({ user, selected, onClick }: {
         }}
     >
         <Avatar
-            size={38} src={user.avatar}
+            size={38}
+            src={getAvatarUrl(user.avatar)}
             icon={!user.avatar && <UserOutlined />}
             style={{ flexShrink: 0, background: "#f0f0f0", color: "#bbb" }}
         />
