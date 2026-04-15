@@ -12,8 +12,8 @@ import type {
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
-    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness
-
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
+    , ICareerPathBulkResult
 
 } from '@/types/backend';
 
@@ -562,6 +562,27 @@ export const callGetAllActiveCareerPaths = () => {
     );
 };
 
+/* ===================== CAREER PATH — BULK & PREVIEW (MỚI) ===================== */
+
+export const callGetJobTitlesByLevel = (departmentId: number, levelCode: string) => {
+    return axios.get<IBackendRes<IJobTitleByLevel[]>>(
+        `/api/v1/departments/${departmentId}/job-titles/by-level/${levelCode}`
+    );
+};
+
+export const callPreviewBulkCareerPath = (data: ICareerPathBulkRequest) => {
+    return axios.post<IBackendRes<ICareerPathPreviewResponse>>(
+        `/api/v1/career-paths/preview`,
+        data
+    );
+};
+
+export const callBulkCreateCareerPath = (data: ICareerPathBulkRequest) => {
+    return axios.post<IBackendRes<ICareerPathBulkResult>>(
+        `/api/v1/career-paths/bulk`,
+        data
+    );
+};
 /* ===================== SECTION JOB TITLES ===================== */
 
 /* FETCH ACTIVE LIST BY SECTION (Không phân trang)  

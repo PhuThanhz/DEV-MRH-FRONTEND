@@ -351,6 +351,56 @@ export interface ICareerPathRequest {
 
     status?: number;
 }
+// Thêm vào cuối phần career path types
+
+export interface IJobTitleByLevel {
+    id: number;
+    nameVi: string;
+    nameEn?: string;
+    positionLevelCode?: string;
+    bandOrder?: number;
+    alreadyExists: boolean;
+}
+
+export interface ICareerPathPreviewResponse {
+    willCreate: {
+        jobTitleId: number;
+        jobTitleName: string;
+        positionLevelCode?: string;
+        reason?: string | null;
+    }[];
+    willSkip: {
+        jobTitleId: number;
+        jobTitleName: string;
+        positionLevelCode?: string;
+        reason: string;
+    }[];
+}
+
+export interface ICareerPathBulkRequest {
+    departmentId: number;
+    jobTitleIds: number[];
+    jobStandard?: string;
+    trainingRequirement?: string;
+    evaluationMethod?: string;
+    requiredTime?: string;
+    trainingOutcome?: string;
+    performanceRequirement?: string;
+    salaryNote?: string;
+    status?: number;
+}
+
+export interface ICareerPathBulkResult {
+    created: ICareerPath[];
+    skipped: {
+        jobTitleId: number;
+        jobTitleName: string;
+        reason: string;
+    }[];
+    totalRequested: number;
+    totalCreated: number;
+    totalSkipped: number;
+}
 /* ===================== EMPLOYEE CAREER PATH ===================== */
 
 // Thông tin 1 bước trong lộ trình (shortcut)

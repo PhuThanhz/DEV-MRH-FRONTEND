@@ -5,16 +5,25 @@ import {
     ProFormSwitch,
     ProFormSelect,
 } from "@ant-design/pro-components";
-import { Col, Form, Row, message, Card } from "antd";
-import { useEffect } from "react";
+import { Col, Row, Form, Card, Button, Space, Tag, Divider, Typography } from "antd";
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import {
     useCreateCareerPathMutation,
     useUpdateCareerPathMutation,
+    usePreviewBulkCareerPathMutation,
+    useBulkCreateCareerPathMutation,
+    useActiveJobTitlesByDepartment,
 } from "@/hooks/useCareerPaths";
-import { useDepartmentJobTitlesQuery } from "@/hooks/useDepartmentJobTitles";
-import type { ICareerPath } from "@/types/backend";
+
+import type {
+    ICareerPath,
+    ICareerPathPreviewResponse,
+} from "@/types/backend";
+import { notify } from "@/components/common/notification/notify";
+
+const { Title, Text } = Typography;
 
 interface IProps {
     openModal: boolean;
@@ -42,50 +51,96 @@ const ModalCareerPath = ({
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
 
-    const { data: jobTitles = [], isFetching: loadingJobTitles } =
-        useDepartmentJobTitlesQuery(Number(departmentId));
+    const [selectedJobTitleIds, setSelectedJobTitleIds] = useState<number[]>([]);
+    const [previewData, setPreviewData] = useState<ICareerPathPreviewResponse | null>(null);
 
-    const { mutate: createCareerPath, isPending: isCreating } =
-        useCreateCareerPathMutation();
-    const { mutate: updateCareerPath, isPending: isUpdating } =
-        useUpdateCareerPathMutation();
+    // Hook lấy danh sách chức danh
+    const { data: jobTitles = [], isFetching: loadingJobTitles } =
+        useActiveJobTitlesByDepartment(Number(departmentId));
+
+    const { mutate: createCareerPath, isPending: isCreating } = useCreateCareerPathMutation();
+    const { mutate: updateCareerPath, isPending: isUpdating } = useUpdateCareerPathMutation();
+    const { mutateAsync: previewBulk, isPending: isPreviewing } = usePreviewBulkCareerPathMutation();
+    const { mutateAsync: bulkCreate, isPending: isBulkCreating } = useBulkCreateCareerPathMutation();
 
     useEffect(() => {
         if (isEdit && dataInit) {
             form.setFieldsValue({
                 ...dataInit,
-                jobTitleId: dataInit.jobTitleId,
-                active: dataInit.active,
+                active: dataInit.active ?? true,
             });
         } else {
             form.resetFields();
-            form.setFieldValue("departmentId", departmentId);
+            form.setFieldValue("departmentId", Number(departmentId));
             form.setFieldValue("active", true);
+            form.setFieldValue("status", 1);
+            setSelectedJobTitleIds([]);
+            setPreviewData(null);
         }
-    }, [dataInit, departmentId, form]);
+    }, [dataInit, isEdit, departmentId, form]);
 
     const handleReset = () => {
         form.resetFields();
+        setSelectedJobTitleIds([]);
+        setPreviewData(null);
         setDataInit(null);
         setOpenModal(false);
     };
 
-    const submitCareerPath = async (values: any) => {
+    const handlePreview = async () => {
         try {
-            const payload = {
-                ...values,
-                departmentId: Number(departmentId),
-            };
+            const values = await form.validateFields();
+            const jobTitleIds: number[] = form.getFieldValue("jobTitleIds") || [];
 
-            if (isEdit) {
-                updateCareerPath({ id: dataInit!.id!, ...payload });
-            } else {
-                createCareerPath(payload);
+            if (jobTitleIds.length === 0) {
+                notify.warning("Vui lòng chọn ít nhất một chức danh");
+                return;
             }
 
+            const payload = {
+                departmentId: Number(departmentId),
+                jobTitleIds,
+                jobStandard: values.jobStandard,
+                trainingRequirement: values.trainingRequirement,
+                evaluationMethod: values.evaluationMethod,
+                requiredTime: values.requiredTime,
+                trainingOutcome: values.trainingOutcome,
+                performanceRequirement: values.performanceRequirement,
+                salaryNote: values.salaryNote,
+                status: values.status,
+            };
+
+            const preview = await previewBulk(payload);
+            setPreviewData(preview);
+            setSelectedJobTitleIds(jobTitleIds);
+        } catch (err: any) {
+            notify.error(err?.message || "Không thể xem trước");
+        }
+    };
+
+    const handleConfirmCreate = async () => {
+        if (!previewData) return;
+
+        const values = form.getFieldsValue();
+
+        const payload = {
+            departmentId: Number(departmentId),
+            jobTitleIds: selectedJobTitleIds,
+            ...values,
+        };
+
+        try {
+            if (selectedJobTitleIds.length === 1) {
+                createCareerPath({
+                    ...payload,
+                    jobTitleId: selectedJobTitleIds[0],
+                });
+            } else {
+                await bulkCreate(payload);
+            }
             handleReset();
         } catch (err: any) {
-            message.error(err?.response?.data?.message || "Có lỗi xảy ra");
+            notify.error(err?.message || "Có lỗi xảy ra");
         }
     };
 
@@ -94,23 +149,31 @@ const ModalCareerPath = ({
             title={isEdit ? "Cập nhật lộ trình thăng tiến" : "Tạo lộ trình thăng tiến"}
             open={openModal}
             form={form}
-            onFinish={submitCareerPath}
             modalProps={{
                 onCancel: handleReset,
                 afterClose: handleReset,
                 destroyOnClose: true,
-                // Responsive width: trên mobile dùng 95vw, desktop dùng 900px
-                width: "min(900px, 95vw)",
+                width: "min(1000px, 95vw)",
                 maskClosable: false,
-                confirmLoading: isCreating || isUpdating,
-                styles: {
-                    body: {
-                        maxHeight: "75vh",
-                        overflowY: "auto",
-                        padding: "16px 16px 0",
-                    },
-                },
             }}
+            submitter={
+                isEdit
+                    ? undefined
+                    : {
+                        render: () => (
+                            <Space>
+                                <Button onClick={handleReset}>Hủy</Button>
+                                <Button
+                                    type="primary"
+                                    loading={isPreviewing}
+                                    onClick={handlePreview}
+                                >
+                                    Xem trước
+                                </Button>
+                            </Space>
+                        ),
+                    }
+            }
         >
             {/* Nhóm 1: Thông tin cơ bản */}
             <Card title="Thông tin cơ bản" bordered={false} style={cardStyle}>
@@ -135,21 +198,28 @@ const ModalCareerPath = ({
 
                     <Col xs={24} sm={8}>
                         <ProFormSelect
-                            name="jobTitleId"
+                            name="jobTitleIds"
                             label="Chức danh"
-                            placeholder="Chọn chức danh"
-                            disabled={isEdit}
-                            rules={[{ required: true, message: "Vui lòng chọn chức danh" }]}
+                            mode="multiple"
+                            placeholder="Chọn một hoặc nhiều chức danh"
+                            rules={[{ required: true, message: "Vui lòng chọn ít nhất một chức danh" }]}
+                            options={jobTitles.map((jt: any) => ({
+                                label: (
+                                    <Space>
+                                        {jt.nameVi}
+                                        {jt.alreadyExists && <Tag color="red">Đã tồn tại</Tag>}
+                                    </Space>
+                                ),
+                                value: jt.id,
+                                disabled: jt.alreadyExists,
+                            }))}
                             fieldProps={{
                                 loading: loadingJobTitles,
                                 showSearch: true,
-                                filterOption: (input, option) =>
-                                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase()),
+                                filterOption: (input: string, option: any) =>
+                                    (option?.label as string)?.toLowerCase().includes(input.toLowerCase()),
+                                onChange: () => setPreviewData(null),
                             }}
-                            options={jobTitles.map((jt: any) => ({
-                                label: jt.jobTitle?.nameVi,
-                                value: jt.jobTitle?.id,
-                            }))}
                         />
                     </Col>
 
@@ -157,7 +227,7 @@ const ModalCareerPath = ({
                         <ProFormText
                             name="requiredTime"
                             label="Thời gian giữ vị trí (tháng)"
-                            placeholder="Ví dụ: 12, 24..."
+                            placeholder="Ví dụ: 12, 18, 24..."
                         />
                     </Col>
                 </Row>
@@ -250,6 +320,57 @@ const ModalCareerPath = ({
                     </Col>
                 </Row>
             </Card>
+
+            {/* ==================== PREVIEW SECTION ==================== */}
+            {previewData && !isEdit && (
+                <>
+                    <Divider />
+                    <Card title="📋 Kết quả xem trước" bordered={false}>
+                        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                            <Title level={5}>
+                                Tổng chọn: <Text strong>{selectedJobTitleIds.length}</Text> chức danh
+                            </Title>
+
+                            {previewData.willCreate?.length > 0 && (
+                                <div>
+                                    <Tag color="green">Sẽ tạo: {previewData.willCreate.length}</Tag>
+                                    <ul style={{ paddingLeft: 16, marginTop: 8 }}>
+                                        {previewData.willCreate.map((item: any) => (
+                                            <li key={item.jobTitleId}>
+                                                {item.jobTitleName || item.nameVi}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {previewData.willSkip?.length > 0 && (
+                                <div>
+                                    <Tag color="orange">Bỏ qua: {previewData.willSkip.length}</Tag>
+                                    <ul style={{ paddingLeft: 16, marginTop: 8 }}>
+                                        {previewData.willSkip.map((item: any) => (
+                                            <li key={item.jobTitleId} style={{ color: "#fa8c16" }}>
+                                                {item.jobTitleName} — {item.reason}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <Button
+                                type="primary"
+                                size="large"
+                                block
+                                loading={isBulkCreating || isCreating}
+                                onClick={handleConfirmCreate}
+                                disabled={!previewData.willCreate || previewData.willCreate.length === 0}
+                            >
+                                Xác nhận tạo {previewData.willCreate?.length || 0} lộ trình
+                            </Button>
+                        </Space>
+                    </Card>
+                </>
+            )}
         </ModalForm>
     );
 };

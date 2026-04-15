@@ -115,6 +115,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
 
     return (
         <Modal
+            key={dataInit?.id ?? "create"}
             title={dataInit ? "Cập nhật danh mục" : "Thêm danh mục phân quyền"}
             open={open}
             onCancel={handleClose}
@@ -122,7 +123,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
             okText="Lưu"
             cancelText="Hủy"
             confirmLoading={createMutation.isPending || updateMutation.isPending}
-            destroyOnClose
+        // ✅ Bỏ destroyOnClose
         >
             <Form layout="vertical" form={form}>
                 <Form.Item
@@ -130,7 +131,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                     name="code"
                     rules={[{ required: true, message: "Nhập mã danh mục" }]}
                 >
-                    <Input placeholder="Ví dụ: CAT001" />  {/* ← thêm */}
+                    <Input placeholder="Ví dụ: CAT001" />
                 </Form.Item>
 
                 <Form.Item
@@ -138,7 +139,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                     name="name"
                     rules={[{ required: true, message: "Nhập tên danh mục" }]}
                 >
-                    <Input placeholder="Ví dụ: Quyền quản lý nhân sự" />  {/* ← thêm */}
+                    <Input placeholder="Ví dụ: Quyền quản lý nhân sự" />
                 </Form.Item>
 
                 <Form.Item

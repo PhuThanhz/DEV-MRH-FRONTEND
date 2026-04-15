@@ -12,7 +12,9 @@ import {
     callGetCareerPathGroupedByBand,
     callGetCareerPathGlobal,
     callGetAllActiveCareerPaths,
-
+    callGetJobTitlesByLevel,
+    callPreviewBulkCareerPath,
+    callBulkCreateCareerPath,
     // ✅ API MỚI – NGUỒN SỰ THẬT
     callFetchCompanyJobTitlesOfDepartment,
 } from "@/config/api";
@@ -22,6 +24,10 @@ import type {
     ICareerPathRequest,
     IResCareerPathBandGroup,
     IBackendRes,
+    IJobTitleByLevel,
+    ICareerPathPreviewResponse,
+    ICareerPathBulkRequest,
+    ICareerPathBulkResult,
 } from "@/types/backend";
 
 import { notify } from "@/components/common/notification/notify";
@@ -191,5 +197,63 @@ export const useActiveJobTitlesByDepartment = (departmentId?: number | string) =
             // chỉ trả jobTitleInfo cho Career Path dùng
             return (res.data ?? []).map((x: any) => x.jobTitle);
         },
+    });
+};
+/* =========================================================
+   📌 FETCH JOB TITLES BY LEVEL (MỚI)
+========================================================= */
+export const useJobTitlesByLevelQuery = (departmentId?: number, levelCode?: string) => {
+    return useQuery<IJobTitleByLevel[]>({
+        queryKey: ["job-titles-by-level", departmentId, levelCode],
+        enabled: !!departmentId && !!levelCode,
+        queryFn: async () => {
+            const res = await callGetJobTitlesByLevel(
+                Number(departmentId), levelCode!
+            ) as IBackendRes<IJobTitleByLevel[]>;
+            return res.data ?? [];
+        },
+    });
+};
+
+/* =========================================================
+   👁️ PREVIEW BULK CREATE (MỚI)
+========================================================= */
+export const usePreviewBulkCareerPathMutation = () => {
+    return useMutation({
+        mutationFn: async (payload: ICareerPathBulkRequest) => {
+            const res = await callPreviewBulkCareerPath(
+                payload
+            ) as IBackendRes<ICareerPathPreviewResponse>;
+
+            return res.data!;
+        },
+        onError: (err: any) =>
+            notify.error(err.message || "Lỗi khi preview"),
+    });
+};
+/* =========================================================
+   🟢 BULK CREATE (MỚI)
+========================================================= */
+export const useBulkCreateCareerPathMutation = () => {
+    const qc = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (payload: ICareerPathBulkRequest) => {
+            const res = await callBulkCreateCareerPath(
+                payload
+            ) as IBackendRes<ICareerPathBulkResult>;
+            return res.data!;
+        },
+        onSuccess: (data) => {
+            if (data.totalCreated > 0) {
+                notify.created(`Tạo thành công ${data.totalCreated} lộ trình`);
+            }
+            if (data.totalSkipped > 0) {
+                notify.error(`${data.totalSkipped} chức danh đã tồn tại, bị bỏ qua`);
+            }
+            qc.invalidateQueries({ queryKey: ["career-paths-department"] });
+            qc.invalidateQueries({ queryKey: ["career-paths-band"] });
+        },
+        onError: (err: any) => notify.error(err.message || "Lỗi khi bulk create"),
     });
 };
