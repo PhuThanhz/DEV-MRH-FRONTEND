@@ -573,6 +573,24 @@ export interface IDepartmentJobTitle {
     };
 }
 /* ============================================
+   DEPARTMENT JOB TITLE - ASSIGN STATUS (Modal gán)
+============================================ */
+export interface IJobTitleAssignStatus {
+    id: number;
+    nameVi: string;
+    nameEn?: string;
+    positionCode?: string;
+    band?: string;
+    level?: number;
+    bandOrder?: number;
+    levelNumber?: number;
+
+    assigned: boolean;
+    assignSource?: "DEPARTMENT" | "SECTION" | "COMPANY" | null;  // ← enum đầy đủ
+    usedInDepartments: string[];
+    canAssign: boolean;  // ← THÊM
+}
+/* ============================================
    SECTION - JOB TITLE (Gán chức danh vào bộ phận)
 ============================================ */
 export interface ISectionJobTitle {
@@ -1381,6 +1399,7 @@ export interface IProcedure {
 
     // ← THÊM: dùng cho CONFIDENTIAL
     userIds?: number[];
+    assignedByList?: string[];
 
     active: boolean;
 

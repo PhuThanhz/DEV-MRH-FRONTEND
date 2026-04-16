@@ -144,7 +144,7 @@ const ModalEmployee = ({
         try {
             let avatarFileName = dataInit?.avatar || "";
             if (avatarFile) {
-                const uploadRes = await callUploadSingleFile(avatarFile, "AVATAR");
+                const uploadRes = await callUploadSingleFile(avatarFile, "avatar");
                 if (uploadRes?.data?.fileName) avatarFileName = uploadRes.data.fileName;
             }
 

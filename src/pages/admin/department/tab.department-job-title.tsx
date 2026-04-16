@@ -1,12 +1,11 @@
 // src/pages/admin/department/department-job-title/department.job-title.tab.tsx
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Button,
     Popconfirm,
     Space,
     Tooltip,
-    Input,
     Empty,
     Tag,
     Typography,
@@ -14,10 +13,9 @@ import {
 import {
     PlusOutlined,
     DeleteOutlined,
-    SearchOutlined,
     CheckCircleOutlined,
 } from "@ant-design/icons";
-import type { ProColumns, ActionType } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
@@ -25,6 +23,7 @@ import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { notify } from "@/components/common/notification/notify";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+
 import {
     callFetchCompanyJobTitlesOfDepartment,
     callDeleteDepartmentJobTitle,
@@ -47,26 +46,6 @@ interface IProps {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-    toolbarWrapper: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        marginBottom: 16,
-        flexWrap: "wrap",
-    },
-    toolbarLeft: {
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        flexWrap: "wrap",
-        flex: 1,
-    },
-    searchInput: {
-        width: 300,
-        borderRadius: 8,
-        fontSize: 13,
-    },
     assignButton: {
         borderRadius: 8,
         height: 32,
@@ -100,7 +79,11 @@ const styles: Record<string, React.CSSProperties> = {
     },
 };
 
-const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
+const DepartmentJobTitleTab = ({
+    departmentId,
+    companyId,
+    departmentName
+}: IProps) => {
     const [data, setData] = useState<IDepartmentJobTitle[]>([]);
     const [loading, setLoading] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
@@ -117,8 +100,6 @@ const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
         departmentJobTitleId: number;
         jobTitleName: string;
     } | null>(null);
-
-    const tableRef = useRef<ActionType>(null);
 
     const fetchData = async () => {
         if (!departmentId) return;
@@ -318,7 +299,6 @@ const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
                 />
 
                 <DataTable<IDepartmentJobTitle>
-                    actionRef={tableRef}
                     rowKey="id"
                     loading={loading}
                     columns={columns}
@@ -360,20 +340,21 @@ const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
                 />
             </div>
 
+            {/* Drawer Gán chức danh */}
             {openDrawer && departmentId && (
                 <DrawerAssignJobTitle
                     open={openDrawer}
                     onClose={() => setOpenDrawer(false)}
                     departmentId={departmentId}
-                    companyId={companyId ?? 0}
-                    assignedJobIds={data.map((d) => d.jobTitle.id)}
+                    departmentName={departmentName}          // ← Thêm dòng này
                     onSuccess={() => {
                         fetchData();
-                        setOpenDrawer(false);
+                        // Không cần setOpenDrawer(false) nữa vì Drawer đã tự đóng
                     }}
                 />
             )}
 
+            {/* Drawer Bậc lương */}
             {openSalary && selectedSalary && (
                 <DrawerDepartmentSalaryGrade
                     open={openSalary}
@@ -387,6 +368,7 @@ const DepartmentJobTitleTab = ({ departmentId, companyId }: IProps) => {
                 />
             )}
 
+            {/* Drawer Tiêu chí đánh giá */}
             {openPerformance && selectedPerformance && (
                 <DrawerJobTitlePerformanceContent
                     open={openPerformance}

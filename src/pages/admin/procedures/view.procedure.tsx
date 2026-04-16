@@ -342,6 +342,19 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                             <Text style={{ color: "#999", fontWeight: 400, fontSize: 13 }}>--</Text>
                         )}
                     </Field>
+                    <Field label="Người gửi" span={2}>
+                        {dataInit.assignedByList?.length ? (
+                            <Space wrap>
+                                {dataInit.assignedByList.map((name) => (
+                                    <Tag key={name} color="blue">
+                                        {name}
+                                    </Tag>
+                                ))}
+                            </Space>
+                        ) : (
+                            <Text style={{ color: "#999" }}>--</Text>
+                        )}
+                    </Field>
                 </div>
 
                 {/* ── Thời gian ── */}

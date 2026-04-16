@@ -5,12 +5,14 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-    callFetchCompanyJobTitlesOfDepartment, // ✅ API MỚI
+    callFetchCompanyJobTitlesOfDepartment,
     callCreateDepartmentJobTitle,
     callDeleteDepartmentJobTitle,
     callRestoreDepartmentJobTitle,
+    callFetchJobTitlesWithAssignStatus,
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
+import type { IJobTitleAssignStatus } from "@/types/backend";
 
 /* =====================================================
    1. FETCH JOB TITLES GÁN TRỰC TIẾP Ở PHÒNG BAN (source=DEPARTMENT)
@@ -100,6 +102,38 @@ export const useRestoreDepartmentJobTitleMutation = () => {
 
         onError: (err: any) => {
             notify.error(err?.response?.data?.message || "Lỗi khi khôi phục chức danh");
+        },
+    });
+};
+
+/* =====================================================
+   5. FETCH JOB TITLES KÈM TRẠNG THÁI GÁN (CHO MODAL)
+   - Hỗ trợ filter: search, status, band, level
+   - Hỗ trợ phân trang: page, size
+===================================================== */
+export interface IJobTitleAssignStatusParams {
+    search?: string;
+    status?: string;
+    band?: string;
+    level?: number;
+    page?: number;
+    size?: number;
+}
+
+export const useJobTitlesWithAssignStatusQuery = (
+    departmentId?: number,
+    params?: IJobTitleAssignStatusParams
+) => {
+    return useQuery({
+        queryKey: ["job-titles-assign-status", departmentId, params],
+        enabled: !!departmentId,
+        queryFn: async () => {
+            if (!departmentId) throw new Error("Thiếu ID phòng ban");
+
+            const res = await callFetchJobTitlesWithAssignStatus(departmentId, params);
+
+            // res.data là IModelPaginate<IJobTitleAssignStatus>
+            return res.data ?? null;
         },
     });
 };

@@ -47,6 +47,7 @@ const LoginPage = () => {
     }
   };
 
+
   // ── Thay inline error bằng toast notification ──
   const onFinishFailed = ({ errorFields }: any) => {
     const firstError = errorFields[0]?.errors[0];
@@ -55,6 +56,7 @@ const LoginPage = () => {
 
   return (
     <div className="login-root">
+
 
       {/* ── LEFT — desktop only ── */}
       <div className="login-left">
@@ -87,6 +89,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
 
       {/* ── RIGHT ── */}
       <div className="login-right">

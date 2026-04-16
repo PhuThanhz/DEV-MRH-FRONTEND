@@ -13,7 +13,7 @@ import type {
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
-    , ICareerPathBulkResult
+    , ICareerPathBulkResult, IJobTitleAssignStatus
 
 } from '@/types/backend';
 
@@ -331,6 +331,23 @@ export const callFetchCompanyJobTitlesOfDepartment = (departmentId: number) => {
 export const callFetchDepartmentsByCompany = (companyId: number) => {
     return axios.get<IBackendRes<IDepartment[]>>(
         `/api/v1/departments/by-company/${companyId}`
+    );
+};
+/* FETCH JOB TITLES WITH ASSIGN STATUS (cho modal gán chức danh vào phòng ban) */
+export const callFetchJobTitlesWithAssignStatus = (
+    departmentId: number,
+    params?: {
+        search?: string;
+        status?: string;
+        band?: string;
+        level?: number;
+        page?: number;
+        size?: number;
+    }
+) => {
+    return axios.get<IBackendRes<IModelPaginate<IJobTitleAssignStatus>>>(
+        `/api/v1/departments/${departmentId}/job-titles/assign-status`,
+        { params }
     );
 };
 /* ===================== SECTIONS ===================== */

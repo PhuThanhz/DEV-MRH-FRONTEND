@@ -10,7 +10,11 @@ import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
 import type { FilterField } from "@/components/common/filter/AdvancedFilterSelect";
-
+import {
+    useCompanyProceduresWithFilterQuery,
+    useDepartmentProceduresWithFilterQuery,
+    useConfidentialProceduresWithFilterQuery,
+} from "@/hooks/useProcedure";
 import ModalProcedure from "../modal.procedure";
 import ModalRevise from "../components/modal.revise";
 import ViewProcedure from "../view.procedure";
@@ -65,8 +69,24 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
     );
 
-    const { data, isFetching, refetch } = useProceduresQuery(type, query);
-    const deleteMutation = useDeleteProcedureMutation(type);
+    const companyQuery = useCompanyProceduresWithFilterQuery(
+        type === "COMPANY" ? query : ""
+    );
+
+    const departmentQuery = useDepartmentProceduresWithFilterQuery(
+        type === "DEPARTMENT" ? query : ""
+    );
+
+    const confidentialQuery = useConfidentialProceduresWithFilterQuery(
+        type === "CONFIDENTIAL" ? query : ""
+    );
+
+    const { data, isFetching, refetch } =
+        type === "COMPANY"
+            ? companyQuery
+            : type === "DEPARTMENT"
+                ? departmentQuery
+                : confidentialQuery; const deleteMutation = useDeleteProcedureMutation(type);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
