@@ -9,6 +9,7 @@ import {
     callRejectJdFlow,
     callIssueJdFlow,
     callFetchJdIssuers,
+    callRecallJdFlow,   // ← THÊM import này
 } from "@/config/api";
 
 import type {
@@ -227,4 +228,30 @@ export const useJdIssuersQuery = (enabled: boolean = true) => {
             return res.data ?? [];
         },
     });
+};
+/* ===================== RECALL JD ===================== */
+
+export const useRecallJdFlowMutation = () => {
+
+    const queryClient = useQueryClient();
+
+    return useMutation({
+
+        mutationFn: (data: { jdId: number }) =>
+            callRecallJdFlow(data.jdId),
+
+        onSuccess: (_, variables) => {
+
+            queryClient.invalidateQueries({ queryKey: ["jd-flow", variables.jdId] });
+            queryClient.invalidateQueries({ queryKey: ["jd-flow-logs", variables.jdId] });
+
+            queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
+
+            queryClient.invalidateQueries({ queryKey: ["job-descriptions"] });
+            queryClient.invalidateQueries({ queryKey: ["my-job-descriptions"] });
+
+        },
+
+    });
+
 };

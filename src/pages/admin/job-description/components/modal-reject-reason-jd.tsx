@@ -1,14 +1,17 @@
-import { Modal, Tag } from "antd";
+import { Modal, Tag, Typography, Space, Avatar } from "antd";
+import { RollbackOutlined, StopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+
+const { Text } = Typography;
 
 interface Props {
     open: boolean;
     record: {
-        status?: string;               // ← THÊM — phân biệt REJECTED vs RETURNED
+        status?: string;
         rejectorName?: string;
         rejectorPosition?: string;
         rejectorDepartment?: string;
-        rejectorPositionCode?: string; // ← THÊM — cấp bậc (M1, M2, L3...)
+        rejectorPositionCode?: string;
         rejectComment?: string;
         updatedAt?: string;
     } | null;
@@ -20,21 +23,15 @@ const ModalRejectReasonJd = ({ open, record, onClose }: Props) => {
 
     const isReturned = record.status === "RETURNED";
 
-    // Màu theo loại
-    const accentColor = isReturned ? "#b45309" : "#A32D2D";
-    const accentBg = isReturned ? "#fffbeb" : "#FCEBEB";
-    const accentBorder = isReturned ? "#fcd34d" : "#F7C1C1";
-    const titleBarColor = isReturned ? "#f59e0b" : "#E24B4A";
-    const titleText = isReturned ? "Lý do hoàn trả" : "Lý do từ chối";
-    const labelText = isReturned ? "Nội dung hoàn trả" : "Nội dung từ chối";
-    const timeText = isReturned ? "Hoàn trả lúc" : "Từ chối lúc";
-
     const initials = record.rejectorName
         ?.split(" ")
         .slice(-2)
         .map((w) => w[0])
         .join("")
         .toUpperCase() ?? "?";
+
+    const titleText = isReturned ? "Lý do hoàn trả" : "Lý do từ chối";
+    const timeText = isReturned ? "Hoàn trả lúc" : "Từ chối lúc";
 
     return (
         <Modal
@@ -43,105 +40,79 @@ const ModalRejectReasonJd = ({ open, record, onClose }: Props) => {
             footer={null}
             width={460}
             title={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                        width: 3, height: 18,
-                        borderRadius: 0,
-                        background: titleBarColor,
-                        flexShrink: 0,
-                    }} />
-                    <span style={{ fontSize: 15, fontWeight: 500 }}>{titleText}</span>
-                </div>
+                <Space>
+                    {isReturned
+                        ? <RollbackOutlined style={{ color: "#fa8c16" }} />
+                        : <StopOutlined style={{ color: "#ff4d4f" }} />
+                    }
+                    <span>{titleText}</span>
+                </Space>
             }
+            destroyOnClose
         >
-            <div style={{ padding: "4px 0 8px" }}>
-                {/* Card người từ chối / hoàn trả */}
+            <Space direction="vertical" size="middle" style={{ width: "100%", padding: "4px 0 8px" }}>
                 {record.rejectorName && (
-                    <div style={{
-                        background: "#fafafa",
-                        borderRadius: 10,
-                        border: "0.5px solid #f0f0f0",
-                        padding: "14px 16px",
-                        marginBottom: 16,
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            {/* Avatar initials */}
-                            <div style={{
-                                width: 40, height: 40, borderRadius: "50%",
-                                background: accentBg,
-                                border: `0.5px solid ${accentBorder}`,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                fontSize: 14, fontWeight: 500, color: accentColor,
-                                flexShrink: 0,
-                            }}>
-                                {initials}
-                            </div>
-
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                {/* Tên + chức danh */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: 14, fontWeight: 500, color: "#1a1a1a" }}>
-                                        {record.rejectorName}
-                                    </span>
-                                    {record.rejectorPosition && (
-                                        <Tag color="purple" style={{ margin: 0, fontSize: 11 }}>
-                                            {record.rejectorPosition}
-                                        </Tag>
-                                    )}
-                                    {/* Cấp bậc — M1, M2, L3... */}
-                                    {record.rejectorPositionCode && (
-                                        <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
-                                            {record.rejectorPositionCode}
-                                        </Tag>
-                                    )}
-                                </div>
-
-                                {/* Phòng ban */}
-                                {record.rejectorDepartment && (
-                                    <div style={{ marginTop: 3 }}>
-                                        <span style={{ fontSize: 12, color: "#888" }}>
-                                            {record.rejectorDepartment}
-                                        </span>
-                                    </div>
+                    <Space align="center">
+                        <Avatar
+                            style={{
+                                background: isReturned ? "#fff7e6" : "#fff2f0",
+                                color: isReturned ? "#d46b08" : "#cf1322",
+                                border: `1px solid ${isReturned ? "#ffd591" : "#ffccc7"}`,
+                                fontWeight: 600,
+                            }}
+                        >
+                            {initials}
+                        </Avatar>
+                        <div>
+                            <Space size={6} wrap>
+                                <Text strong>{record.rejectorName}</Text>
+                                {record.rejectorPosition && (
+                                    <Tag color="purple">{record.rejectorPosition}</Tag>
                                 )}
-                            </div>
+                                {record.rejectorPositionCode && (
+                                    <Tag color="blue">{record.rejectorPositionCode}</Tag>
+                                )}
+                            </Space>
+                            {record.rejectorDepartment && (
+                                <div>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                        {record.rejectorDepartment}
+                                    </Text>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    </Space>
                 )}
 
-                {/* Label */}
-                <div style={{
-                    fontSize: 11, fontWeight: 600, color: "#aaa",
-                    textTransform: "uppercase", letterSpacing: "0.05em",
-                    marginBottom: 6,
-                }}>
-                    {labelText}
+                <div>
+                    <Text
+                        type="secondary"
+                        style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}
+                    >
+                        {isReturned ? "Nội dung hoàn trả" : "Nội dung từ chối"}
+                    </Text>
+                    <div
+                        style={{
+                            background: isReturned ? "#fff7e6" : "#fff2f0",
+                            border: `1px solid ${isReturned ? "#ffd591" : "#ffccc7"}`,
+                            borderRadius: 8,
+                            padding: "12px 14px",
+                            fontSize: 13,
+                            lineHeight: 1.8,
+                            whiteSpace: "pre-wrap",
+                            color: isReturned ? "#78350f" : "#791F1F",
+                        }}
+                    >
+                        {record.rejectComment ?? "—"}
+                    </div>
                 </div>
 
-                {/* Nội dung */}
-                <div style={{
-                    fontSize: 13,
-                    color: isReturned ? "#78350f" : "#791F1F",
-                    background: accentBg,
-                    border: `0.5px solid ${accentBorder}`,
-                    borderRadius: 8,
-                    padding: "14px 16px",
-                    lineHeight: 1.8,
-                    whiteSpace: "pre-wrap",
-                }}>
-                    {record.rejectComment ?? "—"}
-                </div>
-
-                {/* Timestamp */}
                 {record.updatedAt && (
-                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ddd" }} />
-                        <span style={{ fontSize: 11, color: "#bbb" }}>
-                            {timeText} {dayjs(record.updatedAt).format("HH:mm · DD/MM/YYYY")}
-                        </span>
-                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                        {timeText}: {dayjs(record.updatedAt).format("HH:mm · DD/MM/YYYY")}
+                    </Text>
                 )}
-            </div>
+            </Space>
         </Modal>
     );
 };

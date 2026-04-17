@@ -1333,7 +1333,7 @@ export const callFetchJdFlowLogs = (jdId: number) => {
  */
 export const callSubmitJdFlow = (data: {
     jdId: number;
-    nextUserId: number;
+    nextUserId?: number;  // ← đã optional ✅
 }) => {
     return axios.post<IBackendRes<any>>(
         `/api/v1/jd-flow/submit`,
@@ -1354,7 +1354,11 @@ export const callApproveJdFlow = (data: {
         data
     );
 };
-
+export const callRecallJdFlow = (jdId: number) => {
+    return axios.post<IBackendRes<any>>(
+        `/api/v1/jd-flow/recall/${jdId}`
+    );
+};
 /**
  * Từ chối JD
  * POST /api/v1/jd-flow/reject
