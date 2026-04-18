@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Button, Dropdown } from "antd";
+import { Space, Tag, Popconfirm, Button, Dropdown, message } from "antd";
 import {
     EyeOutlined,
     EditOutlined,
@@ -10,6 +10,7 @@ import {
     CloseCircleOutlined,
     FileDoneOutlined,
     ReloadOutlined,
+    UndoOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import dayjs from "dayjs";
@@ -24,6 +25,7 @@ import { useDeleteJobDescriptionMutation } from "@/hooks/useJobDescriptions";
 import {
     useRejectJdFlowMutation,
     useIssueJdFlowMutation,
+    useSubmitJdFlowMutation,
 } from "@/hooks/useJdFlow";
 import ModalJobDescription from "../modal.job-description";
 import ViewJobDescription from "../view.job-description/index";
@@ -40,7 +42,6 @@ const STATUS_COLOR: Record<string, string> = {
     IN_REVIEW: "processing",
     APPROVED: "warning",
     REJECTED: "error",
-    RETURNED: "warning",
     PUBLISHED: "success",
 };
 
@@ -49,7 +50,6 @@ const STATUS_LABEL: Record<string, string> = {
     IN_REVIEW: "Đang duyệt",
     APPROVED: "Đã duyệt",
     REJECTED: "Từ chối",
-    RETURNED: "Hoàn trả",
     PUBLISHED: "Đã ban hành",
 };
 
@@ -138,6 +138,7 @@ const JobDescriptionTable = ({
     const deleteMutation = useDeleteJobDescriptionMutation();
     const rejectMutation = useRejectJdFlowMutation();
     const issueMutation = useIssueJdFlowMutation();
+    const submitMutation = useSubmitJdFlowMutation();
 
     const [openModal, setOpenModal] = useState(false);
     const [editRecord, setEditRecord] = useState<IJobDescription | null>(null);
@@ -182,152 +183,102 @@ const JobDescriptionTable = ({
         });
     };
 
-    // ===================== BUILD DROPDOWN ITEMS =====================
+    const handleResubmitReject = (record: any, returnToPrevious: boolean = false) => {
+        const jdId = record.jdId ?? record.id;
+        if (!jdId) {
+            message.error("Không tìm thấy ID của JD");
+            return;
+        }
+
+        submitMutation.mutate(
+            {
+                jdId,
+                nextUserId: undefined,
+                returnToPrevious,
+            },
+            {
+                onSuccess: () => {
+                    message.success(returnToPrevious
+                        ? "Đã gửi về người trước đó thành công!"
+                        : "Gửi lại cho người vừa từ chối thành công!");
+                    tableRef.current?.reload?.();
+                },
+                onError: (error: any) => {
+                    const msg = error?.response?.data?.message || "Gửi lại thất bại";
+                    message.error(msg);
+                },
+            }
+        );
+    };
+
+    // ── Dropdown items: chỉ giữ lại các action KHÔNG phải Duyệt/Từ chối/Ban hành ──
     const buildDropdownItems = (record: any) => {
         const items: any[] = [];
 
-        // ── Tab "JD của tôi" (mode MY) ──
-        if (mode === "MY" && record.id) {
-            if (record.status === "DRAFT") {
-                items.push({
-                    key: "submit",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                            <span onClick={() => {
-                                setFlowRecord({ id: record.id, status: record.status });
-                                setOpenFlowModal(true);
-                            }}>
-                                <SendOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
-                                Gửi duyệt
-                            </span>
-                        </Access>
-                    ),
-                });
-            } else if (record.status === "REJECTED") {
-                items.push({
-                    key: "resubmit",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                            <span onClick={() => {
-                                setFlowRecord({ id: record.id, status: record.status });
-                                setOpenFlowModal(true);
-                            }}>
-                                <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
-                                Gửi lại duyệt
-                            </span>
-                        </Access>
-                    ),
-                });
-            }
-            // RETURNED ở tab "JD của tôi": Không hiển thị nút trong dropdown (để dùng nút chính trong Modal)
+        // Mode MY – Gửi duyệt (DRAFT)
+        if (mode === "MY" && record.id && record.status === "DRAFT") {
+            items.push({
+                key: "submit",
+                label: (
+                    <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
+                        <span onClick={() => {
+                            setFlowRecord({ id: record.id, status: record.status });
+                            setOpenFlowModal(true);
+                        }}>
+                            <SendOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
+                            Gửi duyệt
+                        </span>
+                    </Access>
+                ),
+            });
         }
 
-        // ── Tab Inbox / JD cần xử lý (mode !== "MY") ──
-        else if (mode !== "MY") {
-            if (record.status === "IN_REVIEW") {
-                items.push({
-                    key: "approve",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>
-                            <span style={{ color: "#0f8a5f" }} onClick={() => {
-                                setFlowRecord({ id: record.jdId ?? record.id, status: record.status, isApprover: true });
-                                setOpenFlowModal(true);
-                            }}>
-                                <CheckCircleOutlined style={{ ...menuIconStyle, color: "#0f8a5f" }} />
-                                Duyệt
+        // Gửi lại khi REJECTED – áp dụng cả MY và INBOX/ALL
+        if (record.status === "REJECTED") {
+            items.push({
+                key: "resubmit_normal",
+                label: (
+                    <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
+                        <Popconfirm
+                            title="Gửi lại JD?"
+                            description={`JD sẽ được gửi lại cho ${record.rejectorName || "người vừa từ chối"}.`}
+                            okText="Gửi lại"
+                            cancelText="Hủy"
+                            onConfirm={() => handleResubmitReject(record, false)}
+                        >
+                            <span style={{ display: "inline-flex", alignItems: "center" }}>
+                                <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
+                                Gửi lại cho người từ chối
                             </span>
-                        </Access>
-                    ),
-                });
+                        </Popconfirm>
+                    </Access>
+                ),
+            });
 
+            if (record.canReturnToPrevious) {
                 items.push({
-                    key: "reject",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
-                            <span style={{ color: "#c4621a" }} onClick={() => {
-                                setRejectRecord(record);
-                                setIsResubmitReject(false);
-                                setOpenRejectModal(true);
-                            }}>
-                                <CloseCircleOutlined style={{ ...menuIconStyle, color: "#c4621a" }} />
-                                Từ chối
-                            </span>
-                        </Access>
-                    ),
-                });
-            }
-
-            if (record.status === "APPROVED") {
-                items.push({
-                    key: "issue",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.ISSUE} hideChildren>
-                            <span style={{ color: "#7c3abf" }} onClick={() => {
-                                setIssueRecord(record);
-                                setOpenIssueModal(true);
-                            }}>
-                                <FileDoneOutlined style={{ ...menuIconStyle, color: "#7c3abf" }} />
-                                Ban hành
-                            </span>
-                        </Access>
-                    ),
-                });
-            }
-
-            if (record.status === "RETURNED") {
-
-                items.push({
-                    key: "resubmit",
+                    key: "resubmit_previous",
                     label: (
                         <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                            <span onClick={() => {
-                                setFlowRecord({
-                                    id: record.jdId ?? record.id,
-                                    jdId: record.jdId ?? record.id,
-                                    status: record.status,
-                                    isCreator: true,  // ← thêm dòng này
-                                    rejectComment: record.rejectComment,
-                                    rejectorName: record.rejectorName,
-                                    rejectorPosition: record.rejectorPosition,
-                                    rejectorPositionCode: record.rejectorPositionCode,
-                                });
-                                setOpenFlowModal(true);
-                            }}>
-                                <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
-                                Gửi lại duyệt
-                            </span>
+                            <Popconfirm
+                                title="Gửi về người trước đó?"
+                                description="JD sẽ được đẩy ngược về người duyệt trước đó. Bạn có chắc chắn?"
+                                okText="Xác nhận"
+                                cancelText="Hủy"
+                                onConfirm={() => handleResubmitReject(record, true)}
+                            >
+                                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                                    <UndoOutlined style={{ ...menuIconStyle, color: "#fa8c16" }} />
+                                    Gửi về người trước đó
+                                </span>
+                            </Popconfirm>
                         </Access>
                     ),
                 });
             }
-            if (record.status === "REJECTED") {
-                items.push({
-                    key: "resubmit",
-                    label: (
-                        <Access permission={ALL_PERMISSIONS.JD_FLOW.SUBMIT} hideChildren>
-                            <span onClick={() => {
-                                setFlowRecord({
-                                    id: record.jdId ?? record.id,
-                                    jdId: record.jdId ?? record.id,
-                                    status: record.status,
-                                    rejectComment: record.rejectComment,
-                                    rejectorName: record.rejectorName,
-                                    rejectorPosition: record.rejectorPosition,
-                                    rejectorPositionCode: record.rejectorPositionCode,
-                                });
-                                setOpenFlowModal(true);
-                            }}>
-                                <ReloadOutlined style={{ ...menuIconStyle, color: "#1677ff" }} />
-                                Gửi lại duyệt
-                            </span>
-                        </Access>
-                    ),
-                });
-            }
-
         }
 
-        // Xóa JD (chỉ DRAFT)
+        // Xóa JD (chỉ DRAFT, mode MY hoặc ALL)
         if ((mode === "MY" || mode === "ALL") && record.status === "DRAFT" && record.id) {
             if (items.length > 0) items.push({ type: "divider" });
             items.push({
@@ -372,22 +323,17 @@ const JobDescriptionTable = ({
             align: "center",
             render: (_, record: any) => {
                 const isRejected = record.status === "REJECTED";
-                const isReturned = record.status === "RETURNED";
-
-                if ((isRejected || isReturned) && record.rejectComment) {
-                    const btnStyle: React.CSSProperties = isReturned
-                        ? { color: "#b45309", border: "1px solid #fcd34d", background: "#fffbeb" }
-                        : { color: "#b91c1c", border: "1px solid #fca5a5", background: "#fff1f2" };
-
+                if (isRejected && record.rejectComment) {
                     return (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                             <Tag color={STATUS_COLOR[record.status]}>
                                 {STATUS_LABEL[record.status]}
                             </Tag>
                             <span
-                                style={{ fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "1px 8px", cursor: "pointer", ...btnStyle }}
-                                // ĐỔI THÀNH
-                                // ĐÚNG — phải mở ModalRejectReasonJd
+                                style={{
+                                    fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "1px 8px",
+                                    cursor: "pointer", color: "#b91c1c", border: "1px solid #fca5a5", background: "#fff1f2"
+                                }}
                                 onClick={() => {
                                     setRejectReasonRecord(record);
                                     setOpenRejectReasonModal(true);
@@ -398,7 +344,6 @@ const JobDescriptionTable = ({
                         </div>
                     );
                 }
-
                 return (
                     <Tag color={STATUS_COLOR[record.status] ?? "default"}>
                         {STATUS_LABEL[record.status] ?? record.status}
@@ -415,14 +360,17 @@ const JobDescriptionTable = ({
         },
         {
             title: "Hành động",
-            width: 120,
+            // Tăng width để chứa các nút inline Duyệt / Từ chối / Ban hành
+            width: 220,
             align: "center",
             fixed: "right",
             render: (_, record: any) => {
                 const dropdownItems = buildDropdownItems(record);
+                const isInboxOrAll = mode !== "MY";
 
                 return (
-                    <Space size={4} align="center">
+                    <Space size={4} align="center" wrap>
+                        {/* Xem */}
                         <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_BY_ID} hideChildren>
                             <Button
                                 type="text"
@@ -432,9 +380,9 @@ const JobDescriptionTable = ({
                             />
                         </Access>
 
-                        {/* Chỉnh sửa */}
-                        {(mode === "MY" || mode === "ALL" || (mode === "INBOX" && (record.status === "RETURNED" || record.status === "REJECTED"))) &&
-                            (record.status === "DRAFT" || record.status === "REJECTED" || record.status === "RETURNED") &&
+                        {/* Sửa */}
+                        {(mode === "MY" || mode === "ALL" || (mode === "INBOX" && record.status === "REJECTED")) &&
+                            (record.status === "DRAFT" || record.status === "REJECTED") &&
                             (record.id ?? record.jdId) && (
                                 <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.UPDATE} hideChildren>
                                     <Button
@@ -449,7 +397,56 @@ const JobDescriptionTable = ({
                                 </Access>
                             )}
 
-                        {/* Dropdown */}
+                        {/* ── INLINE: Nút Duyệt (IN_REVIEW, mode không phải MY) ── */}
+                        {isInboxOrAll && record.status === "IN_REVIEW" && (
+                            <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>
+                                <ActionBtn
+                                    variant="approve"
+                                    onClick={() => {
+                                        setFlowRecord({ id: record.jdId ?? record.id, status: record.status, isApprover: true });
+                                        setOpenFlowModal(true);
+                                    }}
+                                >
+                                    <CheckCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />
+                                    Duyệt
+                                </ActionBtn>
+                            </Access>
+                        )}
+
+                        {/* ── INLINE: Nút Từ chối (IN_REVIEW, mode không phải MY) ── */}
+                        {isInboxOrAll && record.status === "IN_REVIEW" && (
+                            <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
+                                <ActionBtn
+                                    variant="reject"
+                                    onClick={() => {
+                                        setRejectRecord(record);
+                                        setIsResubmitReject(false);
+                                        setOpenRejectModal(true);
+                                    }}
+                                >
+                                    <CloseCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />
+                                    Từ chối
+                                </ActionBtn>
+                            </Access>
+                        )}
+
+                        {/* ── INLINE: Nút Ban hành (APPROVED, mode không phải MY) ── */}
+                        {isInboxOrAll && record.status === "APPROVED" && (
+                            <Access permission={ALL_PERMISSIONS.JD_FLOW.ISSUE} hideChildren>
+                                <ActionBtn
+                                    variant="issue"
+                                    onClick={() => {
+                                        setIssueRecord(record);
+                                        setOpenIssueModal(true);
+                                    }}
+                                >
+                                    <FileDoneOutlined style={{ marginRight: 4, fontSize: 13 }} />
+                                    Ban hành
+                                </ActionBtn>
+                            </Access>
+                        )}
+
+                        {/* Dropdown cho các action phụ còn lại */}
                         {dropdownItems.length > 0 && (
                             <Dropdown menu={{ items: dropdownItems }} trigger={["click"]} placement="bottomRight">
                                 <Button type="text" size="small" icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />} />
@@ -463,7 +460,6 @@ const JobDescriptionTable = ({
 
     return (
         <>
-            {/* Search & Filter */}
             <div className="flex flex-col gap-3">
                 <SearchFilter
                     searchPlaceholder="Tìm theo mã JD..."
@@ -485,7 +481,6 @@ const JobDescriptionTable = ({
                                     { label: "Đang duyệt", value: "IN_REVIEW", color: "blue" },
                                     { label: "Đã duyệt", value: "APPROVED", color: "gold" },
                                     { label: "Từ chối", value: "REJECTED", color: "red" },
-                                    { label: "Hoàn trả", value: "RETURNED", color: "orange" },
                                     { label: "Đã ban hành", value: "PUBLISHED", color: "green" },
                                 ]
                             }]}
@@ -496,7 +491,6 @@ const JobDescriptionTable = ({
                 </div>
             </div>
 
-            {/* Table */}
             <div style={{ marginTop: 16 }}>
                 <DataTable<TableRecord>
                     actionRef={tableRef}
@@ -526,7 +520,6 @@ const JobDescriptionTable = ({
                 />
             </div>
 
-            {/* Modals */}
             <ModalJobDescription open={openModal} onClose={() => { setOpenModal(false); setEditRecord(null); }} editRecord={editRecord} />
             <ViewJobDescription open={openView} onClose={() => { setOpenView(false); setViewRecord(null); }} record={viewRecord as any} />
             <ModalJdFlow open={openFlowModal} onClose={() => setOpenFlowModal(false)} record={flowRecord} />

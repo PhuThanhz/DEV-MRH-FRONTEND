@@ -1259,10 +1259,11 @@ export type JD_STATUS =
 /* ===================== JD FLOW REQUEST ===================== */
 
 export interface IReqSubmitJdFlow {
-    jdId: number
-    nextUserId: number
+    jdId: number;
+    nextUserId?: number;           // optional
+    returnToPrevious?: boolean;    // ← THÊM
+    comment?: string;              // ← THÊM (dùng khi gửi về trước)
 }
-
 export interface IReqApproveJdFlow {
     jdId: number
     nextUserId: number

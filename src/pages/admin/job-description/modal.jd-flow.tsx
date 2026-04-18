@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Modal, Button, Input, message, Spin, Tag, Avatar, Empty } from "antd";
+import { Modal, Button, Input, message, Spin, Tag, Avatar, Empty, Space, Typography } from "antd";
 import {
     UserOutlined, CrownOutlined, ApartmentOutlined,
     SearchOutlined, CheckOutlined, BankOutlined, CloseCircleOutlined,
-    RollbackOutlined, UndoOutlined,
+    UndoOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 
 import { callFetchJdApprovers, callFetchJdIssuers, callFetchJdFlow } from "@/config/api";
@@ -14,6 +14,8 @@ import {
 } from "@/hooks/useJdFlow";
 
 import ModalRejectJd from "../job-description/components/modal-reject-jd";
+
+const { Text } = Typography;
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -100,11 +102,7 @@ const ApproverCard = ({ user, selected, onClick }: {
                     {user.name}
                 </span>
                 {user.isFinal && (
-                    <Tag
-                        icon={<CrownOutlined style={{ fontSize: 9 }} />}
-                        color="gold"
-                        style={{ fontSize: 10, padding: "0 5px", margin: 0, lineHeight: "17px" }}
-                    >
+                    <Tag icon={<CrownOutlined style={{ fontSize: 9 }} />} color="gold" style={{ fontSize: 10, padding: "0 5px", margin: 0, lineHeight: "17px" }}>
                         Duyệt cuối
                     </Tag>
                 )}
@@ -156,7 +154,7 @@ const ApproverPicker = ({ label, list, selectedId, onSelect }: {
                 prefix={<SearchOutlined style={{ color: "#ccc", fontSize: 13 }} />}
                 placeholder="Tìm theo tên, chức danh, phòng ban..."
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                 allowClear
                 style={{ marginBottom: 10, borderRadius: 8, fontSize: 13, height: 36 }}
             />
@@ -211,9 +209,8 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
 
     const jdId = useMemo(() => record?.id ?? record?.jdId, [record]);
 
-    // Lấy reject info trực tiếp từ record (backend đã trả sẵn qua fetchInbox / fetchFlowByJd)
     const rejectInfo = useMemo<RejectInfo | null>(() => {
-        if (status !== "REJECTED" && status !== "RETURNED") return null;
+        if (status !== "REJECTED") return null;
         if (!record?.rejectorName && !record?.rejectComment) return null;
         return {
             rejectorName: record.rejectorName ?? "Không rõ",
@@ -257,7 +254,6 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 if (flowData?.currentUserIsFinal === true && status === "IN_REVIEW") {
                     setIsFinalApprover(true);
                 }
-
             } catch (error) {
                 console.error("Load data error:", error);
                 message.error("Không tải được danh sách người duyệt");
@@ -267,26 +263,43 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         loadData();
     }, [open, jdId, status]);
 
-    // ========== HANDLERS ==========
+    const handleResubmit = (returnToPrevious: boolean) => {
+        if (!jdId) return;
 
-    // DRAFT / REJECTED: bắt buộc chọn người
-    // RETURNED: không cần chọn, backend tự lấy lastRejector
+        submitMutation.mutate({
+            jdId,
+            nextUserId: undefined,
+            returnToPrevious,
+        }, {
+            onSuccess: () => {
+                message.success(returnToPrevious
+                    ? "Đã gửi về người trước đó thành công!"
+                    : "Gửi lại cho người vừa từ chối thành công!");
+                onClose();
+            },
+            onError: (error: any) => {
+                const msg = error?.response?.data?.message || "Gửi lại thất bại";
+                message.error(msg);
+            },
+        });
+    };
+
     const handleSubmit = () => {
-        if (status !== "RETURNED" && !nextUserId) {
+        if (status !== "REJECTED" && !nextUserId) {
             message.warning("Vui lòng chọn người nhận duyệt");
             return;
         }
 
-        submitMutation.mutate(
-            { jdId, nextUserId: status === "RETURNED" ? undefined : nextUserId },
-            {
-                onSuccess: () => { message.success("Gửi duyệt thành công"); onClose(); },
-                onError: (error: any) => {
-                    const msg = error?.response?.data?.message || "Gửi duyệt thất bại";
-                    message.error(msg);
-                },
-            }
-        );
+        submitMutation.mutate({
+            jdId,
+            nextUserId: status === "REJECTED" ? undefined : nextUserId,
+        }, {
+            onSuccess: () => {
+                message.success("Gửi duyệt thành công");
+                onClose();
+            },
+            onError: (error: any) => message.error(error?.response?.data?.message || "Gửi duyệt thất bại"),
+        });
     };
 
     const handleApprove = () => {
@@ -299,23 +312,23 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
             return;
         }
 
-        approveMutation.mutate(
-            { jdId, nextUserId: isFinalApprover ? nextIssuerId : nextUserId },
-            {
-                onSuccess: () => { message.success("Duyệt JD thành công"); onClose(); },
-                onError: () => message.error("Duyệt thất bại"),
-            }
-        );
+        approveMutation.mutate({
+            jdId,
+            nextUserId: isFinalApprover ? nextIssuerId : nextUserId,
+        }, {
+            onSuccess: () => { message.success("Duyệt JD thành công"); onClose(); },
+            onError: () => message.error("Duyệt thất bại"),
+        });
     };
 
     const handleReject = (reason: string) => {
         rejectMutation.mutate({ jdId, comment: reason }, {
             onSuccess: () => {
-                message.success("Đã hoàn trả JD");
+                message.success("Đã từ chối JD");
                 setOpenReject(false);
                 onClose();
             },
-            onError: () => message.error("Hoàn trả thất bại"),
+            onError: () => message.error("Từ chối thất bại"),
         });
     };
 
@@ -329,31 +342,9 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
     const handleRecall = () => {
         recallMutation.mutate({ jdId }, {
             onSuccess: () => { message.success("Thu hồi JD thành công"); onClose(); },
-            onError: (error: any) => {
-                const msg = error?.response?.data?.message || "Thu hồi thất bại";
-                message.error(msg);
-            },
+            onError: (error: any) => message.error(error?.response?.data?.message || "Thu hồi thất bại"),
         });
     };
-
-    // ========== STYLES ==========
-
-    const primaryBtn = (disabled: boolean): React.CSSProperties => ({
-        height: 40, fontSize: 13, fontWeight: 600, borderRadius: 8, border: "none",
-        background: disabled ? "#f5f5f5" : "linear-gradient(135deg, #e91e8c 0%, #c2185b 100%)",
-        color: disabled ? "#ccc" : "#fff",
-        boxShadow: disabled ? "none" : "0 2px 8px rgba(233,30,140,0.2)",
-    });
-
-    const ghostBtn = (color: string, bg: string, border: string): React.CSSProperties => ({
-        height: 40, fontSize: 13, fontWeight: 600, borderRadius: 8,
-        border: `1px solid ${border}`, color, background: bg,
-    });
-
-    // ========== DERIVED ==========
-
-    // RETURNED: nút "Gửi lại" không cần chọn người (backend tự xử lý)
-    const submitDisabled = status !== "RETURNED" && !nextUserId;
 
     return (
         <>
@@ -374,7 +365,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 <Spin spinning={loading}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "12px 0" }}>
 
-                        {/* ===== BANNER TỪ CHỐI / HOÀN TRẢ ===== */}
+                        {/* Thông tin từ chối (nếu có) */}
                         {rejectInfo && (
                             <div style={{
                                 background: "#fff2f0", border: "1px solid #ffccc7",
@@ -392,9 +383,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                                                 {rejectInfo.rejectorPosition}
                                             </Tag>
                                         )}
-                                        <span style={{ fontSize: 12, color: "#ff7875" }}>
-                                            {status === "RETURNED" ? "đã hoàn trả JD này" : "đã từ chối JD này"}
-                                        </span>
+                                        <span style={{ fontSize: 12, color: "#ff7875" }}>đã từ chối JD này</span>
                                     </div>
                                     <div style={{
                                         fontSize: 13, color: "#5c0011", background: "#fff",
@@ -407,8 +396,8 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             </div>
                         )}
 
-                        {/* ===== PICKER: DRAFT / REJECTED — phải chọn người ===== */}
-                        {(status === "DRAFT" || status === "REJECTED") && (
+                        {/* DRAFT: chọn người duyệt */}
+                        {status === "DRAFT" && (
                             <ApproverPicker
                                 label="Chọn người duyệt tiếp theo"
                                 list={approvers}
@@ -417,8 +406,8 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             />
                         )}
 
-                        {/* ===== PICKER: IN_REVIEW non-final — chọn người duyệt tiếp ===== */}
-                        {!isFinalApprover && status === "IN_REVIEW" && (
+                        {/* IN_REVIEW, không phải người duyệt cuối: chọn người duyệt tiếp */}
+                        {status === "IN_REVIEW" && !isFinalApprover && (
                             <ApproverPicker
                                 label="Chọn người duyệt tiếp theo"
                                 list={approvers}
@@ -427,8 +416,8 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             />
                         )}
 
-                        {/* ===== PICKER: IN_REVIEW final — chọn người ban hành ===== */}
-                        {isFinalApprover && status === "IN_REVIEW" && (
+                        {/* IN_REVIEW, người duyệt cuối: chọn người ban hành */}
+                        {status === "IN_REVIEW" && isFinalApprover && (
                             <ApproverPicker
                                 label="Chọn người ban hành JD"
                                 list={issuers}
@@ -437,99 +426,90 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             />
                         )}
 
-                        {/* ===== RETURNED: thông báo tự động gửi lại ===== */}
-                        {status === "RETURNED" && (
-                            <div style={{
-                                background: "#fffbe6", border: "1px solid #ffe58f",
-                                borderRadius: 8, padding: "10px 14px",
-                                fontSize: 13, color: "#7c4f00",
-                            }}>
-                                Bấm <strong>"Gửi lại duyệt"</strong> để tự động gửi lại cho người vừa hoàn trả.
-                                Hoặc bấm <strong>"Từ chối"</strong> để trả ngược về người trước đó trong luồng.
-                            </div>
-                        )}
-
                         <div style={{ height: 1, background: "#f5f5f5", margin: "0 -24px" }} />
 
-                        {/* ===== NHÓM NÚT: DRAFT / REJECTED ===== */}
-                        {(status === "DRAFT" || status === "REJECTED") && (
+                        {/* REJECTED */}
+                        {status === "REJECTED" && (
+                            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                                <Button
+                                    type="primary"
+                                    block
+                                    size="large"
+                                    icon={<ReloadOutlined />}
+                                    onClick={() => handleResubmit(false)}
+                                >
+                                    Gửi lại cho người vừa từ chối
+                                </Button>
+
+                                {record?.canReturnToPrevious && (
+                                    <Button
+                                        block
+                                        size="large"
+                                        icon={<UndoOutlined />}
+                                        onClick={() => handleResubmit(true)}
+                                        style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
+                                    >
+                                        Gửi về người trước đó trong chuỗi duyệt
+                                    </Button>
+                                )}
+                            </Space>
+                        )}
+
+                        {/* DRAFT */}
+                        {status === "DRAFT" && (
                             <Button
-                                type="primary" block
-                                disabled={submitDisabled}
+                                type="primary"
+                                block
                                 onClick={handleSubmit}
-                                style={primaryBtn(submitDisabled)}
+                                disabled={!nextUserId}
                             >
                                 Gửi duyệt
                             </Button>
                         )}
 
-
-                        {/* ===== NHÓM NÚT: RETURNED ===== */}
-                        {status === "RETURNED" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                {/* Gửi lại → backend tự lấy lastRejector, không cần chọn */}
-                                <Button
-                                    type="primary" block
-                                    onClick={handleSubmit}
-                                    style={primaryBtn(false)}
-                                    icon={<RollbackOutlined />}
-                                >
-                                    Gửi lại duyệt
-                                </Button>
-
-                                {/* Từ chối → chỉ hiện khi KHÔNG phải người tạo */}
-                                {!record?.isCreator && (
-                                    <Button
-                                        block
-                                        onClick={() => setOpenReject(true)}
-                                        style={ghostBtn("#e53935", "#fff5f5", "#ffb3b3")}
-                                        icon={<CloseCircleOutlined />}
-                                    >
-                                        Từ chối (trả về người trước)
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ===== NHÓM NÚT: IN_REVIEW ===== */}
+                        {/* IN_REVIEW
+                            - Người duyệt THƯỜNG: hiện [Duyệt & chuyển tiếp] + [Từ chối] + [Thu hồi]
+                            - Người duyệt CUỐI:   chỉ hiện [Duyệt & gửi ban hành] (Từ chối và Thu hồi đã có ngoài bảng)
+                        */}
                         {status === "IN_REVIEW" && (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                <div style={{ display: "flex", gap: 8 }}>
+                            <>
+                                {isFinalApprover ? (
+                                    // Người duyệt cuối — chỉ nút duyệt, bỏ từ chối & thu hồi
                                     <Button
-                                        type="primary" block
-                                        disabled={isFinalApprover ? !nextIssuerId : !nextUserId}
-                                        onClick={handleApprove}
-                                        style={{
-                                            ...primaryBtn(isFinalApprover ? !nextIssuerId : !nextUserId),
-                                            flex: 2,
-                                        }}
-                                    >
-                                        {isFinalApprover ? "Duyệt & gửi ban hành" : "Duyệt & chuyển tiếp"}
-                                    </Button>
-                                    <Button
+                                        type="primary"
                                         block
-                                        onClick={() => setOpenReject(true)}
-                                        style={{ ...ghostBtn("#e53935", "#fff5f5", "#ffb3b3"), flex: 1 }}
+                                        disabled={!nextIssuerId}
+                                        onClick={handleApprove}
                                     >
-                                        Từ chối
+                                        Duyệt & gửi ban hành
                                     </Button>
-                                </div>
-
-                                {/* Thu hồi: chỉ hiện khi người dùng là người vừa gửi — backend sẽ guard */}
-                                <Button
-                                    block
-                                    onClick={handleRecall}
-                                    style={ghostBtn("#888", "#fafafa", "#e0e0e0")}
-                                    icon={<UndoOutlined />}
-                                >
-                                    Thu hồi JD
-                                </Button>
-                            </div>
+                                ) : (
+                                    // Người duyệt thường — giữ đầy đủ
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <Button
+                                                type="primary"
+                                                block
+                                                disabled={!nextUserId}
+                                                onClick={handleApprove}
+                                            >
+                                                Duyệt & chuyển tiếp
+                                            </Button>
+                                            <Button block danger onClick={() => setOpenReject(true)}>
+                                                Từ chối
+                                            </Button>
+                                        </div>
+                                        <Button block onClick={handleRecall} icon={<UndoOutlined />}>
+                                            Thu hồi JD
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
                         )}
 
-                        {/* ===== NÚT BAN HÀNH ===== */}
+                        {/* APPROVED */}
                         {status === "APPROVED" && (
-                            <Button type="primary" block onClick={handleIssue} style={primaryBtn(false)}>
+                            <Button type="primary" block onClick={handleIssue}>
                                 Ban hành JD
                             </Button>
                         )}

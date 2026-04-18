@@ -3,7 +3,7 @@ import {
     Modal, Form, Input, Select, DatePicker,
     Button, Spin, Alert, Tag,
 } from "antd";
-import { PlusOutlined, MinusCircleOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import type {
     IJobDescription, ICompany, IDepartment,
     IDepartmentJobTitle, IOrgChart, IOrgNode,
@@ -44,9 +44,9 @@ const ACCENT = "#e8637a";
 
 const MODAL_TABS = [
     { key: "1", label: "I. Thông tin chung" },
-    { key: "2", label: "II. Sơ đồ vị trí công việc" },
+    { key: "2", label: "II. Sơ đồ vị trí" },
     { key: "3", label: "III. Mô tả công việc" },
-    { key: "4", label: "IV. Yêu cầu đối với vị trí" },
+    { key: "4", label: "IV. Yêu cầu vị trí" },
 ];
 
 const NODE_W = 190;
@@ -59,7 +59,6 @@ const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY }: EdgeProps) => {
     return <path id={id} d={d} fill="none" stroke="#000000" strokeWidth={1.5} />;
 };
 
-// ─── Selectable Node – dùng cho cả TẠO MỚI và CHỈNH SỬA (có thể toggle) ────
 interface SelectableNodeData {
     label: string;
     levelCode: string;
@@ -170,14 +169,12 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     };
 };
 
-// ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
     open: boolean;
     onClose: () => void;
     editRecord: IJobDescription | null;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function ModalJobDescription({ open, onClose, editRecord }: Props) {
     const [form] = Form.useForm();
     const isEdit = !!editRecord;
@@ -212,10 +209,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     const [rfNodes, setRfNodes] = useState<Node[]>([]);
     const [rfEdges, setRfEdges] = useState<Edge[]>([]);
 
-    // [THAY ĐỔI 1] Bỏ ViewNode, chỉ dùng selectableNode cho cả create và edit
-    const nodeTypes = useMemo(() => ({
-        selectableNode: SelectableNode,
-    }), []);
+    const nodeTypes = useMemo(() => ({ selectableNode: SelectableNode }), []);
     const edgeTypes = useMemo(() => ({ orgEdge: OrgEdge }), []);
 
     const createMutation = useCreateJobDescriptionMutation();
@@ -224,14 +218,12 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
     const [activeTab, setActiveTab] = useState("1");
 
-    // ─── Toggle node (dùng cho cả tạo mới và chỉnh sửa) ─────────────────────
     const handleToggleNode = useCallback((nodeId: number) => {
         setSelectedNodeIds((prev) =>
             prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
         );
     }, []);
 
-    // ─── Build RF nodes (dùng chung cho cả create và edit) ───────────────────
     const buildRfNodes = useCallback((
         raw: IOrgNode[],
         selectedIds: number[],
@@ -275,7 +267,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         };
     }, []);
 
-    // [THAY ĐỔI 2] Sync rfNodes khi selectedNodeIds thay đổi — áp dụng cho cả create VÀ edit
+    // Sync rfNodes khi selectedNodeIds thay đổi
     useEffect(() => {
         if (rawNodes.length === 0) return;
         setRfNodes((prev) =>
@@ -293,7 +285,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         );
     }, [selectedNodeIds, selectedJobTitleName, handleToggleNode, rawNodes.length]);
 
-    // ─── Load companies khi mở modal ────────────────────────────────────────
+    // Load companies khi mở modal
     useEffect(() => {
         if (!open) return;
         setLoadingCompanies(true);
@@ -302,7 +294,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
             .finally(() => setLoadingCompanies(false));
     }, [open]);
 
-    // ─── Reset state khi đóng modal ─────────────────────────────────────────
+    // Reset state khi đóng modal
     useEffect(() => {
         if (!open) {
             form.resetFields();
@@ -318,10 +310,11 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
             setRfEdges([]);
             setSelectedChartId(null);
             setSelectedNodeIds([]);
+            setLoadingChart(false);
         }
     }, [open, form]);
 
-    // ─── Prefill form khi edit ───────────────────────────────────────────────
+    // Prefill form khi edit
     useEffect(() => {
         if (!open || !isEdit || !fullJd) return;
 
@@ -348,55 +341,59 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         if (fullJd.departmentId) setSelectedDepartmentId(fullJd.departmentId);
 
         const prefillRelated = async () => {
-            const promises: Promise<any>[] = [];
+            setLoadingChart(true);
+            try {
+                const promises: Promise<any>[] = [];
 
-            if (fullJd.companyId) {
-                promises.push(
-                    callFetchDepartmentsByCompany(fullJd.companyId)
-                        .then((res: any) => setDepartments(res?.data ?? []))
-                );
-            }
+                if (fullJd.companyId) {
+                    promises.push(
+                        callFetchDepartmentsByCompany(fullJd.companyId)
+                            .then((res: any) => setDepartments(res?.data ?? []))
+                    );
+                }
 
-            if (fullJd.departmentId) {
-                promises.push(
-                    callFetchCompanyJobTitlesOfDepartment(fullJd.departmentId)
-                        .then((res: any) => {
-                            const jts: IDepartmentJobTitle[] = res?.data ?? [];
-                            setJobTitles(jts);
-                            const matched = jts.find((jt) => jt.id === fullJd.departmentJobTitleId);
-                            if (matched) setSelectedJobTitleName(matched.jobTitle?.nameVi ?? null);
-                        })
-                );
-                promises.push(
-                    callFetchOrgCharts(
-                        `filter=departmentId='${fullJd.departmentId}'&page=1&pageSize=50`
-                    ).then((res: any) => setCharts(res?.data?.result ?? []))
-                );
-            }
+                if (fullJd.departmentId) {
+                    promises.push(
+                        callFetchCompanyJobTitlesOfDepartment(fullJd.departmentId)
+                            .then((res: any) => {
+                                const jts: IDepartmentJobTitle[] = res?.data ?? [];
+                                setJobTitles(jts);
+                                const matched = jts.find((jt) => jt.id === fullJd.departmentJobTitleId);
+                                if (matched) setSelectedJobTitleName(matched.jobTitle?.nameVi ?? null);
+                            })
+                    );
+                    promises.push(
+                        callFetchOrgCharts(
+                            `filter=departmentId='${fullJd.departmentId}'&page=1&pageSize=50`
+                        ).then((res: any) => setCharts(res?.data?.result ?? []))
+                    );
+                }
 
-            await Promise.all(promises);
+                await Promise.all(promises);
 
-            if (fullJd.positions?.length) {
-                const firstChartId = fullJd.positions[0].chartId;
-                setSelectedChartId(firstChartId);
-                const preSelectedIds = fullJd.positions.map((p) => p.nodeId);
-                setSelectedNodeIds(preSelectedIds);
+                if (fullJd.positions?.length) {
+                    const firstChartId = fullJd.positions[0].chartId;
+                    setSelectedChartId(firstChartId);
+                    const preSelectedIds = fullJd.positions.map((p) => p.nodeId);
+                    setSelectedNodeIds(preSelectedIds);
 
-                const res = await callFetchOrgNodes(firstChartId) as any;
-                const raw: IOrgNode[] = res?.data ?? [];
-                setRawNodes(raw);
+                    const res = await callFetchOrgNodes(firstChartId) as any;
+                    const raw: IOrgNode[] = res?.data ?? [];
+                    setRawNodes(raw);
 
-                // [THAY ĐỔI 3] Edit mode: dùng selectableNode thay vì viewNode
-                const { nodes: built, edges } = buildRfNodes(raw, preSelectedIds, handleToggleNode);
-                setRfNodes(built);
-                setRfEdges(edges);
+                    const { nodes: built, edges } = buildRfNodes(raw, preSelectedIds, handleToggleNode);
+                    setRfNodes(built);
+                    setRfEdges(edges);
+                }
+            } finally {
+                setLoadingChart(false);
             }
         };
 
         prefillRelated();
     }, [open, isEdit, fullJd]); // eslint-disable-line
 
-    // ─── Init form khi tạo mới ───────────────────────────────────────────────
+    // Init form khi tạo mới
     useEffect(() => {
         if (!open || isEdit) return;
         form.setFieldsValue({
@@ -525,24 +522,142 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     const currentTabIndex = MODAL_TABS.findIndex((t) => t.key === activeTab);
     const isLastTab = activeTab === MODAL_TABS[MODAL_TABS.length - 1].key;
 
+    // Tất cả tabs đều click được tự do
+    const handleTabClick = (tabKey: string) => {
+        setActiveTab(tabKey);
+    };
+
     const goToNextTab = () => {
         if (currentTabIndex < MODAL_TABS.length - 1) {
             setActiveTab(MODAL_TABS[currentTabIndex + 1].key);
         }
     };
 
-    // [THAY ĐỔI 4] Cả create và edit đều có thể click tab tự do
-    // Create mode: chỉ cho click tab đã đi qua (index <= currentTabIndex)
-    // Edit mode: tất cả tab click tự do
-    const handleTabClick = (tabKey: string) => {
-        if (isEdit) {
-            setActiveTab(tabKey);
-            return;
+    // ─── Render Tab 2 content ─────────────────────────────────────────────────
+    const renderTab2 = () => {
+        if (loadingChart) {
+            return (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
+                    <Spin tip="Đang tải sơ đồ..." />
+                </div>
+            );
         }
-        const targetIndex = MODAL_TABS.findIndex((t) => t.key === tabKey);
-        if (targetIndex <= currentTabIndex) {
-            setActiveTab(tabKey);
+
+        if (!selectedDepartmentId && !isEdit) {
+            return (
+                <Alert
+                    message="Chọn phòng ban ở tab Thông tin chung để hiện sơ đồ"
+                    type="info" showIcon
+                />
+            );
         }
+
+        if (charts.length === 0 && !isEdit) {
+            return (
+                <Alert
+                    message="Phòng ban này chưa có sơ đồ tổ chức"
+                    type="warning" showIcon
+                />
+            );
+        }
+
+        if (isEdit && charts.length === 0 && rfNodes.length === 0) {
+            return (
+                <Alert
+                    message="Không có dữ liệu sơ đồ tổ chức cho JD này"
+                    type="info" showIcon
+                />
+            );
+        }
+
+        return (
+            <>
+                {charts.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: "#6b7280", marginBottom: 4 }}>
+                            Chọn sơ đồ
+                        </div>
+                        <Select
+                            style={{ width: "100%" }}
+                            placeholder="Chọn sơ đồ tổ chức"
+                            value={selectedChartId ?? undefined}
+                            onChange={handleChartChange}
+                            options={charts.map((c) => ({
+                                value: c.id, label: c.name,
+                            }))}
+                        />
+                    </div>
+                )}
+
+                {!selectedChartId && charts.length > 0 && (
+                    <Alert
+                        message="Chọn sơ đồ tổ chức để xem và chỉnh sửa vị trí"
+                        type="info" showIcon
+                    />
+                )}
+
+                {selectedChartId && (
+                    <>
+                        {rfNodes.length === 0 ? (
+                            <Alert
+                                message="Sơ đồ này chưa có node nào"
+                                type="warning" showIcon
+                            />
+                        ) : (
+                            <div style={{
+                                height: 460, border: "1px solid #e5e7eb",
+                                borderRadius: 10, overflow: "hidden",
+                                background: "#f8f9fb",
+                            }}>
+                                <ReactFlow
+                                    nodes={rfNodes} edges={rfEdges}
+                                    nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+                                    nodesDraggable={false} nodesConnectable={false}
+                                    elementsSelectable={false}
+                                    onNodesChange={(changes: NodeChange[]) =>
+                                        setRfNodes((nds) => applyNodeChanges(changes, nds))
+                                    }
+                                    onEdgesChange={(changes: EdgeChange[]) =>
+                                        setRfEdges((eds) => applyEdgeChanges(changes, eds))
+                                    }
+                                    fitView fitViewOptions={{ padding: 0.2 }}
+                                    minZoom={0.3} maxZoom={1.5}
+                                    defaultEdgeOptions={{ type: "orgEdge" }}
+                                >
+                                    <Background color="#e5e7eb" gap={20} />
+                                    <Controls showInteractive={false} />
+                                </ReactFlow>
+                            </div>
+                        )}
+
+                        {selectedNodeIds.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                                <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 6 }}>
+                                    Đã chọn {selectedNodeIds.length} vị trí:
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                    {selectedNodeIds.map((nid) => {
+                                        const n = rawNodes.find((x) => x.id === nid);
+                                        return (
+                                            <Tag
+                                                key={nid} color="blue" closable
+                                                onClose={() =>
+                                                    setSelectedNodeIds((prev) =>
+                                                        prev.filter((id) => id !== nid)
+                                                    )
+                                                }
+                                            >
+                                                {n?.name ?? n?.title ?? `#${nid}`}
+                                            </Tag>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </>
+        );
     };
 
     // ─── Render ──────────────────────────────────────────────────────────────
@@ -563,23 +678,61 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
             styles={{ body: { padding: "20px 24px 8px", background: "#f5f6fa" } }}
             footer={
                 <div style={{
-                    display: "flex", justifyContent: "flex-end",
-                    gap: 8, padding: "12px 4px 4px",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 4px 4px",
                 }}>
-                    <Button onClick={onClose} disabled={isPending}>Hủy</Button>
+                    <Button onClick={onClose} disabled={isPending}>
+                        Hủy
+                    </Button>
 
-                    {/* [THAY ĐỔI 5] Nút Tiếp tục hiện cho cả create và edit khi chưa ở tab cuối */}
+                    {/* Nút Tiếp theo — ẩn ở tab cuối */}
                     {!isLastTab && (
-                        <Button
+                        <button
                             onClick={goToNextTab}
-                            icon={<ArrowRightOutlined />}
-                            iconPosition="end"
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                padding: "0 18px",
+                                height: 32,
+                                borderRadius: 6,
+                                border: `1.5px solid ${ACCENT}`,
+                                background: "#fff",
+                                color: ACCENT,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                                cursor: "pointer",
+                                transition: "all 0.18s ease",
+                                letterSpacing: "0.01em",
+                            }}
+                            onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = ACCENT;
+                                (e.currentTarget as HTMLButtonElement).style.color = "#fff";
+                            }}
+                            onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = "#fff";
+                                (e.currentTarget as HTMLButtonElement).style.color = ACCENT;
+                            }}
                         >
-                            Tiếp tục
-                        </Button>
+                            Tiếp theo
+                            <svg
+                                width="14" height="14" viewBox="0 0 14 14"
+                                fill="none" xmlns="http://www.w3.org/2000/svg"
+                                style={{ flexShrink: 0 }}
+                            >
+                                <path
+                                    d="M3 7H11M8 4L11 7L8 10"
+                                    stroke="currentColor" strokeWidth="1.6"
+                                    strokeLinecap="round" strokeLinejoin="round"
+                                />
+                            </svg>
+                        </button>
                     )}
 
-                    {/* Submit: edit thì luôn hiện; create thì chỉ hiện ở tab cuối */}
                     {(isEdit || isLastTab) && (
                         <Button
                             type="primary"
@@ -612,27 +765,24 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     }}>
                         {MODAL_TABS.map((tab) => {
                             const isActive = activeTab === tab.key;
-                            const tabIndex = MODAL_TABS.findIndex((t) => t.key === tab.key);
-                            // Create mode: tab chưa tới → disabled; Edit mode: tất cả enabled
-                            const isDisabled = !isEdit && tabIndex > currentTabIndex;
 
                             return (
                                 <button
                                     key={tab.key}
                                     onClick={() => handleTabClick(tab.key)}
-                                    disabled={isDisabled}
                                     style={{
-                                        flex: 1, padding: "9px 12px", borderRadius: 8,
+                                        flex: 1,
+                                        padding: "9px 12px",
+                                        borderRadius: 8,
                                         fontSize: 13,
                                         fontWeight: isActive ? 700 : 500,
-                                        color: isActive ? "#fff" : isDisabled ? "#c0c0c0" : "#6b7280",
+                                        color: isActive ? "#fff" : "#6b7280",
                                         background: isActive ? ACCENT : "transparent",
                                         border: "none",
-                                        cursor: isDisabled ? "not-allowed" : "pointer",
+                                        cursor: "pointer",
                                         transition: "all 0.18s ease",
                                         fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
                                         boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
-                                        opacity: isDisabled ? 0.45 : 1,
                                     }}
                                 >
                                     {tab.label}
@@ -650,7 +800,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             minHeight: 500,
                         }}>
 
-                            {/* ── TAB 1: Thông tin chung ── */}
+                            {/* ── TAB 1 ── */}
                             <div style={{ display: activeTab === "1" ? "block" : "none" }}>
                                 <div className="grid grid-cols-2 gap-x-4 pt-2">
                                     <Form.Item
@@ -663,9 +813,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                             loading={loadingCompanies}
                                             disabled={isEdit}
                                             onChange={handleCompanyChange}
-                                            options={companies.map((c) => ({
-                                                value: c.id, label: c.name,
-                                            }))}
+                                            options={companies.map((c) => ({ value: c.id, label: c.name }))}
                                         />
                                     </Form.Item>
 
@@ -683,9 +831,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                             disabled={isEdit || !selectedCompanyId}
                                             loading={loadingDepartments}
                                             onChange={handleDepartmentChange}
-                                            options={departments.map((d) => ({
-                                                value: d.id, label: d.name,
-                                            }))}
+                                            options={departments.map((d) => ({ value: d.id, label: d.name }))}
                                         />
                                     </Form.Item>
 
@@ -715,15 +861,11 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                         />
                                     </Form.Item>
 
-                                    {/* [THAY ĐỔI 6] Mã JD disabled khi edit */}
                                     <Form.Item
                                         name="code" label="Mã JD"
                                         rules={[{ required: true, message: "Nhập mã JD" }]}
                                     >
-                                        <Input
-                                            placeholder="VD: JD-001"
-                                            disabled={isEdit}
-                                        />
+                                        <Input placeholder="VD: JD-001" disabled={isEdit} />
                                     </Form.Item>
 
                                     <Form.Item
@@ -757,115 +899,14 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                 </Form.Item>
                             </div>
 
-                            {/* ── TAB 2: Sơ đồ vị trí công việc ── */}
+                            {/* ── TAB 2 ── */}
                             <div style={{ display: activeTab === "2" ? "block" : "none" }}>
                                 <div className="pt-2">
-                                    {/* [THAY ĐỔI 7] Edit mode: render giống create mode (selectableNode + cho toggle) */}
-                                    {!selectedDepartmentId && !isEdit ? (
-                                        <Alert
-                                            message="Chọn phòng ban ở tab Thông tin chung để hiện sơ đồ"
-                                            type="info" showIcon
-                                        />
-                                    ) : loadingChart ? (
-                                        <div className="flex justify-center py-10">
-                                            <Spin tip="Đang tải sơ đồ..." />
-                                        </div>
-                                    ) : charts.length === 0 && !isEdit ? (
-                                        <Alert
-                                            message="Phòng ban này chưa có sơ đồ tổ chức"
-                                            type="warning" showIcon
-                                        />
-                                    ) : rfNodes.length === 0 && isEdit ? (
-                                        <Alert
-                                            message="Không có dữ liệu sơ đồ tổ chức cho JD này"
-                                            type="info" showIcon
-                                        />
-                                    ) : (
-                                        <>
-                                            {/* Chọn sơ đồ — create mode hoặc edit mode đều hiện nếu có charts */}
-                                            {charts.length > 0 && (
-                                                <div className="mb-3">
-                                                    <div className="text-sm font-medium text-gray-600 mb-1">
-                                                        Chọn sơ đồ
-                                                    </div>
-                                                    <Select
-                                                        style={{ width: "100%" }}
-                                                        placeholder="Chọn sơ đồ tổ chức"
-                                                        value={selectedChartId ?? undefined}
-                                                        onChange={handleChartChange}
-                                                        options={charts.map((c) => ({
-                                                            value: c.id, label: c.name,
-                                                        }))}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {selectedChartId && (
-                                                <>
-                                                    {rfNodes.length === 0 ? (
-                                                        <Alert
-                                                            message="Sơ đồ này chưa có node nào"
-                                                            type="warning" showIcon
-                                                        />
-                                                    ) : (
-                                                        <div style={{
-                                                            height: 460, border: "1px solid #e5e7eb",
-                                                            borderRadius: 10, overflow: "hidden",
-                                                            background: "#f8f9fb",
-                                                        }}>
-                                                            <ReactFlow
-                                                                nodes={rfNodes} edges={rfEdges}
-                                                                nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-                                                                nodesDraggable={false} nodesConnectable={false}
-                                                                elementsSelectable={false}
-                                                                onNodesChange={(changes: NodeChange[]) =>
-                                                                    setRfNodes((nds) => applyNodeChanges(changes, nds))
-                                                                }
-                                                                onEdgesChange={(changes: EdgeChange[]) =>
-                                                                    setRfEdges((eds) => applyEdgeChanges(changes, eds))
-                                                                }
-                                                                fitView fitViewOptions={{ padding: 0.2 }}
-                                                                minZoom={0.3} maxZoom={1.5}
-                                                                defaultEdgeOptions={{ type: "orgEdge" }}
-                                                            >
-                                                                <Background color="#e5e7eb" gap={20} />
-                                                                <Controls showInteractive={false} />
-                                                            </ReactFlow>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedNodeIds.length > 0 && (
-                                                        <div className="mt-3">
-                                                            <div className="text-xs text-gray-500 mb-1">
-                                                                Đã chọn {selectedNodeIds.length} vị trí:
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {selectedNodeIds.map((nid) => {
-                                                                    const n = rawNodes.find((x) => x.id === nid);
-                                                                    return (
-                                                                        <Tag
-                                                                            key={nid} color="blue" closable
-                                                                            onClose={() =>
-                                                                                setSelectedNodeIds((prev) =>
-                                                                                    prev.filter((id) => id !== nid)
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            {n?.name ?? n?.title ?? `#${nid}`}
-                                                                        </Tag>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-                                        </>
-                                    )}
+                                    {renderTab2()}
                                 </div>
                             </div>
 
-                            {/* ── TAB 3: Mô tả công việc ── */}
+                            {/* ── TAB 3 ── */}
                             <div style={{ display: activeTab === "3" ? "block" : "none" }}>
                                 <div className="pt-2">
                                     <Form.List name="tasks">
@@ -922,7 +963,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                 </div>
                             </div>
 
-                            {/* ── TAB 4: Yêu cầu đối với vị trí ── */}
+                            {/* ── TAB 4 ── */}
                             <div style={{ display: activeTab === "4" ? "block" : "none" }}>
                                 <div className="pt-2 grid grid-cols-2 gap-x-4">
                                     <Form.Item name="knowledge" label="Kiến thức">

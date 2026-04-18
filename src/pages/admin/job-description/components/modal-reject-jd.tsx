@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Input, Typography, Space, Alert } from "antd";
-import { RollbackOutlined, StopOutlined } from "@ant-design/icons";
+import { StopOutlined } from "@ant-design/icons";
 import type { IJdInbox } from "@/types/backend";
 
 const { Text } = Typography;
@@ -9,7 +9,7 @@ interface Props {
     open: boolean;
     record: IJdInbox | null;
     loading?: boolean;
-    isResubmit?: boolean;
+    isResubmit?: boolean;        // vẫn giữ để tương lai có thể mở rộng
     onConfirm: (reason: string) => void;
     onCancel: () => void;
 }
@@ -30,10 +30,11 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
         onCancel();
     };
 
-    const title = isResubmit ? "Trả lại JD" : "Từ chối JD";
-    const confirmLabel = isResubmit ? "Xác nhận trả lại" : "Xác nhận từ chối";
+    // Vì đã bỏ RETURNED, nên isResubmit giờ chỉ dùng để phân biệt "Gửi lại" hay "Từ chối"
+    const title = isResubmit ? "Gửi lại JD" : "Từ chối JD";
+    const confirmLabel = isResubmit ? "Xác nhận gửi lại" : "Xác nhận từ chối";
     const note = isResubmit
-        ? "JD sẽ được trả về người đã gửi cho bạn. Họ có thể chỉnh sửa hoặc từ chối tiếp."
+        ? "JD sẽ được gửi lại cho người vừa từ chối bạn."
         : "Lý do từ chối sẽ được gửi đến người tạo JD để họ có thể chỉnh sửa và gửi lại.";
 
     return (
@@ -41,10 +42,7 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
             open={open}
             title={
                 <Space>
-                    {isResubmit
-                        ? <RollbackOutlined style={{ color: "#fa8c16" }} />
-                        : <StopOutlined style={{ color: "#ff4d4f" }} />
-                    }
+                    <StopOutlined style={{ color: "#ff4d4f" }} />
                     <span>{title}</span>
                 </Space>
             }
@@ -54,7 +52,6 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
                 danger: !isResubmit,
                 disabled: !reason.trim(),
                 loading,
-                style: isResubmit ? { background: "#fa8c16", borderColor: "#fa8c16" } : {},
             }}
             onOk={handleConfirm}
             onCancel={handleCancel}
@@ -72,17 +69,16 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
 
                 <div>
                     <Text strong style={{ display: "block", marginBottom: 6 }}>
-                        Lý do {isResubmit ? "trả lại" : "từ chối"}{" "}
+                        Lý do {isResubmit ? "gửi lại" : "từ chối"}{" "}
                         <Text type="danger">*</Text>
                     </Text>
 
-                    {/* Bọc trong div position: relative để đặt counter bên ngoài textarea */}
                     <div style={{ position: "relative" }}>
                         <Input.TextArea
                             rows={5}
                             placeholder={
                                 isResubmit
-                                    ? "Ví dụ: Cần xem xét lại, chưa đủ điều kiện trình duyệt tiếp..."
+                                    ? "Ví dụ: Đã chỉnh sửa theo góp ý, đề nghị xem xét lại..."
                                     : "Ví dụ: Mô tả chức danh chưa rõ ràng, cần bổ sung thêm yêu cầu kinh nghiệm..."
                             }
                             value={reason}
@@ -91,7 +87,6 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
                             showCount={false}
                             style={{ resize: "none", paddingBottom: 24 }}
                         />
-                        {/* Counter nằm ngoài textarea, không đè nội dung */}
                         <Text
                             type={reason.length >= maxLength * 0.9 ? "danger" : "secondary"}
                             style={{

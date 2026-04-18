@@ -168,8 +168,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         setSearchValue("");
         setStatusFilter(null);
         setCreatedAtFilter(null);
-        setCompanyIdFilter(companyId ?? null);
-        setDepartmentIdFilter(departmentId ?? null);
+        setCompanyIdFilter(null);
         setSectionIdFilter(null);
         setPlanYearFilter(null);
         setResetSignal((s) => s + 1);
