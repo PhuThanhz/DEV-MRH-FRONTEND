@@ -10,7 +10,7 @@ import {
     useCreateDepartmentObjectiveMutation,
 } from "@/hooks/useDepartmentObjectives";
 import { useSectionsQuery } from "@/hooks/useSections";
-import DeptPageNav from "@/components/common/navigation/DeptPageNav"; // ← THÊM
+import DeptPageNav from "@/components/common/navigation/DeptPageNav";
 
 import ObjectivesSection from "./components/ObjectivesSection";
 import TasksSection from "./components/TasksSection";
@@ -21,10 +21,41 @@ import type { IDepartmentMissionTree } from "@/types/backend";
 
 const { Title, Text } = Typography;
 
-export interface LocalObjectiveItem { id?: number; content: string; orderNo: number }
-export interface LocalTaskItem { id?: number; content: string; orderNo: number }
-export interface LocalSectionTask { sectionId: number; sectionName: string; items: LocalTaskItem[] }
-export interface LocalAuthorityItem { id?: number; content: string; orderNo: number }
+export interface LocalObjectiveItem {
+    id?: number
+    content: string
+    orderNo: number
+    createdBy?: string
+    updatedBy?: string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface LocalTaskItem {
+    id?: number
+    content: string
+    orderNo: number
+    createdBy?: string
+    updatedBy?: string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface LocalSectionTask {
+    sectionId: number
+    sectionName: string
+    items: LocalTaskItem[]
+}
+
+export interface LocalAuthorityItem {
+    id?: number
+    content: string
+    orderNo: number
+    createdBy?: string
+    updatedBy?: string
+    createdAt?: string
+    updatedAt?: string
+}
 
 const ACCENT = "#e8637a";
 
@@ -62,7 +93,13 @@ const DepartmentObjectivesPage = () => {
 
         setObjectives(
             mission.objectives?.map((o, i) => ({
-                id: o.id, content: o.content, orderNo: i + 1,
+                id: o.id,
+                content: o.content,
+                orderNo: i + 1,
+                createdBy: o.createdBy,
+                updatedBy: o.updatedBy,
+                createdAt: o.createdAt,
+                updatedAt: o.updatedAt,
             })) || []
         );
 
@@ -70,7 +107,13 @@ const DepartmentObjectivesPage = () => {
 
         setAuthorities(
             mission.authorities?.map((a, i) => ({
-                id: a.id, content: a.content, orderNo: i + 1,
+                id: a.id,
+                content: a.content,
+                orderNo: i + 1,
+                createdBy: a.createdBy,
+                updatedBy: a.updatedBy,
+                createdAt: a.createdAt,
+                updatedAt: a.updatedAt,
             })) || []
         );
 
@@ -84,7 +127,13 @@ const DepartmentObjectivesPage = () => {
                         sectionId: sec.id!,
                         sectionName: sec.name,
                         items: found?.tasks?.map((t, i) => ({
-                            id: t.id, content: t.content, orderNo: i + 1,
+                            id: t.id,
+                            content: t.content,
+                            orderNo: i + 1,
+                            createdBy: t.createdBy,
+                            updatedBy: t.updatedBy,
+                            createdAt: t.createdAt,
+                            updatedAt: t.updatedAt,
                         })) || [],
                     };
                 })
@@ -92,7 +141,13 @@ const DepartmentObjectivesPage = () => {
         } else {
             setGeneralTasks(
                 mission.generalTasks?.map((t, i) => ({
-                    id: t.id, content: t.content, orderNo: i + 1,
+                    id: t.id,
+                    content: t.content,
+                    orderNo: i + 1,
+                    createdBy: t.createdBy,
+                    updatedBy: t.updatedBy,
+                    createdAt: t.createdAt,
+                    updatedAt: t.updatedAt,
                 })) || []
             );
         }

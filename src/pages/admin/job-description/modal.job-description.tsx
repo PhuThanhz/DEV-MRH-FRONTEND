@@ -51,7 +51,126 @@ const MODAL_TABS = [
 
 const NODE_W = 190;
 const NODE_H = 80;
+// ─── TaskItem (collapsible) ───────────────────────────────────────────────────
+interface TaskItemProps {
+    name: number;
+    restField: any;
+    index: number;
+    canRemove: boolean;
+    onRemove: () => void;
+    accent: string;
+}
 
+const TaskItem = ({ name, restField, index, canRemove, onRemove, accent }: TaskItemProps) => {
+    const [collapsed, setCollapsed] = useState(false);
+
+    return (
+        <div style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            background: "#fff",
+            overflow: "hidden",
+            transition: "box-shadow 0.18s",
+            boxShadow: collapsed ? "none" : "0 1px 4px rgba(0,0,0,.05)",
+        }}>
+            {/* Header row — luôn hiển thị */}
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    background: collapsed ? "#fafafa" : "#fff",
+                    borderBottom: collapsed ? "none" : "1px solid #f3f4f6",
+                    transition: "background 0.15s",
+                }}
+                onClick={() => setCollapsed((v) => !v)}
+            >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{
+                        width: 22, height: 22,
+                        borderRadius: "50%",
+                        background: accent,
+                        color: "#fff",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                    }}>
+                        {index + 1}
+                    </span>
+                    <span style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#374151",
+                        fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                        letterSpacing: "0.03em",
+                        textTransform: "uppercase",
+                    }}>
+                        Nhiệm vụ {index + 1}
+                    </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {canRemove && (
+                        <Button
+                            type="text" danger size="small"
+                            icon={<MinusCircleOutlined />}
+                            onClick={onRemove}
+                            style={{ padding: "0 6px" }}
+                        />
+                    )}
+                    <span style={{
+                        fontSize: 16,
+                        color: "#9ca3af",
+                        transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                        display: "inline-flex",
+                        cursor: "pointer",
+                        userSelect: "none",
+                    }}
+                        onClick={(e) => { e.stopPropagation(); setCollapsed((v) => !v); }}
+                    >
+                        ▾
+                    </span>
+                </div>
+            </div>
+
+            {/* Body — ẩn/hiện theo collapsed */}
+            {!collapsed && (
+                <div style={{ padding: "12px 14px 4px" }}>
+                    <Form.Item
+                        {...restField}
+                        name={[name, "title"]}
+                        label="Tiêu đề"
+                        rules={[{ required: true, message: "Nhập tiêu đề" }]}
+                        style={{ marginBottom: 10 }}
+                    >
+                        <Input placeholder="VD: Lập kế hoạch hàng tuần" />
+                    </Form.Item>
+                    <Form.Item
+                        {...restField}
+                        name={[name, "content"]}
+                        label="Nội dung"
+                        rules={[{ required: true, message: "Nhập nội dung" }]}
+                        style={{ marginBottom: 12 }}
+                    >
+                        <Input.TextArea
+                            autoSize={{ minRows: 2, maxRows: 10 }}
+                            placeholder="Mô tả chi tiết nhiệm vụ..."
+                        />
+                    </Form.Item>
+                </div>
+            )}
+        </div>
+    );
+};
 // ─── Org Edge ────────────────────────────────────────────────────────────────
 const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY }: EdgeProps) => {
     const midY = (sourceY + targetY) / 2;
@@ -907,58 +1026,106 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             </div>
 
                             {/* ── TAB 3 ── */}
+                            {/* ── TAB 3 ── */}
                             <div style={{ display: activeTab === "3" ? "block" : "none" }}>
                                 <div className="pt-2">
                                     <Form.List name="tasks">
-                                        {(fields, { add, remove }) => (
-                                            <>
-                                                {fields.map(({ key, name, ...restField }, index) => (
-                                                    <div
-                                                        key={key}
-                                                        className="border border-gray-200 rounded-lg p-3 mb-3 bg-gray-50"
-                                                    >
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                                Nhiệm vụ #{index + 1}
+                                        {(fields, { add, remove }) => {
+                                            const MAX_TASKS = 10;
+                                            return (
+                                                <div style={{ position: "relative" }}>
+                                                    {/* Header: số đếm + floating add button */}
+                                                    <div style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "space-between",
+                                                        marginBottom: 12,
+                                                    }}>
+                                                        <span style={{
+                                                            fontSize: 12,
+                                                            fontWeight: 600,
+                                                            color: "#6b7280",
+                                                            fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                                                            letterSpacing: "0.04em",
+                                                            textTransform: "uppercase",
+                                                        }}>
+                                                            Danh sách nhiệm vụ
+                                                        </span>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                            <span style={{
+                                                                fontSize: 12,
+                                                                color: fields.length >= MAX_TASKS ? "#ef4444" : "#9ca3af",
+                                                                fontWeight: 500,
+                                                            }}>
+                                                                {fields.length}/{MAX_TASKS}
                                                             </span>
-                                                            {fields.length > 1 && (
-                                                                <Button
-                                                                    type="text" danger size="small"
-                                                                    icon={<MinusCircleOutlined />}
-                                                                    onClick={() => remove(name)}
-                                                                />
-                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                disabled={fields.length >= MAX_TASKS}
+                                                                onClick={() =>
+                                                                    fields.length < MAX_TASKS &&
+                                                                    add({ orderNo: fields.length + 1, title: "", content: "" })
+                                                                }
+                                                                style={{
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: 5,
+                                                                    padding: "5px 14px",
+                                                                    borderRadius: 6,
+                                                                    border: `1.5px solid ${fields.length >= MAX_TASKS ? "#e5e7eb" : ACCENT}`,
+                                                                    background: fields.length >= MAX_TASKS ? "#f9fafb" : "#fff",
+                                                                    color: fields.length >= MAX_TASKS ? "#d1d5db" : ACCENT,
+                                                                    fontSize: 12,
+                                                                    fontWeight: 600,
+                                                                    cursor: fields.length >= MAX_TASKS ? "not-allowed" : "pointer",
+                                                                    transition: "all 0.18s ease",
+                                                                    fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (fields.length >= MAX_TASKS) return;
+                                                                    e.currentTarget.style.background = ACCENT;
+                                                                    e.currentTarget.style.color = "#fff";
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (fields.length >= MAX_TASKS) return;
+                                                                    e.currentTarget.style.background = "#fff";
+                                                                    e.currentTarget.style.color = ACCENT;
+                                                                }}
+                                                            >
+                                                                <PlusOutlined style={{ fontSize: 11 }} />
+                                                                Thêm nhiệm vụ
+                                                            </button>
                                                         </div>
-                                                        <Form.Item
-                                                            {...restField}
-                                                            name={[name, "title"]}
-                                                            label="Tiêu đề"
-                                                            rules={[{ required: true, message: "Nhập tiêu đề" }]}
-                                                            className="mb-2"
-                                                        >
-                                                            <Input placeholder="VD: Lập kế hoạch hàng tuần" />
-                                                        </Form.Item>
-                                                        <Form.Item
-                                                            {...restField}
-                                                            name={[name, "content"]}
-                                                            label="Nội dung"
-                                                            rules={[{ required: true, message: "Nhập nội dung" }]}
-                                                            className="mb-0"
-                                                        >
-                                                            <TextArea rows={2} placeholder="Mô tả chi tiết nhiệm vụ..." />
-                                                        </Form.Item>
                                                     </div>
-                                                ))}
-                                                <Button
-                                                    type="dashed" block icon={<PlusOutlined />}
-                                                    onClick={() =>
-                                                        add({ orderNo: fields.length + 1, title: "", content: "" })
-                                                    }
-                                                >
-                                                    Thêm nhiệm vụ
-                                                </Button>
-                                            </>
-                                        )}
+
+                                                    {/* Danh sách nhiệm vụ có collapse */}
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                                        {fields.map(({ key, name, ...restField }, index) => (
+                                                            <TaskItem
+                                                                key={key}
+                                                                name={name}
+                                                                restField={restField}
+                                                                index={index}
+                                                                canRemove={fields.length > 1}
+                                                                onRemove={() => remove(name)}
+                                                                accent={ACCENT}
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {fields.length === 0 && (
+                                                        <div style={{
+                                                            textAlign: "center",
+                                                            padding: "40px 0",
+                                                            color: "#9ca3af",
+                                                            fontSize: 13,
+                                                        }}>
+                                                            Chưa có nhiệm vụ nào. Nhấn "Thêm nhiệm vụ" để bắt đầu.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }}
                                     </Form.List>
                                 </div>
                             </div>
@@ -967,23 +1134,23 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             <div style={{ display: activeTab === "4" ? "block" : "none" }}>
                                 <div className="pt-2 grid grid-cols-2 gap-x-4">
                                     <Form.Item name="knowledge" label="Kiến thức">
-                                        <TextArea rows={4} placeholder="Yêu cầu kiến thức..." />
+                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kiến thức..." />
                                     </Form.Item>
                                     <Form.Item name="experience" label="Kinh nghiệm">
-                                        <TextArea rows={4} placeholder="Yêu cầu kinh nghiệm..." />
+                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kinh nghiệm..." />
                                     </Form.Item>
                                     <Form.Item name="skills" label="Kỹ năng">
-                                        <TextArea rows={4} placeholder="Yêu cầu kỹ năng..." />
+                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kỹ năng..." />
                                     </Form.Item>
                                     <Form.Item name="qualities" label="Phẩm chất">
-                                        <TextArea rows={4} placeholder="Phẩm chất cần có..." />
+                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Phẩm chất cần có..." />
                                     </Form.Item>
                                     <Form.Item
                                         name="otherRequirements"
                                         label="Yêu cầu khác"
                                         className="col-span-2"
                                     >
-                                        <TextArea rows={3} placeholder="Các yêu cầu khác (nếu có)..." />
+                                        <TextArea autoSize={{ minRows: 3, maxRows: 12 }} placeholder="Các yêu cầu khác (nếu có)..." />
                                     </Form.Item>
                                 </div>
                             </div>

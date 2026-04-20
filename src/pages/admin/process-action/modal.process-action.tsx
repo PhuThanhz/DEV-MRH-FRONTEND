@@ -1,6 +1,6 @@
 /* ===================== PROCESS ACTION MODAL ===================== */
 
-import { ModalForm, ProFormText, ProFormSwitch } from "@ant-design/pro-components";
+import { ModalForm, ProFormText, ProFormSwitch, ProFormTextArea } from "@ant-design/pro-components";
 import { Form } from "antd";
 
 import type { IProcessAction } from "@/types/backend";
@@ -88,19 +88,33 @@ const ModalProcessAction = ({
             <ProFormText
                 name="code"
                 label="Mã hành động"
-                rules={[{ required: true, message: "Vui lòng nhập mã" }]}
+                placeholder="Nhập mã hành động"
+                rules={[{ required: true, message: "Vui lòng nhập mã hành động" }]}
                 disabled={isEdit}
             />
 
             <ProFormText
                 name="name"
-                label="Tên hành động"
-                rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+                label="Đầu mục"
+                placeholder="Nhập tên đầu mục"
+                rules={[{ required: true, message: "Vui lòng nhập đầu mục" }]}
             />
 
-            <ProFormText name="shortDescription" label="Mô tả ngắn" />
+            <ProFormText
+                name="shortDescription"
+                label="Giải thích tên đầu mục"
+                placeholder="Nhập giải thích ngắn gọn"
+            />
 
-            <ProFormText name="description" label="Mô tả chi tiết" />
+            <ProFormTextArea
+                name="description"
+                label="Định nghĩa"
+                placeholder="Nhập định nghĩa"
+                fieldProps={{
+                    rows: 5,
+                    autoSize: { minRows: 4, maxRows: 10 },
+                }}
+            />
 
             <ProFormSwitch
                 name="active"

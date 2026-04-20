@@ -12,6 +12,27 @@ interface IProps {
     setDataInit: (v: IProcessAction | null) => void;
 }
 
+const renderDefinition = (text?: string | null) => {
+    if (!text) return "--";
+
+    const lines = text
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (lines.length <= 1) return text;
+
+    return (
+        <ul style={{ margin: 0, paddingLeft: 16, listStyle: "none" }}>
+            {lines.map((line, idx) => (
+                <li key={idx} style={{ marginBottom: 4 }}>
+                    {line.startsWith("-") ? line : `- ${line}`}
+                </li>
+            ))}
+        </ul>
+    );
+};
+
 const ViewProcessAction = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
 
@@ -45,16 +66,16 @@ const ViewProcessAction = ({ open, onClose, dataInit, setDataInit }: IProps) => 
                     {dataInit?.code || "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Tên hành động">
+                <Descriptions.Item label="Đầu mục">
                     {dataInit?.name || "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Mô tả ngắn" span={isMobile ? 1 : 2}>
+                <Descriptions.Item label="Giải thích tên đầu mục" span={isMobile ? 1 : 2}>
                     {dataInit?.shortDescription || "--"}
                 </Descriptions.Item>
 
-                <Descriptions.Item label="Mô tả chi tiết" span={isMobile ? 1 : 2}>
-                    {dataInit?.description || "--"}
+                <Descriptions.Item label="Định nghĩa" span={isMobile ? 1 : 2}>
+                    {renderDefinition(dataInit?.description)}
                 </Descriptions.Item>
 
                 <Descriptions.Item label="Trạng thái">

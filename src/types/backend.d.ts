@@ -1119,6 +1119,10 @@ export interface IDepartmentMissionTree {
 export interface IDepartmentObjectiveItem {
     id: number
     content: string
+    createdBy?: string   // ← THÊM
+    updatedBy?: string   // ← THÊM
+    createdAt?: string   // ← THÊM
+    updatedAt?: string   // ← THÊM
 }
 
 export interface IDepartmentSectionTask {
@@ -1130,14 +1134,21 @@ export interface IDepartmentSectionTask {
 export interface IDepartmentTaskItem {
     id: number
     content: string
+    createdBy?: string   // ← THÊM
+    updatedBy?: string   // ← THÊM
+    createdAt?: string   // ← THÊM
+    updatedAt?: string   // ← THÊM
 }
 
 // THÊM MỚI
 export interface IDepartmentAuthorityItem {
     id: number
     content: string
+    createdBy?: string   // ← THÊM
+    updatedBy?: string   // ← THÊM
+    createdAt?: string   // ← THÊM
+    updatedAt?: string   // ← THÊM
 }
-
 export interface ICreateDepartmentMissionReq {
     departmentId: number
     issueDate?: string
