@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Modal, Input, Checkbox, Avatar, Badge, Button,
-    Spin, Empty, Tag, Tooltip,
+    Spin, Empty,
 } from "antd";
 import {
-    SearchOutlined, UserOutlined, CloseOutlined, CheckOutlined,
+    SearchOutlined, CloseOutlined, CheckOutlined,
 } from "@ant-design/icons";
 import { callFetchUsersByCompany } from "@/config/api";
 
 interface UserOption {
-    value: number;
+    value: string;
     name: string;
     email: string;
     department?: string;
@@ -20,11 +20,25 @@ interface UserPickerModalProps {
     open: boolean;
     onClose: () => void;
     companyId: number | null;
-    selectedIds: number[];
-    onChange: (ids: number[]) => void;
+    selectedIds: string[];
+    onChange: (ids: string[]) => void;
+    cachedUsers?: Map<string, UserOption>;
 }
 
 const PAGE_SIZE = 10;
+
+const AVATAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+
+const getColor = (id: string) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+const getInitials = (name: string) =>
+    name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
 
 const UserPickerModal: React.FC<UserPickerModalProps> = ({
     open,
@@ -32,20 +46,27 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     companyId,
     selectedIds,
     onChange,
+    cachedUsers, // ← nhận prop nhưng trước đây không dùng → fix ở đây
 }) => {
     const [search, setSearch] = useState("");
     const [allUsers, setAllUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const [localSelected, setLocalSelected] = useState<number[]>([]);
+    const [localSelected, setLocalSelected] = useState<string[]>([]);
 
-    // Load users khi mở modal
     useEffect(() => {
         if (!open || !companyId) return;
         setLocalSelected(selectedIds);
         setSearch("");
         setPage(1);
-        loadUsers();
+
+        // ✅ FIX: Nếu đã có cachedUsers từ parent thì dùng luôn, không gọi API lại
+        // → fix bug "User #2683a8" vì userMap đã load sẵn ở UserSelectField
+        if (cachedUsers && cachedUsers.size > 0) {
+            setAllUsers(Array.from(cachedUsers.values()));
+        } else {
+            loadUsers();
+        }
     }, [open, companyId]);
 
     const loadUsers = async () => {
@@ -53,7 +74,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         try {
             const res = await callFetchUsersByCompany(companyId!);
             const positions: any[] = res?.data ?? [];
-            const seen = new Set<number>();
+            const seen = new Set<string>();
             const users: UserOption[] = positions
                 .filter((p) => {
                     const uid = p.user?.id ?? p.id;
@@ -87,7 +108,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
-    const toggle = (id: number) => {
+    const toggle = (id: string) => {
         setLocalSelected((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         );
@@ -110,16 +131,20 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
 
     const handleClearAll = () => setLocalSelected([]);
 
-    const selectedUsers = allUsers.filter((u) => localSelected.includes(u.value));
+    // ✅ FIX: selectedUsers lấy từ allUsers (đã có tên đầy đủ)
+    // Nếu user không có trong allUsers (vd: user bị xoá khỏi công ty)
+    // thì fallback về cachedUsers để vẫn hiện tên thay vì UUID
+    const selectedUsers = localSelected.map((id) => {
+        const fromList = allUsers.find((u) => u.value === id);
+        if (fromList) return fromList;
+        const fromCache = cachedUsers?.get(id);
+        if (fromCache) return fromCache;
+        return { value: id, name: `User #${id.slice(0, 6)}`, email: id, department: undefined };
+    });
+
     const pageIds = paginated.map((u) => u.value);
     const allPageSelected = pageIds.length > 0 && pageIds.every((id) => localSelected.includes(id));
     const somePageSelected = pageIds.some((id) => localSelected.includes(id)) && !allPageSelected;
-
-    const getInitials = (name: string) =>
-        name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
-
-    const AVATAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
-    const getColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
     return (
         <Modal
@@ -162,9 +187,8 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
             </div>
 
             <div style={{ display: "flex", height: 460 }}>
-                {/* Left: danh sách */}
+                {/* Left: danh sách chọn */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: "1px solid #f3f4f6" }}>
-                    {/* Search */}
                     <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6" }}>
                         <Input
                             prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
@@ -176,7 +200,6 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         />
                     </div>
 
-                    {/* Select all row */}
                     {!loading && paginated.length > 0 && (
                         <div style={{
                             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -199,7 +222,6 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         </div>
                     )}
 
-                    {/* List */}
                     <div style={{ flex: 1, overflowY: "auto" }}>
                         {loading ? (
                             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
@@ -229,7 +251,11 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                             (e.currentTarget as HTMLElement).style.background = isSelected ? "#eff6ff" : "transparent";
                                         }}
                                     >
-                                        <Checkbox checked={isSelected} onChange={() => toggle(user.value)} onClick={(e) => e.stopPropagation()} />
+                                        <Checkbox
+                                            checked={isSelected}
+                                            onChange={() => toggle(user.value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
                                         <Avatar
                                             size={34}
                                             style={{ background: getColor(user.value), flexShrink: 0, fontSize: 12, fontWeight: 600 }}
@@ -242,12 +268,8 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                             </div>
                                             <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                 {user.email}
-                                                {user.department && (
-                                                    <span style={{ marginLeft: 6, color: "#d1d5db" }}>·</span>
-                                                )}
-                                                {user.department && (
-                                                    <span style={{ marginLeft: 6, color: "#6b7280" }}>{user.department}</span>
-                                                )}
+                                                {user.department && <span style={{ marginLeft: 6, color: "#d1d5db" }}>·</span>}
+                                                {user.department && <span style={{ marginLeft: 6, color: "#6b7280" }}>{user.department}</span>}
                                             </div>
                                         </div>
                                         {isSelected && (
@@ -259,7 +281,6 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         )}
                     </div>
 
-                    {/* Pagination */}
                     {totalPages > 1 && (
                         <div style={{
                             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -277,9 +298,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                     fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center",
                                 }}
                             >‹</button>
-                            <span style={{ fontSize: 12, color: "#6b7280" }}>
-                                {page} / {totalPages}
-                            </span>
+                            <span style={{ fontSize: 12, color: "#6b7280" }}>{page} / {totalPages}</span>
                             <button
                                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                 disabled={page === totalPages}
@@ -295,16 +314,14 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     )}
                 </div>
 
-                {/* Right: đã chọn */}
+                {/* Right: đã chọn — hiện tên đầy đủ nhờ selectedUsers đã fix */}
                 <div style={{ width: 220, display: "flex", flexDirection: "column" }}>
                     <div style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "12px 14px",
                         borderBottom: "1px solid #f3f4f6",
                     }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>
-                            Đã chọn
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Đã chọn</span>
                         {localSelected.length > 0 && (
                             <Badge
                                 count={localSelected.length}
@@ -325,7 +342,6 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                     style={{
                                         display: "flex", alignItems: "center", gap: 8,
                                         padding: "7px 14px",
-                                        borderRadius: 0,
                                     }}
                                 >
                                     <Avatar
@@ -338,9 +354,14 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                         <div style={{ fontSize: 12, fontWeight: 500, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                             {user.name}
                                         </div>
+                                        <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            {user.email !== user.value ? user.email : ""}
+                                        </div>
                                     </div>
+                                    {/* Bỏ người này khỏi danh sách = thu hồi quyền khi save */}
                                     <button
                                         onClick={() => toggle(user.value)}
+                                        title="Bỏ khỏi danh sách (sẽ thu hồi quyền khi lưu)"
                                         style={{
                                             width: 18, height: 18, borderRadius: 4, border: "none",
                                             background: "#fee2e2", cursor: "pointer", color: "#ef4444",
@@ -386,9 +407,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         : "Chưa chọn người dùng nào"}
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>
-                    <Button onClick={onClose} style={{ borderRadius: 8, height: 36 }}>
-                        Huỷ
-                    </Button>
+                    <Button onClick={onClose} style={{ borderRadius: 8, height: 36 }}>Huỷ</Button>
                     <Button
                         type="primary"
                         onClick={handleConfirm}

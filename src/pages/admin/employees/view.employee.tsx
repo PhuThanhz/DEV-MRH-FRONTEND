@@ -97,7 +97,7 @@ const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) =
 
 const ViewDetailEmployee = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     const backendURL = import.meta.env.VITE_BACKEND_URL;
-    const userId = dataInit?.id ? Number(dataInit.id) : undefined;
+    const userId = dataInit?.id ? String(dataInit.id) : undefined;
     const { data: positions = [], isLoading } = useUserPositionsQuery(userId);
 
     const handleClose = () => { onClose(false); setDataInit(null); };

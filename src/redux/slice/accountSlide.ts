@@ -33,7 +33,7 @@ export interface IUserInfo {
 }
 
 export interface IUser {
-    id?: number;
+    id?: string;
     email: string;
     name: string;
     avatar?: string;

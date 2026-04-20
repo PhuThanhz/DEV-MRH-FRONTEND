@@ -25,7 +25,7 @@ import {
 const { Text } = Typography;
 
 interface IProps {
-    activeUserId?: number;
+    activeUserId?: string;
 }
 
 const SOURCE_OPTIONS = [

@@ -963,6 +963,37 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_CONFIDENTIAL" },
         REVISE: { method: "POST", apiPath: "/api/v1/procedures/{id}/revise", module: "PROCEDURE_CONFIDENTIAL" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/procedures/{id}", module: "PROCEDURE_CONFIDENTIAL" },
+        SHARE: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/*/share",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+
+        ACCESS_LIST: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/*/access-list",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+        REVOKE: {
+            method: "DELETE",
+            apiPath: "/api/v1/procedures/{id}/access/{userId}",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+        SHARE_LOG_SENT: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/sent",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+        SHARE_LOG_RECEIVED: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/received",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
+        SHARE_LOG_ALL: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/all",
+            module: "PROCEDURE_CONFIDENTIAL",
+        },
     },
     /* ===================== EMPLOYEES ===================== */
     EMPLOYEES: {

@@ -2,14 +2,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchUser,
     callCreateUser,
-    callFetchUserById,   // thêm dòng này
+    callFetchUserById,
     callUpdateUser,
     callDeleteUser,
-
 } from "@/config/api";
 import type { IUser, IModelPaginate } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
+// ======================================================
+// GET LIST
+// ======================================================
 export const useUsersQuery = (query: string) => {
     return useQuery({
         queryKey: ["users", query],
@@ -21,26 +23,27 @@ export const useUsersQuery = (query: string) => {
     });
 };
 
-export const useUserByIdQuery = (id?: number) => {
+// ======================================================
+// GET DETAIL  ✅ đổi number → string
+// ======================================================
+export const useUserByIdQuery = (id?: string) => {
     return useQuery({
         queryKey: ["user", id],
         enabled: !!id,
         queryFn: async () => {
             if (!id) throw new Error("Thiếu ID người dùng");
-
             const res = await callFetchUserById(id);
-
-            if (!res?.data)
-                throw new Error("Không tìm thấy thông tin người dùng");
-
+            if (!res?.data) throw new Error("Không tìm thấy thông tin người dùng");
             return res.data as IUser;
         },
     });
 };
 
+// ======================================================
+// CREATE
+// ======================================================
 export const useCreateUserMutation = () => {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async (user: IUser) => {
             const res = await callCreateUser(user);
@@ -58,9 +61,11 @@ export const useCreateUserMutation = () => {
     });
 };
 
+// ======================================================
+// UPDATE
+// ======================================================
 export const useUpdateUserMutation = () => {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async (user: IUser) => {
             const res = await callUpdateUser(user);
@@ -72,6 +77,7 @@ export const useUpdateUserMutation = () => {
             notify.updated(res?.message || "Cập nhật người dùng thành công");
             queryClient.invalidateQueries({ queryKey: ["users"] });
             if (variables?.id) {
+                // id là string UUID nên invalidate đúng key
                 queryClient.invalidateQueries({ queryKey: ["user", variables.id] });
             }
         },
@@ -81,11 +87,13 @@ export const useUpdateUserMutation = () => {
     });
 };
 
+// ======================================================
+// DELETE
+// ======================================================
 export const useDeleteUserMutation = () => {
     const queryClient = useQueryClient();
-
     return useMutation({
-        mutationFn: async (id: number) => {
+        mutationFn: async (id: string) => {  // ✅ string
             const res = await callDeleteUser(id);
             if (!res?.statusCode || res.statusCode !== 200) {
                 throw new Error(res?.message || "Không thể xóa người dùng");

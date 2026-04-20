@@ -99,8 +99,10 @@ const ScoreCell = ({ record }: { record: IDepartmentCompleteness }) => {
 };
 
 /** Cột hạng mục thiếu */
+/** Cột hạng mục thiếu */
 const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
     const missing = CRITERIA.filter((c) => !record[c.key]);
+
     if (missing.length === 0) {
         return (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -111,26 +113,30 @@ const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
             </div>
         );
     }
+
     return (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {missing.map((c) => (
-                <Tag
-                    key={String(c.key)}
-                    style={{
-                        margin: 0,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        borderRadius: 4,
-                        padding: "1px 7px",
-                        background: "#fff1f0",
-                        color: "#cf1322",
-                        border: "1px solid #ffccc7",
-                        lineHeight: "18px",
-                    }}
-                >
-                    {c.label}
-                </Tag>
-            ))}
+            {CRITERIA.map((c) => {
+                const done = !!record[c.key];
+                return (
+                    <Tag
+                        key={String(c.key)}
+                        style={{
+                            margin: 0,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            borderRadius: 4,
+                            padding: "1px 7px",
+                            lineHeight: "18px",
+                            background: done ? "#f6ffed" : "#fff1f0",
+                            color: done ? "#389e0d" : "#cf1322",
+                            border: `1px solid ${done ? "#b7eb8f" : "#ffccc7"}`,
+                        }}
+                    >
+                        {c.label}
+                    </Tag>
+                );
+            })}
         </div>
     );
 };

@@ -13,7 +13,7 @@ import type {
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
-    , ICareerPathBulkResult, IJobTitleAssignStatus
+    , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO
 
 } from '@/types/backend';
 
@@ -65,14 +65,14 @@ export const callUpdateUser = (user: IUser) => {
     return axios.put<IBackendRes<IUser>>(`/api/v1/users`, { ...user })
 }
 
-export const callDeleteUser = (id: number) => {
+export const callDeleteUser = (id: string) => {
     return axios.delete<IBackendRes<IUser>>(`/api/v1/users/${id}`);
 }
 
 export const callFetchUser = (query: string) => {
     return axios.get<IBackendRes<IModelPaginate<IUser>>>(`/api/v1/users?${query}`);
 }
-export const callFetchUserById = (id: number) => {
+export const callFetchUserById = (id: string) => {
     return axios.get<IBackendRes<IUser>>(`/api/v1/users/${id}`);
 }
 
@@ -125,7 +125,7 @@ export const callFetchEmployees = (query: string) => {
     );
 };
 
-export const callFetchEmployeeById = (id: number) => {
+export const callFetchEmployeeById = (id: string) => {
     return axios.get<IBackendRes<IEmployee>>(
         `/api/v1/employees/${id}`
     );
@@ -145,7 +145,7 @@ export const callUpdateEmployee = (data: IUpdateEmployeeReq) => {
     );
 };
 
-export const callDeleteEmployee = (id: number) => {
+export const callDeleteEmployee = (id: string) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/employees/${id}`
     );
@@ -193,14 +193,14 @@ export const callActiveCompany = (id: number) => {
 };
 /* ===================== USER POSITIONS ===================== */
 
-export const callFetchUserPositions = (userId: number) => {
+export const callFetchUserPositions = (userId: string) => {
     return axios.get<IBackendRes<IUserPosition[]>>(
         `/api/v1/users/${userId}/positions`
     );
 };
 
 export const callCreateUserPosition = (
-    userId: number,
+    userId: string,
     data: {
         source: string;
         companyJobTitleId?: number;
@@ -214,7 +214,7 @@ export const callCreateUserPosition = (
     );
 };
 
-export const callDeleteUserPosition = (id: number) => {
+export const callDeleteUserPosition = (id: string) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/users/positions/${id}`
     );
@@ -1311,12 +1311,11 @@ export const callFetchJdFlowInbox = () => {
  * Lấy danh sách user có quyền duyệt JD
  * GET /api/v1/jd-flow/approvers
  */
-export const callFetchJdApprovers = () => {
+export const callFetchJdApprovers = (jdId?: number) => {
     return axios.get<IBackendRes<any[]>>(
-        `/api/v1/jd-flow/approvers`
+        `/api/v1/jd-flow/approvers${jdId ? `?jdId=${jdId}` : ""}`
     );
 };
-
 /**
  * Lấy timeline duyệt JD
  * GET /api/v1/jd-flow/logs/{jdId}
@@ -1333,9 +1332,10 @@ export const callFetchJdFlowLogs = (jdId: number) => {
  */
 export const callSubmitJdFlow = (data: {
     jdId: number;
-    nextUserId?: number;
-    returnToPrevious?: boolean;  // ← thêm
-    comment?: string;            // ← thêm
+    nextUserId?: string;
+    comment?: string;
+    returnToPrevious?: boolean; // ✅ THÊM DÒNG NÀY
+    // ← thêm
 }) => {
     return axios.post<IBackendRes<any>>(
         `/api/v1/jd-flow/submit`,
@@ -1349,7 +1349,7 @@ export const callSubmitJdFlow = (data: {
  */
 export const callApproveJdFlow = (data: {
     jdId: number;
-    nextUserId?: number;
+    nextUserId?: string;
 }) => {
     return axios.post<IBackendRes<any>>(
         `/api/v1/jd-flow/approve`,
@@ -1391,9 +1391,9 @@ export const callIssueJdFlow = (data: {
  * Lấy danh sách user có quyền ban hành JD
  * GET /api/v1/jd-flow/issuers
  */
-export const callFetchJdIssuers = () => {
+export const callFetchJdIssuers = (jdId?: number) => {
     return axios.get<IBackendRes<any[]>>(
-        `/api/v1/jd-flow/issuers`
+        `/api/v1/jd-flow/issuers${jdId ? `?jdId=${jdId}` : ""}`
     );
 };
 /* ===================== PASSWORD RESET ===================== */
@@ -1431,7 +1431,7 @@ export const callCreateProcedure = (
         note?: string;
         departmentId?: number | null;
         sectionId?: number | null;
-        userIds?: number[];   // ← THÊM
+        userIds?: string[];   // ← THÊM
 
     }
 ) => {
@@ -1453,7 +1453,7 @@ export const callUpdateProcedure = (
         note?: string;
         departmentId?: number | null;
         sectionId?: number | null;
-        userIds?: number[];   // ← THÊM
+        userIds?: string[];   // ← THÊM
     }
 ) => {
     return axios.put<IBackendRes<any>>(
@@ -1575,7 +1575,7 @@ export const callReviseProcedure = (
         note?: string;
         departmentId?: number | null;
         sectionId?: number | null;
-        userIds?: number[];   // ← THÊM
+        userIds?: string[];   // ← THÊM
     }
 ) => {
     return axios.post<IBackendRes<any>>(
@@ -1592,14 +1592,14 @@ export const callAssignEmployeeCareerPath = (data: IReqAssignCareerPath) => {
     );
 };
 
-export const callUpdateEmployeeCareerPath = (id: number, data: IReqAssignCareerPath) => {
+export const callUpdateEmployeeCareerPath = (id: string, data: IReqAssignCareerPath) => {
     return axios.put<IBackendRes<IEmployeeCareerPath>>(
         `/api/v1/employee-career-paths/${id}`,
         data
     );
 };
 
-export const callPromoteEmployee = (id: number, data: IReqPromoteEmployee) => {
+export const callPromoteEmployee = (id: string, data: IReqPromoteEmployee) => {
     return axios.post<IBackendRes<IEmployeeCareerPath>>(
         `/api/v1/employee-career-paths/${id}/promote`,
         data
@@ -1614,7 +1614,7 @@ export const callSetEmployeeCareerPathStatus = (id: number, status: number) => {
     );
 };
 
-export const callGetEmployeeCareerPathByUser = (userId: number) => {
+export const callGetEmployeeCareerPathByUser = (userId: string) => {
     return axios.get<IBackendRes<IEmployeeCareerPath>>(
         `/api/v1/employee-career-paths/user/${userId}`
     );
@@ -1633,7 +1633,7 @@ export const callGetUpcomingPromotions = (withinDays: number = 30) => {
     );
 };
 
-export const callGetEmployeeCareerPathHistory = (userId: number) => {
+export const callGetEmployeeCareerPathHistory = (userId: string) => {
     return axios.get<IBackendRes<IEmployeeCareerPathHistory[]>>(
         `/api/v1/employee-career-paths/history/${userId}`
     );
@@ -1699,5 +1699,46 @@ export const callFetchDepartmentCompleteness = () => {
 export const callFetchUsersUnassignedCareerPath = (departmentId: number) => {
     return axios.get<IBackendRes<IUser[]>>(
         `/api/v1/departments/${departmentId}/users/unassigned-career-path`
+    );
+};
+// SHARE quy trình bảo mật
+export const callShareProcedure = (id: number, userIds: string[]) => {
+    return axios.post<IBackendRes<void>>(
+        `/api/v1/procedures/${id}/share`,
+        { userIds }
+    );
+};
+
+// Lấy danh sách người có quyền
+export const callFetchProcedureAccessList = (id: number) => {
+    return axios.get<IBackendRes<IAccessDTO[]>>(
+        `/api/v1/procedures/${id}/access-list`
+    );
+};
+
+// Thu hồi quyền
+export const callRevokeProcedureAccess = (id: number, userId: string) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/procedures/${id}/access/${userId}`
+    );
+};
+// Lịch sử tôi đã gửi
+export const callFetchSentShareLog = () => {
+    return axios.get<IBackendRes<IShareLogDTO[]>>(
+        `/api/v1/procedures/share-log/sent`
+    );
+};
+
+// Lịch sử tôi đã nhận
+export const callFetchReceivedShareLog = () => {
+    return axios.get<IBackendRes<IShareLogDTO[]>>(
+        `/api/v1/procedures/share-log/received`
+    );
+};
+
+// Toàn bộ log — admin
+export const callFetchAllShareLog = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IShareLogDTO>>>(
+        `/api/v1/procedures/share-log/all?${query}`
     );
 };

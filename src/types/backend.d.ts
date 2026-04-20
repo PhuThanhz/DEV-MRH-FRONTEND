@@ -18,7 +18,7 @@ export interface IModelPaginate<T> {
 export interface IAccount {
     access_token: string;
     user: {
-        id: number;
+        id: string;
         email: string;
         name: string;
         avatar?: string;
@@ -52,7 +52,7 @@ export interface IGetAccount extends Omit<IAccount, "access_token"> { }
 
 // ✅ ĐÚNG — đã có trong backend.ts mới
 export interface IUser {
-    id?: number;        // ⭐ number
+    id: string;      // ⭐ number
     name: string;
     email: string;
     password?: string;
@@ -89,14 +89,13 @@ export interface IReqChangePasswordDTO {
 }
 // ===== USER POSITION =====
 export interface IUserPosition {
-    id?: number;
+    id: string;  // ✅ đã là string
     source: "COMPANY" | "DEPARTMENT" | "SECTION";
     active: boolean;
 
     // ← THÊM
     user?: {
-        id: number;
-        name: string;
+        id: string; name: string;
         email: string;
         employeeCode?: string; // ← THÊM
 
@@ -426,10 +425,10 @@ export interface IEmployeeCareerPathStepProgress {
 }
 
 export interface IEmployeeCareerPath {
-    id?: number;
+    id: string;  // ✅ đã là string
 
     user?: {
-        id: number;
+        id: string;
         name: string;
         email: string;
     };
@@ -484,23 +483,22 @@ export interface IEmployeeCareerPathHistory {
     note?: string;
     createdAt?: string;
     createdBy?: string;
+
 }
 
 // Gán lộ trình — đơn giản hơn, dùng templateId thay vì targetCareerPathId
 export interface IReqAssignCareerPath {
-    userId: number;
+    userId: string;
     templateId: number;           // ← thay targetCareerPathId
     currentCareerPathId: number;  // chức danh hiện tại → tìm bước bắt đầu
     startDate?: string;
     note?: string;
-    // ← bỏ: targetCareerPathId, expectedPromotionDate
 }
 
 // Promote — đơn giản hơn, backend tự tìm bước tiếp theo
 export interface IReqPromoteEmployee {
     promotedAt?: string;
     note?: string;
-    // ← bỏ: newCurrentCareerPathId, newTargetCareerPathId, newExpectedPromotionDate
 }
 /* ===================== CAREER PATH TEMPLATE ===================== */
 export interface ICareerPathTemplate {
@@ -1260,41 +1258,41 @@ export type JD_STATUS =
 
 export interface IReqSubmitJdFlow {
     jdId: number;
-    nextUserId?: number;           // optional
+    nextUserId?: string;           // optional
     returnToPrevious?: boolean;    // ← THÊM
     comment?: string;              // ← THÊM (dùng khi gửi về trước)
 }
 export interface IReqApproveJdFlow {
-    jdId: number
-    nextUserId: number
+    jdId: number;
+    nextUserId: string;
 }
 
 export interface IReqRejectJdFlow {
-    jdId: number
-    comment?: string
+    jdId: number;
+    comment?: string;
 }
 
 export interface IReqIssueJdFlow {
-    jdId: number
+    jdId: number;
 }
 
 
 /* ===================== JD FLOW HISTORY ===================== */
 
 export interface IJDFlowLog {
-    id: number
+    id: number;
 
-    jdId: number
+    jdId: number;
 
     action: "SUBMIT" | "APPROVE" | "REJECT" | "ISSUE"
 
     fromUser?: {
-        id: number
+        id: string
         name: string
     }
 
     toUser?: {
-        id: number
+        id: string
         name: string
     }
 
@@ -1306,7 +1304,7 @@ export interface IJDFlowLog {
 /* ===================== JD APPROVER ===================== */
 
 export interface IJDApprover {
-    id: number;
+    id: string;
     name: string;
     email: string;
     avatar?: string;
@@ -1329,13 +1327,13 @@ export interface IJDFlowItem {
     currentUserIsFinal?: boolean // ✅ thêm field này
 
     fromUser?: {
-        id: number
-        name: string
+        id: string;
+        name: string;
     }
 
     currentUser?: {
-        id: number
-        name: string
+        id: string;
+        name: string;
     }
 }
 
@@ -1350,12 +1348,12 @@ export interface IJdInbox {
     status: string;
 
     fromUser?: {
-        id: number;
+        id: string;
         name: string;
     };
 
     currentUser?: {
-        id: number;
+        id: string;
         name: string;
     };
 
@@ -1367,7 +1365,7 @@ export interface IJdInbox {
     rejectorPosition?: string;    // ← THÊM
     rejectorDepartment?: string;  // ← THÊM
     rejectorPositionCode?: string;  // ← THÊM
-    rejectorPositionCode?: string;  // ← THÊM
+    canReturnToPrevious?: boolean;  // ← THIẾU CÁI NÀY
 
 
 }
@@ -1377,32 +1375,44 @@ export interface IJdInbox {
 export type ProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
 export interface IProcedure {
-    procedureCode?: string; // 🔥 THÊM
+    procedureCode?: string;
     id?: number;
     type?: ProcedureType;
+    companyId?: number;   // ✅ THÊM
 
     companyCode?: string;
     companyName?: string;
+    companyId?: number;
 
     departmentId?: number;
     departmentName?: string;
+
+    // ✅ THÊM — dùng cho DEPARTMENT type (nhiều phòng ban)
+    departments?: {
+        id: number;
+        name: string;
+
+        companyId?: number;    // ✅ THÊM
+        companyName?: string;
+        companyCode?: string;
+    }[];
 
     sectionId?: number;
     sectionName?: string;
 
     procedureName: string;
-    fileUrls?: string[]; // ← đổi từ fileUrl?: string
+    fileUrls?: string[];
     status?: string;
     planYear?: number;
-    issuedDate?: string; // ← THÊM
+    issuedDate?: string;
     note?: string;
     version?: number;
 
-    // ← THÊM: dùng cho CONFIDENTIAL
-    userIds?: number[];
+    userIds?: string[];
     assignedByList?: string[];
 
     active: boolean;
+    createdByName?: string;
 
     createdAt?: string;
     updatedAt?: string;
@@ -1440,10 +1450,11 @@ export interface IProcedureRequest {
     fileUrls?: string[]; // ← đổi từ fileUrl?: string
     note?: string;
     active?: boolean;  // ← thêm dòng này
-    departmentId?: number | null;
+    departmentId?: number | null;    // ← giữ cho COMPANY & CONFIDENTIAL
+    departmentIds?: number[] | null; // ← thêm cho DEPARTMENT
     sectionId?: number | null;
     // ← THÊM: dùng cho CONFIDENTIAL
-    userIds?: number[];
+    userIds?: string[];
 }
 export interface IDashboardSummary {
     totalCompany: number;
@@ -1468,7 +1479,7 @@ export interface IDepartmentCompleteness {
 /* ===================== EMPLOYEE ===================== */
 
 export interface IEmployee {
-    id: number;
+    id: string;  // ❌ đang là number → string
     name: string;
     email: string;
     avatar?: string;
@@ -1495,7 +1506,7 @@ export interface IEmployee {
     };
 
     positions?: {
-        id: number;
+        id: string;
         source: "COMPANY" | "DEPARTMENT" | "SECTION";
 
         companyName?: string;
@@ -1520,7 +1531,7 @@ export interface ICreateEmployeeReq {
 }
 
 export interface IUpdateEmployeeReq {
-    id: number;
+    id: string;  // ❌ đang là number → string
 
     name?: string;
     active?: boolean;
@@ -1536,3 +1547,36 @@ export interface IUpdateEmployeeReq {
 
 
 // hoàn thiện bộ hồ sơ 
+export interface IAccessDTO {
+    userId: string;
+    name?: string;
+    email?: string;
+    assignedByName?: string;
+    assignedAt?: string;
+}
+export interface IShareLogDTO {
+    id: number;
+    procedureId: number;
+    procedureCode: string;
+    procedureName: string;
+    procedureStatus: string;
+    procedureVersion: number;
+    procedureIssuedDate?: string;
+
+    // ← thêm 2 cái này để filter client-side
+    companyId?: number;
+    departmentId?: number;
+
+    senderId: string;
+    senderName: string;
+    senderEmail: string;
+    senderRole: string;
+
+    receiverId: string;
+    receiverName: string;
+    receiverEmail: string;
+    receiverRole: string;
+
+    action: "SHARE" | "REVOKE";
+    sentAt: string;
+}

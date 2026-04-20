@@ -8,13 +8,12 @@ import type { IUserPosition } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
 /* ===== GET LIST ===== */
-export const useUserPositionsQuery = (userId?: number) => {
+export const useUserPositionsQuery = (userId?: string) => {  // ✅ string
     return useQuery({
         queryKey: ["user-positions", userId],
         enabled: !!userId,
         queryFn: async () => {
             const res = await callFetchUserPositions(userId!);
-            // interceptor đã unwrap 1 lần → res = IBackendRes → res.data = IUserPosition[]
             return (res as any)?.data ?? [];
         },
     });
@@ -28,7 +27,7 @@ export const useCreateUserPositionMutation = () => {
             userId,
             data,
         }: {
-            userId: number;
+            userId: string;  // ✅ string
             data: {
                 source: string;
                 companyJobTitleId?: number;
@@ -37,7 +36,6 @@ export const useCreateUserPositionMutation = () => {
             };
         }) => {
             const res = await callCreateUserPosition(userId, data);
-            // interceptor đã unwrap → res = IBackendRes → res.data = IUserPosition
             return (res as any)?.data ?? null;
         },
         onSuccess: (_data, variables) => {
@@ -51,10 +49,10 @@ export const useCreateUserPositionMutation = () => {
 };
 
 /* ===== DELETE ===== */
-export const useDeleteUserPositionMutation = (userId?: number) => {
+export const useDeleteUserPositionMutation = (userId?: string) => {  // ✅ string
     const client = useQueryClient();
     return useMutation({
-        mutationFn: async (id: number) => {
+        mutationFn: async (id: string) => {
             await callDeleteUserPosition(id);
         },
         onSuccess: () => {

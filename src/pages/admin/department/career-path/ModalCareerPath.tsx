@@ -221,20 +221,26 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
         }
     };
 
+    // ✅ SAU — spread values TRƯỚC, departmentId đặt SAU để không bị ghi đè
     const handleConfirmCreate = async () => {
         if (!previewData) return;
         const values = form.getFieldsValue();
-        const payload = {
-            departmentId: Number(departmentId),
-            jobTitleIds: selectedJobTitleIds,
-            ...values,
+        const basePayload = {
+            ...values,                          // spread trước
+            departmentId: Number(departmentId), // đặt sau — luôn thắng
             active: activeState,
         };
         try {
             if (selectedJobTitleIds.length === 1) {
-                createCareerPath({ ...payload, jobTitleId: selectedJobTitleIds[0] });
+                createCareerPath({
+                    ...basePayload,
+                    jobTitleId: selectedJobTitleIds[0], // single create dùng jobTitleId
+                });
             } else {
-                await bulkCreate(payload);
+                await bulkCreate({
+                    ...basePayload,
+                    jobTitleIds: selectedJobTitleIds,   // bulk create dùng jobTitleIds
+                });
             }
             handleReset();
         } catch (err: any) {
@@ -356,48 +362,66 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                     </Col>
 
                     {/* Chức danh */}
+                    {/* Chức danh */}
                     <Col xs={24} sm={11}>
-                        <ProFormSelect
-                            name="jobTitleIds"
-                            label={
-                                <Lbl>
-                                    Chức danh{" "}
-                                    <span style={{ fontWeight: 400, color: T.icon }}>(một hoặc nhiều)</span>
-                                </Lbl>
-                            }
-                            mode="multiple"
-                            placeholder="Tìm và chọn chức danh..."
-                            rules={[{ required: true, message: "Vui lòng chọn ít nhất một chức danh" }]}
-                            options={jobTitles.map((jt: any) => ({
-                                label: (
-                                    <Space size={5}>
-                                        <UserSwitchOutlined style={{ color: T.icon, fontSize: 11 }} />
-                                        <span style={{ fontSize: 13 }}>{jt.nameVi}</span>
-                                        {jt.alreadyExists && (
-                                            <Tag style={{
-                                                fontSize: 10, lineHeight: "15px", padding: "0 5px",
-                                                margin: 0, borderRadius: 3,
-                                                color: T.amber, background: T.amberFaint,
-                                                border: `1px solid ${T.amberLine}`,
-                                            }}>
-                                                Đã tồn tại
-                                            </Tag>
-                                        )}
-                                    </Space>
-                                ),
-                                value: jt.id,
-                                disabled: jt.alreadyExists,
-                            }))}
-                            fieldProps={{
-                                loading: loadingJobTitles,
-                                showSearch: true,
-                                filterOption: false,
-                                onSearch: () => { },
-                                onChange: () => setPreviewData(null),
-                                maxTagCount: "responsive",
-                                style: { borderRadius: T.rs },
-                            }}
-                        />
+                        {isEdit ? (
+                            // ── Edit mode: readonly display ──
+                            <div style={{ marginBottom: 20 }}>
+                                <div style={{ marginBottom: 6 }}><Lbl>Chức danh</Lbl></div>
+                                <div style={{
+                                    display: "flex", alignItems: "center", gap: 7,
+                                    border: `1px solid ${T.line}`, borderRadius: T.rs,
+                                    padding: "6px 11px", background: T.bg,
+                                    fontSize: 13, fontWeight: 500, color: T.sub, minHeight: 34,
+                                }}>
+                                    <UserSwitchOutlined style={{ fontSize: 12, color: T.icon, flexShrink: 0 }} />
+                                    <span>{dataInit?.jobTitleName || "—"}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            // ── Create mode: multi-select ──
+                            <ProFormSelect
+                                name="jobTitleIds"
+                                label={
+                                    <Lbl>
+                                        Chức danh{" "}
+                                        <span style={{ fontWeight: 400, color: T.icon }}>(một hoặc nhiều)</span>
+                                    </Lbl>
+                                }
+                                mode="multiple"
+                                placeholder="Tìm và chọn chức danh..."
+                                rules={[{ required: true, message: "Vui lòng chọn ít nhất một chức danh" }]}
+                                options={jobTitles.map((jt: any) => ({
+                                    label: (
+                                        <Space size={5}>
+                                            <UserSwitchOutlined style={{ color: T.icon, fontSize: 11 }} />
+                                            <span style={{ fontSize: 13 }}>{jt.nameVi}</span>
+                                            {jt.alreadyExists && (
+                                                <Tag style={{
+                                                    fontSize: 10, lineHeight: "15px", padding: "0 5px",
+                                                    margin: 0, borderRadius: 3,
+                                                    color: T.amber, background: T.amberFaint,
+                                                    border: `1px solid ${T.amberLine}`,
+                                                }}>
+                                                    Đã tồn tại
+                                                </Tag>
+                                            )}
+                                        </Space>
+                                    ),
+                                    value: jt.id,
+                                    disabled: jt.alreadyExists,
+                                }))}
+                                fieldProps={{
+                                    loading: loadingJobTitles,
+                                    showSearch: true,
+                                    filterOption: false,
+                                    onSearch: () => { },
+                                    onChange: () => setPreviewData(null),
+                                    maxTagCount: "responsive",
+                                    style: { borderRadius: T.rs },
+                                }}
+                            />
+                        )}
                     </Col>
 
                     {/* Thời gian */}

@@ -30,18 +30,17 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(0);
     const [activeTab, setActiveTab] = useState<string>("account");
-    const [createdUserId, setCreatedUserId] = useState<number | null>(null);
+    const [createdUserId, setCreatedUserId] = useState<string | null>(null);
 
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
-    const activeUserId = isEdit ? Number(dataInit?.id) : (createdUserId ?? undefined);
+    const activeUserId = isEdit ? (dataInit?.id) : (createdUserId ?? undefined);
 
     const { mutate: createUser, isPending: isCreating } = useCreateUserMutation();
     const { mutate: updateUser, isPending: isUpdating } = useUpdateUserMutation();
 
     const backendURL = import.meta.env.VITE_BACKEND_URL;
 
-    // ========================= INIT =========================
     useEffect(() => {
         if (dataInit?.id) {
             const roleItem: IRoleSelect = {
@@ -67,7 +66,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             });
             setCurrentStep(0);
             setActiveTab("account");
-            setCreatedUserId(Number(dataInit.id));
+            setCreatedUserId((dataInit.id));
         } else {
             form.resetFields();
             setSelectedRole(null);
@@ -85,7 +84,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
         };
     }, [previewUrl]);
 
-    // ========================= RESET =========================
     const handleReset = () => {
         form.resetFields();
         setSelectedRole(null);
@@ -98,7 +96,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
         setOpenModal(false);
     };
 
-    // ========================= FILE =========================
     const handleFileSelect = (file: File): false => {
         if (!file.type.startsWith("image/")) {
             message.error("Vui lòng chọn file ảnh!");
@@ -113,7 +110,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
         return false;
     };
 
-    // ========================= SUBMIT =========================
     const submitUser = async (values: any) => {
         try {
             const { name, email, password, role, active } = values;
@@ -154,7 +150,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 createUser(payload, {
                     onSuccess: (res: any) => {
                         const newId = res?.data?.id;
-                        if (newId) setCreatedUserId(Number(newId));
+                        if (newId) setCreatedUserId((newId));
                         setCurrentStep(1);
                     },
                 });
@@ -164,7 +160,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
         }
     };
 
-    // ========================= BUTTON LOGIC =========================
     const getSubmitConfig = () => {
         if (currentStep === 1) return { text: "Hoàn tất", icon: <CheckOutlined /> };
         if (activeTab === "account") return { text: "Tiếp theo", icon: <ArrowRightOutlined /> };
@@ -191,30 +186,31 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
 
     const submitConfig = getSubmitConfig();
 
-    // ========================= UI =========================
     return (
         <>
             <style>{`
                 /* ===== Modal ===== */
                 .elegant-modal .ant-modal-content {
-                    border-radius: ${isMobile ? "16px 16px 0 0" : "20px"} !important;
-                    box-shadow: 0 24px 64px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06) !important;
+                    border-radius: ${isMobile ? "16px 16px 0 0" : "16px"} !important;
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.10), 0 2px 10px rgba(0,0,0,0.06) !important;
                     overflow: hidden;
                     padding: 0 !important;
                     display: flex !important;
                     flex-direction: column !important;
-                    /* Mobile: chiếm toàn màn hình theo chiều cao */
-                    ${isMobile ? "max-height: 95dvh !important; height: 95dvh !important;" : ""}
+                    ${isMobile
+                    ? "max-height: 92dvh !important; height: 92dvh !important;"
+                    : "max-height: 82vh !important;"
+                }
                 }
                 .elegant-modal .ant-modal-header {
-                    padding: ${isMobile ? "16px 16px 0 16px" : "22px 28px 0 28px"} !important;
+                    padding: ${isMobile ? "14px 16px 0 16px" : "18px 24px 0 24px"} !important;
                     border-bottom: none !important;
                     background: #fff !important;
                     margin-bottom: 0 !important;
                     flex-shrink: 0 !important;
                 }
                 .elegant-modal .ant-modal-title {
-                    font-size: ${isMobile ? "16px" : "18px"} !important;
+                    font-size: ${isMobile ? "15px" : "16px"} !important;
                     font-weight: 700 !important;
                     color: #111827 !important;
                     letter-spacing: -0.03em !important;
@@ -235,10 +231,10 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     overflow: hidden !important;
                 }
                 .elegant-modal .ant-modal-close {
-                    top: ${isMobile ? "14px" : "20px"} !important;
-                    right: ${isMobile ? "14px" : "22px"} !important;
-                    width: 32px !important;
-                    height: 32px !important;
+                    top: ${isMobile ? "12px" : "16px"} !important;
+                    right: ${isMobile ? "14px" : "18px"} !important;
+                    width: 28px !important;
+                    height: 28px !important;
                     border-radius: 8px !important;
                     background: #f7f7f8 !important;
                     border: 1.5px solid #efefef !important;
@@ -252,18 +248,18 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     border-color: #e0e0e0 !important;
                 }
                 .elegant-modal .ant-modal-close .ant-modal-close-x {
-                    width: 32px !important;
-                    height: 32px !important;
-                    line-height: 32px !important;
-                    font-size: 13px !important;
+                    width: 28px !important;
+                    height: 28px !important;
+                    line-height: 28px !important;
+                    font-size: 12px !important;
                     color: #6b7280 !important;
                 }
 
-                /* ===== Steps icons ===== */
+                /* ===== Steps ===== */
                 .elegant-steps .ant-steps-item-process .ant-steps-item-icon {
                     background: #f5317f !important;
                     border-color: #f5317f !important;
-                    box-shadow: 0 4px 12px rgba(245,49,127,0.30) !important;
+                    box-shadow: 0 3px 8px rgba(245,49,127,0.28) !important;
                 }
                 .elegant-steps .ant-steps-item-finish .ant-steps-item-icon {
                     background: #fff0f6 !important;
@@ -279,35 +275,19 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 .elegant-steps .ant-steps-item-wait .ant-steps-item-icon .ant-steps-icon {
                     color: #9ca3af !important;
                 }
-
-                /* ===== Steps connector ===== */
                 .elegant-steps *[class*="ant-steps-item"] .ant-steps-item-tail::after,
-                .elegant-steps .ant-steps-item-tail::after,
-                .elegant-steps .ant-steps-item-tail::before,
-                .elegant-steps .ant-steps-item-finish .ant-steps-item-tail::after,
-                .elegant-steps .ant-steps-item-finish .ant-steps-item-tail::before,
-                .elegant-steps .ant-steps-item-process .ant-steps-item-tail::after,
-                .elegant-steps .ant-steps-item-process .ant-steps-item-tail::before,
-                .elegant-steps .ant-steps-item-wait .ant-steps-item-tail::after,
-                .elegant-steps .ant-steps-item-wait .ant-steps-item-tail::before,
-                .elegant-steps .ant-steps-item > .ant-steps-item-container > .ant-steps-item-tail::after {
+                .elegant-steps .ant-steps-item-tail::after {
                     background: ${CONNECTOR_COLOR} !important;
                     background-color: ${CONNECTOR_COLOR} !important;
                     background-image: none !important;
-                    border-color: ${CONNECTOR_COLOR} !important;
-                    opacity: 1 !important;
-                    --ant-color-primary: ${CONNECTOR_COLOR} !important;
                 }
-
-                /* ===== Steps title ===== */
                 .elegant-steps .ant-steps-item-process .ant-steps-item-title {
                     color: #111827 !important;
                     font-weight: 600 !important;
-                    font-size: ${isMobile ? "12px" : "13px"} !important;
+                    font-size: 12px !important;
                 }
                 .elegant-steps .ant-steps-item-title {
-                    font-size: ${isMobile ? "12px" : "13px"} !important;
-                    letter-spacing: -0.01em !important;
+                    font-size: 12px !important;
                 }
                 .elegant-steps .ant-steps-item-wait .ant-steps-item-title {
                     color: #9ca3af !important;
@@ -315,20 +295,20 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 .elegant-steps .ant-steps-item-finish .ant-steps-item-title {
                     color: #374151 !important;
                 }
-                /* Ẩn description trên mobile để tiết kiệm không gian */
-                ${isMobile ? ".elegant-steps .ant-steps-item-description { display: none !important; }" : ""}
+                .elegant-steps .ant-steps-item-description {
+                    display: none !important;
+                }
 
                 /* ===== Buttons ===== */
                 .btn-cancel {
-                    border-radius: 10px !important;
+                    border-radius: 8px !important;
                     border: 1.5px solid #e5e7eb !important;
                     color: #6b7280 !important;
                     background: #fff !important;
                     font-size: 13px !important;
                     font-weight: 500 !important;
-                    height: 40px !important;
-                    padding: 0 ${isMobile ? "12px" : "18px"} !important;
-                    transition: all 0.2s !important;
+                    height: 36px !important;
+                    padding: 0 14px !important;
                 }
                 .btn-cancel:hover {
                     border-color: #d1d5db !important;
@@ -336,47 +316,41 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     background: #f9fafb !important;
                 }
                 .btn-back {
-                    border-radius: 10px !important;
+                    border-radius: 8px !important;
                     border: 1.5px solid #e5e7eb !important;
                     color: #374151 !important;
                     background: #fff !important;
                     font-size: 13px !important;
                     font-weight: 500 !important;
-                    height: 40px !important;
-                    padding: 0 ${isMobile ? "10px" : "16px"} !important;
+                    height: 36px !important;
+                    padding: 0 14px !important;
                     display: flex !important;
                     align-items: center !important;
-                    gap: 6px !important;
-                    transition: all 0.2s !important;
+                    gap: 5px !important;
                 }
                 .btn-back:hover {
                     border-color: #d1d5db !important;
                     background: #f9fafb !important;
                 }
                 .btn-primary-pink {
-                    border-radius: 10px !important;
+                    border-radius: 8px !important;
                     background: #f5317f !important;
                     border-color: #f5317f !important;
                     color: #fff !important;
                     font-size: 13px !important;
                     font-weight: 600 !important;
-                    height: 40px !important;
-                    padding: 0 ${isMobile ? "14px" : "22px"} !important;
+                    height: 36px !important;
+                    padding: 0 18px !important;
                     display: flex !important;
                     align-items: center !important;
-                    gap: 7px !important;
-                    box-shadow: 0 4px 14px rgba(245,49,127,0.28) !important;
-                    transition: all 0.22s ease !important;
-                    letter-spacing: -0.01em !important;
+                    gap: 6px !important;
+                    box-shadow: 0 3px 10px rgba(245,49,127,0.25) !important;
+                    transition: all 0.2s !important;
                 }
                 .btn-primary-pink:hover {
                     background: #d4206a !important;
                     border-color: #d4206a !important;
-                    box-shadow: 0 6px 18px rgba(245,49,127,0.38) !important;
                     transform: translateY(-1px) !important;
-                }
-                .btn-primary-pink:active {
-                    transform: translateY(0) !important;
                 }
 
                 /* ===== Form label ===== */
@@ -386,7 +360,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     color: #374151 !important;
                 }
 
-                /* ===== Mobile: modal bottom sheet style ===== */
                 ${isMobile ? `
                 .elegant-modal {
                     margin: 0 !important;
@@ -395,10 +368,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     top: auto !important;
                     bottom: 0 !important;
                     position: fixed !important;
-                }
-                .elegant-modal .ant-modal-wrap {
-                    display: flex !important;
-                    align-items: flex-end !important;
                 }
                 ` : ""}
             `}</style>
@@ -414,14 +383,14 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     onCancel: handleReset,
                     afterClose: handleReset,
                     destroyOnClose: true,
-                    width: isMobile ? "100%" : 900,
+                    // ← WIDTH nhỏ lại: desktop 680, mobile 100%
+                    width: isMobile ? "100%" : 680,
                     maskClosable: false,
                     footer: null,
                     className: "elegant-modal",
-                    // Mobile: bottom sheet, Desktop: top: 40
                     style: isMobile
                         ? { top: "auto", bottom: 0, margin: 0, padding: 0, maxWidth: "100vw" }
-                        : { top: 40 },
+                        : { top: 60 }, // ← top 60 thay vì 40 để không quá sát đầu
                     styles: {
                         mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.25)" },
                     },
@@ -432,16 +401,16 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             >
                 {/* ===== STEPS ===== */}
                 <div style={{
-                    padding: isMobile ? "12px 16px 0 16px" : "16px 28px 0 28px",
+                    padding: isMobile ? "10px 16px 0 16px" : "12px 24px 0 24px",
                     background: "#fff",
                     flexShrink: 0,
                 }}>
                     <div style={{
                         background: "#fafafa",
                         border: "1.5px solid #f0f0f0",
-                        borderRadius: 14,
-                        padding: isMobile ? "10px 14px" : "12px 20px",
-                        marginBottom: isMobile ? 12 : 16,
+                        borderRadius: 10,
+                        padding: isMobile ? "8px 12px" : "10px 16px",
+                        marginBottom: isMobile ? 10 : 12,
                     }}>
                         <ConfigProvider
                             theme={{
@@ -452,9 +421,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                                         colorBorderSecondary: CONNECTOR_COLOR,
                                     },
                                 },
-                                token: {
-                                    colorPrimaryBorder: CONNECTOR_COLOR,
-                                },
+                                token: { colorPrimaryBorder: CONNECTOR_COLOR },
                             }}
                         >
                             <Steps
@@ -462,22 +429,8 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                                 size="small"
                                 className="elegant-steps"
                                 items={[
-                                    {
-                                        title: "Thông tin người dùng",
-                                        description: isMobile ? undefined : (
-                                            <span style={{ fontSize: 11, color: "#9ca3af" }}>
-                                                Tài khoản & nhân sự
-                                            </span>
-                                        ),
-                                    },
-                                    {
-                                        title: "Gán chức danh",
-                                        description: isMobile ? undefined : (
-                                            <span style={{ fontSize: 11, color: "#9ca3af" }}>
-                                                Vị trí công việc
-                                            </span>
-                                        ),
-                                    },
+                                    { title: "Thông tin người dùng" },
+                                    { title: "Gán chức danh" },
                                 ]}
                             />
                         </ConfigProvider>
@@ -487,7 +440,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 {/* ===== CONTENT — scrollable ===== */}
                 <div style={{
                     flex: 1,
-                    padding: isMobile ? "4px 16px 0 16px" : "4px 28px 0 28px",
+                    padding: isMobile ? "4px 16px 0 16px" : "4px 24px 0 24px",
                     minHeight: 0,
                     overflowY: "auto",
                     WebkitOverflowScrolling: "touch",
@@ -504,7 +457,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                             setActiveTab={setActiveTab}
                         />
                     )}
-
                     {currentStep === 1 && (
                         <UserPositionForm activeUserId={activeUserId} />
                     )}
@@ -515,12 +467,12 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: isMobile ? "12px 16px 20px 16px" : "16px 28px 22px 28px",
+                    padding: isMobile
+                        ? `12px 16px calc(14px + env(safe-area-inset-bottom)) 16px`
+                        : "12px 24px 16px 24px",
                     borderTop: "1.5px solid #f3f4f6",
                     background: "#fff",
                     flexShrink: 0,
-                    paddingBottom: isMobile ? "calc(20px + env(safe-area-inset-bottom))" : "22px",
-                    // Đảm bảo footer luôn nằm trên icon emoji
                     position: "relative",
                     zIndex: 10,
                 }}>
@@ -528,7 +480,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                         fontSize: 12,
                         color: "#9ca3af",
                         letterSpacing: "-0.01em",
-                        whiteSpace: "nowrap", // ← fix "Bướ c 1/ 2"
+                        whiteSpace: "nowrap",
                         flexShrink: 0,
                     }}>
                         Bước {currentStep + 1} / 2
@@ -536,7 +488,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
 
                     <div style={{
                         display: "flex",
-                        gap: isMobile ? 6 : 8,
+                        gap: 6,
                         alignItems: "center",
                         flexShrink: 0,
                     }}>
@@ -544,7 +496,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                             <Button
                                 className="btn-back"
                                 onClick={() => setActiveTab("account")}
-                                icon={<ArrowLeftOutlined style={{ fontSize: 12 }} />}
+                                icon={<ArrowLeftOutlined style={{ fontSize: 11 }} />}
                             >
                                 {!isMobile && "Quay lại"}
                             </Button>

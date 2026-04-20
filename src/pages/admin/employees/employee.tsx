@@ -92,7 +92,7 @@ const EmployeePage = () => {
 
     const reloadTable = () => refetch();
 
-    const handleDelete = (id: number) => {
+    const handleDelete = (id: string) => {
         deleteEmployee(id, { onSuccess: reloadTable });
     };
 
@@ -308,8 +308,7 @@ const EmployeePage = () => {
                             cancelText="Hủy"
                             okButtonProps={{ danger: true }}
                             placement="topRight"
-                            onConfirm={() => handleDelete(Number(entity.id))}
-                        >
+                            onConfirm={() => handleDelete(entity.id as string)}                        >
                             <Button
                                 type="text"
                                 size="small"

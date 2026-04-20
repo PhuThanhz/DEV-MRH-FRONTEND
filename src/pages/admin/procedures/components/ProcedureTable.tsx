@@ -18,12 +18,12 @@ import {
 import ModalProcedure from "../modal.procedure";
 import ModalRevise from "../components/modal.revise";
 import ViewProcedure from "../view.procedure";
-import { Dropdown, Grid } from "antd";
+import { Dropdown } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import {
-    useProceduresQuery,
     useDeleteProcedureMutation,
 } from "@/hooks/useProcedure";
+import useAccess from "@/hooks/useAccess";
 
 import {
     callFetchCompany,
@@ -50,6 +50,7 @@ interface IProps {
 
 const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const tableRef = useRef<ActionType>(null);
+    const isAdmin = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_ALL);
 
     const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
@@ -72,11 +73,9 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const companyQuery = useCompanyProceduresWithFilterQuery(
         type === "COMPANY" ? query : ""
     );
-
     const departmentQuery = useDepartmentProceduresWithFilterQuery(
         type === "DEPARTMENT" ? query : ""
     );
-
     const confidentialQuery = useConfidentialProceduresWithFilterQuery(
         type === "CONFIDENTIAL" ? query : ""
     );
@@ -86,7 +85,9 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             ? companyQuery
             : type === "DEPARTMENT"
                 ? departmentQuery
-                : confidentialQuery; const deleteMutation = useDeleteProcedureMutation(type);
+                : confidentialQuery;
+
+    const deleteMutation = useDeleteProcedureMutation(type);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -95,7 +96,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     };
     const procedures = data?.result ?? [];
 
-    // ===================== BUILD FILTERS =====================
     const buildFilters = (
         search: string,
         status: string | null,
@@ -107,23 +107,26 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     ) => {
         const parts: string[] = [];
 
-        if (companyId) parts.push(`department.company.id:${companyId}`);
-        if (departmentId) parts.push(`department.id:${departmentId}`);
+        // ✅ Phân biệt path theo type
+        const companyPath = type === "DEPARTMENT"
+            ? "departments.company.id"
+            : "department.company.id";
+        const deptPath = type === "DEPARTMENT"
+            ? "departments.id"
+            : "department.id";
 
+        if (companyId) parts.push(`${companyPath}:${companyId}`);
+        if (departmentId) parts.push(`${deptPath}:${departmentId}`);
         if (search) parts.push(`procedureName~'${search}'`);
         if (status) parts.push(`status='${status}'`);
         if (createdAt) parts.push(createdAt);
-
-        if (!companyId && cmpId) parts.push(`department.company.id:${cmpId}`);
-        if (!departmentId && deptId) parts.push(`department.id:${deptId}`);
-
+        if (!companyId && cmpId) parts.push(`${companyPath}:${cmpId}`);
+        if (!departmentId && deptId) parts.push(`${deptPath}:${deptId}`);
         if (sectId) parts.push(`section.id:${sectId}`);
         if (planYear) parts.push(`planYear=${planYear}`);
-
         return parts;
     };
 
-    // ===================== AUTO BUILD QUERY =====================
     useEffect(() => {
         const q: any = {
             page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -142,7 +145,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         type, companyId, departmentId,
     ]);
 
-    // ===================== BUILD QUERY FOR TABLE =====================
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
             page: params.current,
@@ -153,17 +155,14 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter
         );
         if (filters.length > 0) q.filter = filters.join(" and ");
-
         let sortBy = "sort=createdAt,desc";
         if (sort?.procedureName)
             sortBy = sort.procedureName === "ascend"
                 ? "sort=procedureName,asc"
                 : "sort=procedureName,desc";
-
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
-    // ===================== RESET =====================
     const handleReset = () => {
         setSearchValue("");
         setStatusFilter(null);
@@ -175,7 +174,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         refetch();
     };
 
-    // ===================== PERMISSION =====================
     const permission = {
         view: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.GET_BY_ID
             : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_BY_ID
@@ -192,9 +190,9 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         create: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
             : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
                 : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
+
     };
 
-    // ===================== COLUMNS =====================
     const columns: ProColumns<IProcedure>[] = [
         {
             title: "STT",
@@ -218,7 +216,11 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             align: "center",
             width: 100,
             hideInTable: !!companyId || !!departmentId,
-            render: (_, record) => <Tag color="blue">{record.companyCode}</Tag>,
+            render: (_, record) => (
+                <Tag color="blue">
+                    {record.departments?.[0]?.companyCode ?? record.companyCode ?? "--"}
+                </Tag>
+            ),
         },
         {
             title: "Công ty",
@@ -227,19 +229,32 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             width: 220,
             ellipsis: { showTitle: true },
             hideInTable: !!companyId || !!departmentId,
+            render: (_, record) =>
+                record.departments?.[0]?.companyName ?? record.companyName ?? "--",
         },
         {
             title: "Phòng ban",
             dataIndex: "departmentName",
-            align: "left",
-            width: 180,
-            hideInTable: !!departmentId,
-            render: (_, record) => (
-                <Tag color="cyan">{record.departmentName || "--"}</Tag>
-            ),
+            render: (_, record) => {
+                // DEPARTMENT type → có departments[]
+                if (type === "DEPARTMENT") {
+                    const departments = record.departments ?? [];
+                    if (departments.length === 0) return <Tag color="cyan">--</Tag>;
+                    return (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {departments.map((d) => (
+                                <Tag key={d.id} color="cyan">{d.name}</Tag>
+                            ))}
+                        </div>
+                    );
+                }
+                // COMPANY / CONFIDENTIAL type → dùng departmentName flat
+                return record.departmentName
+                    ? <Tag color="cyan">{record.departmentName}</Tag>
+                    : <Tag color="cyan">--</Tag>;
+            },
         },
         {
-            // Ẩn cột Bộ phận ở cả 3 loại bảng
             title: "Bộ phận",
             dataIndex: "sectionName",
             align: "left",
@@ -254,7 +269,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             dataIndex: "procedureName",
             sorter: true,
             align: "left",
-            // Không đặt width cố định để cột tự giãn, hiển thị đầy đủ nội dung
             render: (_, record) => (
                 <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                     {record.procedureName}
@@ -300,9 +314,76 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     : "--",
         },
         {
+            title: "Người tạo",
+            dataIndex: "createdBy",
+            align: "left",
+            width: 220,
+            hideInTable: type !== "CONFIDENTIAL" || !isAdmin,
+            render: (_, record) => {
+                const name = record.createdByName ?? record.createdBy ?? "—";
+                const email = record.createdBy ?? "";
+
+                return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+                        {/* Avatar */}
+                        <div
+                            style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: "50%",
+                                background: "#eef2ff",
+                                color: "#4f46e5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                flexShrink: 0,
+                            }}
+                        >
+                            {name !== "—" ? name.charAt(0).toUpperCase() : "?"}
+                        </div>
+
+                        {/* Text */}
+                        <div style={{ minWidth: 0 }}>
+                            <div
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: "#111827",
+                                    lineHeight: "18px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    maxWidth: 140,
+                                }}
+                            >
+                                {name}
+                            </div>
+
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: "#6b7280",
+                                    lineHeight: "16px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    maxWidth: 140,
+                                }}
+                            >
+                                {email || "—"}
+                            </div>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
             title: "Hành động",
             align: "center",
-            width: 100,
+            width: type === "CONFIDENTIAL" ? 120 : 100,
             fixed: "right",
             render: (_, record) => {
                 const menuItems = [
@@ -312,12 +393,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         label: (
                             <Access permission={permission.update} hideChildren>
                                 <Tooltip title="Chỉnh sửa">
-                                    <span
-                                        onClick={() => {
-                                            setDataInit(record);
-                                            setOpenModal(true);
-                                        }}
-                                    >
+                                    <span onClick={() => { setDataInit(record); setOpenModal(true); }}>
                                         Chỉnh sửa
                                     </span>
                                 </Tooltip>
@@ -327,27 +403,14 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     {
                         key: "revise",
                         icon: (
-                            <Tag
-                                color="green"
-                                style={{
-                                    margin: 0,
-                                    borderRadius: 6,
-                                    padding: "0 6px",
-                                    fontSize: 12,
-                                }}
-                            >
+                            <Tag color="green" style={{ margin: 0, borderRadius: 6, padding: "0 6px", fontSize: 12 }}>
                                 v{(record.version ?? 1) + 1}
                             </Tag>
                         ),
                         label: (
                             <Access permission={permission.revise} hideChildren>
                                 <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
-                                    <span
-                                        onClick={() => {
-                                            setDataInit(record);
-                                            setOpenRevise(true);
-                                        }}
-                                    >
+                                    <span onClick={() => { setDataInit(record); setOpenRevise(true); }}>
                                         Tạo version v{(record.version ?? 1) + 1}
                                     </span>
                                 </Tooltip>
@@ -381,40 +444,29 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                             <Tooltip title="Xem chi tiết">
                                 <EyeOutlined
                                     style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                    onClick={() => {
-                                        setDataInit(record);
-                                        setOpenView(true);
-                                    }}
+                                    onClick={() => { setDataInit(record); setOpenView(true); }}
                                 />
                             </Tooltip>
                         </Access>
 
-                        <Dropdown
-                            menu={{ items: menuItems }}
-                            trigger={["click"]}
-                        >
+
+                        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                             <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
                         </Dropdown>
                     </Space>
                 );
-            }
+            },
         },
     ];
 
-    // ===================== FILTER FIELDS =====================
     const filterFields: FilterField[] = [
-
         ...(!companyId && !departmentId ? [{
             key: "companyId",
             label: "Công ty",
             asyncOptions: async () => {
                 const res = await callFetchCompany("page=1&size=500&sort=name,asc");
                 const list: ICompany[] = (res?.data as any)?.result ?? [];
-                return list.map((c) => ({
-                    label: c.name,
-                    value: c.id,
-                    color: "blue",
-                }));
+                return list.map((c) => ({ label: c.name, value: c.id, color: "blue" }));
             },
         }] as FilterField[] : []),
 
@@ -426,11 +478,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     asyncOptions: async () => {
                         const res = await callFetchDepartmentsByCompany(companyId);
                         const list: IDepartment[] = (res?.data as any) ?? [];
-                        return list.map((d) => ({
-                            label: d.name,
-                            value: d.id,
-                            color: "cyan",
-                        }));
+                        return list.map((d) => ({ label: d.name, value: d.id, color: "cyan" }));
                     },
                 }
                 : {
@@ -439,11 +487,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         if (!parentCompanyId) return [];
                         const res = await callFetchDepartmentsByCompany(parentCompanyId);
                         const list: IDepartment[] = (res?.data as any) ?? [];
-                        return list.map((d) => ({
-                            label: d.name,
-                            value: d.id,
-                            color: "cyan",
-                        }));
+                        return list.map((d) => ({ label: d.name, value: d.id, color: "cyan" }));
                     },
                 }),
         }] as FilterField[] : []),
@@ -456,11 +500,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     asyncOptions: async () => {
                         const res = await callFetchSectionsByDepartment(departmentId);
                         const list: ISection[] = (res?.data as any) ?? [];
-                        return list.map((s) => ({
-                            label: s.name,
-                            value: s.id,
-                            color: "geekblue",
-                        }));
+                        return list.map((s) => ({ label: s.name, value: s.id, color: "geekblue" }));
                     },
                 }
                 : {
@@ -469,11 +509,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         if (!parentDeptId) return [];
                         const res = await callFetchSectionsByDepartment(parentDeptId);
                         const list: ISection[] = (res?.data as any) ?? [];
-                        return list.map((s) => ({
-                            label: s.name,
-                            value: s.id,
-                            color: "geekblue",
-                        }));
+                        return list.map((s) => ({ label: s.name, value: s.id, color: "geekblue" }));
                     },
                 }),
         },
@@ -508,10 +544,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     showFilterButton={false}
                     onSearch={setSearchValue}
                     onReset={handleReset}
-                    onAddClick={() => {
-                        setDataInit(null);
-                        setOpenModal(true);
-                    }}
+                    onAddClick={() => { setDataInit(null); setOpenModal(true); }}
                     addPermission={permission.create}
                 />
                 <div className="flex flex-wrap gap-3 items-center">

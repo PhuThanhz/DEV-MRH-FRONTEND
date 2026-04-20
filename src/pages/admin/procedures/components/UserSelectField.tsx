@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Form, Tag, Avatar, Tooltip, Typography } from "antd";
 import { UserOutlined, InfoCircleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import UserPickerModal from "./UserPickerModal";
@@ -13,14 +13,20 @@ interface UserSelectFieldProps {
 }
 
 interface UserOption {
-    value: number;
+    value: string;
     name: string;
     email: string;
     department?: string;
 }
 
 const AVATAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
-const getColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
+const getColor = (id: string) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
 const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
 
@@ -31,31 +37,27 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
 }) => {
     const form = Form.useFormInstance();
     const [pickerOpen, setPickerOpen] = useState(false);
-    const [userMap, setUserMap] = useState<Map<number, UserOption>>(new Map());
+    const [userMap, setUserMap] = useState<Map<string, UserOption>>(new Map());
+    const [loadingMap, setLoadingMap] = useState(false);
 
-    const selectedIds: number[] = Form.useWatch("userIds", form) ?? [];
+    const selectedIds: string[] = Form.useWatch("userIds", form) ?? [];
 
-    const handleChange = (ids: number[]) => {
-        form.setFieldValue("userIds", ids);
-        onCountChange(ids.length);
-    };
-
-    const removeUser = (id: number) => {
-        const next = selectedIds.filter((x) => x !== id);
-        form.setFieldValue("userIds", next);
-        onCountChange(next.length);
-    };
-
-    const handleOpen = async () => {
-        setPickerOpen(true);
-        if (companyId && userMap.size === 0) {
+    // ✅ FIX CHÍNH: Load userMap ngay khi companyId có giá trị
+    // Không chờ user bấm mở picker → fix bug hiển thị UUID khi edit
+    useEffect(() => {
+        if (!companyId) {
+            setUserMap(new Map());
+            return;
+        }
+        const load = async () => {
+            setLoadingMap(true);
             try {
                 const res = await callFetchUsersByCompany(companyId);
                 const positions: any[] = res?.data ?? [];
-                const seen = new Set<number>();
-                const map = new Map<number, UserOption>();
+                const seen = new Set<string>();
+                const map = new Map<string, UserOption>();
                 positions.forEach((p) => {
-                    const uid = p.user?.id ?? p.id;
+                    const uid = String(p.user?.id ?? p.id);
                     if (!seen.has(uid)) {
                         seen.add(uid);
                         map.set(uid, {
@@ -69,8 +71,26 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 setUserMap(map);
             } catch {
                 // ignore
+            } finally {
+                setLoadingMap(false);
             }
-        }
+        };
+        load();
+    }, [companyId]); // re-load khi đổi công ty
+
+    const handleChange = (ids: string[]) => {
+        form.setFieldValue("userIds", ids);
+        onCountChange(ids.length);
+    };
+
+    const removeUser = (id: string) => {
+        const next = selectedIds.filter((x) => x !== id);
+        form.setFieldValue("userIds", next);
+        onCountChange(next.length);
+    };
+
+    const handleOpen = () => {
+        setPickerOpen(true);
     };
 
     return (
@@ -106,23 +126,27 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 style={{ marginBottom: 0 }}
             >
                 <div
-                    onClick={() => companyId && handleOpen()}
+                    onClick={() => companyId && !loadingMap && handleOpen()}
                     style={{
                         display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8,
                         minHeight: 40, padding: "8px 12px",
                         border: "1px solid #e5e7eb", borderRadius: 8,
-                        cursor: companyId ? "pointer" : "not-allowed",
+                        cursor: companyId && !loadingMap ? "pointer" : "not-allowed",
                         background: companyId ? "#fff" : "#f9fafb",
                         transition: "border-color 0.15s",
+                        opacity: loadingMap ? 0.6 : 1,
                     }}
                     onMouseEnter={(e) => {
-                        if (companyId) (e.currentTarget as HTMLElement).style.borderColor = "#3b82f6";
+                        if (companyId && !loadingMap)
+                            (e.currentTarget as HTMLElement).style.borderColor = "#3b82f6";
                     }}
                     onMouseLeave={(e) => {
                         (e.currentTarget as HTMLElement).style.borderColor = "#e5e7eb";
                     }}
                 >
-                    {selectedIds.length === 0 ? (
+                    {loadingMap ? (
+                        <span style={{ color: "#9ca3af", fontSize: 13 }}>Đang tải danh sách...</span>
+                    ) : selectedIds.length === 0 ? (
                         <span style={{ color: "#9ca3af", fontSize: 13 }}>
                             {companyId ? "Nhấn để chọn người được xem..." : "Vui lòng chọn công ty trước"}
                         </span>
@@ -130,9 +154,11 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                         <>
                             {selectedIds.slice(0, 6).map((id) => {
                                 const user = userMap.get(id);
-                                const name = user?.name ?? `#${id}`;
+                                // ✅ FIX: nếu chưa có trong map thì hiện "Đang tải..."
+                                // thay vì hiện UUID
+                                const name = user?.name ?? (loadingMap ? "..." : `User #${id.slice(0, 6)}`);
                                 return (
-                                    <Tooltip key={id} title={user?.email ?? ""}>
+                                    <Tooltip key={id} title={user?.email ?? id}>
                                         <Tag
                                             style={{
                                                 display: "inline-flex", alignItems: "center", gap: 5,
@@ -153,7 +179,10 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                                         >
                                             <Avatar
                                                 size={18}
-                                                style={{ background: getColor(id), fontSize: 9, fontWeight: 700, flexShrink: 0 }}
+                                                style={{
+                                                    background: getColor(id),
+                                                    fontSize: 9, fontWeight: 700, flexShrink: 0,
+                                                }}
                                             >
                                                 {getInitials(name)}
                                             </Avatar>
@@ -163,7 +192,10 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                                 );
                             })}
                             {selectedIds.length > 6 && (
-                                <Tag style={{ borderRadius: 999, fontSize: 12, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" }}>
+                                <Tag style={{
+                                    borderRadius: 999, fontSize: 12,
+                                    background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8",
+                                }}>
                                     +{selectedIds.length - 6} người
                                 </Tag>
                             )}
@@ -190,6 +222,8 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 companyId={companyId}
                 selectedIds={selectedIds}
                 onChange={handleChange}
+                // ✅ Truyền userMap xuống để picker không phải load lại
+                cachedUsers={userMap}
             />
         </>
     );

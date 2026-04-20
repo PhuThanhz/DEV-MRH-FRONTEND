@@ -7,6 +7,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
+import { useUserByIdQuery } from "@/hooks/useUsers"; // ← THÊM
 import type { IUserPosition } from "@/types/backend";
 
 const { Text } = Typography;
@@ -37,7 +38,6 @@ const genderLabel: Record<string, string> = {
     MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác",
 };
 
-// ── InfoRow ───────────────────────────────────────────────────────────────────
 const InfoRow = ({
     icon, label, value, highlight = false, noBorder = false,
 }: {
@@ -72,7 +72,6 @@ const InfoRow = ({
     </div>
 );
 
-// ── SectionTitle ──────────────────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
         <Text style={{
@@ -85,7 +84,6 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
     </div>
 );
 
-// ── SquareBadge ───────────────────────────────────────────────────────────────
 const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) => (
     <Tag
         color={antColor}
@@ -95,7 +93,6 @@ const SquareBadge = ({ label, antColor }: { label: string; antColor: string }) =
     </Tag>
 );
 
-// ── Positions Table (desktop) ─────────────────────────────────────────────────
 const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; isLoading: boolean }) => (
     <table style={{
         width: "100%", borderCollapse: "collapse",
@@ -178,7 +175,6 @@ const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; 
     </table>
 );
 
-// ── Positions Cards (mobile) ──────────────────────────────────────────────────
 const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; isLoading: boolean }) => {
     if (isLoading) {
         return (
@@ -218,7 +214,6 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
                         flexDirection: "column",
                         gap: 8,
                     }}>
-                        {/* Title row */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
                             <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
                                 {r.jobTitle?.nameVi ?? "--"}
@@ -228,7 +223,6 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
                                 {cfg && <SquareBadge label={cfg.label} antColor={cfg.antColor} />}
                             </div>
                         </div>
-                        {/* Meta row */}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
                             {r.company?.name && (
                                 <Text style={{ fontSize: 12, color: TEXT_LABEL }}>
@@ -257,16 +251,22 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const backendURL = import.meta.env.VITE_BACKEND_URL;
-    const userId = dataInit?.id ? Number(dataInit.id) : undefined;
+    const userId = dataInit?.id ? String(dataInit.id) : undefined;
+
+    // ← THÊM: fetch GET /users/:id khi modal mở, chỉ fire khi open=true
+    const { data: fullUser } = useUserByIdQuery(open ? userId : undefined);
+
+    // ← THÊM: ưu tiên dùng fullUser (đầy đủ data), fallback về dataInit
+    const user = fullUser ?? dataInit;
+    const info = user?.userInfo; // ← đổi từ dataInit?.userInfo
+
     const { data: positions = [], isLoading } = useUserPositionsQuery(userId);
 
     const handleClose = () => { onClose(false); setDataInit(null); };
 
-    const avatarSrc = dataInit?.avatar
-        ? `${backendURL}/uploads/avatar/${dataInit.avatar}?t=${Date.now()}`
+    const avatarSrc = user?.avatar // ← đổi từ dataInit?.avatar
+        ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
         : undefined;
-
-    const info = dataInit?.userInfo;
 
     const hrFields = [
         { icon: <IdcardOutlined />, label: "Mã nhân viên", value: info?.employeeCode, highlight: true },
@@ -289,7 +289,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     return (
         <>
             <style>{`
-                /* ── Modal chrome ── */
                 .detail-modal .ant-modal-content {
                     border-radius: 20px !important;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05) !important;
@@ -330,33 +329,16 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     line-height: 30px !important; font-size: 12px !important;
                     color: #6b7280 !important;
                 }
-
-                /* zebra row hover */
                 .detail-pos-row:hover td { background: #fafafa !important; }
-
-                /* ── Responsive ── */
-
-                /* Tablet: stack two columns */
                 @media (max-width: 768px) {
-                    .detail-modal .ant-modal-body {
-                        padding: 12px 16px 20px !important;
-                    }
-                    .detail-two-col {
-                        grid-template-columns: 1fr !important;
-                    }
-                    /* Hide table, show cards */
+                    .detail-modal .ant-modal-body { padding: 12px 16px 20px !important; }
+                    .detail-two-col { grid-template-columns: 1fr !important; }
                     .pos-table-wrap { display: none !important; }
                     .pos-cards-wrap { display: block !important; }
                 }
-
-                /* Mobile: tighter profile header */
                 @media (max-width: 480px) {
-                    .detail-modal .ant-modal-content {
-                        border-radius: 16px !important;
-                    }
-                    .detail-modal .ant-modal-body {
-                        padding: 10px 12px 16px !important;
-                    }
+                    .detail-modal .ant-modal-content { border-radius: 16px !important; }
+                    .detail-modal .ant-modal-body { padding: 10px 12px 16px !important; }
                     .detail-profile-header {
                         flex-direction: column !important;
                         align-items: flex-start !important;
@@ -369,8 +351,6 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         line-height: 60px !important;
                     }
                 }
-
-                /* Show cards by default only on mobile; hide on desktop */
                 .pos-cards-wrap { display: none; }
                 .pos-table-wrap { display: block; }
             `}</style>
@@ -413,27 +393,21 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             flexShrink: 0,
                         }}
                     >
-                        {dataInit?.name?.charAt(0)?.toUpperCase()}
+                        {user?.name?.charAt(0)?.toUpperCase()} {/* ← đổi dataInit → user */}
                     </Avatar>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
                             <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
-                                {dataInit?.name || "--"}
+                                {user?.name || "--"} {/* ← đổi */}
                             </Text>
-                            {dataInit?.active ? (
-                                <Tag
-                                    icon={<CheckCircleFilled />}
-                                    color="success"
-                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}
-                                >
+                            {user?.active ? ( // ← đổi
+                                <Tag icon={<CheckCircleFilled />} color="success"
+                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
                                     Hoạt động
                                 </Tag>
                             ) : (
-                                <Tag
-                                    icon={<CloseCircleFilled />}
-                                    color="error"
-                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}
-                                >
+                                <Tag icon={<CloseCircleFilled />} color="error"
+                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
                                     Vô hiệu hóa
                                 </Tag>
                             )}
@@ -441,28 +415,24 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <Text style={{ fontSize: 13, color: TEXT_LABEL }}>
                                 <MailOutlined style={{ marginRight: 5, color: TEXT_MUTED }} />
-                                {dataInit?.email || "--"}
+                                {user?.email || "--"} {/* ← đổi */}
                             </Text>
-                            {dataInit?.role?.name && (
-                                <Tag
-                                    style={{
-                                        borderRadius: 20, margin: 0, fontWeight: 500, fontSize: 12,
-                                        background: "transparent", border: `1px solid ${BORDER_MED}`,
-                                        color: TEXT_LABEL,
-                                    }}
-                                >
+                            {user?.role?.name && ( // ← đổi
+                                <Tag style={{
+                                    borderRadius: 20, margin: 0, fontWeight: 500, fontSize: 12,
+                                    background: "transparent", border: `1px solid ${BORDER_MED}`,
+                                    color: TEXT_LABEL,
+                                }}>
                                     <SafetyOutlined style={{ marginRight: 4 }} />
-                                    {dataInit.role.name}
+                                    {user.role.name}
                                 </Tag>
                             )}
                             {info?.employeeCode && (
-                                <Tag
-                                    style={{
-                                        borderRadius: 20, margin: 0, fontSize: 12,
-                                        background: "transparent", border: `1px solid ${BORDER_MED}`,
-                                        color: TEXT_MUTED,
-                                    }}
-                                >
+                                <Tag style={{
+                                    borderRadius: 20, margin: 0, fontSize: 12,
+                                    background: "transparent", border: `1px solid ${BORDER_MED}`,
+                                    color: TEXT_MUTED,
+                                }}>
                                     <IdcardOutlined style={{ marginRight: 4 }} />
                                     {info.employeeCode}
                                 </Tag>
@@ -485,18 +455,16 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                         borderRadius: 14, padding: "14px 16px",
                     }}>
                         <SectionTitle>Tài khoản</SectionTitle>
-
-                        <InfoRow icon={<MailOutlined />} label="Email" value={dataInit?.email} highlight />
+                        <InfoRow icon={<MailOutlined />} label="Email" value={user?.email} highlight /> {/* ← đổi */}
                         <InfoRow
                             icon={<SafetyOutlined />}
                             label="Vai trò"
                             value={
-                                dataInit?.role?.name
-                                    ? <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>{dataInit.role.name}</Tag>
+                                user?.role?.name // ← đổi
+                                    ? <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>{user.role.name}</Tag>
                                     : "--"
                             }
                         />
-                        {/* Người tạo / sửa */}
                         <div style={{
                             display: "flex", alignItems: "flex-start", gap: 10,
                             padding: "9px 0", borderBottom: `1px solid ${BORDER}`,
@@ -511,16 +479,15 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                                 <div>
                                     <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người tạo</Text>
-                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{dataInit?.createdBy || "--"}</Text>
+                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{user?.createdBy || "--"}</Text> {/* ← đổi */}
                                 </div>
                                 <div style={{ width: 1, height: 28, background: BORDER, alignSelf: "center" }} />
                                 <div>
                                     <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người sửa</Text>
-                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{dataInit?.updatedBy || "--"}</Text>
+                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{user?.updatedBy || "--"}</Text> {/* ← đổi */}
                                 </div>
                             </div>
                         </div>
-                        {/* Ngày tạo / sửa */}
                         <div style={{ display: "flex", gap: 10, paddingTop: 10, flexWrap: "wrap" }}>
                             <div style={{
                                 flex: 1, minWidth: 100, background: BG_SUBTLE, borderRadius: 8,
@@ -528,7 +495,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             }}>
                                 <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày tạo</Text>
                                 <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
-                                    {dataInit?.createdAt ? dayjs(dataInit.createdAt).format("DD/MM/YYYY HH:mm") : "--"}
+                                    {user?.createdAt ? dayjs(user.createdAt).format("DD/MM/YYYY HH:mm") : "--"} {/* ← đổi */}
                                 </Text>
                             </div>
                             <div style={{
@@ -537,7 +504,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             }}>
                                 <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày sửa</Text>
                                 <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
-                                    {dataInit?.updatedAt ? dayjs(dataInit.updatedAt).format("DD/MM/YYYY HH:mm") : "--"}
+                                    {user?.updatedAt ? dayjs(user.updatedAt).format("DD/MM/YYYY HH:mm") : "--"} {/* ← đổi */}
                                 </Text>
                             </div>
                         </div>
@@ -590,13 +557,9 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             </Tag>
                         )}
                     </div>
-
-                    {/* Desktop: table */}
                     <div className="pos-table-wrap">
                         <PositionsTable positions={positions} isLoading={isLoading} />
                     </div>
-
-                    {/* Mobile: cards */}
                     <div className="pos-cards-wrap">
                         <PositionCards positions={positions} isLoading={isLoading} />
                     </div>

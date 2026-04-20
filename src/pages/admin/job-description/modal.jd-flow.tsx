@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Modal, Button, Input, message, Spin, Tag, Avatar, Empty, Space, Typography } from "antd";
+import { Modal, Button, Input, message, Spin, Tag, Avatar, Empty, Space } from "antd";
 import {
     UserOutlined, CrownOutlined, ApartmentOutlined,
     SearchOutlined, CheckOutlined, BankOutlined, CloseCircleOutlined,
     UndoOutlined, ReloadOutlined,
 } from "@ant-design/icons";
+import { useAppSelector } from "@/redux/hooks";
 
 import { callFetchJdApprovers, callFetchJdIssuers, callFetchJdFlow } from "@/config/api";
 import {
@@ -14,8 +15,6 @@ import {
 } from "@/hooks/useJdFlow";
 
 import ModalRejectJd from "../job-description/components/modal-reject-jd";
-
-const { Text } = Typography;
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -39,7 +38,7 @@ interface PositionInfo {
 }
 
 interface Approver {
-    id: number;
+    id: string;
     name: string;
     email: string;
     avatar?: string;
@@ -90,22 +89,31 @@ const ApproverCard = ({ user, selected, onClick }: {
             cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
         }}
     >
-        <Avatar
-            size={38}
-            src={getAvatarUrl(user.avatar)}
-            icon={!user.avatar && <UserOutlined />}
-            style={{ flexShrink: 0, background: "#f0f0f0", color: "#bbb" }}
-        />
+        <div style={{ position: "relative", flexShrink: 0 }}>
+            <Avatar
+                size={38}
+                src={getAvatarUrl(user.avatar)}
+                icon={!user.avatar && <UserOutlined />}
+                style={{ background: "#f0f0f0", color: "#bbb" }}
+            />
+            {user.isFinal && (
+                <div style={{
+                    position: "absolute", top: -5, right: -5,
+                    width: 15, height: 15, borderRadius: "50%",
+                    background: "#faad14",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                }}>
+                    <CrownOutlined style={{ fontSize: 7, color: "#fff" }} />
+                </div>
+            )}
+        </div>
+
         <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 600, fontSize: 13, color: "#1a1a1a", lineHeight: "18px" }}>
                     {user.name}
                 </span>
-                {user.isFinal && (
-                    <Tag icon={<CrownOutlined style={{ fontSize: 9 }} />} color="gold" style={{ fontSize: 10, padding: "0 5px", margin: 0, lineHeight: "17px" }}>
-                        Duyệt cuối
-                    </Tag>
-                )}
             </div>
             {user.positions && user.positions.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -113,6 +121,7 @@ const ApproverCard = ({ user, selected, onClick }: {
                 </div>
             )}
         </div>
+
         <div style={{
             width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -126,7 +135,8 @@ const ApproverCard = ({ user, selected, onClick }: {
 
 const ApproverPicker = ({ label, list, selectedId, onSelect }: {
     label: string; list: Approver[];
-    selectedId: number | undefined; onSelect: (id: number | undefined) => void;
+    selectedId: string | undefined;
+    onSelect: (id: string | undefined) => void;
 }) => {
     const [search, setSearch] = useState("");
 
@@ -184,11 +194,13 @@ const ApproverPicker = ({ label, list, selectedId, onSelect }: {
 
 const ModalJdFlow = ({ open, onClose, record }: Props) => {
 
+    const currentUserId = useAppSelector(state => state.account.user?.id);
+
     const [isFinalApprover, setIsFinalApprover] = useState(false);
     const [approvers, setApprovers] = useState<Approver[]>([]);
     const [issuers, setIssuers] = useState<Approver[]>([]);
-    const [nextUserId, setNextUserId] = useState<number | undefined>();
-    const [nextIssuerId, setNextIssuerId] = useState<number | undefined>();
+    const [nextUserId, setNextUserId] = useState<string | undefined>();
+    const [nextIssuerId, setNextIssuerId] = useState<string | undefined>();
     const [openReject, setOpenReject] = useState(false);
 
     const submitMutation = useSubmitJdFlowMutation();
@@ -208,6 +220,11 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         record?.status?.toString()?.trim()?.toUpperCase() || "", [record]);
 
     const jdId = useMemo(() => record?.id ?? record?.jdId, [record]);
+
+    // ✅ Kiểm tra người hiện tại có phải currentUser của flow không
+    const isCurrentUser = useMemo(() =>
+        String(record?.currentUser?.id) === String(currentUserId),
+        [record, currentUserId]);
 
     const rejectInfo = useMemo<RejectInfo | null>(() => {
         if (status !== "REJECTED") return null;
@@ -233,13 +250,13 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         const loadData = async () => {
             try {
                 const [resA, resI, resFlow] = await Promise.all([
-                    callFetchJdApprovers(),
-                    callFetchJdIssuers(),
+                    callFetchJdApprovers(jdId),
+                    callFetchJdIssuers(jdId),
                     callFetchJdFlow(jdId),
                 ]);
 
                 const mapUser = (u: any): Approver => ({
-                    id: Number(u.id),
+                    id: String(u.id),
                     name: u.name || "",
                     email: u.email || "",
                     avatar: u.avatar,
@@ -247,8 +264,11 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                     positions: Array.isArray(u.positions) ? u.positions : [],
                 });
 
-                setApprovers(((resA as any)?.data ?? []).map(mapUser));
-                setIssuers(((resI as any)?.data ?? []).map((u: any) => ({ ...mapUser(u), isFinal: false })));
+                const filterSelf = (list: Approver[]) =>
+                    list.filter(u => u.id !== String(currentUserId));
+
+                setApprovers(filterSelf(((resA as any)?.data ?? []).map(mapUser)));
+                setIssuers(filterSelf(((resI as any)?.data ?? []).map((u: any) => ({ ...mapUser(u), isFinal: false }))));
 
                 const flowData = (resFlow as any)?.data;
                 if (flowData?.currentUserIsFinal === true && status === "IN_REVIEW") {
@@ -261,43 +281,28 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         };
 
         loadData();
-    }, [open, jdId, status]);
+    }, [open, jdId, status, currentUserId]);
 
     const handleResubmit = (returnToPrevious: boolean) => {
         if (!jdId) return;
-
-        submitMutation.mutate({
-            jdId,
-            nextUserId: undefined,
-            returnToPrevious,
-        }, {
+        submitMutation.mutate({ jdId, nextUserId: undefined, returnToPrevious }, {
             onSuccess: () => {
                 message.success(returnToPrevious
                     ? "Đã gửi về người trước đó thành công!"
                     : "Gửi lại cho người vừa từ chối thành công!");
                 onClose();
             },
-            onError: (error: any) => {
-                const msg = error?.response?.data?.message || "Gửi lại thất bại";
-                message.error(msg);
-            },
+            onError: (error: any) => message.error(error?.response?.data?.message || "Gửi lại thất bại"),
         });
     };
 
     const handleSubmit = () => {
-        if (status !== "REJECTED" && !nextUserId) {
+        if (!nextUserId) {
             message.warning("Vui lòng chọn người nhận duyệt");
             return;
         }
-
-        submitMutation.mutate({
-            jdId,
-            nextUserId: status === "REJECTED" ? undefined : nextUserId,
-        }, {
-            onSuccess: () => {
-                message.success("Gửi duyệt thành công");
-                onClose();
-            },
+        submitMutation.mutate({ jdId, nextUserId }, {
+            onSuccess: () => { message.success("Gửi duyệt thành công"); onClose(); },
             onError: (error: any) => message.error(error?.response?.data?.message || "Gửi duyệt thất bại"),
         });
     };
@@ -311,7 +316,6 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
             message.warning("Vui lòng chọn người duyệt tiếp theo");
             return;
         }
-
         approveMutation.mutate({
             jdId,
             nextUserId: isFinalApprover ? nextIssuerId : nextUserId,
@@ -339,13 +343,6 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         });
     };
 
-    const handleRecall = () => {
-        recallMutation.mutate({ jdId }, {
-            onSuccess: () => { message.success("Thu hồi JD thành công"); onClose(); },
-            onError: (error: any) => message.error(error?.response?.data?.message || "Thu hồi thất bại"),
-        });
-    };
-
     return (
         <>
             <Modal
@@ -365,7 +362,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 <Spin spinning={loading}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "12px 0" }}>
 
-                        {/* Thông tin từ chối (nếu có) */}
+                        {/* Thông tin từ chối */}
                         {rejectInfo && (
                             <div style={{
                                 background: "#fff2f0", border: "1px solid #ffccc7",
@@ -396,7 +393,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             </div>
                         )}
 
-                        {/* DRAFT: chọn người duyệt */}
+                        {/* DRAFT */}
                         {status === "DRAFT" && (
                             <ApproverPicker
                                 label="Chọn người duyệt tiếp theo"
@@ -406,7 +403,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             />
                         )}
 
-                        {/* IN_REVIEW, không phải người duyệt cuối: chọn người duyệt tiếp */}
+                        {/* IN_REVIEW - duyệt thường */}
                         {status === "IN_REVIEW" && !isFinalApprover && (
                             <ApproverPicker
                                 label="Chọn người duyệt tiếp theo"
@@ -416,7 +413,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                             />
                         )}
 
-                        {/* IN_REVIEW, người duyệt cuối: chọn người ban hành */}
+                        {/* IN_REVIEW - duyệt cuối */}
                         {status === "IN_REVIEW" && isFinalApprover && (
                             <ApproverPicker
                                 label="Chọn người ban hành JD"
@@ -428,81 +425,41 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
 
                         <div style={{ height: 1, background: "#f5f5f5", margin: "0 -24px" }} />
 
-                        {/* REJECTED */}
-                        {status === "REJECTED" && (
+                        {/* ✅ REJECTED — chỉ hiện nút nếu là currentUser */}
+                        {status === "REJECTED" && isCurrentUser && (
                             <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                                <Button
-                                    type="primary"
-                                    block
-                                    size="large"
-                                    icon={<ReloadOutlined />}
-                                    onClick={() => handleResubmit(false)}
-                                >
+                                <Button type="primary" block size="large" icon={<ReloadOutlined />}
+                                    onClick={() => handleResubmit(false)}>
                                     Gửi lại cho người vừa từ chối
                                 </Button>
-
                                 {record?.canReturnToPrevious && (
-                                    <Button
-                                        block
-                                        size="large"
-                                        icon={<UndoOutlined />}
+                                    <Button block size="large" icon={<UndoOutlined />}
                                         onClick={() => handleResubmit(true)}
-                                        style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
-                                    >
+                                        style={{ borderColor: "#fa8c16", color: "#fa8c16" }}>
                                         Gửi về người trước đó trong chuỗi duyệt
                                     </Button>
                                 )}
                             </Space>
                         )}
 
-                        {/* DRAFT */}
+                        {/* DRAFT - nút gửi */}
                         {status === "DRAFT" && (
-                            <Button
-                                type="primary"
-                                block
-                                onClick={handleSubmit}
-                                disabled={!nextUserId}
-                            >
+                            <Button type="primary" block onClick={handleSubmit} disabled={!nextUserId}>
                                 Gửi duyệt
                             </Button>
                         )}
 
-                        {/* IN_REVIEW
-                            - Người duyệt THƯỜNG: hiện [Duyệt & chuyển tiếp] + [Từ chối] + [Thu hồi]
-                            - Người duyệt CUỐI:   chỉ hiện [Duyệt & gửi ban hành] (Từ chối và Thu hồi đã có ngoài bảng)
-                        */}
+                        {/* ✅ IN_REVIEW - chỉ còn nút Duyệt, bỏ Từ chối + Thu hồi */}
                         {status === "IN_REVIEW" && (
                             <>
                                 {isFinalApprover ? (
-                                    // Người duyệt cuối — chỉ nút duyệt, bỏ từ chối & thu hồi
-                                    <Button
-                                        type="primary"
-                                        block
-                                        disabled={!nextIssuerId}
-                                        onClick={handleApprove}
-                                    >
+                                    <Button type="primary" block disabled={!nextIssuerId} onClick={handleApprove}>
                                         Duyệt & gửi ban hành
                                     </Button>
                                 ) : (
-                                    // Người duyệt thường — giữ đầy đủ
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                        <div style={{ display: "flex", gap: 8 }}>
-                                            <Button
-                                                type="primary"
-                                                block
-                                                disabled={!nextUserId}
-                                                onClick={handleApprove}
-                                            >
-                                                Duyệt & chuyển tiếp
-                                            </Button>
-                                            <Button block danger onClick={() => setOpenReject(true)}>
-                                                Từ chối
-                                            </Button>
-                                        </div>
-                                        <Button block onClick={handleRecall} icon={<UndoOutlined />}>
-                                            Thu hồi JD
-                                        </Button>
-                                    </div>
+                                    <Button type="primary" block disabled={!nextUserId} onClick={handleApprove}>
+                                        Duyệt & chuyển tiếp
+                                    </Button>
                                 )}
                             </>
                         )}

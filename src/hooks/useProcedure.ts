@@ -12,8 +12,14 @@ import {
     callFetchProceduresByCompany,
     callFetchCompanyProceduresWithFilter,
     callFetchDepartmentProceduresWithFilter,
-    callFetchConfidentialProceduresWithFilter, // ← THÊM
+    callFetchConfidentialProceduresWithFilter,
     callReviseProcedure,
+    callFetchProcedureAccessList,
+    callRevokeProcedureAccess,
+    callShareProcedure,
+    callFetchSentShareLog,
+    callFetchReceivedShareLog,
+    callFetchAllShareLog,
 } from "@/config/api";
 import type {
     IModelPaginate,
@@ -21,6 +27,8 @@ import type {
     IProcedureHistory,
     IProcedureRequest,
     ProcedureType,
+    IAccessDTO,
+    IShareLogDTO,
 } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
@@ -93,10 +101,7 @@ export const useProceduresBySectionQuery = (
 };
 
 /* ===================== FETCH HISTORY ===================== */
-export const useProcedureHistoryQuery = (
-    type: ProcedureType,
-    id?: number
-) => {
+export const useProcedureHistoryQuery = (type: ProcedureType, id?: number) => {
     return useQuery({
         queryKey: ["procedure-history", type, id],
         enabled: !!id,
@@ -123,14 +128,10 @@ export const useCreateProcedureMutation = (type: ProcedureType) => {
             }
             return res;
         },
-
         onSuccess: (res) => {
             notify.created(res?.message || "Tạo quy trình thành công");
-            queryClient.invalidateQueries({
-                queryKey: ["procedures", type],
-            });
+            queryClient.invalidateQueries({ queryKey: ["procedures", type] });
         },
-
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi tạo quy trình");
         },
@@ -142,33 +143,19 @@ export const useUpdateProcedureMutation = (type: ProcedureType) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            id,
-            data,
-        }: {
-            id: number;
-            data: IProcedureRequest;
-        }) => {
+        mutationFn: async ({ id, data }: { id: number; data: IProcedureRequest }) => {
             const res = await callUpdateProcedure(type, id, data);
             if (!res?.data) {
                 throw new Error(res?.message || "Không thể cập nhật quy trình");
             }
             return res;
         },
-
         onSuccess: (res, variables) => {
             notify.updated(res?.message || "Cập nhật quy trình thành công");
-            queryClient.invalidateQueries({
-                queryKey: ["procedures", type],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["procedure", type, variables.id],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["procedure-history", type, variables.id],
-            });
+            queryClient.invalidateQueries({ queryKey: ["procedures", type] });
+            queryClient.invalidateQueries({ queryKey: ["procedure", type, variables.id] });
+            queryClient.invalidateQueries({ queryKey: ["procedure-history", type, variables.id] });
         },
-
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi cập nhật quy trình");
         },
@@ -187,14 +174,10 @@ export const useDeleteProcedureMutation = (type: ProcedureType) => {
             }
             return res;
         },
-
         onSuccess: () => {
             notify.deleted("Xoá quy trình thành công");
-            queryClient.invalidateQueries({
-                queryKey: ["procedures", type],
-            });
+            queryClient.invalidateQueries({ queryKey: ["procedures", type] });
         },
-
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi xoá quy trình");
         },
@@ -209,21 +192,14 @@ export const useToggleActiveProcedureMutation = (type: ProcedureType) => {
         mutationFn: async (id: number) => {
             const res = await callToggleActiveProcedure(type, id);
             if (res?.statusCode && Number(res.statusCode) >= 400) {
-                throw new Error(
-                    res?.message || "Không thể cập nhật trạng thái quy trình"
-                );
+                throw new Error(res?.message || "Không thể cập nhật trạng thái quy trình");
             }
             return res;
         },
-
         onSuccess: () => {
             notify.updated("Cập nhật trạng thái quy trình thành công");
-            queryClient.invalidateQueries({
-                queryKey: ["procedures", type],
-                exact: false,
-            });
+            queryClient.invalidateQueries({ queryKey: ["procedures", type], exact: false });
         },
-
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi cập nhật trạng thái");
         },
@@ -290,35 +266,119 @@ export const useReviseProcedureMutation = (type: ProcedureType) => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({
-            id,
-            data,
-        }: {
-            id: number;
-            data: IProcedureRequest;
-        }) => {
+        mutationFn: async ({ id, data }: { id: number; data: IProcedureRequest }) => {
             const res = await callReviseProcedure(type, id, data);
             if (!res?.data) {
                 throw new Error(res?.message || "Không thể tạo phiên bản mới");
             }
             return res;
         },
-
         onSuccess: (res, variables) => {
             notify.updated(res?.message || "Tạo phiên bản mới thành công");
-            queryClient.invalidateQueries({
-                queryKey: ["procedures", type],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["procedure", type, variables.id],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["procedure-history", type, variables.id],
-            });
+            queryClient.invalidateQueries({ queryKey: ["procedures", type] });
+            queryClient.invalidateQueries({ queryKey: ["procedure", type, variables.id] });
+            queryClient.invalidateQueries({ queryKey: ["procedure-history", type, variables.id] });
         },
-
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi tạo phiên bản mới");
+        },
+    });
+};
+
+/* ===================== SHARE ===================== */
+// Backend trả ResponseEntity<Void> nên không có data trong response
+// → check lỗi theo statusCode thay vì !res?.data
+export const useShareProcedureMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, userIds }: { id: number; userIds: string[] }) => {
+            const res = await callShareProcedure(id, userIds);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể chia sẻ");
+            }
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.updated("Chia sẻ quy trình thành công");
+            queryClient.invalidateQueries({ queryKey: ["procedure-access", variables.id] });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi chia sẻ quy trình");
+        },
+    });
+};
+
+/* ===================== ACCESS LIST ===================== */
+export const useProcedureAccessListQuery = (id?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["procedure-access", id],
+        enabled: !!id && enabled,
+        queryFn: async () => {
+            const res = await callFetchProcedureAccessList(id!);
+            return (res.data as IAccessDTO[]) ?? [];
+        },
+    });
+};
+
+/* ===================== REVOKE ===================== */
+// Thêm check lỗi từ response để onError chạy đúng khi backend trả 403/404
+export const useRevokeProcedureAccessMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, userId }: { id: number; userId: string }) => {
+            const res = await callRevokeProcedureAccess(id, userId);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Thu hồi thất bại");
+            }
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.deleted("Thu hồi quyền thành công");
+            queryClient.invalidateQueries({ queryKey: ["share-log-sent"] });
+            queryClient.invalidateQueries({ queryKey: ["share-log-received"] });
+            queryClient.invalidateQueries({ queryKey: ["share-log-all"] });
+            queryClient.invalidateQueries({ queryKey: ["procedure-access", variables.id] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Thu hồi thất bại");
+        },
+    });
+};
+
+/* ===================== SHARE LOG — ĐÃ GỬI ===================== */
+export const useSentShareLogQuery = (enabled = true) => {
+    return useQuery({
+        queryKey: ["share-log-sent"],
+        enabled,
+        queryFn: async () => {
+            const res = await callFetchSentShareLog();
+            return (res.data as IShareLogDTO[]) ?? [];
+        },
+    });
+};
+
+/* ===================== SHARE LOG — ĐÃ NHẬN ===================== */
+export const useReceivedShareLogQuery = (enabled = true) => {
+    return useQuery({
+        queryKey: ["share-log-received"],
+        enabled,
+        queryFn: async () => {
+            const res = await callFetchReceivedShareLog();
+            return (res.data as IShareLogDTO[]) ?? [];
+        },
+    });
+};
+
+/* ===================== SHARE LOG — TẤT CẢ (ADMIN) ===================== */
+export const useAllShareLogQuery = (query: string, enabled = true) => {
+    return useQuery({
+        queryKey: ["share-log-all", query],
+        enabled,
+        queryFn: async () => {
+            const res = await callFetchAllShareLog(query);
+            return (res.data as IModelPaginate<IShareLogDTO>) ?? { result: [], meta: {} };
         },
     });
 };

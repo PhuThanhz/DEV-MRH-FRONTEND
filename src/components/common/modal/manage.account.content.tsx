@@ -498,7 +498,7 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
     const currentAvatar = user?.avatar
         ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
         : "";
-    const userId = user?.id ? Number(user.id) : undefined;
+    const userId = user?.id ? String(user.id) : undefined;
 
     const { data: positions = [], isLoading: loadingPositions } = useUserPositionsQuery(userId);
 

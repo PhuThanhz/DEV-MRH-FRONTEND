@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { BankOutlined, ApartmentOutlined, LockOutlined } from "@ant-design/icons";
 import ProcedureTable from "./components/ProcedureTable";
+import ConfidentialProcedureView from "./components/ConfidentialProcedureView";  // ← thêm
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import useAccess from "@/hooks/useAccess";
@@ -39,7 +40,6 @@ const ProcedureAdminPage = () => {
     // ===================== ACTIVE TAB =====================
     const [activeTab, setActiveTab] = useState<TabType>("COMPANY");
 
-    // 🔥 FIX: auto chọn tab hợp lệ
     useEffect(() => {
         if (!tabs.length) return;
         if (!tabs.find(t => t.key === activeTab)) {
@@ -47,7 +47,6 @@ const ProcedureAdminPage = () => {
         }
     }, [tabs, activeTab]);
 
-    // 🔥 Nếu không có quyền gì
     if (!tabs.length) {
         return (
             <PageContainer title="Quản lý quy trình">
@@ -72,8 +71,9 @@ const ProcedureAdminPage = () => {
             {activeTab === "DEPARTMENT" && canViewDepartment && (
                 <ProcedureTable type="DEPARTMENT" />
             )}
+            {/* ← đổi từ ProcedureTable type="CONFIDENTIAL" thành ConfidentialProcedureView */}
             {activeTab === "CONFIDENTIAL" && canViewConfidential && (
-                <ProcedureTable type="CONFIDENTIAL" />
+                <ConfidentialProcedureView />
             )}
         </PageContainer>
     );

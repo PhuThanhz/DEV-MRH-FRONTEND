@@ -99,7 +99,7 @@ interface IProps {
 
 // ── User option shape ─────────────────────────────────────────────
 interface IUserOption {
-    id: number;
+    id: string;
     name: string;
     email: string;
     jobTitleName?: string;
@@ -154,7 +154,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
                 const opts: IUserOption[] = users.map((u: any) => {
                     const activePos = u.positions?.find((p: any) => p.active) ?? u.positions?.[0];
                     return {
-                        id: u.id,
+                        id: String(u.id),
                         name: u.name,
                         email: u.email,
                         jobTitleName: activePos?.jobTitleNameVi,
@@ -189,7 +189,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
     }, [open, dataInit]);
 
     // ── Detect vị trí khi chọn nhân viên ─────────────────────────
-    const handleUserChange = async (userId: number) => {
+    const handleUserChange = async (userId: string) => {
         setDetectedCareerPathId(undefined);
         setDetectedJobTitle("");
         setDetectedLevelCode("");
@@ -372,7 +372,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
                                 loading={loadingUsers}
                                 placeholder="Tìm tên hoặc email..."
                                 suffixIcon={loadingPosition ? <Spin size="small" /> : undefined}
-                                onChange={(val) => handleUserChange(val as number)}
+                                onChange={(val) => handleUserChange(val as string)}
                                 filterOption={(input, option) => {
                                     const u = userOptions.find((o) => o.id === option?.value);
                                     if (!u) return false;

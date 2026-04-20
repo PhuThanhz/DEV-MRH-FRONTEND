@@ -33,7 +33,7 @@ export const useEmployeesQuery = (query: string) => {
 // ======================================================
 // GET DETAIL
 // ======================================================
-export const useEmployeeByIdQuery = (id?: number) => {
+export const useEmployeeByIdQuery = (id?: string) => {
     return useQuery({
         queryKey: ["employee", id],
         enabled: !!id,
@@ -110,7 +110,7 @@ export const useDeleteEmployeeMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (id: number) => {
+        mutationFn: async (id: string) => {
             const res = await callDeleteEmployee(id);
 
             if (!res?.statusCode || res.statusCode !== 200) {

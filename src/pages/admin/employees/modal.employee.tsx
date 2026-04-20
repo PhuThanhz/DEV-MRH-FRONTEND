@@ -59,12 +59,12 @@ const ModalEmployee = ({
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(0);
-    const [createdUserId, setCreatedUserId] = useState<number | null>(null);
+    const [createdUserId, setCreatedUserId] = useState<string | null>(null);
 
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
     const activeUserId = isEdit
-        ? Number(dataInit?.id)
+        ? (dataInit?.id)
         : (createdUserId ?? undefined);
 
     const { mutate: createEmployee, isPending: isCreating } =
@@ -103,7 +103,7 @@ const ModalEmployee = ({
                     : null,
             });
             setCurrentStep(0);
-            setCreatedUserId(Number(dataInit.id));
+            setCreatedUserId((dataInit.id));
         } else {
             form.resetFields();
             setAvatarFile(null);
@@ -183,7 +183,7 @@ const ModalEmployee = ({
                 createEmployee(payload, {
                     onSuccess: (res: any) => {
                         const newId = res?.data?.id;
-                        if (newId) setCreatedUserId(Number(newId));
+                        if (newId) setCreatedUserId((newId));
                         onSuccess?.();
                         setCurrentStep(1);
                     },

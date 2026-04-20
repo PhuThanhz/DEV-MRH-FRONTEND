@@ -12,7 +12,7 @@ import { T, Badge } from "./ModalEmployeeDetail";
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-export const TabHistory = ({ userId }: { userId?: number }) => {
+export const TabHistory = ({ userId }: { userId?: string }) => {
     const screens = useBreakpoint();
     const isMobile = !screens.md;
 

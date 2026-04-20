@@ -22,7 +22,7 @@ import { notify } from "@/components/common/notification/notify";
 ===================================================== */
 
 /** Lấy lộ trình của 1 nhân viên theo userId */
-export const useEmployeeCareerPathByUserQuery = (userId?: number) => {
+export const useEmployeeCareerPathByUserQuery = (userId?: string) => {
     return useQuery({
         queryKey: ["employee-career-path", "user", userId],
         enabled: !!userId,
@@ -60,7 +60,7 @@ export const useUpcomingPromotionsQuery = (withinDays: number = 30) => {
 };
 
 /** Lịch sử thăng tiến của 1 nhân viên */
-export const useEmployeeCareerPathHistoryQuery = (userId?: number) => {
+export const useEmployeeCareerPathHistoryQuery = (userId?: string) => {
     return useQuery({
         queryKey: ["employee-career-path-history", userId],
         enabled: !!userId,
@@ -106,7 +106,7 @@ export const useUpdateEmployeeCareerPathMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: IReqAssignCareerPath }) => {
+        mutationFn: async ({ id, data }: { id: string; data: IReqAssignCareerPath }) => {
             const res = await callUpdateEmployeeCareerPath(id, data);
             if (!res?.data) throw new Error(res?.message || "Không thể cập nhật lộ trình");
             return res;
@@ -131,7 +131,7 @@ export const usePromoteEmployeeMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: IReqPromoteEmployee }) => {
+        mutationFn: async ({ id, data }: { id: string; data: IReqPromoteEmployee }) => {
             const res = await callPromoteEmployee(id, data);
             if (!res?.data) throw new Error(res?.message || "Không thể thăng tiến");
             return res;

@@ -5,12 +5,9 @@ import {
     ProFormSelect,
     ProFormSwitch,
 } from "@ant-design/pro-components";
+import { Col, Form, Row, message, Upload, Input, DatePicker } from "antd";
 import {
-    Col, Form, Row, message, Upload, Input, DatePicker,
-} from "antd";
-import {
-    UploadOutlined, BankOutlined,
-    ApartmentOutlined, LockOutlined,
+    UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 
@@ -19,6 +16,8 @@ import {
     callFetchDepartmentsByCompany,
     callFetchSectionsByDepartment,
     callUploadSingleFile,
+    callShareProcedure,
+
 } from "@/config/api";
 
 import type {
@@ -128,8 +127,7 @@ const TypeSelectorFiltered: React.FC<{
         DEPARTMENT: canDepartment,
         CONFIDENTIAL: canConfidential,
     };
-    console.log("ACL:", import.meta.env.VITE_ACL_ENABLE);
-    console.log({ canCompany, canDepartment, canConfidential });
+
     const visibleOptions = TYPE_OPTIONS.filter((opt) => accessMap[opt.key]);
 
     if (visibleOptions.length === 1) {
@@ -189,25 +187,43 @@ const ModalProcedure: React.FC<IProps> = ({
 
     useEffect(() => {
         if (!open) return;
+
         if (dataInit?.id) {
             setProcedureType(defaultType);
             const userIds = (dataInit as any).userIds ?? [];
             const urls = dataInit.fileUrls ?? [];
+
+            // ✅ FIX UUID: Set companyId VÀ departmentId TRƯỚC khi setFieldsValue
+            // để UserSelectField có companyId ngay từ đầu → load userMap đúng
+            // → tags hiển thị tên thay vì UUID
+            const resolvedCompanyId =
+                dataInit?.departments?.[0]?.companyId  // ✅ lấy từ departments
+                ?? dataInit.companyId
+                ?? fixedCompanyId
+                ?? null; const resolvedDepartmentId = dataInit.departmentId ?? fixedDepartmentId ?? null;
+
+            setCompanyId(resolvedCompanyId);
+            setDepartmentId(resolvedDepartmentId);
+            setSelectedUserCount(userIds.length);
+
             form.setFieldsValue({
                 procedureCode: dataInit.procedureCode ?? "",
                 departmentId: dataInit.departmentId,
+                // ✅ THÊM — set lại danh sách phòng ban khi edit
+                departmentIds: (dataInit?.departments as any[])?.map((d: any) => d.id) ?? [],
                 sectionId: dataInit.sectionId,
                 procedureName: dataInit.procedureName,
                 status: dataInit.status,
                 planYear: dataInit.planYear,
-                issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : null, // ← dayjs object cho DatePicker
+                issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : null,
                 note: dataInit.note,
                 fileUrls: urls,
                 active: dataInit.active,
                 userIds,
             });
+
             setFileList(
-                urls.map((name, i) => ({
+                urls.map((name: string, i: number) => ({
                     uid: String(i),
                     name,
                     status: "done" as const,
@@ -215,8 +231,6 @@ const ModalProcedure: React.FC<IProps> = ({
                     response: name,
                 }))
             );
-            setDepartmentId(dataInit.departmentId ?? null);
-            setSelectedUserCount(userIds.length);
         } else {
             form.resetFields();
             setFileList([]);
@@ -237,6 +251,7 @@ const ModalProcedure: React.FC<IProps> = ({
         setSelectedUserCount(0);
         form.setFieldValue("companyId", undefined);
         form.setFieldValue("departmentId", undefined);
+        form.setFieldValue("departmentIds", undefined); // ✅ THÊM
         form.setFieldValue("sectionId", undefined);
         form.setFieldValue("userIds", []);
         form.setFieldValue("procedureCode", "");
@@ -253,25 +268,65 @@ const ModalProcedure: React.FC<IProps> = ({
         onClose();
     };
 
+    // ─────────────────────────────────────────────
+    // SYNC SHARE / REVOKE khi EDIT quy trình CONFIDENTIAL
+    //
+    // Flow:
+    // 1. Lấy access list hiện tại từ server (những người đang có quyền)
+    // 2. So sánh với danh sách mới user chọn trong form
+    // 3. Share những người mới thêm vào
+    // 4. Revoke từng người bị bỏ ra
+    // ─────────────────────────────────────────────
+
+
+    // ─────────────────────────────────────────────
+    // SUBMIT FORM
+    //
+    // FIX DUPLICATE LOG:
+    // - CREATE: backend handleCreate đã gọi saveAccessList(logShare=false)
+    //   → KHÔNG ghi log → frontend gọi callShareProcedure để ghi log 1 lần duy nhất ✅
+    // - EDIT: gọi syncAccessList để so sánh cũ/mới và share/revoke tương ứng
+    // ─────────────────────────────────────────────
     const submitForm = async (values: any) => {
+        const newUserIds: string[] =
+            procedureType === "CONFIDENTIAL" ? (values.userIds ?? []) : [];
+
         const payload: IProcedureRequest = {
             procedureCode: (values.procedureCode ?? "").trim().toUpperCase(),
             procedureName: values.procedureName,
             status: values.status,
             planYear: values.planYear ? Number(values.planYear) : undefined,
-            issuedDate: values.issuedDate ? dayjs(values.issuedDate).toISOString() : undefined, // ← THÊM
+            issuedDate: values.issuedDate ? dayjs(values.issuedDate).toISOString() : undefined,
             fileUrls: values.fileUrls ?? [],
             note: values.note,
             active: values.active ?? true,
-            departmentId: values.departmentId ?? fixedDepartmentId ?? dataInit?.departmentId ?? null,
+            // ✅ Phân biệt theo type
+            departmentId: procedureType !== "DEPARTMENT"
+                ? (values.departmentId ?? fixedDepartmentId ?? dataInit?.departmentId ?? null)
+                : null,
+            departmentIds: procedureType === "DEPARTMENT"
+                ? (values.departmentIds ?? [])
+                : null,
             sectionId: values.sectionId ?? null,
-            ...(procedureType === "CONFIDENTIAL" && { userIds: values.userIds ?? [] }),
+            userIds: newUserIds,
         };
+
         if (isEdit && dataInit?.id) {
+            // EDIT: backend syncAccessList tự xử lý share/revoke + ghi log
             await updateMutation.mutateAsync({ id: dataInit.id, data: payload });
         } else {
+            // CREATE: backend đã tự SHARE + ghi log
+            // frontend KHÔNG cần gọi callShareProcedure nữa
             await createMutation.mutateAsync(payload);
+
+            if (newUserIds.length > 0) {
+                message.success(`Tạo và chia sẻ cho ${newUserIds.length} người`);
+            } else {
+                message.success("Tạo quy trình thành công");
+            }
+
         }
+
         refetch();
         handleReset();
     };
@@ -308,7 +363,6 @@ const ModalProcedure: React.FC<IProps> = ({
                 message.error("Chỉ chấp nhận file PDF, Word, Excel!");
                 return Upload.LIST_IGNORE;
             }
-
 
             const tempUid = Date.now().toString();
             setFileList((prev) => [...prev, { uid: tempUid, name: file.name, status: "uploading" }]);
@@ -412,12 +466,10 @@ const ModalProcedure: React.FC<IProps> = ({
         >
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                {/* Hidden field lưu fileUrls */}
                 <Form.Item name="fileUrls" hidden>
                     <Input />
                 </Form.Item>
 
-                {/* ── Loại quy trình ── */}
                 <Form.Item label="Loại quy trình" style={{ marginBottom: 0 }}>
                     <TypeSelectorFiltered
                         value={procedureType}
@@ -428,13 +480,16 @@ const ModalProcedure: React.FC<IProps> = ({
 
                 <Divider />
 
-                {/* ── Công ty + Phòng ban ── */}
                 <Row gutter={16}>
                     {!fixedCompanyId && (
                         <Col xs={24} lg={12}>
                             {isEdit ? (
                                 <Form.Item label="Công ty" style={{ marginBottom: 0 }}>
-                                    <Input value={dataInit?.companyName} disabled
+                                    <Input value={
+                                        dataInit?.departments?.[0]?.companyName
+                                        ?? dataInit?.companyName
+                                        ?? ""
+                                    } disabled
                                         style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
                                 </Form.Item>
                             ) : (
@@ -460,18 +515,74 @@ const ModalProcedure: React.FC<IProps> = ({
                         </Col>
                     )}
                     <Col xs={24} lg={12}>
-                        {isEdit || fixedDepartmentId ? (
+                        {fixedDepartmentId ? (
+                            // Cố định — không cho sửa
                             <Form.Item label="Phòng ban" style={{ marginBottom: 0 }}>
                                 <Input
-                                    value={
-                                        dataInit?.departmentName ??
-                                        (fixedDepartmentId ? `Phòng ban #${fixedDepartmentId}` : "")
-                                    }
+                                    value={`Phòng ban #${fixedDepartmentId}`}
                                     disabled
                                     style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }}
                                 />
                             </Form.Item>
+                        ) : isEdit && procedureType !== "DEPARTMENT" ? (
+                            // Edit COMPANY hoặc CONFIDENTIAL — disabled
+                            <Form.Item label="Phòng ban" style={{ marginBottom: 0 }}>
+                                <Input
+                                    value={dataInit?.departmentName ?? ""}
+                                    disabled
+                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }}
+                                />
+                            </Form.Item>
+                        ) : procedureType === "DEPARTMENT" ? (
+                            // ✅ Edit hoặc Create DEPARTMENT — multi-select có thể thêm/bỏ
+                            <ProFormSelect
+                                name="departmentIds"
+                                label="Phòng ban"
+                                request={loadDepartments}
+                                params={{ companyId }}
+                                rules={[{ required: true, message: "Chọn ít nhất 1 phòng ban" }]}
+                                fieldProps={{
+                                    mode: "multiple",
+                                    allowClear: true,
+                                    showSearch: true,
+                                    optionFilterProp: "label",
+                                    tagRender: (props) => {
+                                        const { label, onClose } = props;
+                                        return (
+                                            <span style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 4,
+                                                margin: "2px 3px",
+                                                padding: "2px 10px",
+                                                borderRadius: 6,
+                                                background: "#f5f5f5",
+                                                border: "1px solid #e5e7eb",
+                                                color: "#374151",
+                                                fontSize: 12,
+                                                fontWeight: 500,
+                                            }}>
+                                                {label}
+                                                <span
+                                                    onClick={onClose}
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        color: "#9ca3af",
+                                                        fontWeight: 400,
+                                                        fontSize: 14,
+                                                        lineHeight: 1,
+                                                        marginLeft: 2,
+                                                    }}
+                                                >
+                                                    ×
+                                                </span>
+                                            </span>
+                                        );
+                                    },
+                                }}
+                            />
                         ) : (
+                            // Create COMPANY hoặc CONFIDENTIAL — single select
                             <ProFormSelect
                                 name="departmentId"
                                 label="Phòng ban"
@@ -493,7 +604,6 @@ const ModalProcedure: React.FC<IProps> = ({
                     </Col>
                 </Row>
 
-                {/* ── Bộ phận + Mã + Tên quy trình ── */}
                 <Row gutter={16}>
                     <Col xs={24} lg={12}>
                         <ProFormSelect
@@ -523,7 +633,6 @@ const ModalProcedure: React.FC<IProps> = ({
                     </Col>
                 </Row>
 
-                {/* ── Trạng thái + Năm + Ngày ban hành + Kích hoạt ── */}
                 <Row gutter={16}>
                     <Col xs={24} lg={6}>
                         <ProFormSelect
@@ -545,7 +654,6 @@ const ModalProcedure: React.FC<IProps> = ({
                             placeholder="VD: 2026"
                         />
                     </Col>
-                    {/* ← THÊM: dùng Form.Item + DatePicker thay ProFormDatePicker */}
                     <Col xs={24} lg={6}>
                         <Form.Item name="issuedDate" label="Ngày ban hành">
                             <DatePicker
@@ -555,7 +663,8 @@ const ModalProcedure: React.FC<IProps> = ({
                             />
                         </Form.Item>
                     </Col>
-                    <Col xs={24} lg={6}>
+
+                    <Col xs={24} lg={6} style={{ display: "none" }}>
                         <ProFormSwitch
                             name="active"
                             label="Kích hoạt"
@@ -564,7 +673,6 @@ const ModalProcedure: React.FC<IProps> = ({
                     </Col>
                 </Row>
 
-                {/* ── Người được xem — chỉ khi CONFIDENTIAL ── */}
                 {procedureType === "CONFIDENTIAL" && (
                     <>
                         <Divider />
@@ -578,7 +686,6 @@ const ModalProcedure: React.FC<IProps> = ({
 
                 <Divider />
 
-                {/* ── File + Ghi chú ── */}
                 <Row gutter={16}>
                     <Col xs={24} lg={14}>
                         <Form.Item label="File quy trình" style={{ marginBottom: 0 }}>
