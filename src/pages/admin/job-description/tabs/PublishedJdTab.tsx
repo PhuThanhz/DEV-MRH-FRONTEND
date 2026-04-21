@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import queryString from "query-string";
 import JobDescriptionTable from "../components/JobDescriptionTable";
-import { useJobDescriptionsQuery } from "@/hooks/useJobDescriptions";
+import { usePublishedJobDescriptionsQuery } from "@/hooks/useJobDescriptions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 
 const PublishedJdTab = () => {
@@ -10,10 +10,10 @@ const PublishedJdTab = () => {
     const [resetSignal, setResetSignal] = useState(0);
 
     const [query, setQuery] = useState(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc&filter=status='PUBLISHED'`
+        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
     );
 
-    const { data, isFetching, refetch } = useJobDescriptionsQuery(query);
+    const { data, isFetching, refetch } = usePublishedJobDescriptionsQuery(query);
 
     useEffect(() => {
         const q: any = {
@@ -21,10 +21,10 @@ const PublishedJdTab = () => {
             size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
             sort: "createdAt,desc",
         };
-        const filters: string[] = [`status='PUBLISHED'`];
+        const filters: string[] = [];
         if (searchValue) filters.push(`code~'${searchValue}'`);
         if (dateFilter) filters.push(dateFilter);
-        q.filter = filters.join(" and ");
+        if (filters.length > 0) q.filter = filters.join(" and ");
         setQuery(queryString.stringify(q, { encode: false }));
     }, [searchValue, dateFilter]);
 

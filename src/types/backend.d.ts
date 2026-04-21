@@ -1367,6 +1367,7 @@ export interface IJdInbox {
         id: string;
         name: string;
     };
+    creator?: boolean;  // ← CÓ field này chưa?
 
     updatedAt?: string;
 

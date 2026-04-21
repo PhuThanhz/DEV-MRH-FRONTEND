@@ -139,6 +139,8 @@ const JobDescriptionTable = ({
 
     // ✅ Lấy currentUserId từ Redux
     const currentUserId = useAppSelector(state => state.account.user?.id);
+    const currentUserEmail = useAppSelector(state => state.account.user?.email);
+
 
     const deleteMutation = useDeleteJobDescriptionMutation();
     const rejectMutation = useRejectJdFlowMutation();
@@ -439,23 +441,31 @@ const JobDescriptionTable = ({
                             />
                         </Access>
 
+
                         {/* Sửa */}
-                        {(mode === "MY" || mode === "ALL" || (mode === "INBOX" && record.status === "REJECTED")) &&
-                            (record.status === "DRAFT" || record.status === "REJECTED") &&
-                            (record.id ?? record.jdId) && (
+                        {(record.status === "DRAFT" || record.status === "REJECTED") &&
+                            (record.id ?? record.jdId) &&
+                            (
+                                record.status === "DRAFT" ||
+                                record.createdBy === currentUserEmail ||
+                                (record as any).creator === true  // ← người tạo trong inbox
+                            ) && (
                                 <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.UPDATE} hideChildren>
                                     <Button
                                         type="text"
                                         size="small"
                                         icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                                         onClick={() => {
-                                            setEditRecord(record as IJobDescription);
+                                            const editData = {
+                                                ...record,
+                                                id: (record as any).id ?? (record as any).jdId, // ← THÊM DÒNG NÀY
+                                            };
+                                            setEditRecord(editData as IJobDescription);
                                             setOpenModal(true);
                                         }}
                                     />
                                 </Access>
                             )}
-
                         {/* Nút Duyệt */}
                         {isInboxOrAll && record.status === "IN_REVIEW" && (
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>

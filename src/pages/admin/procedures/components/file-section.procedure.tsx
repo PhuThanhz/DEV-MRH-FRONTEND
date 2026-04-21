@@ -19,7 +19,6 @@ import { Worker, Viewer } from "@react-pdf-viewer/core";
 import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
 import "@react-pdf-viewer/core/lib/styles/index.css";
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export const buildFileUrl = (fileName?: string) =>
     fileName
@@ -292,7 +291,6 @@ const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
         </Tooltip>
     );
 };
-
 // ─── FileSection ──────────────────────────────────────────────────────────────
 interface IPreviewState { url: string; ext: string; name: string }
 interface IFileSectionProps { fileNames?: string[] }

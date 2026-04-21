@@ -99,7 +99,6 @@ const ScoreCell = ({ record }: { record: IDepartmentCompleteness }) => {
 };
 
 /** Cột hạng mục thiếu */
-/** Cột hạng mục thiếu */
 const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
     const missing = CRITERIA.filter((c) => !record[c.key]);
 
