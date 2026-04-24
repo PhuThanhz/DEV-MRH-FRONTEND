@@ -5,40 +5,18 @@ import type { IResPublicProcedureDTO } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
 import {
-    Button,
-    Card,
-    Col,
-    Divider,
-    Progress,
-    Row,
-    Skeleton,
-    Space,
-    Tag,
-    Typography,
-    Input,
-    theme,
-    Flex,
+    Button, Card, Col, Divider, Progress, Row, Skeleton,
+    Space, Tag, Typography, Input, theme, Flex,
 } from "antd";
 import {
-    BankOutlined,
-    CalendarOutlined,
-    ClockCircleOutlined,
-    DownloadOutlined,
-    EyeOutlined,
-    FilePdfOutlined,
-    FileWordOutlined,
-    FileExcelOutlined,
-    FileImageOutlined,
-    FileOutlined,
-    LockOutlined,
-    PaperClipOutlined,
-    TeamOutlined,
+    BankOutlined, CalendarOutlined, ClockCircleOutlined,
+    DownloadOutlined, EyeOutlined, FilePdfOutlined, FileWordOutlined,
+    FileExcelOutlined, FileImageOutlined, FileOutlined, LockOutlined,
+    PaperClipOutlined, TeamOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
 const { useToken } = theme;
-
-/* ─── Constants ─────────────────────────────────────────────── */
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "warning" },
@@ -60,8 +38,6 @@ const EXT_ICON: Record<string, React.ReactNode> = {
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL as string;
 
-/* ─── Helpers ────────────────────────────────────────────────── */
-
 function getFileIcon(ext: string) {
     return EXT_ICON[ext.toUpperCase()] ?? <FileOutlined style={{ color: "#6b7280" }} />;
 }
@@ -72,16 +48,12 @@ function getProgressColor(pct: number) {
     return "#10b981";
 }
 
-/* ─── Sub-components ─────────────────────────────────────────── */
-
 const SectionLabel = ({ icon, text }: { icon?: React.ReactNode; text: string }) => (
     <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
         {icon && <span style={{ marginRight: 5 }}>{icon}</span>}
         {text}
     </Text>
 );
-
-/* ─── Main Component ─────────────────────────────────────────── */
 
 const PublicProcedureView = () => {
     const { token: routeToken } = useParams<{ token: string }>();
@@ -99,7 +71,7 @@ const PublicProcedureView = () => {
     const fetchView = async () => {
         setLoading(true); setError(null);
         try {
-            const res = await fetch(`${BASE_URL}/public/view/${routeToken}`);
+            const res = await fetch(`${BASE_URL}/api/public/view/${routeToken}`);
             const json = await res.json();
             if (!res.ok) { setError(json?.message ?? "Không thể xem quy trình"); return; }
             if (json?.data?.requirePin) { setRequirePin(true); return; }
@@ -124,7 +96,7 @@ const PublicProcedureView = () => {
         if (code.length !== 6) { notify.warning("Vui lòng nhập đủ 6 số"); return; }
         setPinLoading(true);
         try {
-            const res = await fetch(`${BASE_URL}/public/view/${routeToken}/verify-pin`, {
+            const res = await fetch(`${BASE_URL}/api/public/view/${routeToken}/verify-pin`, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ pin: code }),
             });
@@ -158,7 +130,6 @@ const PublicProcedureView = () => {
         maxWidth: 600,
     };
 
-    /* ── Loading ── */
     if (loading) return (
         <div style={centeredPageStyle}>
             <div style={containerStyle}>
@@ -169,7 +140,6 @@ const PublicProcedureView = () => {
         </div>
     );
 
-    /* ── Error ── */
     if (error) return (
         <div style={centeredPageStyle}>
             <div style={{ ...containerStyle, maxWidth: 420 }}>
@@ -193,7 +163,6 @@ const PublicProcedureView = () => {
         </div>
     );
 
-    /* ── PIN ── */
     if (requirePin) return (
         <div style={centeredPageStyle}>
             <div style={{ ...containerStyle, maxWidth: 380 }}>
@@ -252,12 +221,9 @@ const PublicProcedureView = () => {
     const status = STATUS_MAP[data.status ?? ""] ?? { label: data.status ?? "--", color: "default" };
     const pct = data.maxAccessCount ? Math.round((data.accessCount ?? 0) / data.maxAccessCount * 100) : null;
 
-    /* ── Main View ── */
     return (
         <div style={pageStyle}>
             <div style={containerStyle}>
-
-                {/* Top bar */}
                 <Flex justify="space-between" align="center" style={{ marginBottom: 20 }}>
                     <Flex align="center" gap={10}>
                         <img src="/logo/LOGOFINAL.png" alt="LOTUS HRM" style={{ width: 32, height: 32, objectFit: "contain" }} />
@@ -270,44 +236,28 @@ const PublicProcedureView = () => {
                     </Tag>
                 </Flex>
 
-                {/* Hero card */}
-                <Card
-                    style={{ borderRadius: 16, marginBottom: 16, overflow: "hidden" }}
-                    styles={{ body: { padding: 0 } }}
-                >
-                    <div style={{
-                        height: 4,
-                        background: "linear-gradient(90deg, #f43f5e, #ec4899)",
-                    }} />
+                <Card style={{ borderRadius: 16, marginBottom: 16, overflow: "hidden" }} styles={{ body: { padding: 0 } }}>
+                    <div style={{ height: 4, background: "linear-gradient(90deg, #f43f5e, #ec4899)" }} />
                     <div style={{ padding: "20px 24px 24px" }}>
                         <Space size={6} wrap style={{ marginBottom: 12 }}>
-                            <Tag color="default" style={{ fontWeight: 600, borderRadius: 6, fontSize: 12 }}>
-                                {data.procedureCode}
-                            </Tag>
-                            <Tag color={status.color} style={{ fontWeight: 600, borderRadius: 6, fontSize: 12 }}>
-                                {status.label}
-                            </Tag>
+                            <Tag color="default" style={{ fontWeight: 600, borderRadius: 6, fontSize: 12 }}>{data.procedureCode}</Tag>
+                            <Tag color={status.color} style={{ fontWeight: 600, borderRadius: 6, fontSize: 12 }}>{status.label}</Tag>
                             {data.version && (
                                 <Tag style={{ fontWeight: 600, borderRadius: 6, fontSize: 12, color: designToken.colorTextSecondary }}>
                                     v{data.version}
                                 </Tag>
                             )}
                         </Space>
-                        <Title level={4} style={{ margin: 0, lineHeight: 1.4 }}>
-                            {data.procedureName}
-                        </Title>
+                        <Title level={4} style={{ margin: 0, lineHeight: 1.4 }}>{data.procedureName}</Title>
                     </div>
                 </Card>
 
-                {/* Info grid */}
                 <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                     {data.departmentName && (
                         <Col span={12}>
                             <Card style={{ borderRadius: 12, height: "100%" }} styles={{ body: { padding: "14px 16px" } }}>
                                 <SectionLabel icon={<BankOutlined />} text="Phòng ban" />
-                                <div style={{ marginTop: 6 }}>
-                                    <Text strong style={{ fontSize: 14 }}>{data.departmentName}</Text>
-                                </div>
+                                <div style={{ marginTop: 6 }}><Text strong style={{ fontSize: 14 }}>{data.departmentName}</Text></div>
                             </Card>
                         </Col>
                     )}
@@ -315,9 +265,7 @@ const PublicProcedureView = () => {
                         <Col span={12}>
                             <Card style={{ borderRadius: 12, height: "100%" }} styles={{ body: { padding: "14px 16px" } }}>
                                 <SectionLabel icon={<TeamOutlined />} text="Bộ phận" />
-                                <div style={{ marginTop: 6 }}>
-                                    <Text strong style={{ fontSize: 14 }}>{data.sectionName}</Text>
-                                </div>
+                                <div style={{ marginTop: 6 }}><Text strong style={{ fontSize: 14 }}>{data.sectionName}</Text></div>
                             </Card>
                         </Col>
                     )}
@@ -325,30 +273,22 @@ const PublicProcedureView = () => {
                         <Col span={12}>
                             <Card style={{ borderRadius: 12, height: "100%" }} styles={{ body: { padding: "14px 16px" } }}>
                                 <SectionLabel icon={<CalendarOutlined />} text="Ngày ban hành" />
-                                <div style={{ marginTop: 6 }}>
-                                    <Text strong style={{ fontSize: 14 }}>{dayjs(data.issuedDate).format("DD/MM/YYYY")}</Text>
-                                </div>
+                                <div style={{ marginTop: 6 }}><Text strong style={{ fontSize: 14 }}>{dayjs(data.issuedDate).format("DD/MM/YYYY")}</Text></div>
                             </Card>
                         </Col>
                     )}
                     {data.expiresAt && (
                         <Col span={12}>
-                            <Card
-                                style={{ borderRadius: 12, height: "100%", background: "#fffbeb", borderColor: "#fde68a" }}
-                                styles={{ body: { padding: "14px 16px" } }}
-                            >
+                            <Card style={{ borderRadius: 12, height: "100%", background: "#fffbeb", borderColor: "#fde68a" }} styles={{ body: { padding: "14px 16px" } }}>
                                 <SectionLabel icon={<ClockCircleOutlined />} text="Link hết hạn" />
                                 <div style={{ marginTop: 6 }}>
-                                    <Text strong style={{ fontSize: 14, color: "#b45309" }}>
-                                        {dayjs(data.expiresAt).format("DD/MM/YYYY HH:mm")}
-                                    </Text>
+                                    <Text strong style={{ fontSize: 14, color: "#b45309" }}>{dayjs(data.expiresAt).format("DD/MM/YYYY HH:mm")}</Text>
                                 </div>
                             </Card>
                         </Col>
                     )}
                 </Row>
 
-                {/* Note */}
                 {data.note && (
                     <Card style={{ borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "16px 20px" } }}>
                         <SectionLabel text="Ghi chú" />
@@ -358,63 +298,27 @@ const PublicProcedureView = () => {
                     </Card>
                 )}
 
-                {/* Files */}
                 {data.fileUrls && data.fileUrls.length > 0 && (
-                    <Card
-                        style={{ borderRadius: 12, marginBottom: 16 }}
-                        styles={{ body: { padding: "16px 20px" } }}
-                    >
+                    <Card style={{ borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "16px 20px" } }}>
                         <SectionLabel icon={<PaperClipOutlined />} text={`Tài liệu đính kèm (${data.fileUrls.length})`} />
                         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             {data.fileUrls.map((url, idx) => {
                                 const name = decodeURIComponent(url.split("/").pop() ?? `Tài liệu ${idx + 1}`);
                                 const ext = name.split(".").pop()?.toUpperCase() ?? "FILE";
                                 return (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            background: designToken.colorFillAlter,
-                                            border: `1px solid ${designToken.colorBorderSecondary}`,
-                                            borderRadius: 10,
-                                            padding: "10px 14px",
-                                            gap: 8,
-                                        }}
-                                    >
+                                    <div key={idx} style={{
+                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                        background: designToken.colorFillAlter, border: `1px solid ${designToken.colorBorderSecondary}`,
+                                        borderRadius: 10, padding: "10px 14px", gap: 8,
+                                    }}>
                                         <Flex align="center" gap={10} style={{ minWidth: 0, flex: 1 }}>
                                             <span style={{ fontSize: 20, flexShrink: 0 }}>{getFileIcon(ext)}</span>
-                                            <Text
-                                                style={{ fontSize: 13, fontWeight: 500, flex: 1 }}
-                                                ellipsis={{ tooltip: name }}
-                                            >
-                                                {name}
-                                            </Text>
+                                            <Text style={{ fontSize: 13, fontWeight: 500, flex: 1 }} ellipsis={{ tooltip: name }}>{name}</Text>
                                         </Flex>
                                         <Space size={6} style={{ flexShrink: 0 }}>
-                                            <Button
-                                                size="small"
-                                                icon={<EyeOutlined />}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                style={{ borderRadius: 8 }}
-                                            >
-                                                Xem
-                                            </Button>
+                                            <Button size="small" icon={<EyeOutlined />} href={url} target="_blank" rel="noreferrer" style={{ borderRadius: 8 }}>Xem</Button>
                                             {data.allowDownload && (
-                                                <Button
-                                                    size="small"
-                                                    type="primary"
-                                                    danger
-                                                    icon={<DownloadOutlined />}
-                                                    href={url}
-                                                    download
-                                                    style={{ borderRadius: 8 }}
-                                                >
-                                                    Tải
-                                                </Button>
+                                                <Button size="small" type="primary" danger icon={<DownloadOutlined />} href={url} download style={{ borderRadius: 8 }}>Tải</Button>
                                             )}
                                         </Space>
                                     </div>
@@ -424,7 +328,6 @@ const PublicProcedureView = () => {
                     </Card>
                 )}
 
-                {/* Access counter */}
                 {data.maxAccessCount != null && (
                     <Card style={{ borderRadius: 12, marginBottom: 16 }} styles={{ body: { padding: "16px 20px" } }}>
                         <Flex justify="space-between" align="center" style={{ marginBottom: 10 }}>
@@ -446,13 +349,11 @@ const PublicProcedureView = () => {
                     </Card>
                 )}
 
-                {/* Footer */}
                 <div style={{ textAlign: "center", paddingTop: 8 }}>
                     <Text type="secondary" style={{ fontSize: 11, letterSpacing: "0.04em" }}>
                         Tài liệu nội bộ · Không sao chép hoặc phân phối trái phép
                     </Text>
                 </div>
-
             </div>
         </div>
     );
