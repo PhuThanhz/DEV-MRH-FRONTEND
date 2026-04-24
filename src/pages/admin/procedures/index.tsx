@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { BankOutlined, ApartmentOutlined, LockOutlined } from "@ant-design/icons";
-import ProcedureTable from "./components/ProcedureTable";
+import ProcedureTable from "./components/table/ProcedureTable";
 import ConfidentialProcedureView from "./components/ConfidentialProcedureView";  // ← thêm
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { ALL_PERMISSIONS } from "@/config/permissions";

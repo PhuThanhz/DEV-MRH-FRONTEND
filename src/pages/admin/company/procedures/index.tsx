@@ -1,6 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
-import ProcedureTable from "@/pages/admin/procedures/components/ProcedureTable";
+import ProcedureTable from "@/pages/admin/procedures/components/table/ProcedureTable";
 
 const CompanyProceduresPage = () => {
     const { companyId } = useParams();

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Space, Tag, Popconfirm, Tooltip } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import type { ProColumns, ActionType } from "@ant-design/pro-components";
+import { EyeOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, LockOutlined } from "@ant-design/icons"; import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
 
@@ -15,16 +14,18 @@ import {
     useDepartmentProceduresWithFilterQuery,
     useConfidentialProceduresWithFilterQuery,
 } from "@/hooks/useProcedure";
-import ModalProcedure from "../modal.procedure";
-import ModalRevise from "../components/modal.revise";
-import ViewProcedure from "../view.procedure";
+import ModalProcedure from "../../modal.procedure";
+import ModalRevise from "../modal.revise";
+import ViewProcedure from "../../view.procedure";
 import { Dropdown } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import {
     useDeleteProcedureMutation,
 } from "@/hooks/useProcedure";
 import useAccess from "@/hooks/useAccess";
-
+import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
+import { Modal, Image, Button } from "antd";
+import ModalShareToken from "../ModalShareToken";
 import {
     callFetchCompany,
     callFetchDepartmentsByCompany,
@@ -51,7 +52,9 @@ interface IProps {
 const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const tableRef = useRef<ActionType>(null);
     const isAdmin = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_ALL);
-
+    const [openQrModal, setOpenQrModal] = useState(false);
+    const [openShareModal, setOpenShareModal] = useState(false);
+    const [selectedProcedure, setSelectedProcedure] = useState<IProcedure | null>(null);
     const [openModal, setOpenModal] = useState(false);
     const [openView, setOpenView] = useState(false);
     const [openRevise, setOpenRevise] = useState(false);
@@ -381,6 +384,56 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             },
         },
         {
+            title: "QR",
+            align: "center",
+            width: 60,
+            render: (_, record) => (
+                <Tooltip title="Xem mã QR nội bộ" placement="top">
+                    <div
+                        onClick={() => {
+                            setSelectedProcedure(record);
+                            setOpenQrModal(true);
+                        }}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            background: "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)",
+                            border: "1.5px solid #ff85c0",
+                            transition: "all 0.2s ease",
+                            boxShadow: "0 1px 4px rgba(255,133,192,0.15)",
+                        }}
+                        onMouseEnter={e => {
+                            const el = e.currentTarget;
+                            el.style.background = "linear-gradient(135deg, #ff4d94 0%, #eb2f7a 100%)";
+                            el.style.boxShadow = "0 4px 12px rgba(235,47,122,0.35)";
+                            el.style.transform = "scale(1.1)";
+                            (el.querySelector("span") as HTMLElement).style.color = "#fff";
+                        }}
+                        onMouseLeave={e => {
+                            const el = e.currentTarget;
+                            el.style.background = "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)";
+                            el.style.boxShadow = "0 1px 4px rgba(255,133,192,0.15)";
+                            el.style.transform = "scale(1)";
+                            (el.querySelector("span") as HTMLElement).style.color = "#eb2f7a";
+                        }}
+                    >
+                        <QrcodeOutlined
+                            style={{
+                                fontSize: 18,
+                                color: "#eb2f7a",
+                                transition: "color 0.2s ease",
+                            }}
+                        />
+                    </div>
+                </Tooltip>
+            ),
+        },
+        {
             title: "Hành động",
             align: "center",
             width: type === "CONFIDENTIAL" ? 120 : 100,
@@ -620,6 +673,152 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 onClose={() => setOpenView(false)}
                 dataInit={dataInit}
                 refetch={refetch}
+            />
+            {/* Modal QR nội bộ */}
+            <Modal
+                open={openQrModal}
+                onCancel={() => setOpenQrModal(false)}
+                footer={null}
+                closable={false}
+                width={420}
+                centered
+                styles={{
+                    content: { padding: 0, borderRadius: 28, overflow: "hidden" },
+                    mask: { backdropFilter: "blur(6px)" },
+                }}
+            >
+                {selectedProcedure && (
+                    <>
+                        {/* ── Header ── */}
+                        <div style={{
+                            background: "linear-gradient(135deg,#f0226e 0%,#ff5fa0 60%,#ff85bc 100%)",
+                            padding: "22px 20px 26px",
+                            position: "relative",
+                        }}>
+                            {/* Nút đóng */}
+                            <button
+                                onClick={() => setOpenQrModal(false)}
+                                style={{
+                                    position: "absolute", top: 14, right: 14,
+                                    width: 32, height: 32,
+                                    background: "rgba(255,255,255,0.18)",
+                                    border: "1.5px solid rgba(255,255,255,0.28)",
+                                    borderRadius: 10, color: "rgba(255,255,255,0.9)",
+                                    fontSize: 18, cursor: "pointer",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    outline: "none", lineHeight: 1,
+                                }}
+                            >×</button>
+
+                            {/* Icon + Text ngang hàng */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+                                <div style={{
+                                    width: 52, height: 52,
+                                    background: "rgba(255,255,255,0.2)",
+                                    borderRadius: 14,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    flexShrink: 0,
+                                }}>
+                                    <QrcodeOutlined style={{ fontSize: 26, color: "white" }} />
+                                </div>
+                                <div>
+                                    <div style={{
+                                        color: "rgba(255,255,255,0.78)", fontSize: 11, fontWeight: 500,
+                                        letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 3,
+                                    }}>
+                                        Mã QR nội bộ
+                                    </div>
+                                    <div style={{ color: "white", fontSize: 17, fontWeight: 500, lineHeight: 1.35 }}>
+                                        {selectedProcedure.procedureName}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Badge code phía dưới */}
+                            <div style={{
+                                display: "inline-flex", alignItems: "center", gap: 5,
+                                background: "white", color: "#e8256b",
+                                fontSize: 13, fontWeight: 600,
+                                padding: "5px 14px", borderRadius: 30,
+                            }}>
+                                <QrcodeOutlined style={{ fontSize: 11 }} />
+                                {selectedProcedure.procedureCode}
+                            </div>
+                        </div>
+
+                        {/* ── Body ── */}
+                        <div style={{ padding: 24 }}>
+                            {/* QR image */}
+                            <div style={{
+                                border: "1.5px solid #ffe0ee", borderRadius: 20,
+                                padding: 20, display: "flex", alignItems: "center",
+                                justifyContent: "center", marginBottom: 20,
+                            }}>
+                                {selectedProcedure.qrCode ? (
+                                    <Image
+                                        src={`data:image/png;base64,${selectedProcedure.qrCode}`}
+                                        width={190} height={190} preview={false}
+                                        style={{ borderRadius: 4, display: "block" }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: 190, height: 190, display: "flex",
+                                        alignItems: "center", justifyContent: "center",
+                                        background: "#f9fafb", borderRadius: 4, color: "#ccc", fontSize: 13,
+                                    }}>Chưa có mã QR</div>
+                                )}
+                            </div>
+
+                            {/* Buttons */}
+                            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    style={{
+                                        flex: 1, height: 42, borderRadius: 14, fontWeight: 500,
+                                        borderColor: "#fcc", color: "#e8256b",
+                                    }}
+                                    onClick={() => {
+                                        if (!selectedProcedure.qrCode) return;
+                                        const a = document.createElement("a");
+                                        a.href = `data:image/png;base64,${selectedProcedure.qrCode}`;
+                                        a.download = `QR_${selectedProcedure.procedureCode}.png`;
+                                        a.click();
+                                    }}
+                                >Tải xuống</Button>
+                                <Button
+                                    icon={<ShareAltOutlined />}
+                                    style={{
+                                        flex: 1, height: 42, borderRadius: 14, fontWeight: 500,
+                                        background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
+                                        border: "none", color: "white",
+                                        boxShadow: "0 4px 14px rgba(240,34,110,0.3)",
+                                    }}
+                                    onClick={() => { setOpenQrModal(false); setOpenShareModal(true); }}
+                                >Chia sẻ công khai</Button>
+                            </div>
+
+                            {/* Note */}
+                            <div style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                padding: "11px 14px", background: "#fff7fa",
+                                border: "1px solid #fce4ef", borderRadius: 12,
+                            }}>
+                                <LockOutlined style={{ fontSize: 13, color: "#e8256b", flexShrink: 0 }} />
+                                <span style={{ fontSize: 12, color: "#c0537a" }}>
+                                    Mã QR chỉ dùng nội bộ — quét bằng ứng dụng nội bộ
+                                </span>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </Modal>
+
+            {/* Placeholder — Bước 3 sẽ thay bằng ModalShareToken */}
+            <ModalShareToken
+                open={openShareModal}
+                onClose={() => setOpenShareModal(false)}
+                procedure={selectedProcedure}
+                procedureType={type}
             />
         </>
     );

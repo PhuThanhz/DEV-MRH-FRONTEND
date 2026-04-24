@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Layout, Menu, Drawer, Button } from "antd";
+import { Layout, Menu, Drawer, Button, Switch } from "antd";
 import { CloseOutlined, QrcodeOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
 import { generateMenuItems } from "./menuItems";
@@ -26,21 +26,11 @@ const SliderAdmin: React.FC<IProps> = ({
     const permissions = useAppSelector((state) => state.account.user.role.permissions);
     const [menuItems, setMenuItems] = useState<any[]>([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [showScannerButton, setShowScannerButton] = useState<boolean>(
-        localStorage.getItem("showScannerButton") === "true"
-    );
+    const [showScannerButton, setShowScannerButton] = useState<boolean>(true);
 
     useEffect(() => {
         setMenuItems(generateMenuItems(permissions));
     }, [permissions]);
-
-    useEffect(() => {
-        const handleToggle = (e: any) => {
-            setShowScannerButton(e.detail);
-        };
-        window.addEventListener("toggleScannerVisibility", handleToggle);
-        return () => window.removeEventListener("toggleScannerVisibility", handleToggle);
-    }, []);
 
     useEffect(() => {
         const handleResize = () => {
@@ -120,9 +110,36 @@ const SliderAdmin: React.FC<IProps> = ({
         </div>
     );
 
-    const filteredMenuItems = collapsed
+    const filteredMenuItems = (collapsed
         ? menuItems.filter((item) => item.type !== "group")
-        : menuItems;
+        : menuItems
+    ).map((item) =>
+        item.key === "qr-scanner-toggle"
+            ? {
+                ...item,
+                label: (
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingRight: 4,
+                    }}>
+                        <span>Quét quy trình</span>
+                        <Switch
+                            size="small"
+                            checked={showScannerButton}
+                            onChange={(checked) => setShowScannerButton(checked)}
+                            onClick={(_, e) => e.stopPropagation()}
+                            style={{
+                                backgroundColor: showScannerButton ? "#ec4899" : undefined,
+                                minWidth: 32,
+                            }}
+                        />
+                    </div>
+                ),
+            }
+            : item
+    );
 
     const MenuList = (
         <Menu
@@ -130,6 +147,10 @@ const SliderAdmin: React.FC<IProps> = ({
             mode="inline"
             items={filteredMenuItems}
             onClick={(e) => {
+                if (e.key === "qr-scanner-toggle") {
+                    setShowScannerButton(prev => !prev);
+                    return;
+                }
                 setActiveMenu(e.key);
                 if (isMobile) setMobileOpen(false);
             }}
@@ -160,6 +181,8 @@ const SliderAdmin: React.FC<IProps> = ({
                 style={{
                     width: 72,
                     height: 72,
+                    background: "#ec4899",
+                    borderColor: "#ec4899",
                     boxShadow: "0 12px 32px rgba(255, 105, 180, 0.3)",
                 }}
                 onClick={() => window.dispatchEvent(new CustomEvent("openScannerModal"))}
@@ -168,7 +191,6 @@ const SliderAdmin: React.FC<IProps> = ({
     );
 
     const sharedStyles = `
-        /* Menu hover màu hồng nhẹ */
         .sidebar-menu-pink .ant-menu-item:hover {
             background-color: rgba(236, 72, 153, 0.08) !important;
         }
@@ -177,7 +199,6 @@ const SliderAdmin: React.FC<IProps> = ({
             background-color: rgba(236, 72, 153, 0.08) !important;
         }
 
-        /* Menu item selected màu hồng */
         .sidebar-menu-pink .ant-menu-item-selected {
             background-color: rgba(236, 72, 153, 0.12) !important;
             color: #ec4899 !important;
@@ -188,17 +209,14 @@ const SliderAdmin: React.FC<IProps> = ({
             border-right: 3px solid #ec4899 !important;
         }
 
-        /* Icon color khi selected */
         .sidebar-menu-pink .ant-menu-item-selected .ant-menu-item-icon {
             color: #ec4899 !important;
         }
 
-        /* Submenu selected */
         .sidebar-menu-pink .ant-menu-submenu-selected > .ant-menu-submenu-title {
             color: #ec4899 !important;
         }
 
-        /* Fix màu xanh popup submenu (khi collapsed) */
         .ant-menu-submenu-popup .ant-menu-item-selected,
         .ant-menu-submenu-popup .ant-menu-item-selected a,
         .ant-menu-submenu-popup .ant-menu-item-selected span {
@@ -220,18 +238,15 @@ const SliderAdmin: React.FC<IProps> = ({
             border-right: 3px solid #ec4899 !important;
         }
 
-        /* Logo hover effect */
         .logo-container:hover .logo-overlay {
             background: rgba(236, 72, 153, 0.05) !important;
         }
 
-        /* Smooth transitions */
         .sidebar-menu-pink .ant-menu-item,
         .sidebar-menu-pink .ant-menu-submenu-title {
             transition: all 0.3s ease !important;
         }
 
-        /* Scrollbar mảnh đẹp */
         .sidebar-scroll::-webkit-scrollbar {
             width: 2px;
         }
@@ -249,7 +264,6 @@ const SliderAdmin: React.FC<IProps> = ({
             background: rgba(0, 0, 0, 0.18);
         }
 
-        /* Firefox */
         .sidebar-scroll {
             scrollbar-width: thin;
             scrollbar-color: rgba(0, 0, 0, 0.1) transparent;

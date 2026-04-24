@@ -14,6 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { QrcodeOutlined } from "@ant-design/icons";
 
 interface Permission {
     apiPath: string;
@@ -246,6 +247,13 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
+        // ===================== CÔNG CỤ =====================
+        { type: "group", label: "CÔNG CỤ" },
+        {
+            label: "",  // ← không cần, slider.admin.tsx sẽ tự override
+            key: "qr-scanner-toggle",
+            icon: <QrcodeOutlined />,
+        },
     ];
 
     return full;

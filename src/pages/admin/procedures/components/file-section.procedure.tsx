@@ -249,9 +249,9 @@ const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
 
     const handleDownload = async () => {
         try {
-            const axiosInstance = (await import("@/config/axios-customize")).default;
-            const response = await axiosInstance.get(fileUrl, { responseType: "blob" }) as any;
-            const blob = new Blob([response.data], { type: response.headers?.["content-type"] ?? "application/octet-stream" });
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error("Download failed");
+            const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url; a.download = prettyName; a.click();

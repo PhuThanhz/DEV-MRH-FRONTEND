@@ -42,7 +42,9 @@ import WelcomePage from "@/pages/admin/WelcomePage";
 import DashboardOrWelcome from "@/pages/admin/DashboardOrWelcome";
 import PositionChartPage from "@/pages/admin/department/position-chart/index";
 import DepartmentProfilePage from "@/pages/admin/dashboard/department-profile";
-
+import PublicProcedureView from "@/pages/public/PublicProcedureView";
+import QrScanPage from "@/pages/scan/QrScanPage";
+import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -231,7 +233,15 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-
+        // ✅ THÊM VÀO ĐÂY
+        {
+          path: "procedures/qr/:token",
+          element: (
+            <ProtectedRoute>
+              <QrProcedureDetail />
+            </ProtectedRoute>
+          ),
+        },
         {
           path: PATHS.ADMIN.CAREER_PATH,
           element: (
@@ -299,11 +309,22 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+        // ← THÊM TIẾP
+        {
+          path: "/admin/qr-scan",
+          element: (
+            <ProtectedRoute>
+              <QrScanPage />
+            </ProtectedRoute>
+          ),
+        },
       ],
     },
     { path: PATHS.LOGIN, element: <LoginPage /> },
     { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword /> },
     { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword /> },
+    { path: "/public/view/:token", element: <PublicProcedureView /> },
+
   ]);
 
   return <RouterProvider router={router} />;

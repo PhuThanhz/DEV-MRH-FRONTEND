@@ -850,6 +850,46 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/procedures/{id}/revise",
             module: "PROCEDURES",
         },
+        SHARE_LOG_SENT: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/sent",
+            module: "PROCEDURES",
+        },
+        SHARE_LOG_RECEIVED: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/received",
+            module: "PROCEDURES",
+        },
+        SHARE_LOG_ALL: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-log/all",
+            module: "PROCEDURES",
+        },
+        CREATE_SHARE_TOKEN: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/*/share-tokens",
+            module: "PROCEDURES",
+        },
+        GET_SHARE_TOKENS: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/*/share-tokens",
+            module: "PROCEDURES",
+        },
+        REVOKE_SHARE_TOKEN: {
+            method: "PATCH",
+            apiPath: "/api/v1/procedures/share-tokens/*/revoke",
+            module: "PROCEDURES",
+        },
+        GET_SHARE_TOKEN_ACCESS_LOGS: {
+            method: "GET",
+            apiPath: "/api/v1/procedures/share-tokens/*/access-logs",
+            module: "PROCEDURES",
+        },
+        SEND_SHARE_EMAIL: {
+            method: "POST",
+            apiPath: "/api/v1/procedures/share-tokens/*/send-email",
+            module: "PROCEDURES",
+        },
     },
     /* ===================== EMPLOYEE CAREER PATH ===================== */
     EMPLOYEE_CAREER_PATHS: {
@@ -1030,6 +1070,7 @@ export const ALL_PERMISSIONS = {
             module: "POSITION_CHART",
         },
     },
+
 };
 
 

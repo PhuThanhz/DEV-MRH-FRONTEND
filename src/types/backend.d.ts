@@ -290,7 +290,9 @@ export interface ICompanyProcedure {
     planYear?: number;
     note?: string;
     version?: number;
-
+    // ===== QR =====
+    qrToken?: string;
+    qrCode?: string;
     // ===== Activation =====
     active: boolean;
 
@@ -1216,7 +1218,9 @@ export interface IDepartmentProcedure {
 
     // ===== Activation =====
     active: boolean;
-
+    // ===== QR =====
+    qrToken?: string;
+    qrCode?: string;
     // ===== Audit =====
     createdAt?: string;
     updatedAt?: string;
@@ -1394,7 +1398,6 @@ export interface IProcedure {
 
     companyCode?: string;
     companyName?: string;
-    companyId?: number;
 
     departmentId?: number;
     departmentName?: string;
@@ -1419,7 +1422,8 @@ export interface IProcedure {
     issuedDate?: string;
     note?: string;
     version?: number;
-
+    qrToken?: string;
+    qrCode?: string;
     userIds?: string[];
     assignedByList?: string[];
 
@@ -1591,4 +1595,55 @@ export interface IShareLogDTO {
 
     action: "SHARE" | "REVOKE";
     sentAt: string;
+}
+/* ===================== PROCEDURE SHARE TOKEN ===================== */
+export type ShareTokenPermission = "VIEW_INFO" | "VIEW_FILE" | "VIEW_ALL";
+
+export interface ICreateShareTokenRequest {
+    procedureType: ProcedureType;
+    pin?: string;
+    autoGeneratePin?: boolean;  // ← THÊM
+    permission: ShareTokenPermission;
+    expiresAt?: string;
+    maxAccessCount?: number;
+}
+
+export interface IResShareTokenDTO {
+    id: number;
+    procedureId: number;
+    procedureType: ProcedureType;
+    token: string;
+    permission: ShareTokenPermission;
+    expiresAt?: string;
+    maxAccessCount?: number;
+    accessCount: number;
+    qrCode?: string; // chỉ có khi mới tạo
+    createdBy?: string;
+    createdAt?: string;
+    isRevoked: boolean;
+    hasPin?: boolean; // ← thêm
+    pin?: string;     // ← thêm
+}
+
+export interface IResPublicProcedureDTO {
+    procedureCode: string;
+    procedureName: string;
+    status?: string;
+    version?: number;
+    issuedDate?: string;
+    departmentName?: string;
+    sectionName?: string;
+    note?: string;
+    fileUrls?: string[];       // null nếu VIEW_INFO
+    allowDownload?: boolean;   // true chỉ khi VIEW_ALL
+    accessCount?: number;
+    maxAccessCount?: number;
+    expiresAt?: string;
+}
+
+export interface IRequirePinResponse {
+    requirePin: boolean;
+}
+export interface ISendShareEmailRequest {
+    email: string;
 }

@@ -6,6 +6,7 @@ import HeaderAdmin from "./header.admin";
 import { useAppSelector } from "@/redux/hooks";
 import NotPermitted from "@/components/share/not-permitted";
 import Loading from "@/components/common/loading/loading";
+import QrScannerModal from "@/components/common/qr/QrScannerModal";
 
 const { Content } = Layout;
 
@@ -14,6 +15,7 @@ const LayoutAdmin = () => {
     const [collapsed, setCollapsed] = useState(false);
     const [activeMenu, setActiveMenu] = useState("");
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [openScanner, setOpenScanner] = useState(false);
 
     const { isAuthenticated, isLoading, user } = useAppSelector(
         (state) => state.account
@@ -24,6 +26,12 @@ const LayoutAdmin = () => {
     useEffect(() => {
         setActiveMenu(location.pathname);
     }, [location]);
+
+    useEffect(() => {
+        const handler = () => setOpenScanner(true);
+        window.addEventListener("openScannerModal", handler);
+        return () => window.removeEventListener("openScannerModal", handler);
+    }, []);
 
     if (isLoading) return <Loading />;
 
@@ -71,6 +79,10 @@ const LayoutAdmin = () => {
                 </Content>
             </Layout>
 
+            <QrScannerModal
+                open={openScanner}
+                onClose={() => setOpenScanner(false)}
+            />
         </Layout>
     );
 };

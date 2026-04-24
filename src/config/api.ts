@@ -13,7 +13,9 @@ import type {
     IJobDescription, IDepartmentMissionTree,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
-    , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO
+    , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO, ICreateShareTokenRequest,
+    IResShareTokenDTO,
+    IResPublicProcedureDTO,
 
 } from '@/types/backend';
 
@@ -1740,5 +1742,63 @@ export const callFetchReceivedShareLog = () => {
 export const callFetchAllShareLog = (query: string) => {
     return axios.get<IBackendRes<IModelPaginate<IShareLogDTO>>>(
         `/api/v1/procedures/share-log/all?${query}`
+    );
+};
+/* ===================== PROCEDURE SHARE TOKEN ===================== */
+
+// Tạo share token
+export const callCreateShareToken = (
+    procedureId: number,
+    data: ICreateShareTokenRequest
+) => {
+    return axios.post<IBackendRes<IResShareTokenDTO>>(
+        `/api/v1/procedures/${procedureId}/share-tokens`,
+        data
+    );
+};
+
+// Danh sách share token của 1 quy trình
+export const callFetchShareTokens = (
+    procedureId: number,
+    procedureType: string
+) => {
+    return axios.get<IBackendRes<IResShareTokenDTO[]>>(
+        `/api/v1/procedures/${procedureId}/share-tokens`,
+        { params: { procedureType } }
+    );
+};
+
+// Thu hồi share token
+export const callRevokeShareToken = (tokenId: number) => {
+    return axios.patch<IBackendRes<void>>(
+        `/api/v1/procedures/share-tokens/${tokenId}/revoke`
+    );
+};
+
+// Public view — không cần JWT
+export const callPublicViewProcedure = (token: string) => {
+    return axios.get<IBackendRes<IResPublicProcedureDTO | { requirePin: boolean }>>(
+        `/public/view/${token}`
+    );
+};
+
+// Public verify PIN — không cần JWT
+export const callPublicVerifyPin = (token: string, pin: string) => {
+    return axios.post<IBackendRes<IResPublicProcedureDTO>>(
+        `/public/view/${token}/verify-pin`,
+        { pin }
+    );
+};
+// Lịch sử truy cập của 1 share token
+export const callFetchShareTokenAccessLogs = (tokenId: number) => {
+    return axios.get<IBackendRes<any[]>>(
+        `/api/v1/procedures/share-tokens/${tokenId}/access-logs`
+    );
+};
+// Gửi email chia sẻ token (PIN + QR)
+export const callSendShareEmail = (tokenId: number, email: string) => {
+    return axios.post<IBackendRes<void>>(
+        `/api/v1/procedures/share-tokens/${tokenId}/send-email`,
+        { email }
     );
 };

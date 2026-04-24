@@ -6,8 +6,8 @@ import {
     AuditOutlined,
 } from "@ant-design/icons";
 
-import ProcedureTable from "./ProcedureTable";
-import ShareLogTable from "../components/ShareLogTable";
+import ProcedureTable from "./table/ProcedureTable";
+import ShareLogTable from "./table/ShareLogTable";
 import ViewProcedure from "../view.procedure";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";

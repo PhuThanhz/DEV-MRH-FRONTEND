@@ -20,6 +20,13 @@ import {
     callFetchSentShareLog,
     callFetchReceivedShareLog,
     callFetchAllShareLog,
+    callCreateShareToken,
+    callFetchShareTokens,
+    callRevokeShareToken,
+    callPublicViewProcedure,
+    callPublicVerifyPin,
+    callFetchShareTokenAccessLogs,
+    callSendShareEmail
 } from "@/config/api";
 import type {
     IModelPaginate,
@@ -29,6 +36,9 @@ import type {
     ProcedureType,
     IAccessDTO,
     IShareLogDTO,
+    ICreateShareTokenRequest,
+    IResShareTokenDTO,
+    IResPublicProcedureDTO,
 } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
@@ -379,6 +389,141 @@ export const useAllShareLogQuery = (query: string, enabled = true) => {
         queryFn: async () => {
             const res = await callFetchAllShareLog(query);
             return (res.data as IModelPaginate<IShareLogDTO>) ?? { result: [], meta: {} };
+        },
+    });
+};
+/* ===================== FETCH SHARE TOKENS ===================== */
+export const useShareTokensQuery = (
+    procedureId?: number,
+    procedureType?: string,
+    enabled = true
+) => {
+    return useQuery({
+        queryKey: ["share-tokens", procedureId, procedureType],
+        enabled: !!procedureId && !!procedureType && enabled,
+        queryFn: async () => {
+            const res = await callFetchShareTokens(procedureId!, procedureType!);
+            return (res.data as IResShareTokenDTO[]) ?? [];
+        },
+    });
+};
+
+/* ===================== CREATE SHARE TOKEN ===================== */
+export const useCreateShareTokenMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            procedureId,
+            data,
+        }: {
+            procedureId: number;
+            data: ICreateShareTokenRequest;
+        }) => {
+            const res = await callCreateShareToken(procedureId, data);
+            if (!res?.data) {
+                throw new Error(res?.message || "Không thể tạo link chia sẻ");
+            }
+            return res.data as IResShareTokenDTO;
+        },
+        onSuccess: (_, variables) => {
+            notify.created("Tạo link chia sẻ thành công");
+            queryClient.invalidateQueries({
+                queryKey: ["share-tokens", variables.procedureId],
+            });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi tạo link chia sẻ");
+        },
+    });
+};
+
+/* ===================== REVOKE SHARE TOKEN ===================== */
+export const useRevokeShareTokenMutation = (procedureId?: number) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (tokenId: number) => {
+            const res = await callRevokeShareToken(tokenId);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Thu hồi thất bại");
+            }
+            return res;
+        },
+        onSuccess: () => {
+            notify.deleted("Thu hồi link chia sẻ thành công");
+            queryClient.invalidateQueries({
+                queryKey: ["share-tokens", procedureId],
+            });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi thu hồi link chia sẻ");
+        },
+    });
+};
+
+/* ===================== PUBLIC VIEW (không cần JWT) ===================== */
+export const usePublicViewQuery = (token?: string) => {
+    return useQuery({
+        queryKey: ["public-view", token],
+        enabled: !!token,
+        retry: false,
+        queryFn: async () => {
+            const res = await callPublicViewProcedure(token!);
+            if (!res?.data) throw new Error("Không tìm thấy quy trình");
+            return res.data;
+        },
+    });
+};
+
+/* ===================== PUBLIC VERIFY PIN ===================== */
+export const usePublicVerifyPinMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ token, pin }: { token: string; pin: string }) => {
+            const res = await callPublicVerifyPin(token, pin);
+            if (!res?.data) {
+                throw new Error(res?.message || "PIN không đúng");
+            }
+            return res.data as IResPublicProcedureDTO;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["public-view", variables.token],
+            });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Mã PIN không đúng");
+        },
+    });
+};
+/* ===================== ACCESS LOGS CỦA SHARE TOKEN ===================== */
+export const useShareTokenAccessLogsQuery = (tokenId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["share-token-access-logs", tokenId],
+        enabled: !!tokenId && enabled,
+        queryFn: async () => {
+            const res = await callFetchShareTokenAccessLogs(tokenId!);
+            return (res.data as any[]) ?? [];
+        },
+    });
+};
+/* ===================== GỬI EMAIL SHARE TOKEN ===================== */
+export const useSendShareEmailMutation = () => {
+    return useMutation({
+        mutationFn: async ({ tokenId, email }: { tokenId: number; email: string }) => {
+            const res = await callSendShareEmail(tokenId, email);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Gửi email thất bại");
+            }
+            return res;
+        },
+        onSuccess: () => {
+            notify.updated("Gửi email thành công!");
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi gửi email");
         },
     });
 };
