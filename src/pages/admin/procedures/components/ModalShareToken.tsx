@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-    Modal, Form, Select, Input, InputNumber,
+    Modal, Form, Input, InputNumber,
     DatePicker, Button, Table, Tag, Popconfirm,
     Image, Typography, Tooltip, Flex, Divider, Badge, message, Switch,
 } from "antd";
@@ -8,8 +8,9 @@ import {
     ShareAltOutlined, StopOutlined, QrcodeOutlined,
     EyeOutlined, CalendarOutlined, SafetyOutlined,
     PlusOutlined, DownloadOutlined, GlobalOutlined,
-    LaptopOutlined, CaretDownOutlined, CaretRightOutlined,
+    CaretDownOutlined, CaretRightOutlined,
     MailOutlined, SendOutlined,
+    MobileOutlined, LaptopOutlined, TabletOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { IProcedure, ProcedureType, IResShareTokenDTO } from "@/types/backend";
@@ -23,42 +24,119 @@ import {
 
 const { Text } = Typography;
 
-const PERMISSION_LABELS: Record<string, { label: string; color: string }> = {
-    VIEW_INFO: { label: "Xem thông tin", color: "blue" },
-    VIEW_FILE: { label: "Xem file", color: "cyan" },
-    VIEW_ALL: { label: "Xem + Tải file", color: "green" },
-};
+// =====================================================
+// PARSE USER AGENT — cải thiện độ chính xác
+// Thứ tự quan trọng: kiểm tra token đặc thù trước
+// =====================================================
+type DeviceType = "mobile" | "tablet" | "desktop";
+
+interface ParsedUA {
+    browser: string;
+    os: string;
+    deviceType: DeviceType;
+}
+
+function parseUserAgentDetail(ua: string): ParsedUA {
+    if (!ua) return { browser: "Không rõ", os: "Không rõ", deviceType: "desktop" };
+
+    // ── OS detection (thứ tự quan trọng) ──
+    let os = "Không rõ";
+    let deviceType: DeviceType = "desktop";
+
+    if (/iPad/.test(ua)) {
+        os = "iPadOS";  
+        deviceType = "tablet";
+    } else if (/iPhone/.test(ua)) {
+        os = "iOS";
+        deviceType = "mobile";
+    } else if (/Android/.test(ua)) {
+        // Android tablet thường không có "Mobile" trong UA
+        deviceType = /Mobile/.test(ua) ? "mobile" : "tablet";
+        const m = ua.match(/Android\s([\d.]+)/);
+        os = `Android ${m?.[1] ?? ""}`.trim();
+    } else if (/Windows NT/.test(ua)) {
+        const versions: Record<string, string> = {
+            "10.0": "10/11", "6.3": "8.1", "6.2": "8",
+            "6.1": "7", "6.0": "Vista", "5.1": "XP",
+        };
+        const m = ua.match(/Windows NT ([\d.]+)/);
+        const ver = versions[m?.[1] ?? ""] ?? "";
+        os = ver ? `Windows ${ver}` : "Windows";
+        deviceType = "desktop";
+    } else if (/Mac OS X/.test(ua)) {
+        // macOS vs iOS — nếu không có iPhone/iPad thì là Mac
+        const m = ua.match(/Mac OS X ([\d_]+)/);
+        const ver = m?.[1]?.replace(/_/g, ".") ?? "";
+        os = ver ? `macOS ${ver}` : "macOS";
+        deviceType = "desktop";
+    } else if (/CrOS/.test(ua)) {
+        os = "ChromeOS";
+        deviceType = "desktop";
+    } else if (/Linux/.test(ua)) {
+        os = "Linux";
+        deviceType = "desktop";
+    }
+
+    // ── Browser detection (thứ tự quan trọng) ──
+    let browser = "Trình duyệt khác";
+
+    if (/EdgA?\//.test(ua)) {
+        // Edge Android / Edge desktop
+        const m = ua.match(/Edg(?:A)?\/\s*([\d.]+)/);
+        browser = `Edge ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/OPR\//.test(ua) || /Opera\//.test(ua)) {
+        const m = ua.match(/OPR\/([\d.]+)/);
+        browser = `Opera ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/FxiOS\//.test(ua)) {
+        // Firefox on iOS
+        const m = ua.match(/FxiOS\/([\d.]+)/);
+        browser = `Firefox ${m?.[1]?.split(".")[0] ?? ""} (iOS)`;
+    } else if (/Firefox\//.test(ua)) {
+        const m = ua.match(/Firefox\/([\d.]+)/);
+        browser = `Firefox ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/CriOS\//.test(ua)) {
+        // Chrome on iOS
+        const m = ua.match(/CriOS\/([\d.]+)/);
+        browser = `Chrome ${m?.[1]?.split(".")[0] ?? ""} (iOS)`;
+    } else if (/SamsungBrowser\//.test(ua)) {
+        const m = ua.match(/SamsungBrowser\/([\d.]+)/);
+        browser = `Samsung Browser ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) {
+        const m = ua.match(/Chrome\/([\d.]+)/);
+        browser = `Chrome ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/Chromium\//.test(ua)) {
+        const m = ua.match(/Chromium\/([\d.]+)/);
+        browser = `Chromium ${m?.[1]?.split(".")[0] ?? ""}`;
+    } else if (/Version\/[\d.]+ .*Safari/.test(ua)) {
+        // Safari — phải check sau Chrome vì Safari UA cũng chứa "Safari"
+        const m = ua.match(/Version\/([\d.]+)/);
+        browser = `Safari ${m?.[1]?.split(".")[0] ?? ""}`;
+    }
+
+    return { browser, os, deviceType };
+}
 
 function parseUserAgent(ua: string): string {
     if (!ua) return "Không rõ";
-    let browser = "Trình duyệt khác";
-    let os = "";
-    if (ua.includes("Chrome") && !ua.includes("Edg") && !ua.includes("OPR")) {
-        const m = ua.match(/Chrome\/([\d.]+)/);
-        browser = `Chrome ${m?.[1]?.split(".")[0] ?? ""}`;
-    } else if (ua.includes("Firefox")) {
-        const m = ua.match(/Firefox\/([\d.]+)/);
-        browser = `Firefox ${m?.[1]?.split(".")[0] ?? ""}`;
-    } else if (ua.includes("Safari") && !ua.includes("Chrome")) {
-        const m = ua.match(/Version\/([\d.]+)/);
-        browser = `Safari ${m?.[1]?.split(".")[0] ?? ""}`;
-    } else if (ua.includes("Edg")) {
-        const m = ua.match(/Edg\/([\d.]+)/);
-        browser = `Edge ${m?.[1]?.split(".")[0] ?? ""}`;
-    } else if (ua.includes("OPR") || ua.includes("Opera")) {
-        browser = "Opera";
-    }
-    if (ua.includes("Windows NT")) os = "Windows";
-    else if (ua.includes("Mac OS X")) os = "macOS";
-    else if (ua.includes("Android")) os = "Android";
-    else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
-    else if (ua.includes("Linux")) os = "Linux";
-    return os ? `${browser} · ${os}` : browser;
+    const { browser, os } = parseUserAgentDetail(ua);
+    return os && os !== "Không rõ" ? `${browser} · ${os}` : browser;
+}
+
+function getDeviceIcon(ua: string) {
+    if (!ua) return <LaptopOutlined style={{ color: "#6b7280", fontSize: 12 }} />;
+    const { deviceType } = parseUserAgentDetail(ua);
+    if (deviceType === "mobile")
+        return <MobileOutlined style={{ color: "#6b7280", fontSize: 12 }} />;
+    if (deviceType === "tablet")
+        return <TabletOutlined style={{ color: "#6b7280", fontSize: 12 }} />;
+    return <LaptopOutlined style={{ color: "#6b7280", fontSize: 12 }} />;
 }
 
 function parseIp(ip: string): string {
     if (!ip) return "—";
     if (ip === "0:0:0:0:0:0:0:1" || ip === "::1" || ip === "127.0.0.1") return "localhost";
+    // Rút gọn IPv6 nếu quá dài
+    if (ip.includes(":") && ip.length > 20) return ip.slice(0, 20) + "…";
     return ip;
 }
 
@@ -82,7 +160,7 @@ const ExpandedRow = ({ token, procedureCode }: {
         {
             title: "Địa chỉ IP",
             dataIndex: "ipAddress",
-            width: 140,
+            width: 150,
             render: (v: string) => (
                 <Flex align="center" gap={5}>
                     <GlobalOutlined style={{ color: "#6b7280", fontSize: 12 }} />
@@ -97,11 +175,21 @@ const ExpandedRow = ({ token, procedureCode }: {
             dataIndex: "userAgent",
             render: (v: string) => {
                 if (!v) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
+                const { browser, os, deviceType } = parseUserAgentDetail(v);
+                const deviceLabel = deviceType === "mobile"
+                    ? "Di động" : deviceType === "tablet" ? "Máy tính bảng" : "Máy tính";
                 return (
                     <Tooltip title={v} placement="topLeft">
                         <Flex align="center" gap={5}>
-                            <LaptopOutlined style={{ color: "#6b7280", fontSize: 12 }} />
-                            <Text style={{ fontSize: 12 }}>{parseUserAgent(v)}</Text>
+                            {getDeviceIcon(v)}
+                            <Flex vertical gap={0}>
+                                <Text style={{ fontSize: 12, lineHeight: "16px" }}>
+                                    {browser}
+                                </Text>
+                                <Text type="secondary" style={{ fontSize: 11, lineHeight: "14px" }}>
+                                    {os} · {deviceLabel}
+                                </Text>
+                            </Flex>
                         </Flex>
                     </Tooltip>
                 );
@@ -197,7 +285,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
     const [newTokenQr, setNewTokenQr] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [expandedKey, setExpandedKey] = useState<number | null>(null);
-    const [autoPin, setAutoPin] = useState(false); // ← THÊM
+    const [autoPin, setAutoPin] = useState(false);
 
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [selectedToken, setSelectedToken] = useState<IResShareTokenDTO | null>(null);
@@ -217,9 +305,6 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
 
     const activeTokenCount = tokens.filter((t) => !t.isRevoked).length;
 
-    // =====================================================
-    // HANDLE CREATE — hỗ trợ autoGeneratePin
-    // =====================================================
     const handleCreate = async () => {
         if (createMutation.isPending) return;
         const values = await form.validateFields();
@@ -229,7 +314,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                 procedureType,
                 autoGeneratePin: autoPin,
                 pin: autoPin ? undefined : (values.pin || undefined),
-                permission: values.permission,
+                // ❌ bỏ permission
                 expiresAt: values.expiresAt ? values.expiresAt.toISOString() : undefined,
                 maxAccessCount: values.maxAccessCount || undefined,
             },
@@ -247,7 +332,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
         setEmailModalOpen(false);
         setSelectedToken(null);
         setEmailInput("");
-        setAutoPin(false); // ← reset khi đóng modal
+        setAutoPin(false);
         form.resetFields();
         onClose();
     };
@@ -270,7 +355,6 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
 
     const handleSendPersonalEmail = (r: IResShareTokenDTO) => {
         const shareUrl = `${window.location.origin}/public/view/${r.token}`;
-        const permission = PERMISSION_LABELS[r.permission]?.label ?? r.permission;
         const pin = r.pin ? `Mã PIN: ${r.pin}\n` : "";
         const expires = r.expiresAt
             ? `Hết hạn: ${dayjs(r.expiresAt).format("DD/MM/YYYY")}`
@@ -280,7 +364,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
             `[Lotus HRM] Chia sẻ quy trình — ${procedure?.procedureCode}`
         );
         const body = encodeURIComponent(
-            `Xin chào,\n\nBạn được chia sẻ quyền xem quy trình trên hệ thống Lotus HRM.\n\n━━━━━━━━━━━━━━━━━━━━\nQuyền truy cập : ${permission}\n${pin}${expires}\n━━━━━━━━━━━━━━━━━━━━\n\nLink truy cập: ${shareUrl}\n\nLưu ý: Link và mã PIN chỉ dành riêng cho bạn, vui lòng không chia sẻ cho người khác.\n\nTrân trọng,\nLotus HRM`
+            `Xin chào,\n\nBạn được chia sẻ quyền xem quy trình trên hệ thống Lotus HRM.\n\n━━━━━━━━━━━━━━━━━━━━\n${pin}${expires}\n━━━━━━━━━━━━━━━━━━━━\n\nLink truy cập: ${shareUrl}\n\nLưu ý: Link và mã PIN chỉ dành riêng cho bạn, vui lòng không chia sẻ cho người khác.\n\nTrân trọng,\nLotus HRM`
         );
         window.open(
             `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`,
@@ -303,15 +387,6 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                     onClick={() => toggleExpand(r.id)}
                 />
             ),
-        },
-        {
-            title: "Quyền",
-            dataIndex: "permission",
-            width: 135,
-            render: (v: string) => {
-                const p = PERMISSION_LABELS[v] ?? { label: v, color: "default" };
-                return <Tag color={p.color} style={{ margin: 0 }}>{p.label}</Tag>;
-            },
         },
         {
             title: "Hết hạn",
@@ -451,7 +526,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 setEmailModalOpen(false);
                                 setSelectedToken(null);
                                 setEmailInput("");
-                                setAutoPin(false); // ← reset khi toggle form
+                                setAutoPin(false);
                             }}
                             style={showForm ? {} : {
                                 background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
@@ -464,7 +539,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                         </Button>
                     </Flex>
                 }
-                width={1000}
+                width={900}
                 centered
                 destroyOnClose
                 styles={{ body: { paddingTop: 8 } }}
@@ -478,24 +553,8 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                         marginBottom: 16,
                     }}>
                         <Form form={form} layout="vertical">
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-                                <Form.Item
-                                    name="permission"
-                                    label="Quyền xem"
-                                    rules={[{ required: true, message: "Chọn quyền xem" }]}
-                                >
-                                    <Select placeholder="Chọn quyền truy cập">
-                                        {Object.entries(PERMISSION_LABELS).map(([value, { label }]) => (
-                                            <Select.Option key={value} value={value}>
-                                                <Flex align="center" gap={6}><EyeOutlined />{label}</Flex>
-                                            </Select.Option>
-                                        ))}
-                                    </Select>
-                                </Form.Item>
-
-                                {/* =====================================================
-                                    FIELD PIN — hỗ trợ tự nhập hoặc tự sinh
-                                ===================================================== */}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0 16px" }}>
+                                {/* PIN */}
                                 <Form.Item
                                     name="pin"
                                     label={
@@ -524,6 +583,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                     />
                                 </Form.Item>
 
+                                {/* Ngày hết hạn */}
                                 <Form.Item name="expiresAt" label="Ngày hết hạn (tuỳ chọn)">
                                     <DatePicker
                                         style={{ width: "100%" }}
@@ -534,6 +594,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                     />
                                 </Form.Item>
 
+                                {/* Giới hạn lượt xem */}
                                 <Form.Item name="maxAccessCount" label="Giới hạn lượt xem (tuỳ chọn)">
                                     <InputNumber
                                         min={1}
@@ -669,9 +730,6 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 Nội dung sẽ được gửi kèm trong mail
                             </Text>
                             <Flex gap={8} wrap="wrap">
-                                <Tag color={PERMISSION_LABELS[selectedToken.permission]?.color}>
-                                    {PERMISSION_LABELS[selectedToken.permission]?.label}
-                                </Tag>
                                 {selectedToken.pin ? (
                                     <Tag color="orange" style={{ fontFamily: "monospace", fontWeight: 700 }}>
                                         PIN: {selectedToken.pin}

@@ -1597,13 +1597,11 @@ export interface IShareLogDTO {
     sentAt: string;
 }
 /* ===================== PROCEDURE SHARE TOKEN ===================== */
-export type ShareTokenPermission = "VIEW_INFO" | "VIEW_FILE" | "VIEW_ALL";
 
 export interface ICreateShareTokenRequest {
     procedureType: ProcedureType;
     pin?: string;
     autoGeneratePin?: boolean;  // ← THÊM
-    permission: ShareTokenPermission;
     expiresAt?: string;
     maxAccessCount?: number;
 }
@@ -1613,7 +1611,6 @@ export interface IResShareTokenDTO {
     procedureId: number;
     procedureType: ProcedureType;
     token: string;
-    permission: ShareTokenPermission;
     expiresAt?: string;
     maxAccessCount?: number;
     accessCount: number;

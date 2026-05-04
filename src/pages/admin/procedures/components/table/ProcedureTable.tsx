@@ -1,47 +1,18 @@
-import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Tooltip } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, LockOutlined } from "@ant-design/icons"; import type { ProColumns, ActionType } from "@ant-design/pro-components";
-import queryString from "query-string";
-import dayjs from "dayjs";
+import { Button, Modal, Image } from "antd";
+import { DownloadOutlined, LockOutlined } from "@ant-design/icons";
+import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
 
 import DataTable from "@/components/common/data-table";
-import SearchFilter from "@/components/common/filter/SearchFilter";
-import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
-import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
-import type { FilterField } from "@/components/common/filter/AdvancedFilterSelect";
-import {
-    useCompanyProceduresWithFilterQuery,
-    useDepartmentProceduresWithFilterQuery,
-    useConfidentialProceduresWithFilterQuery,
-} from "@/hooks/useProcedure";
 import ModalProcedure from "../../modal.procedure";
 import ModalRevise from "../modal.revise";
 import ViewProcedure from "../../view.procedure";
-import { Dropdown } from "antd";
-import { MoreOutlined } from "@ant-design/icons";
-import {
-    useDeleteProcedureMutation,
-} from "@/hooks/useProcedure";
-import useAccess from "@/hooks/useAccess";
-import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
-import { Modal, Image, Button } from "antd";
 import ModalShareToken from "../ModalShareToken";
-import {
-    callFetchCompany,
-    callFetchDepartmentsByCompany,
-    callFetchSectionsByDepartment,
-} from "@/config/api";
-import Access from "@/components/share/access";
-import type { IProcedure, ProcedureType, ICompany, IDepartment, ISection } from "@/types/backend";
-import { PAGINATION_CONFIG } from "@/config/pagination";
-import { ALL_PERMISSIONS } from "@/config/permissions";
+import ModalPrintQR from "../ModalPrintQR";
 
-const statusMap: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
-    TERMINATED: { label: "Hết hiệu lực", color: "red" },
-};
+import { useProcedureTable } from "./useProcedureTable";
+import { buildProcedureColumns } from "./procedureColumns";
+import ProcedureToolbar from "./ProcedureToolbar";
+import type { IProcedure, ProcedureType } from "@/types/backend";
 
 interface IProps {
     type: ProcedureType;
@@ -50,591 +21,60 @@ interface IProps {
 }
 
 const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
-    const tableRef = useRef<ActionType>(null);
-    const isAdmin = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_ALL);
-    const [openQrModal, setOpenQrModal] = useState(false);
-    const [openShareModal, setOpenShareModal] = useState(false);
-    const [selectedProcedure, setSelectedProcedure] = useState<IProcedure | null>(null);
-    const [openModal, setOpenModal] = useState(false);
-    const [openView, setOpenView] = useState(false);
-    const [openRevise, setOpenRevise] = useState(false);
-    const [dataInit, setDataInit] = useState<IProcedure | null>(null);
+    const ctx = useProcedureTable({ type, companyId, departmentId });
 
-    const [statusFilter, setStatusFilter] = useState<string | null>(null);
-    const [createdAtFilter, setCreatedAtFilter] = useState<string | null>(null);
-    const [searchValue, setSearchValue] = useState("");
-    const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(companyId ?? null);
-    const [departmentIdFilter, setDepartmentIdFilter] = useState<number | null>(departmentId ?? null);
-    const [sectionIdFilter, setSectionIdFilter] = useState<number | null>(null);
-    const [planYearFilter, setPlanYearFilter] = useState<number | null>(null);
-    const [resetSignal, setResetSignal] = useState(0);
-
-    const [query, setQuery] = useState(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
-    );
-
-    const companyQuery = useCompanyProceduresWithFilterQuery(
-        type === "COMPANY" ? query : ""
-    );
-    const departmentQuery = useDepartmentProceduresWithFilterQuery(
-        type === "DEPARTMENT" ? query : ""
-    );
-    const confidentialQuery = useConfidentialProceduresWithFilterQuery(
-        type === "CONFIDENTIAL" ? query : ""
-    );
-
-    const { data, isFetching, refetch } =
-        type === "COMPANY"
-            ? companyQuery
-            : type === "DEPARTMENT"
-                ? departmentQuery
-                : confidentialQuery;
-
-    const deleteMutation = useDeleteProcedureMutation(type);
-
-    const meta = data?.meta ?? {
-        page: PAGINATION_CONFIG.DEFAULT_PAGE,
-        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        total: 0,
-    };
-    const procedures = data?.result ?? [];
-
-    const buildFilters = (
-        search: string,
-        status: string | null,
-        createdAt: string | null,
-        cmpId: number | null,
-        deptId: number | null,
-        sectId: number | null,
-        planYear: number | null,
-    ) => {
-        const parts: string[] = [];
-
-        // ✅ Phân biệt path theo type
-        const companyPath = type === "DEPARTMENT"
-            ? "departments.company.id"
-            : "department.company.id";
-        const deptPath = type === "DEPARTMENT"
-            ? "departments.id"
-            : "department.id";
-
-        if (companyId) parts.push(`${companyPath}:${companyId}`);
-        if (departmentId) parts.push(`${deptPath}:${departmentId}`);
-        if (search) parts.push(`procedureName~'${search}'`);
-        if (status) parts.push(`status='${status}'`);
-        if (createdAt) parts.push(createdAt);
-        if (!companyId && cmpId) parts.push(`${companyPath}:${cmpId}`);
-        if (!departmentId && deptId) parts.push(`${deptPath}:${deptId}`);
-        if (sectId) parts.push(`section.id:${sectId}`);
-        if (planYear) parts.push(`planYear=${planYear}`);
-        return parts;
-    };
-
-    useEffect(() => {
-        const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
-        };
-        const filters = buildFilters(
-            searchValue, statusFilter, createdAtFilter,
-            companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter
-        );
-        if (filters.length > 0) q.filter = filters.join(" and ");
-        setQuery(queryString.stringify(q, { encode: false }));
-    }, [
-        searchValue, statusFilter, createdAtFilter,
-        companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter,
+    const columns = buildProcedureColumns({
         type, companyId, departmentId,
-    ]);
-
-    const buildQuery = (params: any, sort: any) => {
-        const q: any = {
-            page: params.current,
-            size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        };
-        const filters = buildFilters(
-            searchValue, statusFilter, createdAtFilter,
-            companyIdFilter, departmentIdFilter, sectionIdFilter, planYearFilter
-        );
-        if (filters.length > 0) q.filter = filters.join(" and ");
-        let sortBy = "sort=createdAt,desc";
-        if (sort?.procedureName)
-            sortBy = sort.procedureName === "ascend"
-                ? "sort=procedureName,asc"
-                : "sort=procedureName,desc";
-        return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
-    };
-
-    const handleReset = () => {
-        setSearchValue("");
-        setStatusFilter(null);
-        setCreatedAtFilter(null);
-        setCompanyIdFilter(null);
-        setSectionIdFilter(null);
-        setPlanYearFilter(null);
-        setResetSignal((s) => s + 1);
-        refetch();
-    };
-
-    const permission = {
-        view: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.GET_BY_ID
-            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_BY_ID
-                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.GET_BY_ID,
-        update: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.UPDATE
-            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.UPDATE
-                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.UPDATE,
-        revise: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.REVISE
-            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.REVISE
-                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.REVISE,
-        delete: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.DELETE
-            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.DELETE
-                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.DELETE,
-        create: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
-            : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
-                : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
-
-    };
-
-    const columns: ProColumns<IProcedure>[] = [
-        {
-            title: "STT",
-            width: 55,
-            align: "center",
-            render: (_, __, index) =>
-                index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10),
-        },
-        {
-            title: "Mã quy trình",
-            dataIndex: "procedureCode",
-            align: "left",
-            width: 160,
-            render: (_, record) => (
-                <Tag color="purple">{record.procedureCode ?? "--"}</Tag>
-            ),
-        },
-        {
-            title: "Mã công ty",
-            dataIndex: "companyCode",
-            align: "center",
-            width: 100,
-            hideInTable: !!companyId || !!departmentId,
-            render: (_, record) => (
-                <Tag color="blue">
-                    {record.departments?.[0]?.companyCode ?? record.companyCode ?? "--"}
-                </Tag>
-            ),
-        },
-        {
-            title: "Công ty",
-            dataIndex: "companyName",
-            align: "left",
-            width: 220,
-            ellipsis: { showTitle: true },
-            hideInTable: !!companyId || !!departmentId,
-            render: (_, record) =>
-                record.departments?.[0]?.companyName ?? record.companyName ?? "--",
-        },
-        {
-            title: "Phòng ban",
-            dataIndex: "departmentName",
-            render: (_, record) => {
-                // DEPARTMENT type → có departments[]
-                if (type === "DEPARTMENT") {
-                    const departments = record.departments ?? [];
-                    if (departments.length === 0) return <Tag color="cyan">--</Tag>;
-                    return (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {departments.map((d) => (
-                                <Tag key={d.id} color="cyan">{d.name}</Tag>
-                            ))}
-                        </div>
-                    );
-                }
-                // COMPANY / CONFIDENTIAL type → dùng departmentName flat
-                return record.departmentName
-                    ? <Tag color="cyan">{record.departmentName}</Tag>
-                    : <Tag color="cyan">--</Tag>;
-            },
-        },
-        {
-            title: "Bộ phận",
-            dataIndex: "sectionName",
-            align: "left",
-            width: 150,
-            hideInTable: true,
-            render: (_, record) => (
-                <Tag color="geekblue">{record.sectionName || "--"}</Tag>
-            ),
-        },
-        {
-            title: "Tên quy trình",
-            dataIndex: "procedureName",
-            sorter: true,
-            align: "left",
-            render: (_, record) => (
-                <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-                    {record.procedureName}
-                </span>
-            ),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            align: "center",
-            width: 140,
-            render: (_, record) => {
-                const s = statusMap[record.status ?? ""] ?? {
-                    label: record.status,
-                    color: "default",
-                };
-                return <Tag color={s.color}>{s.label}</Tag>;
-            },
-        },
-        {
-            title: "Năm KH",
-            dataIndex: "planYear",
-            align: "center",
-            width: 85,
-            hideInTable: true,
-        },
-        {
-            title: "Version",
-            dataIndex: "version",
-            align: "center",
-            width: 80,
-            hideInTable: type === "COMPANY",
-            render: (_, record) => <Tag color="blue">v{record.version ?? 1}</Tag>,
-        },
-        {
-            title: <span style={{ whiteSpace: "nowrap" }}>Ngày ban hành</span>,
-            dataIndex: "issuedDate",
-            align: "center",
-            width: 130,
-            render: (_, record) =>
-                record.issuedDate
-                    ? dayjs(record.issuedDate).format("DD-MM-YYYY")
-                    : "--",
-        },
-        {
-            title: "Người tạo",
-            dataIndex: "createdBy",
-            align: "left",
-            width: 220,
-            hideInTable: type !== "CONFIDENTIAL" || !isAdmin,
-            render: (_, record) => {
-                const name = record.createdByName ?? record.createdBy ?? "—";
-                const email = record.createdBy ?? "";
-
-                return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-
-                        {/* Avatar */}
-                        <div
-                            style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: "50%",
-                                background: "#eef2ff",
-                                color: "#4f46e5",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                flexShrink: 0,
-                            }}
-                        >
-                            {name !== "—" ? name.charAt(0).toUpperCase() : "?"}
-                        </div>
-
-                        {/* Text */}
-                        <div style={{ minWidth: 0 }}>
-                            <div
-                                style={{
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: "#111827",
-                                    lineHeight: "18px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    maxWidth: 140,
-                                }}
-                            >
-                                {name}
-                            </div>
-
-                            <div
-                                style={{
-                                    fontSize: 11,
-                                    color: "#6b7280",
-                                    lineHeight: "16px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    maxWidth: 140,
-                                }}
-                            >
-                                {email || "—"}
-                            </div>
-                        </div>
-                    </div>
-                );
-            },
-        },
-        {
-            title: "QR",
-            align: "center",
-            width: 60,
-            render: (_, record) => (
-                <Tooltip title="Xem mã QR nội bộ" placement="top">
-                    <div
-                        onClick={() => {
-                            setSelectedProcedure(record);
-                            setOpenQrModal(true);
-                        }}
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            cursor: "pointer",
-                            background: "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)",
-                            border: "1.5px solid #ff85c0",
-                            transition: "all 0.2s ease",
-                            boxShadow: "0 1px 4px rgba(255,133,192,0.15)",
-                        }}
-                        onMouseEnter={e => {
-                            const el = e.currentTarget;
-                            el.style.background = "linear-gradient(135deg, #ff4d94 0%, #eb2f7a 100%)";
-                            el.style.boxShadow = "0 4px 12px rgba(235,47,122,0.35)";
-                            el.style.transform = "scale(1.1)";
-                            (el.querySelector("span") as HTMLElement).style.color = "#fff";
-                        }}
-                        onMouseLeave={e => {
-                            const el = e.currentTarget;
-                            el.style.background = "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)";
-                            el.style.boxShadow = "0 1px 4px rgba(255,133,192,0.15)";
-                            el.style.transform = "scale(1)";
-                            (el.querySelector("span") as HTMLElement).style.color = "#eb2f7a";
-                        }}
-                    >
-                        <QrcodeOutlined
-                            style={{
-                                fontSize: 18,
-                                color: "#eb2f7a",
-                                transition: "color 0.2s ease",
-                            }}
-                        />
-                    </div>
-                </Tooltip>
-            ),
-        },
-        {
-            title: "Hành động",
-            align: "center",
-            width: type === "CONFIDENTIAL" ? 120 : 100,
-            fixed: "right",
-            render: (_, record) => {
-                const menuItems = [
-                    {
-                        key: "edit",
-                        icon: <EditOutlined style={{ color: "#fa8c16" }} />,
-                        label: (
-                            <Access permission={permission.update} hideChildren>
-                                <Tooltip title="Chỉnh sửa">
-                                    <span onClick={() => { setDataInit(record); setOpenModal(true); }}>
-                                        Chỉnh sửa
-                                    </span>
-                                </Tooltip>
-                            </Access>
-                        ),
-                    },
-                    {
-                        key: "revise",
-                        icon: (
-                            <Tag color="green" style={{ margin: 0, borderRadius: 6, padding: "0 6px", fontSize: 12 }}>
-                                v{(record.version ?? 1) + 1}
-                            </Tag>
-                        ),
-                        label: (
-                            <Access permission={permission.revise} hideChildren>
-                                <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
-                                    <span onClick={() => { setDataInit(record); setOpenRevise(true); }}>
-                                        Tạo version v{(record.version ?? 1) + 1}
-                                    </span>
-                                </Tooltip>
-                            </Access>
-                        ),
-                    },
-                    {
-                        key: "delete",
-                        icon: <DeleteOutlined style={{ color: "red" }} />,
-                        label: (
-                            <Access permission={permission.delete} hideChildren>
-                                <Popconfirm
-                                    title="Xác nhận xoá quy trình này?"
-                                    onConfirm={() => deleteMutation.mutateAsync(record.id!)}
-                                    okText="Xoá"
-                                    cancelText="Huỷ"
-                                    placement="topRight"
-                                >
-                                    <Tooltip title="Xóa">
-                                        <span style={{ color: "red" }}>Xóa</span>
-                                    </Tooltip>
-                                </Popconfirm>
-                            </Access>
-                        ),
-                    },
-                ];
-
-                return (
-                    <Space size="small">
-                        <Access permission={permission.view} hideChildren>
-                            <Tooltip title="Xem chi tiết">
-                                <EyeOutlined
-                                    style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                    onClick={() => { setDataInit(record); setOpenView(true); }}
-                                />
-                            </Tooltip>
-                        </Access>
-
-
-                        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                            <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
-                        </Dropdown>
-                    </Space>
-                );
-            },
-        },
-    ];
-
-    const filterFields: FilterField[] = [
-        ...(!companyId && !departmentId ? [{
-            key: "companyId",
-            label: "Công ty",
-            asyncOptions: async () => {
-                const res = await callFetchCompany("page=1&size=500&sort=name,asc");
-                const list: ICompany[] = (res?.data as any)?.result ?? [];
-                return list.map((c) => ({ label: c.name, value: c.id, color: "blue" }));
-            },
-        }] as FilterField[] : []),
-
-        ...(!departmentId ? [{
-            key: "departmentId",
-            label: "Phòng ban",
-            ...(companyId
-                ? {
-                    asyncOptions: async () => {
-                        const res = await callFetchDepartmentsByCompany(companyId);
-                        const list: IDepartment[] = (res?.data as any) ?? [];
-                        return list.map((d) => ({ label: d.name, value: d.id, color: "cyan" }));
-                    },
-                }
-                : {
-                    dependsOn: "companyId",
-                    asyncOptions: async (parentCompanyId: number) => {
-                        if (!parentCompanyId) return [];
-                        const res = await callFetchDepartmentsByCompany(parentCompanyId);
-                        const list: IDepartment[] = (res?.data as any) ?? [];
-                        return list.map((d) => ({ label: d.name, value: d.id, color: "cyan" }));
-                    },
-                }),
-        }] as FilterField[] : []),
-
-        {
-            key: "sectionId",
-            label: "Bộ phận",
-            ...(departmentId
-                ? {
-                    asyncOptions: async () => {
-                        const res = await callFetchSectionsByDepartment(departmentId);
-                        const list: ISection[] = (res?.data as any) ?? [];
-                        return list.map((s) => ({ label: s.name, value: s.id, color: "geekblue" }));
-                    },
-                }
-                : {
-                    dependsOn: "departmentId",
-                    asyncOptions: async (parentDeptId: number) => {
-                        if (!parentDeptId) return [];
-                        const res = await callFetchSectionsByDepartment(parentDeptId);
-                        const list: ISection[] = (res?.data as any) ?? [];
-                        return list.map((s) => ({ label: s.name, value: s.id, color: "geekblue" }));
-                    },
-                }),
-        },
-
-        {
-            key: "status",
-            label: "Trạng thái",
-            options: [
-                { label: "Cần xây dựng mới", value: "NEED_CREATE", color: "orange" },
-                { label: "Đang hiệu lực", value: "IN_PROGRESS", color: "green" },
-                { label: "Đang cập nhật", value: "NEED_UPDATE", color: "gold" },
-                { label: "Hết hiệu lực", value: "TERMINATED", color: "red" },
-            ],
-        },
-
-        {
-            key: "planYear",
-            label: "Năm KH",
-            options: Array.from({ length: 10 }, (_, i) => {
-                const year = new Date().getFullYear() - 2 + i;
-                return { label: String(year), value: year, color: "purple" };
-            }),
-        },
-    ];
+        isAdmin: ctx.isAdmin,
+        meta: ctx.meta,
+        permission: ctx.permission,
+        deleteMutation: ctx.deleteMutation,
+        onView: (record) => { ctx.setDataInit(record); ctx.setOpenView(true); },
+        onEdit: (record) => { ctx.setDataInit(record); ctx.setOpenModal(true); },
+        onRevise: (record) => { ctx.setDataInit(record); ctx.setOpenRevise(true); },
+        onQrClick: (record) => { ctx.setSelectedProcedure(record); ctx.setOpenQrModal(true); },
+    });
 
     return (
         <>
-            <div className="flex flex-col gap-3 mb-4">
-                <SearchFilter
-                    searchPlaceholder="Tìm theo tên quy trình..."
-                    addLabel="Thêm quy trình"
-                    showFilterButton={false}
-                    onSearch={setSearchValue}
-                    onReset={handleReset}
-                    onAddClick={() => { setDataInit(null); setOpenModal(true); }}
-                    addPermission={permission.create}
-                />
-                <div className="flex flex-wrap gap-3 items-center">
-                    <AdvancedFilterSelect
-                        resetSignal={resetSignal}
-                        fields={filterFields}
-                        onChange={(filters) => {
-                            setCompanyIdFilter(filters.companyId ?? (companyId ?? null));
-                            setDepartmentIdFilter(filters.departmentId ?? (departmentId ?? null));
-                            setSectionIdFilter(filters.sectionId ?? null);
-                            setStatusFilter(filters.status ?? null);
-                            setPlanYearFilter(filters.planYear ?? null);
-                        }}
-                    />
-                    <DateRangeFilter
-                        fieldName="createdAt"
-                        onChange={(filter) => setCreatedAtFilter(filter)}
-                    />
-                </div>
-            </div>
+            <ProcedureToolbar
+                type={type}
+                companyId={companyId}
+                departmentId={departmentId}
+                printMode={ctx.printMode}
+                selectedCount={ctx.selectedRows.length}
+                resetSignal={ctx.resetSignal}
+                permission={ctx.permission}
+                onSearch={ctx.setSearchValue}
+                onReset={ctx.handleReset}
+                onAddClick={() => { ctx.setDataInit(null); ctx.setOpenModal(true); }}
+                onPrintClick={ctx.handlePrintButtonClick}
+                onExitPrintMode={ctx.handleExitPrintMode}
+                onFilterChange={(filters) => {
+                    ctx.setCompanyIdFilter(filters.companyId ?? (companyId ?? null));
+                    ctx.setDepartmentIdFilter(filters.departmentId ?? (departmentId ?? null));
+                    ctx.setSectionIdFilter(filters.sectionId ?? null);
+                    ctx.setStatusFilter(filters.status ?? null);
+                    ctx.setPlanYearFilter(filters.planYear ?? null);
+                }}
+                onDateRangeChange={ctx.setCreatedAtFilter}
+            />
 
             <DataTable<IProcedure>
-                actionRef={tableRef}
+                actionRef={ctx.tableRef}
                 rowKey="id"
-                loading={isFetching}
+                loading={ctx.isFetching}
                 columns={columns}
-                dataSource={procedures}
+                dataSource={ctx.procedures}
                 scroll={{ x: "max-content" }}
                 request={async (params, sort) => {
-                    const q = buildQuery(params, sort);
-                    setQuery(q);
-                    return { data: procedures, success: true, total: meta.total };
+                    const q = ctx.buildQuery(params, sort);
+                    return { data: ctx.procedures, success: true, total: ctx.meta.total };
                 }}
                 pagination={{
-                    current: meta.page,
-                    pageSize: meta.pageSize,
-                    total: meta.total,
+                    current: ctx.meta.page,
+                    pageSize: ctx.meta.pageSize,
+                    total: ctx.meta.total,
                     showQuickJumper: true,
                     showTotal: (total, range) => (
                         <div style={{ fontSize: 13 }}>
@@ -647,37 +87,41 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                         </div>
                     ),
                 }}
-                rowSelection={false}
+                rowSelection={ctx.printMode ? {
+                    selectedRowKeys: ctx.selectedRows.map(r => r.id!),
+                    onChange: (_, rows) => ctx.setSelectedRows(rows),
+                    preserveSelectedRowKeys: true,
+                } : undefined}
             />
 
+            {/* ── Modals ── */}
             <ModalProcedure
                 defaultType={type}
-                open={openModal}
-                onClose={() => setOpenModal(false)}
-                dataInit={dataInit}
-                refetch={refetch}
+                open={ctx.openModal}
+                onClose={() => ctx.setOpenModal(false)}
+                dataInit={ctx.dataInit}
+                refetch={ctx.refetch}
                 {...(companyId ? { fixedCompanyId: companyId } : {})}
             />
-
             <ModalRevise
                 type={type}
-                open={openRevise}
-                onClose={() => setOpenRevise(false)}
-                dataInit={dataInit}
-                refetch={refetch}
+                open={ctx.openRevise}
+                onClose={() => ctx.setOpenRevise(false)}
+                dataInit={ctx.dataInit}
+                refetch={ctx.refetch}
             />
-
             <ViewProcedure
                 type={type}
-                open={openView}
-                onClose={() => setOpenView(false)}
-                dataInit={dataInit}
-                refetch={refetch}
+                open={ctx.openView}
+                onClose={() => ctx.setOpenView(false)}
+                dataInit={ctx.dataInit}
+                refetch={ctx.refetch}
             />
+
             {/* Modal QR nội bộ */}
             <Modal
-                open={openQrModal}
-                onCancel={() => setOpenQrModal(false)}
+                open={ctx.openQrModal}
+                onCancel={() => ctx.setOpenQrModal(false)}
                 footer={null}
                 closable={false}
                 width={420}
@@ -687,17 +131,14 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     mask: { backdropFilter: "blur(6px)" },
                 }}
             >
-                {selectedProcedure && (
+                {ctx.selectedProcedure && (
                     <>
-                        {/* ── Header ── */}
                         <div style={{
                             background: "linear-gradient(135deg,#f0226e 0%,#ff5fa0 60%,#ff85bc 100%)",
-                            padding: "22px 20px 26px",
-                            position: "relative",
+                            padding: "22px 20px 26px", position: "relative",
                         }}>
-                            {/* Nút đóng */}
                             <button
-                                onClick={() => setOpenQrModal(false)}
+                                onClick={() => ctx.setOpenQrModal(false)}
                                 style={{
                                     position: "absolute", top: 14, right: 14,
                                     width: 32, height: 32,
@@ -709,15 +150,11 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                     outline: "none", lineHeight: 1,
                                 }}
                             >×</button>
-
-                            {/* Icon + Text ngang hàng */}
                             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
                                 <div style={{
-                                    width: 52, height: 52,
-                                    background: "rgba(255,255,255,0.2)",
-                                    borderRadius: 14,
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    flexShrink: 0,
+                                    width: 52, height: 52, background: "rgba(255,255,255,0.2)",
+                                    borderRadius: 14, display: "flex", alignItems: "center",
+                                    justifyContent: "center", flexShrink: 0,
                                 }}>
                                     <QrcodeOutlined style={{ fontSize: 26, color: "white" }} />
                                 </div>
@@ -729,34 +166,28 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                         Mã QR nội bộ
                                     </div>
                                     <div style={{ color: "white", fontSize: 17, fontWeight: 500, lineHeight: 1.35 }}>
-                                        {selectedProcedure.procedureName}
+                                        {ctx.selectedProcedure.procedureName}
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Badge code phía dưới */}
                             <div style={{
                                 display: "inline-flex", alignItems: "center", gap: 5,
                                 background: "white", color: "#e8256b",
-                                fontSize: 13, fontWeight: 600,
-                                padding: "5px 14px", borderRadius: 30,
+                                fontSize: 13, fontWeight: 600, padding: "5px 14px", borderRadius: 30,
                             }}>
                                 <QrcodeOutlined style={{ fontSize: 11 }} />
-                                {selectedProcedure.procedureCode}
+                                {ctx.selectedProcedure.procedureCode}
                             </div>
                         </div>
 
-                        {/* ── Body ── */}
                         <div style={{ padding: 24 }}>
-                            {/* QR image */}
                             <div style={{
-                                border: "1.5px solid #ffe0ee", borderRadius: 20,
-                                padding: 20, display: "flex", alignItems: "center",
-                                justifyContent: "center", marginBottom: 20,
+                                border: "1.5px solid #ffe0ee", borderRadius: 20, padding: 20,
+                                display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20,
                             }}>
-                                {selectedProcedure.qrCode ? (
+                                {ctx.selectedProcedure.qrCode ? (
                                     <Image
-                                        src={`data:image/png;base64,${selectedProcedure.qrCode}`}
+                                        src={`data:image/png;base64,${ctx.selectedProcedure.qrCode}`}
                                         width={190} height={190} preview={false}
                                         style={{ borderRadius: 4, display: "block" }}
                                     />
@@ -768,20 +199,15 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                     }}>Chưa có mã QR</div>
                                 )}
                             </div>
-
-                            {/* Buttons */}
                             <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                                 <Button
                                     icon={<DownloadOutlined />}
-                                    style={{
-                                        flex: 1, height: 42, borderRadius: 14, fontWeight: 500,
-                                        borderColor: "#fcc", color: "#e8256b",
-                                    }}
+                                    style={{ flex: 1, height: 42, borderRadius: 14, fontWeight: 500, borderColor: "#fcc", color: "#e8256b" }}
                                     onClick={() => {
-                                        if (!selectedProcedure.qrCode) return;
+                                        if (!ctx.selectedProcedure?.qrCode) return;
                                         const a = document.createElement("a");
-                                        a.href = `data:image/png;base64,${selectedProcedure.qrCode}`;
-                                        a.download = `QR_${selectedProcedure.procedureCode}.png`;
+                                        a.href = `data:image/png;base64,${ctx.selectedProcedure.qrCode}`;
+                                        a.download = `QR_${ctx.selectedProcedure.procedureCode}.png`;
                                         a.click();
                                     }}
                                 >Tải xuống</Button>
@@ -793,11 +219,9 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                         border: "none", color: "white",
                                         boxShadow: "0 4px 14px rgba(240,34,110,0.3)",
                                     }}
-                                    onClick={() => { setOpenQrModal(false); setOpenShareModal(true); }}
+                                    onClick={() => { ctx.setOpenQrModal(false); ctx.setOpenShareModal(true); }}
                                 >Chia sẻ công khai</Button>
                             </div>
-
-                            {/* Note */}
                             <div style={{
                                 display: "flex", alignItems: "center", gap: 8,
                                 padding: "11px 14px", background: "#fff7fa",
@@ -813,12 +237,19 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 )}
             </Modal>
 
-            {/* Placeholder — Bước 3 sẽ thay bằng ModalShareToken */}
             <ModalShareToken
-                open={openShareModal}
-                onClose={() => setOpenShareModal(false)}
-                procedure={selectedProcedure}
+                open={ctx.openShareModal}
+                onClose={() => ctx.setOpenShareModal(false)}
+                procedure={ctx.selectedProcedure}
                 procedureType={type}
+            />
+            <ModalPrintQR
+                open={ctx.openPrintModal}
+                onClose={() => {
+                    ctx.setOpenPrintModal(false);
+                    ctx.handleExitPrintMode();
+                }}
+                procedures={ctx.selectedRows}
             />
         </>
     );
