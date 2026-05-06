@@ -16,7 +16,6 @@ export const ALL_PERMISSIONS = {
             module: "DASHBOARD",
         },
     },
-
     /* ===================== PERMISSIONS ===================== */
     PERMISSIONS: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/permissions", module: "PERMISSIONS" },
@@ -24,7 +23,6 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/permissions", module: "PERMISSIONS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/permissions/{id}", module: "PERMISSIONS" },
     },
-
     /* ===================== ROLES ===================== */
     ROLES: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/roles", module: "ROLES" },
@@ -32,7 +30,6 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/roles", module: "ROLES" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/roles/{id}", module: "ROLES" },
     },
-
     /* ===================== USERS ===================== */
     USERS: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/users", module: "USERS" },
@@ -718,7 +715,12 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/job-position-nodes",
             module: "ORG_CHARTS",
         },
-
+        // ⭐ THÊM
+        BULK_CREATE_TREE: {
+            method: "POST",
+            apiPath: "/api/v1/job-position-nodes/bulk-tree",
+            module: "ORG_CHARTS",
+        },
         DELETE: {
             method: "DELETE",
             apiPath: "/api/v1/job-position-nodes/{id}",

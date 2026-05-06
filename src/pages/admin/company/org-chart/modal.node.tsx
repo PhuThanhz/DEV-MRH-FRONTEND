@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Modal, Form, Input, Select, Switch } from "antd";
+import { createPortal } from "react-dom";
+import { Modal, Form, Input, Select, Switch, Tooltip } from "antd";
 import {
     UserOutlined,
     TagOutlined,
     ApartmentOutlined,
     FileTextOutlined,
-    ClusterOutlined,
     ThunderboltOutlined,
     PlusOutlined,
     DeleteOutlined,
+    StarOutlined,
 } from "@ant-design/icons";
 
 // ─────────────────────────────────────────────────────────
@@ -36,8 +37,8 @@ interface BulkRow {
     title: string;
     levelCode: string;
     holderName: string;
-    parentIndex: number | null;       // index dòng trong bảng
-    existingParentId: number | null;  // id thực từ DB (node hiện có)
+    parentIndex: number | null;
+    existingParentId: number | null;
 }
 
 interface Props {
@@ -58,91 +59,498 @@ let _uid = 0;
 const uid = () => `r${++_uid}`;
 
 const emptyRow = (overrides: Partial<BulkRow> = {}): BulkRow => ({
-    id: uid(), title: "", levelCode: "", holderName: "", parentIndex: null, existingParentId: null, ...overrides,
+    id: uid(),
+    title: "",
+    levelCode: "",
+    holderName: "",
+    parentIndex: null,
+    existingParentId: null,
+    ...overrides,
 });
 
-const DEPTH_PALETTE = [
-    { dot: "#e8637a" }, { dot: "#3b82f6" }, { dot: "#10b981" },
-    { dot: "#f59e0b" }, { dot: "#8b5cf6" }, { dot: "#ec4899" },
-];
+const DEPTH_COLORS = ["#e8637a", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"];
 
-// MỚI
-const getDepth = (rows: BulkRow[], rowIndex: number, memo = new Map<number, number>()): number => {
-    if (memo.has(rowIndex)) return memo.get(rowIndex)!;
-    const row = rows[rowIndex];
-    // Nếu cha là node hiện có (DB) → depth = 1
-    if (row.existingParentId != null) { memo.set(rowIndex, 1); return 1; }
-    if (row.parentIndex === null || row.parentIndex >= rowIndex) { memo.set(rowIndex, 0); return 0; }
-    const d = 1 + getDepth(rows, row.parentIndex, memo);
-    memo.set(rowIndex, d);
+const getDepth = (rows: BulkRow[], idx: number, memo = new Map<number, number>()): number => {
+    if (memo.has(idx)) return memo.get(idx)!;
+    const r = rows[idx];
+    if (r.existingParentId != null) { memo.set(idx, 1); return 1; }
+    if (r.parentIndex === null || r.parentIndex >= idx) { memo.set(idx, 0); return 0; }
+    const d = 1 + getDepth(rows, r.parentIndex, memo);
+    memo.set(idx, d);
     return d;
 };
 
-const kbdStyle: React.CSSProperties = {
-    background: "#fff", border: "1px solid #d1d5db", borderRadius: 4,
-    padding: "1px 5px", fontSize: 10, fontFamily: "monospace", fontWeight: 700,
+// ─────────────────────────────────────────────────────────
+// Design tokens
+// ─────────────────────────────────────────────────────────
+const P = {
+    pink50: "#fff0f6",
+    pink100: "#ffe3ed",
+    pink200: "#ffc1d5",
+    pink500: "#ec4899",
+    pink600: "#db2777",
+    pink700: "#be185d",
+    gray50: "#f9fafb",
+    gray100: "#f3f4f6",
+    gray200: "#e5e7eb",
+    gray300: "#d1d5db",
+    gray400: "#9ca3af",
+    gray500: "#6b7280",
+    gray600: "#4b5563",
+    gray700: "#374151",
+    gray800: "#1f2937",
+    gray900: "#111827",
+    white: "#ffffff",
 };
 
 // ─────────────────────────────────────────────────────────
-// Shared styles
+// Mode Toggle
 // ─────────────────────────────────────────────────────────
-const labelStyle: React.CSSProperties = { fontWeight: 600, fontSize: 13, color: "#374151" };
-const prefixStyle: React.CSSProperties = { color: "#d1d5db", fontSize: 13 };
-const inputStyle: React.CSSProperties = { borderRadius: 10, borderColor: "#e5e7eb", fontSize: 13 };
+const ModeToggle = ({ mode, onChange }: { mode: "single" | "bulk"; onChange: (m: "single" | "bulk") => void }) => (
+    <div style={{ display: "inline-flex", background: P.gray100, border: `1px solid ${P.gray200}`, borderRadius: 8, padding: 3, gap: 2 }}>
+        {([
+            { key: "single" as const, label: "Một vị trí", icon: <ApartmentOutlined /> },
+            { key: "bulk" as const, label: "Hàng loạt", icon: <ThunderboltOutlined /> },
+        ]).map((tab) => {
+            const active = mode === tab.key;
+            return (
+                <button
+                    key={tab.key}
+                    onClick={() => onChange(tab.key)}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+                        fontSize: 12, fontWeight: active ? 700 : 500, whiteSpace: "nowrap",
+                        background: active ? P.white : "transparent",
+                        color: active ? P.pink700 : P.gray500,
+                        boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                        transition: "all 0.15s",
+                    }}
+                >
+                    {tab.icon} {tab.label}
+                </button>
+            );
+        })}
+    </div>
+);
 
 // ─────────────────────────────────────────────────────────
-// Single-node form (unchanged)
+// Single-node form
 // ─────────────────────────────────────────────────────────
 const SingleNodeForm = ({ form, nodes, jdOptions, isEditing }: {
     form: any; nodes: any[];
     jdOptions: { value: number; label: string }[];
     isEditing: boolean;
-}) => (
-    <Form form={form} layout="vertical">
-        <Form.Item name="title" label={<span style={labelStyle}>Tên chức danh</span>}
-            rules={[{ required: true, message: "Vui lòng nhập tên chức danh" }]} style={{ marginBottom: 16 }}>
-            <Input prefix={<UserOutlined style={prefixStyle} />} placeholder="VD: CEO, Trưởng phòng Kinh doanh..."
-                size="large" style={inputStyle} />
-        </Form.Item>
+}) => {
+    const lbl = (text: string) => (
+        <span style={{ fontSize: 11, fontWeight: 600, color: P.gray400, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+            {text}
+        </span>
+    );
+    const inp: React.CSSProperties = { borderRadius: 8, borderColor: P.gray200, fontSize: 13 };
 
-        <div style={{ display: "flex", gap: 14, marginBottom: 16 }}>
-            <Form.Item name="levelCode" label={<span style={labelStyle}>Mã cấp bậc</span>} style={{ flex: 1, marginBottom: 0 }}>
-                <Input prefix={<TagOutlined style={prefixStyle} />} placeholder="M1, S2, C-Level..."
-                    size="large" style={inputStyle} />
+    return (
+        <Form form={form} layout="vertical" requiredMark={false}>
+            <Form.Item
+                name="title"
+                label={lbl("Tên chức danh")}
+                rules={[{ required: true, message: "Vui lòng nhập tên chức danh" }]}
+                style={{ marginBottom: 14 }}
+            >
+                <Input
+                    prefix={<UserOutlined style={{ color: P.gray300 }} />}
+                    placeholder="VD: Giám đốc điều hành, Trưởng phòng Kinh doanh..."
+                    size="large" style={inp}
+                />
             </Form.Item>
-            <Form.Item name="holderName" label={<span style={labelStyle}>Người phụ trách</span>} style={{ flex: 1, marginBottom: 0 }}>
-                <Input prefix={<UserOutlined style={prefixStyle} />} placeholder="Nguyễn Văn A..."
-                    size="large" style={inputStyle} />
-            </Form.Item>
-        </div>
 
-        <Form.Item name="parentId" label={<span style={labelStyle}>Cấp trên</span>} style={{ marginBottom: 16 }}>
-            <Select allowClear placeholder="Chọn cấp trên (nếu có)" size="large" style={{ fontSize: 13 }}
-                suffixIcon={<ClusterOutlined style={{ color: "#d1d5db" }} />}
-                options={nodes.map((n: any) => ({ value: Number(n.id), label: n.data?.title ?? `Node ${n.id}` }))} />
-        </Form.Item>
-
-        <Form.Item name="jobDescriptionId" label={<span style={labelStyle}>Gắn JD</span>} style={{ marginBottom: 16 }}>
-            <Select allowClear placeholder="Chọn JD đã ban hành" size="large" style={{ fontSize: 13 }}
-                suffixIcon={<FileTextOutlined style={{ color: "#d1d5db" }} />} options={jdOptions} />
-        </Form.Item>
-
-        <Form.Item style={{ marginBottom: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fdf2f8", border: "1px solid #fbcfe8", borderRadius: 12, padding: "12px 16px" }}>
-                <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#9d174d" }}>Vị trí mục tiêu</div>
-                    <div style={{ fontSize: 12, color: "#be185d", marginTop: 2, opacity: 0.7 }}>Đánh dấu đây là vị trí hướng đến</div>
-                </div>
-                <Form.Item name="isGoal" valuePropName="checked" noStyle>
-                    <Switch style={{ marginLeft: 16 }} />
+            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                <Form.Item name="levelCode" label={lbl("Mã cấp bậc")} style={{ flex: 1, marginBottom: 0 }}>
+                    <Input prefix={<TagOutlined style={{ color: P.gray300 }} />} placeholder="C1, M2, S3..." size="large" style={inp} />
+                </Form.Item>
+                <Form.Item name="holderName" label={lbl("Người phụ trách")} style={{ flex: 1, marginBottom: 0 }}>
+                    <Input prefix={<UserOutlined style={{ color: P.gray300 }} />} placeholder="Nguyễn Văn A..." size="large" style={inp} />
                 </Form.Item>
             </div>
-        </Form.Item>
-    </Form>
-);
+
+            <Form.Item name="parentId" label={lbl("Cấp trên trực tiếp")} style={{ marginBottom: 14 }}>
+                <Select
+                    allowClear showSearch size="large"
+                    placeholder="Chọn vị trí cấp trên..."
+                    filterOption={(input, opt) => (opt?.label as string ?? "").toLowerCase().includes(input.toLowerCase())}
+                    options={nodes.map((n: any) => ({ value: Number(n.id), label: n.data?.title ?? `Node ${n.id}` }))}
+                    optionRender={(opt) => (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <ApartmentOutlined style={{ color: P.gray400, fontSize: 12 }} />
+                            <span style={{ fontSize: 13 }}>{opt.label}</span>
+                        </div>
+                    )}
+                    style={{ fontSize: 13 }}
+                />
+            </Form.Item>
+
+            <Form.Item name="jobDescriptionId" label={lbl("Mô tả công việc (JD)")} style={{ marginBottom: 14 }}>
+                <Select
+                    allowClear showSearch size="large"
+                    placeholder="Chọn JD đã ban hành..."
+                    suffixIcon={<FileTextOutlined style={{ color: P.gray300 }} />}
+                    options={jdOptions} style={{ fontSize: 13 }}
+                />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 2 }}>
+                <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: P.pink50, border: `1px solid ${P.pink100}`, borderRadius: 10, padding: "12px 16px",
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                            width: 32, height: 32, borderRadius: 8,
+                            background: P.pink100, display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            <StarOutlined style={{ color: P.pink600, fontSize: 14 }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: P.gray800 }}>Vị trí mục tiêu</div>
+                            <div style={{ fontSize: 12, color: P.gray500, marginTop: 1 }}>
+                                Đánh dấu đây là vị trí hướng đến trong lộ trình phát triển
+                            </div>
+                        </div>
+                    </div>
+                    <Form.Item name="isGoal" valuePropName="checked" noStyle>
+                        <Switch size="small" style={{ marginLeft: 12 }} />
+                    </Form.Item>
+                </div>
+            </Form.Item>
+        </Form>
+    );
+};
 
 // ─────────────────────────────────────────────────────────
-// Bulk Table Editor — Excel-like
+// Parent Cell — Portal-based dropdown (tránh bị clip bởi overflow:hidden)
+// ─────────────────────────────────────────────────────────
+const ParentCell = ({
+    rowIndex,
+    row,
+    rows,
+    existingNodes,
+    onSelect,
+}: {
+    rowIndex: number;
+    row: BulkRow;
+    rows: BulkRow[];
+    existingNodes: any[];
+    onSelect: (existingId: number | null, parentIndex: number | null) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Tính toán vị trí dropdown dựa trên trigger rect
+    const updatePosition = useCallback(() => {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const dropdownWidth = 260;
+        const viewportWidth = window.innerWidth;
+
+        // Flip left nếu không đủ chỗ bên phải
+        let left = rect.left;
+        if (left + dropdownWidth > viewportWidth - 8) {
+            left = rect.right - dropdownWidth;
+        }
+
+        setDropdownPos({
+            top: rect.bottom + 4,
+            left,
+            width: dropdownWidth,
+        });
+    }, []);
+
+    // Mở dropdown
+    const handleOpen = () => {
+        updatePosition();
+        setOpen(true);
+        setSearch("");
+    };
+
+    // Focus search khi mở
+    useEffect(() => {
+        if (open) setTimeout(() => inputRef.current?.focus(), 20);
+    }, [open]);
+
+    // Close on outside click
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (
+                triggerRef.current?.contains(target) ||
+                dropdownRef.current?.contains(target)
+            ) return;
+            setOpen(false);
+        };
+        // Scroll trong bảng → đóng dropdown và cập nhật vị trí
+        const onScroll = () => setOpen(false);
+        document.addEventListener("mousedown", handler);
+        document.addEventListener("scroll", onScroll, true);
+        return () => {
+            document.removeEventListener("mousedown", handler);
+            document.removeEventListener("scroll", onScroll, true);
+        };
+    }, [open]);
+
+    // Current label
+    let currentLabel = "";
+    if (row.existingParentId != null) {
+        const n = existingNodes.find((n) => Number(n.id) === row.existingParentId);
+        currentLabel = n?.data?.title ?? `Node ${row.existingParentId}`;
+    } else if (row.parentIndex != null) {
+        currentLabel = rows[row.parentIndex]?.title || `Dòng ${row.parentIndex + 1}`;
+    }
+
+    // Build option groups
+    const lowerSearch = search.toLowerCase();
+    const fromDB = existingNodes
+        .filter((n) => (n.data?.title ?? "").toLowerCase().includes(lowerSearch))
+        .map((n) => ({ id: `ex-${n.id}`, label: n.data?.title ?? `Node ${n.id}` }));
+
+    const fromTable = rows
+        .slice(0, rowIndex)
+        .map((r, i) => r.title.trim() ? { id: `row-${i}`, label: r.title, num: i + 1 } : null)
+        .filter((r): r is NonNullable<typeof r> => r !== null && r.label.toLowerCase().includes(lowerSearch));
+
+    const handleSelect = (id: string) => {
+        if (id.startsWith("ex-")) {
+            onSelect(Number(id.replace("ex-", "")), null);
+        } else {
+            onSelect(null, Number(id.replace("row-", "")));
+        }
+        setOpen(false);
+    };
+
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onSelect(null, null);
+    };
+
+    const hasValue = currentLabel !== "";
+    const noResults = fromDB.length === 0 && fromTable.length === 0;
+
+    return (
+        <>
+            {/* Trigger button */}
+            <div
+                ref={triggerRef}
+                onClick={() => open ? setOpen(false) : handleOpen()}
+                style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "5px 10px", borderRadius: 7, cursor: "pointer",
+                    border: `1.5px solid ${open ? P.pink500 : hasValue ? P.pink200 : P.gray200}`,
+                    background: open ? P.pink50 : hasValue ? "#fff8fb" : P.white,
+                    transition: "all 0.15s", minHeight: 32, userSelect: "none",
+                    boxShadow: open ? `0 0 0 3px rgba(236,72,153,0.08)` : "none",
+                }}
+            >
+                {hasValue ? (
+                    <>
+                        <div style={{
+                            width: 18, height: 18, borderRadius: 5, background: P.pink100,
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}>
+                            <ApartmentOutlined style={{ fontSize: 10, color: P.pink600 }} />
+                        </div>
+                        <span style={{
+                            fontSize: 12, color: P.gray800, fontWeight: 500,
+                            flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {currentLabel}
+                        </span>
+                        <span
+                            onClick={handleClear}
+                            style={{
+                                fontSize: 11, color: P.gray400, cursor: "pointer",
+                                flexShrink: 0, lineHeight: 1, padding: "2px 3px", borderRadius: 3,
+                                transition: "all 0.1s",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; e.currentTarget.style.background = "#fef2f2"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = P.gray400; e.currentTarget.style.background = "transparent"; }}
+                        >
+                            ✕
+                        </span>
+                    </>
+                ) : (
+                    <>
+                        <span style={{ fontSize: 12, color: P.gray400, flex: 1 }}>Chọn cấp trên...</span>
+                        <svg
+                            width="10" height="6" viewBox="0 0 10 6" fill="none"
+                            style={{ flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }}
+                        >
+                            <path d="M1 1l4 4 4-4" stroke={P.gray300} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </>
+                )}
+            </div>
+
+            {/* Dropdown via Portal — thoát khỏi overflow:hidden của table */}
+            {open && createPortal(
+                <div
+                    ref={dropdownRef}
+                    style={{
+                        position: "fixed",
+                        top: dropdownPos.top,
+                        left: dropdownPos.left,
+                        width: dropdownPos.width,
+                        zIndex: 99999,
+                        background: P.white,
+                        border: `1px solid ${P.gray200}`,
+                        borderRadius: 10,
+                        boxShadow: "0 12px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)",
+                        overflow: "hidden",
+                    }}
+                >
+                    {/* Search */}
+                    <div style={{ padding: "8px 10px", borderBottom: `1px solid ${P.gray100}` }}>
+                        <div style={{
+                            display: "flex", alignItems: "center", gap: 7,
+                            background: P.gray50, border: `1px solid ${P.gray200}`,
+                            borderRadius: 7, padding: "6px 10px",
+                        }}>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <circle cx="5" cy="5" r="3.5" stroke={P.gray400} strokeWidth="1.3" />
+                                <path d="M8 8l2 2" stroke={P.gray400} strokeWidth="1.3" strokeLinecap="round" />
+                            </svg>
+                            <input
+                                ref={inputRef}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+                                placeholder="Tìm kiếm vị trí..."
+                                style={{
+                                    border: "none", outline: "none", background: "transparent",
+                                    fontSize: 12.5, color: P.gray800, width: "100%", fontFamily: "inherit",
+                                }}
+                            />
+                            {search && (
+                                <span
+                                    onClick={() => setSearch("")}
+                                    style={{ fontSize: 10, color: P.gray400, cursor: "pointer", flexShrink: 0 }}
+                                >
+                                    ✕
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                        {noResults && (
+                            <div style={{
+                                padding: "24px 14px", textAlign: "center",
+                                color: P.gray400, fontSize: 12,
+                            }}>
+                                <div style={{ fontSize: 20, marginBottom: 6 }}>🔍</div>
+                                Không tìm thấy kết quả
+                            </div>
+                        )}
+
+                        {fromDB.length > 0 && (
+                            <div>
+                                <SectionLabel>Vị trí hiện có</SectionLabel>
+                                {fromDB.map((opt) => (
+                                    <OptionItem
+                                        key={opt.id}
+                                        label={opt.label}
+                                        isSelected={row.existingParentId != null && `ex-${row.existingParentId}` === opt.id}
+                                        badge={null}
+                                        onClick={() => handleSelect(opt.id)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {fromTable.length > 0 && (
+                            <div style={{ borderTop: fromDB.length > 0 ? `1px solid ${P.gray100}` : "none" }}>
+                                <SectionLabel>Trong bảng này</SectionLabel>
+                                {fromTable.map((opt) => (
+                                    <OptionItem
+                                        key={opt.id}
+                                        label={opt.label}
+                                        isSelected={row.parentIndex != null && `row-${row.parentIndex}` === opt.id}
+                                        badge={`#${opt.num}`}
+                                        onClick={() => handleSelect(opt.id)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+};
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <div style={{
+        padding: "8px 14px 4px",
+        fontSize: 10, fontWeight: 700, color: P.gray400,
+        letterSpacing: "0.08em", textTransform: "uppercase" as const,
+    }}>
+        {children}
+    </div>
+);
+
+const OptionItem = ({ label, isSelected, badge, onClick }: {
+    label: string; isSelected: boolean; badge: string | null; onClick: () => void;
+}) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "7px 14px", cursor: "pointer",
+                background: isSelected ? P.pink50 : hovered ? P.gray50 : P.white,
+                transition: "background 0.1s",
+            }}
+        >
+            <div style={{
+                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                background: isSelected ? P.pink100 : P.gray100,
+                display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+                <ApartmentOutlined style={{ fontSize: 10, color: isSelected ? P.pink600 : P.gray500 }} />
+            </div>
+            <span style={{
+                fontSize: 12.5, color: isSelected ? P.pink700 : P.gray800,
+                fontWeight: isSelected ? 600 : 400,
+                flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+                {label}
+            </span>
+            {badge && (
+                <span style={{
+                    fontSize: 10, color: P.gray400, background: P.gray100,
+                    borderRadius: 4, padding: "1px 5px", fontFamily: "monospace", fontWeight: 600,
+                }}>
+                    {badge}
+                </span>
+            )}
+            {isSelected && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M2 6l3 3 5-5" stroke={P.pink600} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            )}
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────
+// Bulk Table Editor
 // ─────────────────────────────────────────────────────────
 const BulkTableEditor = ({ rows, setRows, existingNodes }: {
     rows: BulkRow[];
@@ -153,124 +561,132 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
     const depthMemo = new Map<number, number>();
     const depths = rows.map((_, i) => getDepth(rows, i, depthMemo));
 
-    const updateRow = useCallback((id: string, field: keyof BulkRow, value: any) => {
-        setRows((prev) => prev.map((r) => r.id === id ? { ...r, [field]: value } : r));
-    }, [setRows]);
+    const updateRow = useCallback(
+        (id: string, field: keyof BulkRow, value: any) =>
+            setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))),
+        [setRows],
+    );
 
-    const addRowAfter = useCallback((afterIndex: number) => {
-        const above = rows[afterIndex];
-        const newRow = emptyRow({
-            levelCode: above?.levelCode ?? "",        // ✅ auto-copy mã cấp bậc
-            parentIndex: above?.parentIndex ?? null,  // ✅ auto-copy cùng cha
-        });
-        setRows((prev) => {
-            const next = [...prev];
-            next.splice(afterIndex + 1, 0, newRow);
-            // Cập nhật parentIndex của các row phía sau bị lệch index
-            return next.map((r, i) => {
-                if (i <= afterIndex + 1) return r;
-                if (r.parentIndex !== null && r.parentIndex > afterIndex) {
-                    return { ...r, parentIndex: r.parentIndex + 1 };
-                }
-                return r;
+    const addRowAfter = useCallback(
+        (afterIndex: number) => {
+            const above = rows[afterIndex];
+            const newRow = emptyRow({
+                levelCode: above?.levelCode ?? "",
+                parentIndex: above?.parentIndex ?? null,
+                existingParentId: above?.existingParentId ?? null,
             });
-        });
-        setTimeout(() => inputRefs.current.get(`title-${newRow.id}`)?.focus(), 30);
-    }, [rows, setRows]);
+            setRows((prev) => {
+                const next = [...prev];
+                next.splice(afterIndex + 1, 0, newRow);
+                return next.map((r, i) => {
+                    if (i <= afterIndex + 1) return r;
+                    if (r.parentIndex !== null && r.parentIndex > afterIndex)
+                        return { ...r, parentIndex: r.parentIndex + 1 };
+                    return r;
+                });
+            });
+            setTimeout(() => inputRefs.current.get(`title-${newRow.id}`)?.focus(), 30);
+        },
+        [rows, setRows],
+    );
 
-    const deleteRow = useCallback((index: number) => {
-        if (rows.length === 1) return;
-        setRows((prev) =>
-            prev.filter((_, i) => i !== index).map((r) => {
-                if (r.parentIndex === null) return r;
-                if (r.parentIndex === index) return { ...r, parentIndex: null };
-                if (r.parentIndex > index) return { ...r, parentIndex: r.parentIndex - 1 };
-                return r;
-            })
-        );
-        // Focus dòng trên
-        const above = rows[index - 1] ?? rows[index + 1];
-        if (above) setTimeout(() => inputRefs.current.get(`title-${above.id}`)?.focus(), 30);
-    }, [rows, setRows]);
+    const deleteRow = useCallback(
+        (index: number) => {
+            if (rows.length === 1) return;
+            setRows((prev) =>
+                prev.filter((_, i) => i !== index).map((r) => {
+                    if (r.parentIndex === null) return r;
+                    if (r.parentIndex === index) return { ...r, parentIndex: null };
+                    if (r.parentIndex > index) return { ...r, parentIndex: r.parentIndex - 1 };
+                    return r;
+                }),
+            );
+            const target = rows[index - 1] ?? rows[index + 1];
+            if (target) setTimeout(() => inputRefs.current.get(`title-${target.id}`)?.focus(), 30);
+        },
+        [rows, setRows],
+    );
 
-    const handleKeyDown = useCallback((
-        e: React.KeyboardEvent<HTMLInputElement>,
-        rowIndex: number,
-        field: "title" | "levelCode" | "holderName",
-    ) => {
-        if (e.key === "Enter") { e.preventDefault(); addRowAfter(rowIndex); }
-        if (e.key === "Tab" && !e.shiftKey && field === "holderName") {
-            e.preventDefault(); addRowAfter(rowIndex);
-        }
-        if (e.key === "Backspace" && (e.target as HTMLInputElement).value === "" && rows.length > 1) {
-            e.preventDefault(); deleteRow(rowIndex);
-        }
-    }, [addRowAfter, deleteRow, rows.length]);
+    // FIX: prevent default on Enter/Tab/Backspace to avoid double-newline or form submission
+    const handleKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>, rowIndex: number, field: "title" | "levelCode" | "holderName") => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                addRowAfter(rowIndex);
+                return;
+            }
+            if (e.key === "Tab" && !e.shiftKey && field === "holderName") {
+                e.preventDefault();
+                e.stopPropagation();
+                addRowAfter(rowIndex);
+                return;
+            }
+            if (e.key === "Backspace" && (e.target as HTMLInputElement).value === "" && rows.length > 1) {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteRow(rowIndex);
+            }
+        },
+        [addRowAfter, deleteRow, rows.length],
+    );
 
-    // MỚI
-    const getParentOptions = (rowIndex: number) => [
-        ...existingNodes.map((n) => ({
-            value: `ex-${n.id}`,
-            label: `📌 ${n.data?.title ?? `Node ${n.id}`}`,
-        })),
-        ...rows.slice(0, rowIndex)
-            .map((r, i) => r.title.trim() ? { value: `row-${i}`, label: `↳ Dòng ${i + 1}: ${r.title}` } : null)
-            .filter(Boolean) as { value: string; label: string }[],
-    ];
+    const COLS = "30px 1fr 90px 150px 200px 28px";
+    const cellBase: React.CSSProperties = {
+        width: "100%", border: "none", outline: "none",
+        background: "transparent", padding: "2px 0",
+        fontFamily: "inherit", fontSize: 13, color: P.gray800,
+    };
+
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-            {/* Header */}
+        <div>
+            {/* Table header */}
             <div style={{
-                display: "grid", gridTemplateColumns: "36px 1fr 88px 1fr 148px 32px",
-                gap: 4, padding: "7px 10px",
-                background: "#f3f4f6", borderRadius: "10px 10px 0 0",
-                border: "1px solid #e5e7eb", borderBottom: "none",
+                display: "grid", gridTemplateColumns: COLS, gap: 8,
+                padding: "8px 14px", background: P.gray100,
+                borderRadius: "10px 10px 0 0",
+                border: `1px solid ${P.gray200}`, borderBottom: "none",
             }}>
-                {["#", "Tên chức danh *", "Mã cấp", "Người phụ trách", "Cấp trên", ""].map((h, i) => (
-                    <div key={i} style={{ fontSize: 10.5, fontWeight: 700, color: "#6b7280", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                {["#", "Tên chức danh *", "Mã cấp", "Người phụ trách", "Cấp trên trực tiếp", ""].map((h, i) => (
+                    <div key={i} style={{ fontSize: 10, fontWeight: 700, color: P.gray500, letterSpacing: "0.07em", textTransform: "uppercase" }}>
                         {h}
                     </div>
                 ))}
             </div>
 
             {/* Rows */}
-            <div style={{
-                border: "1px solid #e5e7eb", borderRadius: "0 0 10px 10px", overflow: "hidden", maxHeight: 480, overflowY: "auto"
-            }}>
-                {rows.map((row, rowIndex) => {
-                    const depth = depths[rowIndex];
-                    const dot = DEPTH_PALETTE[depth % DEPTH_PALETTE.length].dot;
-                    const isEmpty = !row.title.trim();
-
+            <div style={{ border: `1px solid ${P.gray200}`, borderRadius: "0 0 10px 10px", maxHeight: 400, overflowY: "auto" }}>
+                {rows.map((row, i) => {
+                    const depth = depths[i];
+                    const dotColor = row.title.trim() ? DEPTH_COLORS[depth % DEPTH_COLORS.length] : P.gray300;
+                    const isLast = i === rows.length - 1;
                     return (
-                        <div key={row.id} style={{
-                            display: "grid", gridTemplateColumns: "36px 1fr 88px 1fr 148px 32px",
-                            gap: 4, padding: "5px 10px",
-                            borderBottom: rowIndex < rows.length - 1 ? "1px solid #f3f4f6" : "none",
-                            background: rowIndex % 2 === 0 ? "#fff" : "#fafafa",
-                            alignItems: "center",
-                        }}>
-                            {/* # */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                <div style={{ width: 6, height: 6, borderRadius: "50%", background: isEmpty ? "#e5e7eb" : dot, flexShrink: 0 }} />
-                                <span style={{ fontSize: 10, color: "#9ca3af", fontFamily: "monospace", fontWeight: 600 }}>{rowIndex + 1}</span>
+                        <div
+                            key={row.id}
+                            style={{
+                                display: "grid", gridTemplateColumns: COLS, gap: 8,
+                                padding: "7px 14px",
+                                borderBottom: isLast ? "none" : `1px solid ${P.gray100}`,
+                                background: i % 2 === 0 ? P.white : P.gray50,
+                                alignItems: "center",
+                            }}
+                        >
+                            {/* # + dot */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                <div style={{ width: 7, height: 7, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+                                <span style={{ fontSize: 10, color: P.gray500, fontFamily: "monospace", fontWeight: 600 }}>{i + 1}</span>
                             </div>
 
-                            {/* Title với indent */}
+                            {/* Title + indent */}
                             <div style={{ paddingLeft: depth * 14, display: "flex", alignItems: "center", gap: 3, overflow: "hidden" }}>
-                                {depth > 0 && <span style={{ color: "#d1d5db", fontSize: 11, flexShrink: 0 }}>└</span>}
+                                {depth > 0 && <span style={{ color: P.gray300, fontSize: 11, flexShrink: 0 }}>└</span>}
                                 <input
                                     ref={(el) => { inputRefs.current.set(`title-${row.id}`, el); }}
                                     value={row.title}
                                     onChange={(e) => updateRow(row.id, "title", e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e, rowIndex, "title")}
-                                    placeholder={`Vị trí ${rowIndex + 1}...`}
-                                    style={{
-                                        width: "100%", border: "none", outline: "none", fontSize: 13,
-                                        fontWeight: row.title ? 500 : 400,
-                                        color: row.title ? "#111827" : "#9ca3af",
-                                        background: "transparent", padding: "3px 0",
-                                    }}
+                                    onKeyDown={(e) => handleKeyDown(e, i, "title")}
+                                    placeholder={`Vị trí ${i + 1}...`}
+                                    style={{ ...cellBase, fontWeight: row.title ? 500 : 400, color: row.title ? P.gray900 : P.gray400 }}
                                 />
                             </div>
 
@@ -279,13 +695,9 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
                                 ref={(el) => { inputRefs.current.set(`level-${row.id}`, el); }}
                                 value={row.levelCode}
                                 onChange={(e) => updateRow(row.id, "levelCode", e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, rowIndex, "levelCode")}
+                                onKeyDown={(e) => handleKeyDown(e, i, "levelCode")}
                                 placeholder="M1..."
-                                style={{
-                                    width: "100%", border: "none", outline: "none", fontSize: 11,
-                                    color: "#e8637a", fontWeight: 600, fontFamily: "monospace",
-                                    background: "transparent", padding: "3px 0",
-                                }}
+                                style={{ ...cellBase, fontSize: 11, fontWeight: 700, fontFamily: "monospace", color: P.pink600 }}
                             />
 
                             {/* Holder */}
@@ -293,55 +705,50 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
                                 ref={(el) => { inputRefs.current.set(`holder-${row.id}`, el); }}
                                 value={row.holderName}
                                 onChange={(e) => updateRow(row.id, "holderName", e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, rowIndex, "holderName")}
+                                onKeyDown={(e) => handleKeyDown(e, i, "holderName")}
                                 placeholder="Tên người..."
-                                style={{
-                                    width: "100%", border: "none", outline: "none", fontSize: 12,
-                                    color: "#374151", background: "transparent", padding: "3px 0",
-                                }}
+                                style={{ ...cellBase, fontSize: 12, color: P.gray700 }}
                             />
 
-                            {/* Parent */}
-                            <Select
-                                allowClear size="small"
-                                placeholder="Chọn cha"
-                                value={
-                                    row.existingParentId != null ? `ex-${row.existingParentId}`
-                                        : row.parentIndex != null ? `row-${row.parentIndex}`
-                                            : undefined
-                                }
-                                onChange={(v: string | undefined) => {
-                                    if (!v) {
-                                        updateRow(row.id, "parentIndex", null);
-                                        updateRow(row.id, "existingParentId", null);
-                                    } else if (v.startsWith("ex-")) {
-                                        updateRow(row.id, "existingParentId", Number(v.replace("ex-", "")));
-                                        updateRow(row.id, "parentIndex", null);
-                                    } else {
-                                        updateRow(row.id, "parentIndex", Number(v.replace("row-", "")));
-                                        updateRow(row.id, "existingParentId", null);
-                                    }
+                            {/* Parent — custom inline dropdown */}
+                            <ParentCell
+                                rowIndex={i}
+                                row={row}
+                                rows={rows}
+                                existingNodes={existingNodes}
+                                onSelect={(existingId, parentIndex) => {
+                                    updateRow(row.id, "existingParentId", existingId);
+                                    updateRow(row.id, "parentIndex", parentIndex);
                                 }}
-                                style={{ fontSize: 11, width: "100%" }}
-                                options={getParentOptions(rowIndex)}
-                                popupMatchSelectWidth={240}
                             />
 
                             {/* Delete */}
-                            <button
-                                onClick={() => deleteRow(rowIndex)}
-                                disabled={rows.length === 1}
-                                style={{
-                                    width: 22, height: 22, borderRadius: "50%", border: "none",
-                                    background: "transparent",
-                                    cursor: rows.length === 1 ? "not-allowed" : "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    color: rows.length === 1 ? "#e5e7eb" : "#f87171",
-                                    padding: 0,
-                                }}
-                            >
-                                <DeleteOutlined style={{ fontSize: 11 }} />
-                            </button>
+                            <Tooltip title={rows.length === 1 ? "" : "Xóa dòng"} mouseEnterDelay={0.6}>
+                                <button
+                                    onClick={() => deleteRow(i)}
+                                    disabled={rows.length === 1}
+                                    style={{
+                                        width: 24, height: 24, borderRadius: 6, border: "none",
+                                        background: "transparent",
+                                        cursor: rows.length === 1 ? "not-allowed" : "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: rows.length === 1 ? P.gray200 : P.gray400,
+                                        padding: 0, transition: "all 0.12s",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (rows.length > 1) {
+                                            e.currentTarget.style.color = "#ef4444";
+                                            e.currentTarget.style.background = "#fef2f2";
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.color = P.gray400;
+                                        e.currentTarget.style.background = "transparent";
+                                    }}
+                                >
+                                    <DeleteOutlined style={{ fontSize: 12 }} />
+                                </button>
+                            </Tooltip>
                         </div>
                     );
                 })}
@@ -351,17 +758,26 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
             <button
                 onClick={() => addRowAfter(rows.length - 1)}
                 style={{
-                    marginTop: 6, width: "100%", height: 32, border: "1.5px dashed #e5e7eb",
-                    borderRadius: 8, background: "transparent", cursor: "pointer",
+                    marginTop: 8, width: "100%", height: 36,
+                    border: `1.5px dashed ${P.gray200}`, borderRadius: 8,
+                    background: "transparent", cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    gap: 6, color: "#9ca3af", fontSize: 12, fontWeight: 500,
+                    gap: 6, color: P.gray400, fontSize: 12, fontWeight: 500, transition: "all 0.15s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e8637a"; (e.currentTarget as HTMLButtonElement).style.color = "#e8637a"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; (e.currentTarget as HTMLButtonElement).style.color = "#9ca3af"; }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = P.pink500;
+                    e.currentTarget.style.color = P.pink600;
+                    e.currentTarget.style.background = P.pink50;
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = P.gray200;
+                    e.currentTarget.style.color = P.gray400;
+                    e.currentTarget.style.background = "transparent";
+                }}
             >
-                <PlusOutlined style={{ fontSize: 10 }} />
+                <PlusOutlined style={{ fontSize: 11 }} />
                 Thêm dòng
-                <span style={{ fontSize: 10, opacity: 0.6 }}>(hoặc Enter ở cuối dòng)</span>
+                <span style={{ color: P.gray300, fontWeight: 400, fontSize: 11 }}>· hoặc nhấn Enter</span>
             </button>
         </div>
     );
@@ -386,7 +802,7 @@ const ModalNode = ({
         }
     }, [open, isEditing, initialValues, form]);
 
-    const validRowCount = rows.filter((r) => r.title.trim()).length;
+    const validCount = rows.filter((r) => r.title.trim()).length;
     const isBulk = mode === "bulk";
 
     const handleOk = async () => {
@@ -395,8 +811,7 @@ const ModalNode = ({
             onSubmit(values);
             form.resetFields();
         } else {
-            if (validRowCount === 0) return;
-            // MỚI
+            if (validCount === 0) return;
             onBulkSubmit?.(
                 rows.filter((r) => r.title.trim()).map((r) => ({
                     title: r.title.trim(),
@@ -404,76 +819,103 @@ const ModalNode = ({
                     holderName: r.holderName || undefined,
                     parentIndex: r.parentIndex,
                     existingParentId: r.existingParentId,
-                }))
+                })),
             );
         }
     };
 
-    const handleCancel = () => { form.resetFields(); onClose(); };
+    const okLabel = isEditing
+        ? "Lưu thay đổi"
+        : isBulk
+            ? `Tạo ${validCount > 0 ? `${validCount} vị trí` : "hàng loạt"}`
+            : "Tạo vị trí";
 
     return (
         <Modal
-            title={null} open={open} onCancel={handleCancel} onOk={handleOk}
-            okText={isEditing ? "Lưu thay đổi" : isBulk ? `Tạo ${validRowCount > 0 ? validRowCount + " " : ""}node` : "Tạo mới"}
-            cancelText="Hủy" destroyOnHidden
+            title={null}
+            open={open}
+            onCancel={() => { form.resetFields(); onClose(); }}
+            onOk={handleOk}
+            okText={okLabel}
+            cancelText="Hủy"
+            destroyOnHidden
             okButtonProps={{
-                disabled: isBulk && validRowCount === 0,
+                disabled: isBulk && validCount === 0,
                 style: {
-                    background: "linear-gradient(135deg, #be185d, #e8637a)",
-                    borderColor: "transparent", fontWeight: 600,
-                    boxShadow: "0 2px 10px rgba(232,99,122,.35)",
-                    height: 40, borderRadius: 10, fontSize: 14, minWidth: 110,
-                    opacity: isBulk && validRowCount === 0 ? 0.5 : 1,
+                    background: isBulk && validCount === 0
+                        ? P.gray200
+                        : "linear-gradient(135deg, #be185d 0%, #db2777 60%, #ec4899 100%)",
+                    borderColor: "transparent",
+                    color: "#fff",
+                    fontWeight: 600,
+                    height: 38,
+                    borderRadius: 8,
+                    fontSize: 13,
+                    minWidth: 120,
+                    boxShadow: isBulk && validCount === 0 ? "none" : "0 2px 8px rgba(219,39,119,0.3)",
+                    opacity: isBulk && validCount === 0 ? 0.6 : 1,
                 },
             }}
-            cancelButtonProps={{ style: { height: 40, borderRadius: 10, fontSize: 14 } }}
-            styles={{
-                content: { borderRadius: 20, padding: 0, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.12)" },
-                body: { padding: 0 },
-                footer: { padding: "14px 28px 22px", borderTop: "1px solid #f3f4f6", background: "#fafafa" },
+            cancelButtonProps={{
+                style: { height: 38, borderRadius: 8, fontSize: 13, borderColor: P.gray200, color: P.gray600 },
             }}
-            width={isBulk ? 960 : 620}
+            styles={{
+                content: {
+                    borderRadius: 14, padding: 0, overflow: "hidden",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)",
+                },
+                body: { padding: 0 },
+                footer: {
+                    padding: "12px 24px 18px",
+                    borderTop: `1px solid ${P.gray100}`,
+                    background: P.gray50,
+                    margin: 0,
+                },
+            }}
+            width={isBulk ? 920 : 560}
         >
-            {/* HEADER */}
-            <div style={{ background: "linear-gradient(135deg, #9d174d 0%, #db2777 55%, #f472b6 100%)", padding: "24px 32px 20px", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,0.07)", pointerEvents: "none" }} />
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {isBulk ? <ThunderboltOutlined style={{ fontSize: 18, color: "#fff" }} /> : <ApartmentOutlined style={{ fontSize: 18, color: "#fff" }} />}
+            {/* ── HEADER ── */}
+            <div style={{ padding: "18px 24px 16px", borderBottom: `1px solid ${P.gray100}`, background: P.white }}>
+                {/* Row 1: icon + title */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: !isEditing ? 14 : 0 }}>
+                    <div style={{
+                        width: 38, height: 38, borderRadius: 9,
+                        background: P.pink50, border: `1px solid ${P.pink100}`,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                        {isBulk
+                            ? <ThunderboltOutlined style={{ fontSize: 16, color: P.pink600 }} />
+                            : <ApartmentOutlined style={{ fontSize: 16, color: P.pink600 }} />
+                        }
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: P.gray900, lineHeight: 1.3 }}>
+                            {isEditing
+                                ? "Chỉnh sửa vị trí"
+                                : isBulk
+                                    ? `Tạo hàng loạt${validCount > 0 ? ` · ${validCount} vị trí` : ""}`
+                                    : "Thêm vị trí mới"
+                            }
                         </div>
-                        <div>
-                            <div style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: "-0.3px" }}>
-                                {isEditing ? "Chỉnh sửa vị trí" : isBulk ? `Tạo hàng loạt${validRowCount > 0 ? ` — ${validRowCount} node` : ""}` : "Thêm vị trí mới"}
-                            </div>
-
+                        <div style={{ fontSize: 12, color: P.gray400, marginTop: 2 }}>
+                            {isEditing
+                                ? "Cập nhật thông tin chức danh"
+                                : isBulk
+                                    ? "Nhập nhiều vị trí cùng lúc vào sơ đồ"
+                                    : "Tạo một vị trí trong sơ đồ tổ chức"
+                            }
                         </div>
                     </div>
-
-                    {!isEditing && (
-                        <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: 3, gap: 2 }}>
-                            {([
-                                { key: "single" as const, label: "Một node", icon: <ApartmentOutlined /> },
-                                { key: "bulk" as const, label: "Hàng loạt", icon: <ThunderboltOutlined /> },
-                            ]).map((tab) => (
-                                <button key={tab.key} onClick={() => setMode(tab.key)} style={{
-                                    display: "flex", alignItems: "center", gap: 5, padding: "5px 12px",
-                                    borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600,
-                                    background: mode === tab.key ? "rgba(255,255,255,0.95)" : "transparent",
-                                    color: mode === tab.key ? "#be185d" : "rgba(255,255,255,0.85)",
-                                    transition: "all 0.15s ease",
-                                }}>
-                                    {tab.icon} {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
+
+                {/* Row 2: mode toggle */}
+                {!isEditing && (
+                    <ModeToggle mode={mode} onChange={setMode} />
+                )}
             </div>
 
-            {/* BODY */}
-            <div style={{ padding: isBulk ? "20px 24px 8px" : "22px 32px 4px" }}>
+            {/* ── BODY ── */}
+            <div style={{ padding: isBulk ? "20px 24px 8px" : "20px 24px 4px", background: P.white }}>
                 {mode === "single"
                     ? <SingleNodeForm form={form} nodes={nodes} jdOptions={jdOptions} isEditing={isEditing} />
                     : <BulkTableEditor rows={rows} setRows={setRows} existingNodes={nodes} />

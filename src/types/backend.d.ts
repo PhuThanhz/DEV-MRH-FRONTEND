@@ -1256,6 +1256,19 @@ export interface IOrgNode {
     jobDescriptionCode?: string // ← thêm (backend trả về ResJobPositionNodeDTO có field này)
     jobDescriptionStatus?: string // ← thêm
 }
+/* ===================== ORG NODE BULK TREE ===================== */
+export interface IReqCreateNodeTree {
+    chartId: number;
+    name: string;
+    level?: string;
+    holderName?: string;
+    isGoal?: boolean;
+    parentId?: number | null;
+    posX?: number;
+    posY?: number;
+    jobDescriptionId?: number | null;
+    children?: IReqCreateNodeTree[]; // ⭐ đệ quy
+}
 /* ======================================================
    JD FLOW TYPES
 ====================================================== */

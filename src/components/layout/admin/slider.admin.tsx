@@ -26,7 +26,10 @@ const SliderAdmin: React.FC<IProps> = ({
     const permissions = useAppSelector((state) => state.account.user.role.permissions);
     const [menuItems, setMenuItems] = useState<any[]>([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [showScannerButton, setShowScannerButton] = useState<boolean>(true);
+    const [showScannerButton, setShowScannerButton] = useState<boolean>(() => {
+        const saved = localStorage.getItem("qr-scan-enabled");
+        return saved !== null ? saved === "true" : true;
+    });
 
     useEffect(() => {
         setMenuItems(generateMenuItems(permissions));
@@ -128,7 +131,10 @@ const SliderAdmin: React.FC<IProps> = ({
                         <Switch
                             size="small"
                             checked={showScannerButton}
-                            onChange={(checked) => setShowScannerButton(checked)}
+                            onChange={(checked) => {
+                                setShowScannerButton(checked);
+                                localStorage.setItem("qr-scan-enabled", String(checked));
+                            }}
                             onClick={(_, e) => e.stopPropagation()}
                             style={{
                                 backgroundColor: showScannerButton ? "#ec4899" : undefined,
@@ -148,7 +154,11 @@ const SliderAdmin: React.FC<IProps> = ({
             items={filteredMenuItems}
             onClick={(e) => {
                 if (e.key === "qr-scanner-toggle") {
-                    setShowScannerButton(prev => !prev);
+                    setShowScannerButton(prev => {
+                        const next = !prev;
+                        localStorage.setItem("qr-scan-enabled", String(next));
+                        return next;
+                    });
                     return;
                 }
                 setActiveMenu(e.key);

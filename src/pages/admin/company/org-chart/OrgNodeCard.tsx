@@ -21,6 +21,7 @@ export interface OrgNodeData {
     allowDelete?: boolean;
     isMobile?: boolean;
     isTablet?: boolean;
+    viewMode?: "compact" | "full"; // ⭐ THÊM
     onEdit: () => void;
     onDelete: () => void;
     onJD?: () => void;
@@ -52,12 +53,18 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const [deleteHover, setDeleteHover] = useState(false);
     const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // ── Responsive sizing từ data prop (được truyền từ loadNodes) ────────────
     const isMobile = data.isMobile ?? false;
     const isTablet = data.isTablet ?? false;
 
-    const NODE_W = isMobile ? 158 : isTablet ? 182 : 220;
-    const NODE_H = isMobile ? 118 : isTablet ? 148 : 185;
+    // ⭐ compact mode: node nhỏ hơn vì chỉ hiện tên
+    const isCompactMode = data.viewMode === "compact";
+
+    const NODE_W = isCompactMode
+        ? (isMobile ? 130 : isTablet ? 150 : 170)
+        : (isMobile ? 158 : isTablet ? 182 : 220);
+    const NODE_H = isCompactMode
+        ? (isMobile ? 56 : isTablet ? 64 : 72)
+        : (isMobile ? 118 : isTablet ? 148 : 185);
 
     // Font sizes
     const titleSize = isMobile ? 12 : isTablet ? 13.5 : 14.5;
@@ -76,7 +83,10 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const hasHolder = !!data.holderName;
     const hasLevel = !!data.levelCode;
-    const isSimple = !hasHolder && !hasLevel;
+
+    // ⭐ isSimple = compact mode HOẶC không có holder/level
+    const isSimple = isCompactMode || (!hasHolder && !hasLevel);
+
     const hs = data.highlightState ?? "idle";
     const bc = BORDER_CFG[hs];
 
@@ -221,25 +231,42 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                     }}
                 >
                     {isSimple ? (
-                        /* ── Simple mode (no holder, no level) ── */
+                        /* ── Simple / Compact mode ── */
                         <div style={{
-                            flex: 1, margin: isMobile ? 3 : 4,
+                            flex: 1,
+                            margin: isCompactMode ? (isMobile ? 2 : 3) : (isMobile ? 3 : 4),
                             borderRadius: isMobile ? 7 : 10,
                             border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            padding: isMobile ? "8px 10px" : "12px 14px",
+                            padding: isCompactMode
+                                ? (isMobile ? "6px 8px" : "8px 12px")
+                                : (isMobile ? "8px 10px" : "12px 14px"),
                             transition: `border-color ${T}`,
                         }}>
+                            {/* ⭐ Goal badge nhỏ gọn khi compact */}
+                            {isCompactMode && data.isGoal && (
+                                <span style={{
+                                    position: "absolute",
+                                    top: isMobile ? 3 : 4,
+                                    left: isMobile ? 5 : 7,
+                                    fontSize: isMobile ? 7 : 8,
+                                    fontWeight: 700,
+                                    color: "#7c3aed",
+                                    lineHeight: 1,
+                                }}>🎯</span>
+                            )}
                             <span style={{
                                 fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
                                 fontWeight: 700,
-                                fontSize: isMobile ? 13 : 15.5,
+                                fontSize: isCompactMode
+                                    ? (isMobile ? 11 : isTablet ? 12.5 : 13.5)
+                                    : (isMobile ? 13 : 15.5),
                                 color: "#111827",
                                 lineHeight: 1.4,
                                 letterSpacing: "-0.01em",
                                 textAlign: "center",
                                 display: "-webkit-box",
-                                WebkitLineClamp: 3,
+                                WebkitLineClamp: isCompactMode ? 2 : 3,
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                                 width: "100%",

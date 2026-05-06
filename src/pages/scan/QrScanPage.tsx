@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Button, Spin, Typography, Tag, Space, Divider, theme, Flex, Card } from "antd";
+import { Button, Typography, Tag, Space, Divider, theme, Flex, Card } from "antd";
 import {
     QrcodeOutlined, ReloadOutlined, CheckCircleFilled,
     WarningFilled, BankOutlined, CalendarOutlined, TeamOutlined,
@@ -12,19 +12,18 @@ import dayjs from "dayjs";
 const { Title, Text } = Typography;
 const { useToken } = theme;
 
-// ── Design tokens ──────────────────────────────────────────────
 const C = {
-    primary: "#1d4ed8",       // blue-700
-    primaryLight: "#3b82f6",  // blue-500
-    primarySoft: "#eff6ff",   // blue-50
-    primaryBorder: "#bfdbfe", // blue-200
+    primary: "#1d4ed8",
+    primaryLight: "#3b82f6",
+    primarySoft: "#eff6ff",
+    primaryBorder: "#bfdbfe",
     success: "#16a34a",
     successBg: "#f0fdf4",
     successBorder: "#bbf7d0",
     warning: "#d97706",
     warningBg: "#fffbeb",
     warningBorder: "#fde68a",
-    scan: "#60a5fa",          // blue-400
+    scan: "#60a5fa",
 };
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -34,7 +33,6 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
     TERMINATED: { label: "Hết hiệu lực", color: "error" },
 };
 
-/* ── InfoRow ────────────────────────────────────────────────── */
 const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => {
     const { token } = useToken();
     return (
@@ -64,21 +62,18 @@ const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string;
     );
 };
 
-/* ── Corner brackets for viewfinder ────────────────────────── */
 const ScanOverlay = () => (
     <div style={{
         position: "absolute", inset: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         pointerEvents: "none",
     }}>
-        {/* dark overlay outside the box */}
         <div style={{
             position: "absolute", inset: 0,
             background: "rgba(0,0,0,0.45)",
             maskImage: "radial-gradient(ellipse 220px 220px at 50% 50%, transparent 100px, black 101px)",
             WebkitMaskImage: "radial-gradient(ellipse 220px 220px at 50% 50%, transparent 100px, black 101px)",
         }} />
-        {/* corner brackets */}
         {[
             { top: "calc(50% - 90px)", left: "calc(50% - 90px)", borderTop: `3px solid ${C.primary}`, borderLeft: `3px solid ${C.primary}`, borderRadius: "4px 0 0 0" },
             { top: "calc(50% - 90px)", right: "calc(50% - 90px)", borderTop: `3px solid ${C.primary}`, borderRight: `3px solid ${C.primary}`, borderRadius: "0 4px 0 0" },
@@ -87,7 +82,6 @@ const ScanOverlay = () => (
         ].map((s, i) => (
             <div key={i} style={{ position: "absolute", width: 22, height: 22, ...s }} />
         ))}
-        {/* scanline */}
         <div style={{
             position: "absolute",
             left: "calc(50% - 90px)", width: 180, height: 2,
@@ -98,7 +92,6 @@ const ScanOverlay = () => (
     </div>
 );
 
-/* ── Pulse ring on FAB ──────────────────────────────────────── */
 const PulseIcon = () => (
     <div style={{ position: "relative", display: "inline-flex" }}>
         <div style={{
@@ -111,7 +104,6 @@ const PulseIcon = () => (
     </div>
 );
 
-/* ══════════════════════════════════════════════════════════════ */
 const QrScanPage = () => {
     const { token } = useToken();
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -122,9 +114,22 @@ const QrScanPage = () => {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        // entrance animation trigger
         const t = setTimeout(() => setMounted(true), 50);
         return () => clearTimeout(t);
+    }, []);
+
+    // ✅ FIX: cleanup đúng cách khi unmount (clear DOM + null ref)
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.stop()
+                    .catch(() => { })
+                    .finally(() => {
+                        try { scannerRef.current?.clear(); } catch { }
+                        scannerRef.current = null;
+                    });
+            }
+        };
     }, []);
 
     const startScan = async () => {
@@ -138,6 +143,8 @@ const QrScanPage = () => {
                 { fps: 10, qrbox: { width: 200, height: 200 } },
                 async (decodedText) => {
                     await scanner.stop();
+                    try { scanner.clear(); } catch { }
+                    scannerRef.current = null;
                     setScanning(false);
                     handleScanSuccess(decodedText);
                 },
@@ -149,10 +156,12 @@ const QrScanPage = () => {
         }
     };
 
+    // ✅ FIX: thêm .clear() để release DOM và camera stream hoàn toàn
     const stopScan = async () => {
         try {
             if (scannerRef.current) {
                 await scannerRef.current.stop();
+                try { scannerRef.current.clear(); } catch { }
                 scannerRef.current = null;
             }
         } catch { }
@@ -178,10 +187,6 @@ const QrScanPage = () => {
         setResult(null);
         setError(null);
     };
-
-    useEffect(() => {
-        return () => { scannerRef.current?.stop().catch(() => { }); };
-    }, []);
 
     const statusObj = result
         ? (STATUS_MAP[result.status ?? ""] ?? (result.active
@@ -263,28 +268,33 @@ const QrScanPage = () => {
                             }}
                             styles={{ body: { padding: 0 } }}
                         >
-                            {/* Top gradient bar */}
                             <div style={{
                                 height: 3,
                                 background: `linear-gradient(90deg, ${C.primary}, ${C.primaryLight}, #a5b4fc)`,
                             }} />
 
-                            {/* Camera viewport */}
                             <div style={{
                                 position: "relative",
                                 background: scanning ? "#000" : token.colorFillQuaternary,
                                 minHeight: scanning ? 280 : 0,
                                 overflow: "hidden",
                             }}>
-                                <div id="qr-reader" style={{ width: "100%", display: scanning ? "block" : "none" }} />
+                                {/* ✅ FIX: luôn render #qr-reader trong DOM, chỉ ẩn bằng visibility */}
+                                <div
+                                    id="qr-reader"
+                                    style={{
+                                        width: "100%",
+                                        visibility: scanning ? "visible" : "hidden",
+                                        height: scanning ? "auto" : 0,
+                                        overflow: "hidden",
+                                    }}
+                                />
                                 {scanning && <ScanOverlay />}
                             </div>
 
-                            {/* Body */}
                             <div style={{ padding: "20px 20px 24px" }}>
                                 {!scanning ? (
                                     <>
-                                        {/* Placeholder icon */}
                                         <Flex vertical align="center" gap={8} style={{ marginBottom: 20, paddingTop: 8 }}>
                                             <div style={{
                                                 width: 80, height: 80, borderRadius: 20,
@@ -350,7 +360,6 @@ const QrScanPage = () => {
                             styles={{ body: { padding: "52px 24px" } }}
                         >
                             <Flex vertical align="center" gap={16}>
-                                {/* Custom spinner */}
                                 <div style={{
                                     width: 48, height: 48, borderRadius: "50%",
                                     border: `3px solid ${C.primarySoft}`,
@@ -417,12 +426,10 @@ const QrScanPage = () => {
                             }}
                             styles={{ body: { padding: 0 } }}
                         >
-                            {/* Gradient header strip */}
                             <div style={{
                                 background: `linear-gradient(135deg, ${C.primary}, ${C.primaryLight})`,
                                 padding: "20px 20px 18px",
                             }}>
-                                {/* Success badge */}
                                 <Flex align="center" gap={7} style={{ marginBottom: 14 }}>
                                     <CheckCircleFilled style={{ color: "#a5f3af", fontSize: 14 }} />
                                     <Text style={{ fontSize: 12, color: "#e0e7ff", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
@@ -430,12 +437,10 @@ const QrScanPage = () => {
                                     </Text>
                                 </Flex>
 
-                                {/* Procedure name */}
                                 <Title level={5} style={{ margin: "0 0 10px", color: "#fff", lineHeight: 1.4 }}>
                                     {result.procedureName}
                                 </Title>
 
-                                {/* Tags */}
                                 <Space size={6} wrap>
                                     <Tag style={{
                                         borderRadius: 6, fontWeight: 700, fontSize: 11,
@@ -460,7 +465,6 @@ const QrScanPage = () => {
                                 </Space>
                             </div>
 
-                            {/* Info rows */}
                             <div style={{ padding: "18px 20px 24px" }}>
                                 <Flex vertical gap={8} style={{ marginBottom: 20 }}>
                                     {result.departmentName && (

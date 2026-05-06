@@ -13,7 +13,6 @@ import ViewProcedure from "@/pages/admin/procedures/view.procedure";
 const { Text } = Typography;
 const { useToken } = theme;
 
-// ── Design tokens ───────────────────────────────────────────────
 const C = {
     primary: "#be185d",
     primaryLight: "#ec4899",
@@ -24,7 +23,6 @@ const C = {
     warningBorder: "#fde68a",
 };
 
-// Kích thước khung quét
 const BOX = 180;
 const ARM = 22;
 const THICK = 3;
@@ -41,25 +39,20 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
     TERMINATED: { label: "Hết hiệu lực", color: "error" },
 };
 
-/* ── L-bracket corners ─────────────────────────────────────── */
 const Corners = () => (
     <>
-        {/* Top-left */}
         <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)` }}>
             <div style={{ position: "absolute", top: 0, left: 0, width: ARM, height: THICK, background: "#fff", borderRadius: 2 }} />
             <div style={{ position: "absolute", top: 0, left: 0, width: THICK, height: ARM, background: "#fff", borderRadius: 2 }} />
         </div>
-        {/* Top-right */}
         <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)` }}>
             <div style={{ position: "absolute", top: 0, right: 0, width: ARM, height: THICK, background: "#fff", borderRadius: 2 }} />
             <div style={{ position: "absolute", top: 0, right: 0, width: THICK, height: ARM, background: "#fff", borderRadius: 2 }} />
         </div>
-        {/* Bottom-left */}
         <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)` }}>
             <div style={{ position: "absolute", bottom: 0, left: 0, width: ARM, height: THICK, background: "#fff", borderRadius: 2 }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, width: THICK, height: ARM, background: "#fff", borderRadius: 2 }} />
         </div>
-        {/* Bottom-right */}
         <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)` }}>
             <div style={{ position: "absolute", bottom: 0, right: 0, width: ARM, height: THICK, background: "#fff", borderRadius: 2 }} />
             <div style={{ position: "absolute", bottom: 0, right: 0, width: THICK, height: ARM, background: "#fff", borderRadius: 2 }} />
@@ -67,23 +60,17 @@ const Corners = () => (
     </>
 );
 
-/* ── Dark mask + brackets + scanline overlay ───────────────── */
 const ScanOverlay = () => (
     <div style={{
         position: "absolute", inset: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         pointerEvents: "none",
     }}>
-        {/* 4 dark rects around the clear box */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(0,0,0,0.58)" }} />
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(0,0,0,0.58)" }} />
         <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, left: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(0,0,0,0.58)" }} />
         <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, right: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(0,0,0,0.58)" }} />
-
-        {/* L-corner brackets */}
         <Corners />
-
-        {/* Scanline */}
         <div style={{
             position: "absolute",
             left: `calc(50% - ${BOX / 2}px)`,
@@ -105,8 +92,21 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
     const [error, setError] = useState<string | null>(null);
     const [openDetail, setOpenDetail] = useState(false);
 
+    // ✅ FIX: stopScan thêm .clear() + null ref để release hoàn toàn camera stream
+    const stopScan = async () => {
+        try {
+            if (scannerRef.current) {
+                await scannerRef.current.stop();
+                try { scannerRef.current.clear(); } catch { }
+                scannerRef.current = null;
+            }
+        } catch { }
+        setScanning(false);
+    };
+
     const startScan = async () => {
-        setError(null); setResult(null);
+        setError(null);
+        setResult(null);
         const scanner = new Html5Qrcode("qr-modal-reader");
         scannerRef.current = scanner;
         try {
@@ -114,7 +114,10 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: BOX, height: BOX } },
                 async (decodedText) => {
+                    // ✅ FIX: clear sau khi scan thành công
                     await scanner.stop();
+                    try { scanner.clear(); } catch { }
+                    scannerRef.current = null;
                     setScanning(false);
                     handleScanSuccess(decodedText);
                 },
@@ -124,13 +127,6 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
         } catch {
             setError("Không thể mở camera. Kiểm tra quyền truy cập camera.");
         }
-    };
-
-    const stopScan = async () => {
-        try {
-            if (scannerRef.current) { await scannerRef.current.stop(); scannerRef.current = null; }
-        } catch { }
-        setScanning(false);
     };
 
     const handleScanSuccess = async (decodedText: string) => {
@@ -152,18 +148,48 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
         }
     };
 
-    const handleReset = async () => { await stopScan(); setResult(null); setError(null); };
-    const handleClose = async () => {
-        await stopScan(); setResult(null); setError(null); setOpenDetail(false); onClose();
-    };
-    const handleCloseDetail = async () => {
-        setOpenDetail(false); setResult(null); setError(null);
+    const handleReset = async () => {
+        await stopScan();
+        setResult(null);
+        setError(null);
     };
 
+    const handleClose = async () => {
+        await stopScan();
+        setResult(null);
+        setError(null);
+        setOpenDetail(false);
+        onClose();
+    };
+
+    const handleCloseDetail = async () => {
+        setOpenDetail(false);
+        setResult(null);
+        setError(null);
+    };
+
+    // ✅ FIX: chỉ theo dõi `open`, không có result/error trong deps để tránh re-trigger
     useEffect(() => {
-        if (open && !result && !error) setTimeout(() => startScan(), 300);
-        if (!open) stopScan();
-    }, [open, result, error]);
+        if (open) {
+            setTimeout(() => startScan(), 300);
+        } else {
+            stopScan();
+        }
+    }, [open]);
+
+    // ✅ FIX: cleanup khi unmount — dùng finally để đảm bảo luôn chạy
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current) {
+                scannerRef.current.stop()
+                    .catch(() => { })
+                    .finally(() => {
+                        try { scannerRef.current?.clear(); } catch { }
+                        scannerRef.current = null;
+                    });
+            }
+        };
+    }, []);
 
     const getProcedureType = (r: any) => {
         if (r?.accessList !== undefined) return "CONFIDENTIAL";
@@ -242,22 +268,21 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 {/* ══ CAMERA / SCANNING STATE ══ */}
                 {!result && !error && !loading && (
                     <div style={{ animation: "qr-fadein 0.3s ease" }}>
-                        {/* Camera viewport — dark full-width */}
                         <div style={{
                             position: "relative",
                             background: "#000",
                             height: 280,
                             overflow: "hidden",
                         }}>
+                            {/* ✅ FIX: dùng visibility thay display:none để tránh Html5Qrcode mất DOM */}
                             <div
                                 id="qr-modal-reader"
                                 style={{
                                     position: "absolute", inset: 0,
-                                    display: scanning ? "block" : "none",
+                                    visibility: scanning ? "visible" : "hidden",
                                 }}
                             />
 
-                            {/* Placeholder khi chưa scan */}
                             {!scanning && (
                                 <Flex vertical align="center" justify="center" gap={10}
                                     style={{ height: "100%", opacity: 0.5 }}
@@ -269,10 +294,8 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                                 </Flex>
                             )}
 
-                            {/* Dark overlay + L-brackets + scanline */}
                             {scanning && <ScanOverlay />}
 
-                            {/* Bottom hint khi đang scan */}
                             {scanning && (
                                 <div style={{
                                     position: "absolute", bottom: 0, left: 0, right: 0,
@@ -296,7 +319,6 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                             )}
                         </div>
 
-                        {/* Controls bên dưới camera */}
                         <div style={{ padding: "14px 20px 18px" }}>
                             {scanning ? (
                                 <Button
@@ -348,7 +370,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                     </Flex>
                 )}
 
-                {/* ══ SUCCESS (trước khi mở detail) ══ */}
+                {/* ══ SUCCESS ══ */}
                 {result && !openDetail && !loading && (
                     <Flex vertical align="center" gap={10}
                         style={{

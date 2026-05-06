@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button, message, Tooltip } from "antd";
-import { PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined } from "@ant-design/icons";
 import { unstable_batchedUpdates } from "react-dom";
 
 import ReactFlow, {
@@ -25,6 +25,7 @@ import dagre from "dagre";
 import { useOrgChartsQuery, useCreateOrgChartMutation } from "@/hooks/useOrgCharts";
 import {
     useCreateOrgNodeMutation,
+    useCreateOrgNodeBulkTreeMutation,
     useUpdateOrgNodeMutation,
     useDeleteOrgNodeMutation,
 } from "@/hooks/useOrgNodes";
@@ -36,6 +37,7 @@ import ModalNode, { type BulkNodeItem } from "./modal.node";
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
 import SearchBar from "./SearchBar";
 import MiniPanel from "./MiniPanel";
+import type { IReqCreateNodeTree } from "@/types/backend";
 
 import ViewJobDescription, { type EnrichedJD } from "../../job-description/view.job-description/index";
 
@@ -196,18 +198,24 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView } = useReactFlow();
     const { width, isMobile, isTablet } = useWindowSize();
-    const isCompact = isMobile || isTablet; // < 1024px
+    const isCompact = isMobile || isTablet;
 
     const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);
     const canDelete = useAccess(ALL_PERMISSIONS.ORG_NODES.DELETE);
 
     const [jdOpen, setJdOpen] = useState(false);
     const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
-
     const [jdOptions, setJdOptions] = useState<{ value: number; label: string }[]>([]);
+
+    // ⭐ View mode state — "compact" = Tổng quan, "full" = Chi tiết
+    const [viewMode, setViewMode] = useState<"compact" | "full">("full");
+    const viewModeRef = useRef<"compact" | "full">("full");
+    viewModeRef.current = viewMode;
+
     const { data } = useOrgChartsQuery(query);
     const createChart = useCreateOrgChartMutation();
     const createNode = useCreateOrgNodeMutation();
+    const bulkTreeNode = useCreateOrgNodeBulkTreeMutation();
     const updateNode = useUpdateOrgNodeMutation();
     const deleteNode = useDeleteOrgNodeMutation();
 
@@ -219,7 +227,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const [pendingSaves, setPendingSaves] = useState<Map<string, { x: number; y: number }>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
 
-    // ── Search + MiniPanel state ──────────────────────────────────────────────
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedNodePos, setSelectedNodePos] = useState<{ x: number; y: number } | null>(null);
 
@@ -228,11 +235,13 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     nodesRef.current = nodes;
     edgesRef.current = edges;
 
-    // Node size responsive theo màn hình
     const nodeW = isMobile ? 160 : isTablet ? 185 : 220;
     const nodeH = isMobile ? 120 : isTablet ? 150 : 185;
     const layoutNodeW = isMobile ? 150 : isTablet ? 175 : 200;
     const layoutNodeH = isMobile ? 110 : isTablet ? 140 : 130;
+
+    const compactLayoutNodeW = isMobile ? 120 : isTablet ? 140 : 160;
+    const compactLayoutNodeH = isMobile ? 50 : isTablet ? 58 : 66;
 
     const nodeTypes = useMemo(() => ({ orgNode: OrgNodeCard }), []);
     const edgeTypes = useMemo(() => ({ orgEdge: OrgEdge }), []);
@@ -242,7 +251,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         unstable_batchedUpdates(() => { setNodes(n); setEdges(e); });
     }, []);
 
-    // ── Sync isSelected vào node data khi selectedNodeId thay đổi ────────────
     useEffect(() => {
         setNodes((prev) =>
             prev.map((n) => {
@@ -252,6 +260,16 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             })
         );
     }, [selectedNodeId]);
+
+    useEffect(() => {
+        setNodes((prev) =>
+            prev.map((n) =>
+                n.data.viewMode === viewMode
+                    ? n
+                    : { ...n, data: { ...n.data, viewMode } }
+            )
+        );
+    }, [viewMode]);
 
     useEffect(() => {
         callFetchJobDescriptions("filter=status='PUBLISHED'&page=1&pageSize=200")
@@ -339,6 +357,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     isSelected: selectedNodeId === node.id,
                     isMobile,
                     isTablet,
+                    viewMode: viewModeRef.current,
                     onEdit: () => handleOpenEdit(node),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
@@ -353,7 +372,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         setSelectedNodeId((prev) => {
                             const next = prev === node.id ? null : node.id;
                             if (next) {
-                                // Lấy DOM element của node để tính vị trí tương đối trong container
                                 const el = document.querySelector(
                                     `.react-flow__node[data-id="${node.id}"]`
                                 );
@@ -381,7 +399,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(dagreEdges); });
     }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet]); // eslint-disable-line
 
-    // ── Search: zoom đến node được chọn ──────────────────────────────────────
     const handleSearchSelect = useCallback((nodeId: string, pos: { x: number; y: number } | null = null) => {
         setSelectedNodeId(nodeId);
         setSelectedNodePos(pos);
@@ -418,17 +435,19 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const handleAutoLayout = useCallback(() => {
         if (nodes.length === 0) return;
+        const lW = viewModeRef.current === "compact" ? compactLayoutNodeW : layoutNodeW;
+        const lH = viewModeRef.current === "compact" ? compactLayoutNodeH : layoutNodeH;
         const { nodes: laid } = getLayoutedElements(
             nodes.map((n) => ({ ...n, position: { x: 0, y: 0 } })),
             edges,
-            layoutNodeW,
-            layoutNodeH,
+            lW,
+            lH,
         );
         setNodes(laid.map((node) => ({ ...node, data: nodesRef.current.find((n) => n.id === node.id)?.data ?? node.data })));
         setPendingSaves((prev) => { const next = new Map(prev); laid.forEach((n) => next.set(n.id, { x: n.position.x, y: n.position.y })); return next; });
         setTimeout(() => fitView({ padding: 0.08, minZoom: 0.5, maxZoom: 0.9, duration: 400 }), 50);
         message.success("Đã căn chỉnh sơ đồ!");
-    }, [nodes, edges, fitView, layoutNodeW, layoutNodeH]);
+    }, [nodes, edges, fitView, layoutNodeW, layoutNodeH, compactLayoutNodeW, compactLayoutNodeH]);
 
     const handleConnect = useCallback(async (connection: Connection) => {
         if (!chartId || !connection.source || !connection.target) return;
@@ -474,33 +493,65 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const handleBulkSubmit = useCallback(async (items: BulkNodeItem[]) => {
         if (!chartId) return;
         setOpenModal(false);
-        const createdIds = new Map<number, number>();
-        let successCount = 0;
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            try {
-                const parentId = item.existingParentId != null
-                    ? item.existingParentId
-                    : item.parentIndex !== null
-                        ? (createdIds.get(item.parentIndex) ?? null)
-                        : null;
-                const res = await createNode.mutateAsync({
-                    chartId, name: item.title, level: item.levelCode,
-                    holderName: item.holderName ?? null, parentId,
-                    isGoal: false, jobDescriptionId: null,
-                });
-                const newId = (res as any)?.id ?? (res as any)?.data?.id ?? (res as any)?.result?.id;
-                if (newId) createdIds.set(i, Number(newId));
-                successCount++;
-            } catch { }
+
+        const buildChildren = (
+            items: BulkNodeItem[],
+            parentRowIndex: number,
+        ): IReqCreateNodeTree[] => {
+            return items
+                .map((item, i) => ({ item, i }))
+                .filter(({ item }) => item.parentIndex === parentRowIndex && item.existingParentId === null)
+                .map(({ item, i }) => ({
+                    chartId: chartId!,
+                    name: item.title,
+                    level: item.levelCode || undefined,
+                    holderName: item.holderName || undefined,
+                    isGoal: false,
+                    jobDescriptionId: null,
+                    children: buildChildren(items, i),
+                } as IReqCreateNodeTree));
+        };
+
+        const roots: IReqCreateNodeTree[] = items
+            .map((item, i) => ({ item, i }))
+            .filter(({ item }) => item.parentIndex === null && item.existingParentId === null)
+            .map(({ item, i }) => ({
+                chartId: chartId!,
+                name: item.title,
+                level: item.levelCode || undefined,
+                holderName: item.holderName || undefined,
+                isGoal: false,
+                jobDescriptionId: null,
+                children: buildChildren(items, i),
+            }));
+
+        const withExistingParent: IReqCreateNodeTree[] = items
+            .map((item, i) => ({ item, i }))
+            .filter(({ item }) => item.existingParentId != null)
+            .map(({ item, i }) => ({
+                chartId: chartId!,
+                name: item.title,
+                level: item.levelCode || undefined,
+                holderName: item.holderName || undefined,
+                isGoal: false,
+                jobDescriptionId: null,
+                parentId: item.existingParentId!,
+                children: buildChildren(items, i),
+            }));
+
+        const payload = [...roots, ...withExistingParent];
+        if (payload.length === 0) return;
+
+        try {
+            await bulkTreeNode.mutateAsync(payload);
+            loadNodes(chartId);
+        } catch {
+            message.error("Tạo hàng loạt thất bại, thử lại nhé!");
         }
-        message.success(`Đã tạo ${successCount}/${items.length} node!`);
-        loadNodes(chartId);
-    }, [chartId, createNode, loadNodes]);
+    }, [chartId, bulkTreeNode, loadNodes]);
 
     const handleCloseModal = useCallback(() => { setOpenModal(false); setEditingNode(null); }, []);
 
-    // ── Container height responsive ───────────────────────────────────────────
     const containerHeight = isMobile
         ? "calc(100vh - 100px)"
         : isTablet
@@ -509,7 +560,6 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const containerMinHeight = isMobile ? 360 : isTablet ? 480 : 600;
 
-    // ── Toolbar button style ──────────────────────────────────────────────────
     const btnBase: React.CSSProperties = {
         borderColor: "#d1d5db",
         color: "#6b7280",
@@ -517,6 +567,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         padding: isMobile ? "0 8px" : undefined,
         fontSize: isMobile ? 12 : 14,
     };
+
+    // "compact" = Tổng quan, "full" = Chi tiết
+    // Highlight nút khi đang ở chế độ Tổng quan (compact)
+    const viewModeBtnStyle: React.CSSProperties = viewMode === "compact"
+        ? { borderColor: "#6366f1", color: "#6366f1", fontWeight: 600, fontSize: isMobile ? 12 : 14, background: "#eef2ff" }
+        : { ...btnBase };
 
     return (
         <div style={{
@@ -538,9 +594,9 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 gap: isMobile ? 4 : 8,
                 flexWrap: "wrap",
                 justifyContent: "flex-end",
-                // Đảm bảo không đè SearchBar: SearchBar rộng ~180px bên trái
                 maxWidth: isMobile ? "calc(100% - 160px)" : isTablet ? "calc(100% - 200px)" : "auto",
             }}>
+                {/* ── Lưu vị trí ── */}
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
                     {pendingSaves.size > 0 && (
                         isMobile ? (
@@ -565,48 +621,58 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     )}
                 </Access>
 
+                {/* ── Hoàn tác ── */}
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
                     {isMobile ? (
                         <Tooltip title="Hoàn tác">
-                            <Button
-                                icon={<ReloadOutlined />}
-                                onClick={handleResetPositions}
-                                size="small"
-                                style={btnBase}
-                            />
+                            <Button icon={<ReloadOutlined />} onClick={handleResetPositions} size="small" style={btnBase} />
                         </Tooltip>
                     ) : (
-                        <Button
-                            icon={<ReloadOutlined />}
-                            onClick={handleResetPositions}
-                            style={btnBase}
-                        >
+                        <Button icon={<ReloadOutlined />} onClick={handleResetPositions} style={btnBase}>
                             {isTablet ? "" : "Hoàn tác"}
                         </Button>
                     )}
                 </Access>
 
+                {/* ── Tự căn chỉnh ── */}
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
                     {isMobile ? (
                         <Tooltip title="Tự căn chỉnh">
-                            <Button
-                                icon={<ApartmentOutlined />}
-                                onClick={handleAutoLayout}
-                                size="small"
-                                style={btnBase}
-                            />
+                            <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout} size="small" style={btnBase} />
                         </Tooltip>
                     ) : (
-                        <Button
-                            icon={<ApartmentOutlined />}
-                            onClick={handleAutoLayout}
-                            style={btnBase}
-                        >
+                        <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout} style={btnBase}>
                             {isTablet ? "" : "Tự căn chỉnh"}
                         </Button>
                     )}
                 </Access>
 
+                {/* ── Toggle: Tổng quan / Chi tiết ── */}
+                {isMobile ? (
+                    <Tooltip title={viewMode === "full" ? "Tổng quan" : "Chi tiết"}>
+                        <Button
+                            icon={viewMode === "full" ? <AppstoreOutlined /> : <BarsOutlined />}
+                            onClick={() => setViewMode((v) => v === "full" ? "compact" : "full")}
+                            size="small"
+                            style={viewModeBtnStyle}
+                        />
+                    </Tooltip>
+                ) : (
+                    <Tooltip title={viewMode === "full" ? "Chỉ hiện tên chức danh" : "Hiện đầy đủ thông tin"}>
+                        <Button
+                            icon={viewMode === "full" ? <AppstoreOutlined /> : <BarsOutlined />}
+                            onClick={() => setViewMode((v) => v === "full" ? "compact" : "full")}
+                            style={viewModeBtnStyle}
+                        >
+                            {isTablet
+                                ? (viewMode === "full" ? "Tổng quan" : "Chi tiết")
+                                : (viewMode === "full" ? "Tổng quan" : "Chi tiết")
+                            }
+                        </Button>
+                    </Tooltip>
+                )}
+
+                {/* ── Thêm vị trí ── */}
                 <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
                     {isMobile ? (
                         <Tooltip title="Thêm vị trí">
@@ -615,10 +681,8 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                                 onClick={() => { setEditingNode(null); setOpenModal(true); }}
                                 size="small"
                                 style={{
-                                    background: "#e8637a",
-                                    borderColor: "#e8637a",
-                                    color: "#fff",
-                                    fontWeight: 600,
+                                    background: "#e8637a", borderColor: "#e8637a",
+                                    color: "#fff", fontWeight: 600,
                                     boxShadow: "0 2px 8px rgba(232,99,122,.3)",
                                 }}
                             />
@@ -628,10 +692,8 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                             icon={<PlusOutlined />}
                             onClick={() => { setEditingNode(null); setOpenModal(true); }}
                             style={{
-                                background: "#e8637a",
-                                borderColor: "#e8637a",
-                                color: "#fff",
-                                fontWeight: 600,
+                                background: "#e8637a", borderColor: "#e8637a",
+                                color: "#fff", fontWeight: 600,
                                 boxShadow: "0 2px 8px rgba(232,99,122,.3)",
                                 fontSize: isTablet ? 13 : 14,
                             }}
@@ -645,12 +707,13 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             {/* ── SearchBar (top-left) ── */}
             <SearchBar
                 nodes={nodes}
-                onSelect={(id) => handleSearchSelect(id, null)}            // fallback không có pos
-                onSelectWithPos={(id, pos) => handleSearchSelect(id, pos)} // có pos thì dùng cái này
+                onSelect={(id) => handleSearchSelect(id, null)}
+                onSelectWithPos={(id, pos) => handleSearchSelect(id, pos)}
                 onClear={() => { setSelectedNodeId(null); setSelectedNodePos(null); }}
                 isMobile={isMobile}
                 isTablet={isTablet}
             />
+
             <ReactFlow
                 nodes={nodes} edges={edges}
                 nodeTypes={nodeTypes} edgeTypes={edgeTypes}
@@ -666,29 +729,21 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 defaultEdgeOptions={EDGE_DEFAULTS}
                 onPaneClick={() => { setSelectedNodeId(null); setSelectedNodePos(null); }}
             >
-                {/* MiniMap ẩn trên mobile để tiết kiệm không gian */}
                 {!isMobile && (
                     <MiniMap
                         nodeColor="#fda4af"
                         maskColor="rgba(0,0,0,0.04)"
-                        style={{
-                            borderRadius: 8,
-                            bottom: 20,
-                        }}
+                        style={{ borderRadius: 8, bottom: 20 }}
                     />
                 )}
                 <Controls
                     showInteractive={false}
-                    style={{
-                        bottom: isMobile ? 8 : 20,
-                        left: isMobile ? 8 : 20,
-                    }}
+                    style={{ bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 20 }}
                 />
                 <Background color="#e5e7eb" gap={20} />
             </ReactFlow>
 
-
-            {/* ── MiniPanel (float gần node) ── */}
+            {/* ── MiniPanel ── */}
             <MiniPanel
                 nodeId={selectedNodeId}
                 nodes={nodes}

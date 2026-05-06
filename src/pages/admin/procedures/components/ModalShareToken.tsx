@@ -44,7 +44,7 @@ function parseUserAgentDetail(ua: string): ParsedUA {
     let deviceType: DeviceType = "desktop";
 
     if (/iPad/.test(ua)) {
-        os = "iPadOS";  
+        os = "iPadOS";
         deviceType = "tablet";
     } else if (/iPhone/.test(ua)) {
         os = "iOS";
@@ -285,7 +285,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
     const [newTokenQr, setNewTokenQr] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [expandedKey, setExpandedKey] = useState<number | null>(null);
-    const [autoPin, setAutoPin] = useState(false);
+    const [autoPin, setAutoPin] = useState(true);
 
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [selectedToken, setSelectedToken] = useState<IResShareTokenDTO | null>(null);
@@ -321,7 +321,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
         });
         if (res?.qrCode) setNewTokenQr(res.qrCode);
         form.resetFields();
-        setAutoPin(false);
+        setAutoPin(true);  // ← SỬA ĐÂY
         setShowForm(false);
     };
 
@@ -526,7 +526,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 setEmailModalOpen(false);
                                 setSelectedToken(null);
                                 setEmailInput("");
-                                setAutoPin(false);
+                                setAutoPin(true);
                             }}
                             style={showForm ? {} : {
                                 background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
@@ -621,14 +621,13 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 <Button onClick={() => {
                                     setShowForm(false);
                                     setNewTokenQr(null);
-                                    setAutoPin(false);
+                                    setAutoPin(true);
                                     form.resetFields();
                                 }}>
                                     Huỷ
                                 </Button>
                             </Flex>
                         </Form>
-
                         {newTokenQr && (
                             <>
                                 <Divider style={{ margin: "0 0 14px" }} />

@@ -15,7 +15,7 @@ import type {
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
     , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO, ICreateShareTokenRequest,
     IResShareTokenDTO,
-    IResPublicProcedureDTO,
+    IResPublicProcedureDTO, IReqCreateNodeTree
 
 } from '@/types/backend';
 
@@ -1285,6 +1285,12 @@ export const callUpdateOrgNode = (data: any) => {
 export const callDeleteOrgNode = (id: number) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/job-position-nodes/${id}`
+    );
+};
+export const callCreateOrgNodeBulkTree = (data: IReqCreateNodeTree[]) => {
+    return axios.post<IBackendRes<IOrgNode[]>>(
+        `/api/v1/job-position-nodes/bulk-tree`,
+        data
     );
 };
 /* ===================== JD FLOW API ===================== */

@@ -4,11 +4,12 @@ import {
     callFetchOrgNodes,
     callCreateOrgNode,
     callUpdateOrgNode,
-    callDeleteOrgNode
+    callDeleteOrgNode,
+    callCreateOrgNodeBulkTree,  // ⭐ THÊM
 } from "@/config/api";
 
 import { notify } from "@/components/common/notification/notify";
-import type { IBackendRes } from "@/types/backend";
+import type { IBackendRes, IReqCreateNodeTree } from "@/types/backend"; // ⭐ THÊM IReqCreateNodeTree
 
 /* ===================== ORG NODES ===================== */
 
@@ -35,7 +36,7 @@ export const useOrgNodesQuery = (chartId: number) => {
 };
 
 
-/* ===================== CREATE NODE ===================== */
+/* ===================== CREATE NODE (single) ===================== */
 
 export const useCreateOrgNodeMutation = () => {
 
@@ -56,6 +57,39 @@ export const useCreateOrgNodeMutation = () => {
         onSuccess: () => {
 
             notify.created("Tạo node thành công");
+
+            queryClient.invalidateQueries({
+                queryKey: ["orgNodes"]
+            });
+
+        }
+
+    });
+
+};
+
+
+/* ===================== CREATE NODE BULK TREE ===================== */
+
+export const useCreateOrgNodeBulkTreeMutation = () => {
+
+    const queryClient = useQueryClient();
+
+    return useMutation<any, Error, IReqCreateNodeTree[]>({
+
+        mutationFn: async (data: IReqCreateNodeTree[]) => {
+
+            const res = await callCreateOrgNodeBulkTree(data);
+
+            const backendRes = res.data as IBackendRes<any[]> | undefined;
+
+            return backendRes?.data;
+
+        },
+
+        onSuccess: () => {
+
+            notify.created("Tạo hàng loạt node thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]
@@ -130,3 +164,4 @@ export const useDeleteOrgNodeMutation = () => {
     });
 
 };
+
