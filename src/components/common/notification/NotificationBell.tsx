@@ -18,7 +18,7 @@ const NotificationBell: React.FC = () => {
             placement="bottomRight"
             overlayStyle={{ zIndex: 10000, padding: 0, borderRadius: 10, overflow: "hidden" }}
             getPopupContainer={() => document.body}
-            dropdownRender={() => (
+            popupRender={() => (
                 <NotificationList
                     items={items}
                     unreadIds={unreadIds}

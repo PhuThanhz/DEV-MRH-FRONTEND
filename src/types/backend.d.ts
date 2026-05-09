@@ -1657,3 +1657,84 @@ export interface IRequirePinResponse {
 export interface ISendShareEmailRequest {
     email: string;
 }
+/* ===================== DOCUMENT CATEGORY ===================== */
+export interface IDocumentCategory {
+    id?: number;
+    categoryCode: string;
+    categoryName: string;
+    symbol?: string;
+    definition?: string;
+    active: boolean;
+    mappingProcedure: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+/* ===================== DOCUMENT ===================== */
+export type DocumentProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
+
+export interface IDocument {
+    id?: number;
+    documentCode: string;
+    documentName: string;
+
+    category?: {
+        id: number;
+        categoryCode: string;
+        categoryName: string;
+        symbol?: string;
+        mappingProcedure: boolean;
+    };
+
+    department?: {
+        id: number;
+        name: string;
+        companyId?: number;
+        companyName?: string;
+        companyCode?: string;
+    };
+
+    section?: {
+        id: number;
+        name: string;
+    };
+
+    status?: string;
+    planYear?: number;
+    issuedDate?: string;
+    fileUrls?: string[];
+    note?: string;
+    active: boolean;
+    version?: number;
+
+    // chỉ có khi category.mappingProcedure = true
+    procedureType?: DocumentProcedureType;
+    procedureId?: number; // ← backend trả về, FE chỉ đọc, không gửi lên
+    userIds?: string[];   // ← THÊM dòng này
+
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IDocumentRequest {
+    documentCode: string;
+    documentName: string;
+    categoryId: number;
+    departmentId?: number;
+    sectionId?: number;
+    departmentIds?: number[];   // ✅ có
+    userIds?: string[];         // ✅ có
+    status?: string;
+    planYear?: number;
+    issuedDate?: string;
+    fileUrls?: string[];        // ✅ có
+    note?: string;
+    procedureType?: DocumentProcedureType;
+}
+
+
+

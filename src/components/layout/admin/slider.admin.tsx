@@ -288,7 +288,7 @@ const SliderAdmin: React.FC<IProps> = ({
                     open={mobileOpen}
                     onClose={() => setMobileOpen(false)}
                     width={280}
-                    bodyStyle={{ padding: 0, background: "#fff" }}
+                    styles={{ body: { padding: 0, background: "#fff" } }}
                     closeIcon={null}
                 >
                     <div

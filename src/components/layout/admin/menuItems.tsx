@@ -7,14 +7,14 @@ import {
     TeamOutlined,
     ClusterOutlined,
     OrderedListOutlined,
-    ApartmentOutlined,
-    StarOutlined,
     FileTextOutlined,
     FileDoneOutlined,
+    FolderOpenOutlined,
+    FileOutlined,
+    QrcodeOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import { QrcodeOutlined } from "@ant-design/icons";
 
 interface Permission {
     apiPath: string;
@@ -34,7 +34,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 item.apiPath === perm.apiPath && item.method === perm.method
         ) || ACL_ENABLE === "false";
 
-    // ── pre-check từng nhóm để quyết định có hiện group label không ──
+    // ── pre-check từng nhóm ──
     const hasUserGroup =
         checkPermission(ALL_PERMISSIONS.USERS.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.ROLES.GET_PAGINATE) ||
@@ -60,6 +60,11 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
     const hasQuyTrinhSubgroup =
         checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_PAGINATE);
+
+    // ✅ THÊM MỚI
+    const hasVanBanGroup =
+        checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE);
 
     const full = [
         // ===================== TỔNG QUAN =====================
@@ -114,7 +119,6 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ? [{ type: "group", label: "TỔ CHỨC" }]
             : []),
 
-        // Nhân viên
         ...(hasEmployeeGroup
             ? [
                 {
@@ -247,10 +251,36 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
+
+        // ===================== QUẢN LÝ VĂN BẢN =====================
+        ...(hasVanBanGroup
+            ? [{ type: "group", label: "QUẢN LÝ VĂN BẢN" }]
+            : []),
+
+        ...(checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE)
+            ? [
+                {
+                    label: <Link to="/admin/document-categories">Danh mục văn bản</Link>,
+                    key: "/admin/document-categories",
+                    icon: <FolderOpenOutlined />,
+                },
+            ]
+            : []),
+
+        ...(checkPermission(ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE)
+            ? [
+                {
+                    label: <Link to="/admin/documents">Văn bản</Link>,
+                    key: "/admin/documents",
+                    icon: <FileOutlined />,
+                },
+            ]
+            : []),
+
         // ===================== CÔNG CỤ =====================
         { type: "group", label: "CÔNG CỤ" },
         {
-            label: "",  // ← không cần, slider.admin.tsx sẽ tự override
+            label: "",
             key: "qr-scanner-toggle",
             icon: <QrcodeOutlined />,
         },

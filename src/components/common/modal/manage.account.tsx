@@ -24,7 +24,7 @@ const ManageAccount = ({ open, onClose }: IProps) => (
         open={open}
         onCancel={() => onClose(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         maskClosable={false}
         width={isMobile ? "100%" : 800}
         styles={{

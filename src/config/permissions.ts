@@ -1072,11 +1072,82 @@ export const ALL_PERMISSIONS = {
             module: "POSITION_CHART",
         },
     },
+    /* ===================== DOCUMENT CATEGORIES ===================== */
+    DOCUMENT_CATEGORIES: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/document-categories",
+            module: "DOCUMENT_CATEGORIES",
+        },
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/document-categories/{id}",
+            module: "DOCUMENT_CATEGORIES",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/document-categories",
+            module: "DOCUMENT_CATEGORIES",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/document-categories/{id}",
+            module: "DOCUMENT_CATEGORIES",
+        },
+        TOGGLE_ACTIVE: {
+            method: "PUT",
+            apiPath: "/api/v1/document-categories/{id}/active",
+            module: "DOCUMENT_CATEGORIES",
+        },
 
+    },
+
+    /* ===================== DOCUMENTS ===================== */
+    DOCUMENTS: {
+        GET_PAGINATE: {
+            method: "GET",
+            apiPath: "/api/v1/documents",
+            module: "DOCUMENTS",
+        },
+        GET_BY_ID: {
+            method: "GET",
+            apiPath: "/api/v1/documents/{id}",
+            module: "DOCUMENTS",
+        },
+        CREATE: {
+            method: "POST",
+            apiPath: "/api/v1/documents",
+            module: "DOCUMENTS",
+        },
+        UPDATE: {
+            method: "PUT",
+            apiPath: "/api/v1/documents/{id}",
+            module: "DOCUMENTS",
+        },
+
+        TOGGLE_ACTIVE: {
+            method: "PUT",
+            apiPath: "/api/v1/documents/{id}/active",
+            module: "DOCUMENTS",
+        },
+        DELETE: {
+            method: "DELETE",
+            apiPath: "/api/v1/documents/{id}",
+            module: "DOCUMENTS",
+        },
+
+        GET_BY_CATEGORY: {
+            method: "GET",
+            apiPath: "/api/v1/documents/by-category/{categoryId}",
+            module: "DOCUMENTS",
+        },
+        GET_BY_DEPARTMENT: {
+            method: "GET",
+            apiPath: "/api/v1/documents/by-department/{departmentId}",
+            module: "DOCUMENTS",
+        },
+    },
 };
-
-
-
 export const ALL_MODULES = {
     DASHBOARD: "DASHBOARD",
     PERMISSIONS: "PERMISSIONS",
@@ -1116,4 +1187,6 @@ export const ALL_MODULES = {
     PROCEDURE_CONFIDENTIAL: "PROCEDURE_CONFIDENTIAL",
     EMPLOYEES: "EMPLOYEES",
     POSITION_CHART: "POSITION_CHART",
+    DOCUMENT_CATEGORIES: "DOCUMENT_CATEGORIES",
+    DOCUMENTS: "DOCUMENTS",
 };

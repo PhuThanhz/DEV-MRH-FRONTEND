@@ -15,7 +15,9 @@ import type {
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
     , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO, ICreateShareTokenRequest,
     IResShareTokenDTO,
-    IResPublicProcedureDTO, IReqCreateNodeTree
+    IResPublicProcedureDTO, IReqCreateNodeTree, IDocumentCategory,
+    IDocument,
+    IDocumentRequest,
 
 } from '@/types/backend';
 
@@ -454,6 +456,11 @@ export const callActivePositionLevel = (id: number) => {
         `/api/v1/position-levels/${id}/active`
     );
 };
+export const callFetchPositionLevelById = (id: number) => {
+    return axios.get<IBackendRes<IPositionLevel>>(
+        `/api/v1/position-levels/${id}`
+    );
+};
 
 /* ===================== JOB TITLES ===================== */
 
@@ -483,7 +490,11 @@ export const callDeleteJobTitle = (id: number) => {
     );
 };
 
-
+export const callFetchJobTitleById = (id: number) => {
+    return axios.get<IBackendRes<IJobTitle>>(
+        `/api/v1/job-titles/${id}`
+    );
+};
 /* ===================== COMPANY PROCEDURES ===================== */
 
 
@@ -1018,7 +1029,11 @@ export const callDeleteProcessAction = (id: string) => {
         `/api/v1/process-actions/${id}`
     );
 };
-
+export const callFetchProcessActionById = (id: number) => {
+    return axios.get<IBackendRes<IProcessAction>>(
+        `/api/v1/process-actions/${id}`
+    );
+};
 /* ===================== PERMISSION CONTENT API ===================== */
 
 export const callFetchPermissionContent = (query: string) => {
@@ -1047,7 +1062,17 @@ export const callTogglePermissionContent = (id: number | string) => {
         `/api/v1/permission-contents/${id}/toggle`
     );
 };
-
+export const callFetchPermissionContentById = (id: number | string) => {
+    return axios.get<IBackendRes<IPermissionContent>>(
+        `/api/v1/permission-contents/${id}`
+    );
+};
+// ← THÊM DÒNG NÀY
+export const callFetchPermissionCategoryById = (id: number | string) => {
+    return axios.get<IBackendRes<IPermissionCategory>>(
+        `/api/v1/permission-categories/${id}`
+    );
+};
 
 
 /* ===================== PERMISSION CATEGORY ===================== */
@@ -1808,3 +1833,85 @@ export const callSendShareEmail = (tokenId: number, email: string) => {
         { email }
     );
 };
+/* ===================== DOCUMENT CATEGORIES ===================== */
+
+export const callFetchDocumentCategory = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IDocumentCategory>>>(
+        `/api/v1/document-categories?${query}`
+    );
+
+export const callFetchDocumentCategoryActive = () =>
+    axios.get<IBackendRes<IDocumentCategory[]>>(
+        `/api/v1/document-categories/active`
+    );
+
+export const callFetchDocumentCategoryMappingProcedure = () =>
+    axios.get<IBackendRes<IDocumentCategory[]>>(
+        `/api/v1/document-categories/mapping-procedure`
+    );
+
+export const callCreateDocumentCategory = (data: IDocumentCategory) =>
+    axios.post<IBackendRes<IDocumentCategory>>(
+        `/api/v1/document-categories`,
+        data
+    );
+
+export const callUpdateDocumentCategory = (id: number, data: IDocumentCategory) =>
+    axios.put<IBackendRes<IDocumentCategory>>(
+        `/api/v1/document-categories/${id}`,
+        data
+    );
+
+export const callToggleActiveDocumentCategory = (id: number) =>
+    axios.put<IBackendRes<void>>(
+        `/api/v1/document-categories/${id}/active`
+    );
+
+
+
+/* ===================== DOCUMENTS ===================== */
+
+export const callFetchDocuments = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IDocument>>>(
+        `/api/v1/documents?${query}`
+    );
+
+export const callFetchDocumentById = (id: number) =>
+    axios.get<IBackendRes<IDocument>>(
+        `/api/v1/documents/${id}`
+    );
+
+export const callCreateDocument = (data: IDocumentRequest) =>
+    axios.post<IBackendRes<IDocument>>(
+        `/api/v1/documents`,
+        data
+    );
+
+export const callUpdateDocument = (id: number, data: IDocumentRequest) =>
+    axios.put<IBackendRes<IDocument>>(
+        `/api/v1/documents/${id}`,
+        data
+    );
+
+
+export const callToggleActiveDocument = (id: number) =>
+    axios.put<IBackendRes<void>>(
+        `/api/v1/documents/${id}/active`
+    );
+
+export const callDeleteDocument = (id: number) =>
+    axios.delete<IBackendRes<void>>(
+        `/api/v1/documents/${id}`
+    );
+
+
+
+export const callFetchDocumentsByCategory = (categoryId: number) =>
+    axios.get<IBackendRes<IDocument[]>>(
+        `/api/v1/documents/by-category/${categoryId}`
+    );
+
+export const callFetchDocumentsByDepartment = (departmentId: number) =>
+    axios.get<IBackendRes<IDocument[]>>(
+        `/api/v1/documents/by-department/${departmentId}`
+    );

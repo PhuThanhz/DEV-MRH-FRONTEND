@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchPermissionContent,
+    callFetchPermissionContentById,
     callCreatePermissionContent,
     callUpdatePermissionContent,
     callDeletePermissionContent,
@@ -30,6 +31,18 @@ export const usePermissionContentQuery = (query: string) => {
         },
     });
 };
+
+/* ===================== GET BY ID ===================== */
+export const usePermissionContentByIdQuery = (id: number | string | null) =>
+    useQuery({
+        queryKey: ["permission-content-detail", id],
+        queryFn: async () => {
+            const res = await callFetchPermissionContentById(id!);
+            if (!res?.data) throw new Error("Không thể lấy chi tiết nội dung phân quyền");
+            return res.data as IPermissionContent;
+        },
+        enabled: !!id,
+    });
 
 /* ===================== CREATE ===================== */
 export const useCreatePermissionContentMutation = () => {

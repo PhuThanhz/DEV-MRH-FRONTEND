@@ -249,7 +249,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                         <Text strong style={{ fontSize: 14 }}>Quét mã QR quy trình</Text>
                     </Flex>
                 }
-                destroyOnClose
+                destroyOnHidden
                 styles={{
                     header: {
                         paddingBottom: 12,

@@ -36,6 +36,8 @@ export const PATHS = {
         CONFIDENTIAL_PROCEDURES: "/admin/confidential-procedures", // ← THÊM
         CHANGE_PASSWORD: "/change-password",
         EMPLOYEE: '/admin/employees',
+        DOCUMENT_CATEGORY: "/admin/document-categories",   // ← THÊM
+        DOCUMENT: "/admin/documents",                       // ← THÊM
 
     },
     CLIENT: {

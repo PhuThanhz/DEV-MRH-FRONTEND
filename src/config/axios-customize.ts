@@ -66,7 +66,6 @@ instance.interceptors.request.use((config) => {
     return config;
 });
 
-
 instance.interceptors.response.use(
     (res) => {
         // download file

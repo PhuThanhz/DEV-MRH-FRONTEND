@@ -45,6 +45,8 @@ import DepartmentProfilePage from "@/pages/admin/dashboard/department-profile";
 import PublicProcedureView from "@/pages/public/PublicProcedureView";
 import QrScanPage from "@/pages/scan/QrScanPage";
 import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
+import DocumentCategoryPage from "@/pages/admin/document-category";
+import DocumentPage from "@/pages/admin/document";
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -315,6 +317,28 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <QrScanPage />
+            </ProtectedRoute>
+          ),
+        },
+        // ===== DOCUMENT CATEGORIES =====
+        {
+          path: PATHS.ADMIN.DOCUMENT_CATEGORY,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE}>
+                <DocumentCategoryPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        // ===== DOCUMENTS =====
+        {
+          path: PATHS.ADMIN.DOCUMENT,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE}>
+                <DocumentPage />
+              </Access>
             </ProtectedRoute>
           ),
         },

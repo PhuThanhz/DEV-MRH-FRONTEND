@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchSection,
+    callFetchSectionById,
     callCreateSection,
     callUpdateSection,
     callDeleteSection,
     callActiveSection,
     callInactiveSection,
+    callFetchSectionsByDepartment,
 } from "@/config/api";
 
 import type { ISection, IModelPaginate } from "@/types/backend";
@@ -24,6 +26,7 @@ export const useSectionsQuery = (query: string) => {
         },
     });
 };
+
 // ======================================================
 // FETCH ONE BY ID
 // ======================================================
@@ -33,10 +36,9 @@ export const useSectionByIdQuery = (id?: number) => {
         enabled: !!id,
         queryFn: async () => {
             if (!id) throw new Error("Thiếu ID bộ phận");
-            const res = await callFetchSection(`filter=id:${id}`);
-            if (!res?.data?.result?.length)
-                throw new Error("Không tìm thấy bộ phận");
-            return res.data.result[0] as ISection;
+            const res = await callFetchSectionById(id);
+            if (!res?.data) throw new Error("Không tìm thấy bộ phận");
+            return res.data as ISection;
         },
     });
 };
@@ -150,28 +152,18 @@ export const useInactiveSectionMutation = () => {
         onError: () => notify.error("Không thể vô hiệu hóa bộ phận"),
     });
 };
+
 // ======================================================
 // FETCH SECTIONS BY DEPARTMENT
 // ======================================================
-
-import { callFetchSectionsByDepartment } from "@/config/api";
-
 export const useSectionsByDepartmentQuery = (departmentId?: number) => {
     return useQuery({
         queryKey: ["sections-by-department", departmentId],
         enabled: !!departmentId,
-
         queryFn: async () => {
-            if (!departmentId) {
-                throw new Error("Thiếu departmentId");
-            }
-
+            if (!departmentId) throw new Error("Thiếu departmentId");
             const res = await callFetchSectionsByDepartment(departmentId);
-
-            if (!res?.data) {
-                throw new Error("Không thể lấy danh sách bộ phận");
-            }
-
+            if (!res?.data) throw new Error("Không thể lấy danh sách bộ phận");
             return res.data as ISection[];
         },
     });

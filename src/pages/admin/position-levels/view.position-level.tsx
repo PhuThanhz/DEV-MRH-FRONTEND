@@ -1,6 +1,7 @@
 import type { IPositionLevel } from "@/types/backend";
-import { Badge, Descriptions, Modal } from "antd";
+import { Badge, Descriptions, Modal, Spin } from "antd";
 import dayjs from "dayjs";
+import { usePositionLevelByIdQuery } from "@/hooks/usePositionLevels";
 
 interface IProps {
     open: boolean;
@@ -10,6 +11,11 @@ interface IProps {
 }
 
 const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProps) => {
+
+    const { data: detail, isLoading } = usePositionLevelByIdQuery(
+        open && dataInit?.id ? dataInit.id : undefined
+    );
+
     const close = () => {
         onClose(false);
         setDataInit(null);
@@ -18,7 +24,6 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
     return (
         <>
             <style>{`
-                /* ── Modal chrome ── */
                 .position-level-modal .ant-modal-content {
                     border-radius: 16px !important;
                     padding: 0 !important;
@@ -65,8 +70,6 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                     font-size: 11px !important;
                     color: #6b7280 !important;
                 }
-
-                /* ── Descriptions styling ── */
                 .position-level-modal .ant-descriptions-bordered .ant-descriptions-item-label {
                     font-size: 12px !important;
                     font-weight: 600 !important;
@@ -80,13 +83,9 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                     color: #111827 !important;
                     padding: 10px 14px !important;
                 }
-
-                /* ── Desktop: giữ min-width để không quá hẹp ── */
                 .position-level-modal.ant-modal {
                     min-width: 560px !important;
                 }
-
-                /* ── Tablet ── */
                 @media (max-width: 768px) {
                     .position-level-modal.ant-modal {
                         min-width: unset !important;
@@ -95,8 +94,6 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                         margin: 16px auto !important;
                     }
                 }
-
-                /* ── Mobile: full width, vẫn giữ layout 2 cột ── */
                 @media (max-width: 480px) {
                     .position-level-modal.ant-modal {
                         width: calc(100vw - 24px) !important;
@@ -127,60 +124,63 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                 footer={null}
                 width="45vw"
                 centered
+                destroyOnHidden
                 className="position-level-modal"
                 styles={{
                     mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.2)" },
                 }}
             >
-                <Descriptions bordered column={{ xs: 2, sm: 2, md: 2 }} layout="vertical">
-                    <Descriptions.Item label="Code">
-                        {dataInit?.code ?? "--"}
-                    </Descriptions.Item>
+                <Spin spinning={isLoading}>
+                    <Descriptions bordered column={{ xs: 2, sm: 2, md: 2 }} layout="vertical">
+                        <Descriptions.Item label="Code">
+                            {detail?.code ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Band">
-                        {dataInit?.band ?? "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Band">
+                            {detail?.band ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Level">
-                        {dataInit?.levelNumber ?? "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Level">
+                            {detail?.levelNumber ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Band Order">
-                        {dataInit?.bandOrder ?? "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Band Order">
+                            {detail?.bandOrder ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Công ty" span={2}>
-                        {dataInit?.companyName ?? "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Công ty" span={2}>
+                            {detail?.companyName ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Trạng thái" span={2}>
-                        {dataInit?.status === 1 ? (
-                            <Badge status="success" text="Đang hoạt động" />
-                        ) : (
-                            <Badge status="error" text="Ngừng hoạt động" />
-                        )}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Trạng thái" span={2}>
+                            {detail?.status === 1 ? (
+                                <Badge status="success" text="Đang hoạt động" />
+                            ) : (
+                                <Badge status="error" text="Ngừng hoạt động" />
+                            )}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Ngày tạo">
-                        {dataInit?.createdAt
-                            ? dayjs(dataInit.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo">
+                            {detail?.createdAt
+                                ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
+                                : "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Ngày cập nhật">
-                        {dataInit?.updatedAt
-                            ? dayjs(dataInit.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Ngày cập nhật">
+                            {detail?.updatedAt
+                                ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
+                                : "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Người tạo">
-                        {dataInit?.createdBy ?? "--"}
-                    </Descriptions.Item>
+                        <Descriptions.Item label="Người tạo">
+                            {detail?.createdBy ?? "--"}
+                        </Descriptions.Item>
 
-                    <Descriptions.Item label="Người cập nhật">
-                        {dataInit?.updatedBy ?? "--"}
-                    </Descriptions.Item>
-                </Descriptions>
+                        <Descriptions.Item label="Người cập nhật">
+                            {detail?.updatedBy ?? "--"}
+                        </Descriptions.Item>
+                    </Descriptions>
+                </Spin>
             </Modal>
         </>
     );

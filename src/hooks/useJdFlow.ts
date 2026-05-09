@@ -54,12 +54,16 @@ export const useJdFlowLogsQuery = (jdId?: number) => {
     });
 };
 
+
+
 /* ===================== JD FLOW INBOX ===================== */
 
 export const useJdFlowInboxQuery = () => {
     return useQuery<IJdInbox[]>({
         queryKey: ["jd-flow-inbox"],
         staleTime: 1000 * 30,
+        refetchOnWindowFocus: false,
+        refetchInterval: 1000 * 30,  // ← thêm dòng này
         queryFn: async (): Promise<IJdInbox[]> => {
             const res = await callFetchJdFlowInbox();
             if (!res || res.statusCode !== 200) {
@@ -69,7 +73,6 @@ export const useJdFlowInboxQuery = () => {
         },
     });
 };
-
 /* ===================== JD APPROVERS ===================== */
 
 export const useJdApproversQuery = (enabled: boolean = true) => {

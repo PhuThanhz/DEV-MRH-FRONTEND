@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useJdFlowInboxQuery } from "@/hooks/useJdFlow";
 import type { IJdInbox } from "@/types/backend";
 
@@ -16,21 +15,12 @@ const saveSeenMap = (map: Record<number, string>) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 };
 
-// key = status + updatedAt — đổi 1 trong 2 là unread lại
 const getItemKey = (item: IJdInbox): string =>
     `${item.status}_${item.updatedAt ?? ""}`;
 
 export const useNotifications = () => {
+    // ← bỏ setInterval, polling được quản lý bởi refetchInterval trong hook
     const { data: inboxItems = [], refetch } = useJdFlowInboxQuery();
-
-    // auto refetch mỗi 30s
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    useEffect(() => {
-        intervalRef.current = setInterval(() => refetch(), 30_000);
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, [refetch]);
 
     const seenMap = getSeenMap();
 

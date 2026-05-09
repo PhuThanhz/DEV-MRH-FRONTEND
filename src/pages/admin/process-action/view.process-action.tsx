@@ -1,9 +1,10 @@
 /* ===================== PROCESS ACTION VIEW ===================== */
 
-import { Modal, Descriptions, Badge } from "antd";
+import { Modal, Descriptions, Badge, Spin } from "antd";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import type { IProcessAction } from "@/types/backend";
+import { useProcessActionByIdQuery } from "@/hooks/useProcessActions";
 
 interface IProps {
     open: boolean;
@@ -42,6 +43,11 @@ const ViewProcessAction = ({ open, onClose, dataInit, setDataInit }: IProps) => 
         return () => window.removeEventListener("resize", handler);
     }, []);
 
+    // ← Fetch chi tiết khi modal mở và có id
+    const { data: detail, isLoading } = useProcessActionByIdQuery(
+        open && dataInit?.id ? dataInit.id : null
+    );
+
     const handleClose = () => {
         onClose(false);
         setDataInit(null);
@@ -56,48 +62,50 @@ const ViewProcessAction = ({ open, onClose, dataInit, setDataInit }: IProps) => 
             width={isMobile ? "95vw" : "50vw"}
             centered
         >
-            <Descriptions
-                bordered
-                column={isMobile ? 1 : 2}
-                layout="vertical"
-                size={isMobile ? "small" : "middle"}
-            >
-                <Descriptions.Item label="Mã hành động">
-                    {dataInit?.code || "--"}
-                </Descriptions.Item>
+            <Spin spinning={isLoading}>
+                <Descriptions
+                    bordered
+                    column={isMobile ? 1 : 2}
+                    layout="vertical"
+                    size={isMobile ? "small" : "middle"}
+                >
+                    <Descriptions.Item label="Mã hành động">
+                        {detail?.code || "--"}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Đầu mục">
-                    {dataInit?.name || "--"}
-                </Descriptions.Item>
+                    <Descriptions.Item label="Đầu mục">
+                        {detail?.name || "--"}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Giải thích tên đầu mục" span={isMobile ? 1 : 2}>
-                    {dataInit?.shortDescription || "--"}
-                </Descriptions.Item>
+                    <Descriptions.Item label="Giải thích tên đầu mục" span={isMobile ? 1 : 2}>
+                        {detail?.shortDescription || "--"}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Định nghĩa" span={isMobile ? 1 : 2}>
-                    {renderDefinition(dataInit?.description)}
-                </Descriptions.Item>
+                    <Descriptions.Item label="Định nghĩa" span={isMobile ? 1 : 2}>
+                        {renderDefinition(detail?.description)}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Trạng thái">
-                    {dataInit?.active ? (
-                        <Badge status="success" text="Hoạt động" />
-                    ) : (
-                        <Badge status="error" text="Ngừng hoạt động" />
-                    )}
-                </Descriptions.Item>
+                    <Descriptions.Item label="Trạng thái">
+                        {detail?.active ? (
+                            <Badge status="success" text="Hoạt động" />
+                        ) : (
+                            <Badge status="error" text="Ngừng hoạt động" />
+                        )}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Ngày tạo">
-                    {dataInit?.createdAt
-                        ? dayjs(dataInit.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                        : "--"}
-                </Descriptions.Item>
+                    <Descriptions.Item label="Ngày tạo">
+                        {detail?.createdAt
+                            ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
+                            : "--"}
+                    </Descriptions.Item>
 
-                <Descriptions.Item label="Ngày cập nhật" span={isMobile ? 1 : 2}>
-                    {dataInit?.updatedAt
-                        ? dayjs(dataInit.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                        : "--"}
-                </Descriptions.Item>
-            </Descriptions>
+                    <Descriptions.Item label="Ngày cập nhật" span={isMobile ? 1 : 2}>
+                        {detail?.updatedAt
+                            ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
+                            : "--"}
+                    </Descriptions.Item>
+                </Descriptions>
+            </Spin>
         </Modal>
     );
 };

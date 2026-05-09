@@ -1,7 +1,7 @@
-// src/hooks/usePositionLevels.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchPositionLevel,
+    callFetchPositionLevelById,
     callCreatePositionLevel,
     callUpdatePositionLevel,
     callDeletePositionLevel,
@@ -11,16 +11,12 @@ import {
 import type { IBackendRes, IModelPaginate, IPositionLevel } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
-/* =====================================================
-    GET PAGINATE
-   ===================================================== */
 export const usePositionLevelsQuery = (query: string) => {
     return useQuery({
         queryKey: ["position-levels", query],
         queryFn: async () => {
             const res = await callFetchPositionLevel(query);
             const backend = res as IBackendRes<IModelPaginate<IPositionLevel>>;
-
             return backend.data ?? {
                 meta: { page: 1, pageSize: 10, pages: 0, total: 0 },
                 result: [],
@@ -29,12 +25,22 @@ export const usePositionLevelsQuery = (query: string) => {
     });
 };
 
-/* =====================================================
-    CREATE
-   ===================================================== */
+// ← THÊM MỚI
+export const usePositionLevelByIdQuery = (id?: number) => {
+    return useQuery({
+        queryKey: ["position-level", id],
+        enabled: !!id,
+        queryFn: async () => {
+            if (!id) throw new Error("Thiếu ID");
+            const res = await callFetchPositionLevelById(id);
+            if (!res?.data) throw new Error("Không tìm thấy bậc chức danh");
+            return res.data as IPositionLevel;
+        },
+    });
+};
+
 export const useCreatePositionLevelMutation = () => {
     const client = useQueryClient();
-
     return useMutation({
         mutationFn: async (data: any) => {
             const res = await callCreatePositionLevel(data);
@@ -44,19 +50,14 @@ export const useCreatePositionLevelMutation = () => {
             notify.created("Tạo bậc chức danh thành công");
             client.invalidateQueries({ queryKey: ["position-levels"] });
         },
-        // ✅ THÊM DÒNG NÀY
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi cập nhật bậc chức danh");
+            notify.error(err?.message || "Lỗi khi tạo bậc chức danh");
         },
     });
 };
 
-/* =====================================================
-    UPDATE
-   ===================================================== */
 export const useUpdatePositionLevelMutation = () => {
     const client = useQueryClient();
-
     return useMutation({
         mutationFn: async (data: any) => {
             const res = await callUpdatePositionLevel(data);
@@ -66,18 +67,17 @@ export const useUpdatePositionLevelMutation = () => {
             notify.updated("Cập nhật bậc chức danh thành công");
             client.invalidateQueries({ queryKey: ["position-levels"] });
         },
+        onError: (err: any) => {
+            notify.error(err?.message || "Lỗi khi cập nhật bậc chức danh");
+        },
     });
 };
 
-/* =====================================================
-    DELETE (soft delete) → backend trả null
-   ===================================================== */
 export const useDeletePositionLevelMutation = () => {
     const client = useQueryClient();
-
     return useMutation({
         mutationFn: async (id: number) => {
-            await callDeletePositionLevel(id); // BE trả null → không cần return
+            await callDeletePositionLevel(id);
         },
         onSuccess: () => {
             notify.deleted("Ngừng kích hoạt thành công");
@@ -86,15 +86,11 @@ export const useDeletePositionLevelMutation = () => {
     });
 };
 
-/* =====================================================
-    ACTIVE → backend cũng trả null
-   ===================================================== */
 export const useActivePositionLevelMutation = () => {
     const client = useQueryClient();
-
     return useMutation({
         mutationFn: async (id: number) => {
-            await callActivePositionLevel(id); // BE trả null → không cần return
+            await callActivePositionLevel(id);
         },
         onSuccess: () => {
             notify.updated("Kích hoạt lại thành công");

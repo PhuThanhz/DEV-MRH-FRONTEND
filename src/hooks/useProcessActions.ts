@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchProcessActions,
+    callFetchProcessActionById,
     callCreateProcessAction,
     callUpdateProcessAction,
     callDeleteProcessAction,
@@ -19,6 +20,18 @@ export const useProcessActionsQuery = (query: string) =>
             if (!res?.data) throw new Error("Không thể lấy danh sách Process Action");
             return res.data as IModelPaginate<IProcessAction>;
         },
+    });
+
+// ← THÊM MỚI
+export const useProcessActionByIdQuery = (id: number | null) =>
+    useQuery({
+        queryKey: ["process-action", id],
+        queryFn: async () => {
+            const res = await callFetchProcessActionById(id!);
+            if (!res?.data) throw new Error("Không thể lấy chi tiết Process Action");
+            return res.data as IProcessAction;
+        },
+        enabled: !!id,
     });
 
 export const useCreateProcessActionMutation = () => {

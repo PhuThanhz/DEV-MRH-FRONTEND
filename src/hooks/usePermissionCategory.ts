@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     callFetchPermissionCategory,
+    callFetchPermissionCategoryById,
     callCreatePermissionCategory,
     callUpdatePermissionCategory,
     callDeletePermissionCategory,
@@ -25,6 +26,18 @@ export const usePermissionCategoryQuery = (query: string) => {
         },
     });
 };
+
+/* ===================== GET BY ID ===================== */
+export const usePermissionCategoryByIdQuery = (id: number | null) =>
+    useQuery({
+        queryKey: ["permission-category-detail", id],
+        queryFn: async () => {
+            const res = await callFetchPermissionCategoryById(id!);
+            if (!res?.data) throw new Error("Không thể lấy chi tiết danh mục");
+            return res.data as IPermissionCategory;
+        },
+        enabled: !!id,
+    });
 
 /* ===================== CREATE ===================== */
 export const useCreatePermissionCategoryMutation = () => {

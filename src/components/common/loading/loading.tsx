@@ -18,7 +18,9 @@ const Loading: React.FC<{ message?: string }> = ({ message = "Đang tải hệ t
                 indicator={<LoadingOutlined style={{ fontSize: 48, color: "#1677ff" }} spin />}
                 tip={<span style={{ fontSize: 18, color: "#555" }}>{message}</span>}
                 size="large"
-            />
+            >
+                <div />
+            </Spin>
         </div>
     );
 };

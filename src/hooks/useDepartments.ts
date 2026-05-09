@@ -5,6 +5,7 @@ import {
     callCreateDepartment,
     callUpdateDepartment,
     callDeleteDepartment,
+    callFetchDepartmentsByCompany,
 } from "@/config/api";
 
 import type {
@@ -24,13 +25,10 @@ export const useDepartmentsQuery = (query: string) => {
         queryKey: ["departments", query],
         queryFn: async () => {
             const res = await callFetchDepartment(query);
-
-            const finalData = res?.data; // { meta, result }
-
+            const finalData = res?.data;
             if (!finalData) {
                 throw new Error("Không thể lấy danh sách phòng ban");
             }
-
             return finalData;
         },
     });
@@ -47,15 +45,29 @@ export const useDepartmentByIdQuery = (id?: number) => {
             if (typeof id !== "number") {
                 throw new Error("Thiếu ID phòng ban");
             }
-
             const res = await callFetchDepartmentById(id);
             const finalData = res?.data;
-
             if (!finalData) {
                 throw new Error("Không tìm thấy phòng ban");
             }
-
             return finalData;
+        },
+    });
+};
+
+/* =====================================================
+   GET BY COMPANY ID (cascade select)
+===================================================== */
+export const useDepartmentsByCompanyQuery = (companyId: number) => {
+    return useQuery<IDepartment[]>({
+        queryKey: ["departments", "by-company", companyId],
+        enabled: !!companyId,
+        queryFn: async () => {
+            const res = await callFetchDepartmentsByCompany(companyId);
+            if (!res?.data) {
+                throw new Error("Không thể lấy danh sách phòng ban theo công ty");
+            }
+            return res.data;
         },
     });
 };
