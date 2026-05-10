@@ -45,8 +45,10 @@ import DepartmentProfilePage from "@/pages/admin/dashboard/department-profile";
 import PublicProcedureView from "@/pages/public/PublicProcedureView";
 import QrScanPage from "@/pages/scan/QrScanPage";
 import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
+// ✅ DOCUMENTS
 import DocumentCategoryPage from "@/pages/admin/document-category";
 import DocumentPage from "@/pages/admin/document";
+
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -320,7 +322,7 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-        // ===== DOCUMENT CATEGORIES =====
+        // ✅ DOCUMENTS
         {
           path: PATHS.ADMIN.DOCUMENT_CATEGORY,
           element: (
@@ -331,7 +333,6 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
-        // ===== DOCUMENTS =====
         {
           path: PATHS.ADMIN.DOCUMENT,
           element: (
@@ -348,7 +349,6 @@ export default function App() {
     { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword /> },
     { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword /> },
     { path: "/public/view/:token", element: <PublicProcedureView /> },
-
   ]);
 
   return <RouterProvider router={router} />;

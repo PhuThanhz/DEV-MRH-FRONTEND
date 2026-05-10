@@ -1612,7 +1612,7 @@ export interface IShareLogDTO {
 /* ===================== PROCEDURE SHARE TOKEN ===================== */
 
 export interface ICreateShareTokenRequest {
-    procedureType: ProcedureType;
+    procedureType?: ProcedureType | "DOCUMENT"; // ← optional vì document tự set bên backend
     pin?: string;
     autoGeneratePin?: boolean;  // ← THÊM
     expiresAt?: string;
@@ -1702,17 +1702,16 @@ export interface IDocument {
     };
 
     status?: string;
-    planYear?: number;
     issuedDate?: string;
     fileUrls?: string[];
     note?: string;
     active: boolean;
     version?: number;
+    qrCode?: string;
 
-    // chỉ có khi category.mappingProcedure = true
     procedureType?: DocumentProcedureType;
-    procedureId?: number; // ← backend trả về, FE chỉ đọc, không gửi lên
-    userIds?: string[];   // ← THÊM dòng này
+    procedureId?: number;
+    userIds?: string[];
 
     createdAt?: string;
     updatedAt?: string;
@@ -1726,15 +1725,16 @@ export interface IDocumentRequest {
     categoryId: number;
     departmentId?: number;
     sectionId?: number;
-    departmentIds?: number[];   // ✅ có
-    userIds?: string[];         // ✅ có
+    departmentIds?: number[];
+    userIds?: string[];
     status?: string;
-    planYear?: number;
     issuedDate?: string;
-    fileUrls?: string[];        // ✅ có
+    fileUrls?: string[];
     note?: string;
     procedureType?: DocumentProcedureType;
 }
+
+
 
 
 

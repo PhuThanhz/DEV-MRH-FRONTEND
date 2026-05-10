@@ -1,5 +1,5 @@
 import { Tag, Space, Popconfirm, Tooltip } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, QrcodeOutlined } from "@ant-design/icons";
+import { EyeOutlined, EditOutlined, DeleteOutlined, QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { MoreOutlined } from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { ProColumns } from "@ant-design/pro-components";
@@ -20,6 +20,7 @@ interface BuildColumnsParams {
     companyId?: number;
     departmentId?: number;
     isAdmin: boolean;
+    canShare: boolean; // 👈 thêm
     meta: { page?: number; pageSize?: number };
     permission: Record<string, any>;
     deleteMutation: { mutateAsync: (id: number) => Promise<any> };
@@ -27,6 +28,7 @@ interface BuildColumnsParams {
     onEdit: (record: IProcedure) => void;
     onRevise: (record: IProcedure) => void;
     onQrClick: (record: IProcedure) => void;
+    onShare: (record: IProcedure) => void;
 }
 
 export const buildProcedureColumns = ({
@@ -34,6 +36,7 @@ export const buildProcedureColumns = ({
     companyId,
     departmentId,
     isAdmin,
+    canShare, // 👈 thêm
     meta,
     permission,
     deleteMutation,
@@ -41,6 +44,7 @@ export const buildProcedureColumns = ({
     onEdit,
     onRevise,
     onQrClick,
+    onShare,
 }: BuildColumnsParams): ProColumns<IProcedure>[] => [
         {
             title: "STT",
@@ -259,6 +263,14 @@ export const buildProcedureColumns = ({
                             </Access>
                         ),
                     },
+                    // 👇 chỉ thêm vào menu khi có quyền
+                    ...(canShare ? [{
+                        key: "share",
+                        icon: <ShareAltOutlined style={{ color: "#f0226e" }} />,
+                        label: (
+                            <span onClick={() => onShare(record)}>Chia sẻ công khai</span>
+                        ),
+                    }] : []),
                     {
                         key: "delete",
                         icon: <DeleteOutlined style={{ color: "red" }} />,

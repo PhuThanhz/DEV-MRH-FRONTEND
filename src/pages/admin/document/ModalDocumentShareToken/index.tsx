@@ -1,22 +1,12 @@
 /**
- * index.tsx
- * Dùng để: modal chia sẻ quy trình công khai — tạo/quản lý share token, gửi email
- * Import vào: bất kỳ trang nào cần share quy trình
- *
- * Cấu trúc folder:
- *   ModalShareToken/
- *   ├── index.tsx          ← file này (modal chính + state + logic)
- *   ├── CreateTokenForm.tsx ← form tạo token mới
- *   ├── TokenCard.tsx       ← card layout cho mobile
- *   ├── ExpandedRow.tsx     ← QR + bảng lịch sử truy cập
- *   ├── useIsMobile.ts      ← hook detect mobile/desktop
- *   └── parseUserAgent.ts   ← parse UA, IP, device icon
+ * index.tsx — ModalDocumentShareToken
+ * Dùng để: modal chia sẻ công khai văn bản — tạo/quản lý share token, gửi email
  */
 
 import { useState } from "react";
 import {
     Modal, Form, Button, Table, Tag, Popconfirm,
-    Typography, Tooltip, Flex, Badge, message, Input,
+    Typography, Tooltip, Flex, Badge, Input,
 } from "antd";
 import {
     ShareAltOutlined, StopOutlined,
@@ -24,15 +14,15 @@ import {
     MailOutlined, SendOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import type { IProcedure, ProcedureType, IResShareTokenDTO } from "@/types/backend";
+import type { IDocument, IResShareTokenDTO } from "@/types/backend";
 import {
-    useShareTokensQuery,
-    useCreateShareTokenMutation,
-    useRevokeShareTokenMutation,
-    useSendShareEmailMutation,
-} from "@/hooks/useProcedure";
+    useDocumentShareTokensQuery,
+    useCreateDocumentShareTokenMutation,
+    useRevokeDocumentShareTokenMutation,
+    useSendDocumentShareEmailMutation,
+} from "@/hooks/useDocuments";
 import { useIsMobile } from "@/hooks/useIsMobile";
- import { CreateTokenForm } from "./CreateTokenForm";
+import { CreateTokenForm } from "./CreateTokenForm";
 import { TokenCard } from "./TokenCard";
 import { ExpandedRow } from "./ExpandedRow";
 
@@ -41,43 +31,36 @@ const { Text } = Typography;
 interface IProps {
     open: boolean;
     onClose: () => void;
-    procedure: IProcedure | null;
-    procedureType: ProcedureType;
+    document: IDocument | null;
 }
 
-const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) => {
+const ModalDocumentShareToken = ({ open, onClose, document }: IProps) => {
     const isMobile = useIsMobile();
     const [form] = Form.useForm();
 
-    // ── UI state ──
     const [showForm, setShowForm] = useState(false);
     const [newTokenQr, setNewTokenQr] = useState<string | null>(null);
     const [expandedKey, setExpandedKey] = useState<number | null>(null);
     const [autoPin, setAutoPin] = useState(true);
-
-    // ── Email modal state ──
     const [emailModalOpen, setEmailModalOpen] = useState(false);
     const [selectedToken, setSelectedToken] = useState<IResShareTokenDTO | null>(null);
     const [emailInput, setEmailInput] = useState("");
 
-    const procedureId = procedure?.id;
+    const documentId = document?.id;
 
-    // ── Queries & mutations ──
-    const { data: tokens = [], isLoading } = useShareTokensQuery(procedureId, procedureType, open);
-    const createMutation = useCreateShareTokenMutation();
-    const revokeMutation = useRevokeShareTokenMutation(procedureId);
-    const sendEmailMutation = useSendShareEmailMutation();
+    const { data: tokens = [], isLoading } = useDocumentShareTokensQuery(documentId, open);
+    const createMutation = useCreateDocumentShareTokenMutation();
+    const revokeMutation = useRevokeDocumentShareTokenMutation(documentId);
+    const sendEmailMutation = useSendDocumentShareEmailMutation();
 
-    const activeTokenCount = tokens.filter((t) => !t.isRevoked).length;
+    const activeTokenCount = tokens.filter(t => !t.isRevoked).length;
 
-    // ── Handlers ──
     const handleCreate = async () => {
         if (createMutation.isPending) return;
         const values = await form.validateFields();
         const res = await createMutation.mutateAsync({
-            procedureId: procedureId!,
+            documentId: documentId!,
             data: {
-                procedureType,
                 autoGeneratePin: autoPin,
                 pin: autoPin ? undefined : (values.pin || undefined),
                 expiresAt: values.expiresAt ? values.expiresAt.toISOString() : undefined,
@@ -109,31 +92,27 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
         form.resetFields();
     };
 
-    const toggleExpand = (id: number) => {
+    const toggleExpand = (id: number) =>
         setExpandedKey(prev => prev === id ? null : id);
-    };
 
     const handleSendSystemEmail = async (tokenId: number) => {
         const trimmed = emailInput.trim();
-        if (!trimmed) {
-            message.warning("Vui lòng nhập email người nhận");
-            return;
-        }
+        if (!trimmed) return;
         await sendEmailMutation.mutateAsync({ tokenId, email: trimmed });
         setEmailModalOpen(false);
         setSelectedToken(null);
         setEmailInput("");
     };
 
-    const handleSendPersonalEmail = (r: IResShareTokenDTO) => {
+    const handleSendGmailEmail = (r: IResShareTokenDTO) => {
         const shareUrl = `${window.location.origin}/public/view/${r.token}`;
         const pin = r.pin ? `Mã PIN: ${r.pin}\n` : "";
         const expires = r.expiresAt
             ? `Hết hạn: ${dayjs(r.expiresAt).format("DD/MM/YYYY")}`
             : "Hết hạn: Vô thời hạn";
-        const subject = encodeURIComponent(`[Lotus HRM] Chia sẻ quy trình — ${procedure?.procedureCode}`);
+        const subject = encodeURIComponent(`[Lotus HRM] Chia sẻ văn bản — ${document?.documentCode}`);
         const body = encodeURIComponent(
-            `Xin chào,\n\nBạn được chia sẻ quyền xem quy trình trên hệ thống Lotus HRM.\n\n━━━━━━━━━━━━━━━━━━━━\n${pin}${expires}\n━━━━━━━━━━━━━━━━━━━━\n\nLink truy cập: ${shareUrl}\n\nLưu ý: Link và mã PIN chỉ dành riêng cho bạn, vui lòng không chia sẻ cho người khác.\n\nTrân trọng,\nLotus HRM`
+            `Xin chào,\n\nBạn được chia sẻ quyền xem văn bản trên hệ thống Lotus HRM.\n\n━━━━━━━━━━━━━━━━━━━━\n${pin}${expires}\n━━━━━━━━━━━━━━━━━━━━\n\nLink truy cập: ${shareUrl}\n\nLưu ý: Link và mã PIN chỉ dành riêng cho bạn, vui lòng không chia sẻ cho người khác.\n\nTrân trọng,\nLotus HRM`
         );
         window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank");
     };
@@ -144,15 +123,13 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
         setEmailModalOpen(true);
     };
 
-    // ── Desktop table columns ──
     const desktopColumns = [
         {
             title: "",
             width: 36,
             render: (_: any, r: IResShareTokenDTO) => (
                 <Button
-                    type="text"
-                    size="small"
+                    type="text" size="small"
                     icon={expandedKey === r.id
                         ? <CaretDownOutlined style={{ color: "#e8256b" }} />
                         : <CaretRightOutlined style={{ color: "#9ca3af" }} />
@@ -223,7 +200,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                             </Button>
                         </Tooltip>
                         <Tooltip title="Mở Gmail với nội dung điền sẵn">
-                            <Button size="small" icon={<MailOutlined />} onClick={() => handleSendPersonalEmail(r)} style={{ fontSize: 12 }}>
+                            <Button size="small" icon={<MailOutlined />} onClick={() => handleSendGmailEmail(r)} style={{ fontSize: 12 }}>
                                 Gmail
                             </Button>
                         </Tooltip>
@@ -241,8 +218,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                         title="Thu hồi link này?"
                         description="Link sẽ không thể dùng được nữa."
                         onConfirm={() => revokeMutation.mutate(r.id)}
-                        okText="Thu hồi"
-                        cancelText="Huỷ"
+                        okText="Thu hồi" cancelText="Huỷ"
                         okButtonProps={{ danger: true }}
                         placement="topRight"
                     >
@@ -258,7 +234,6 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
 
     return (
         <>
-            {/* ── Main modal ── */}
             <Modal
                 open={open}
                 onCancel={handleClose}
@@ -268,12 +243,10 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                         <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
                             <ShareAltOutlined style={{ color: "#e8256b", flexShrink: 0 }} />
                             <span style={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                fontSize: isMobile ? 13 : 14,
+                                overflow: "hidden", textOverflow: "ellipsis",
+                                whiteSpace: "nowrap", fontSize: isMobile ? 13 : 14,
                             }}>
-                                Chia sẻ công khai — {procedure?.procedureCode}
+                                Chia sẻ công khai — {document?.documentCode}
                             </span>
                             {activeTokenCount > 0 && (
                                 <Badge count={activeTokenCount} size="small" style={{ backgroundColor: "#e8256b", flexShrink: 0 }} />
@@ -293,8 +266,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                             }}
                             style={showForm ? {} : {
                                 background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
-                                border: "none",
-                                color: "white",
+                                border: "none", color: "white",
                                 boxShadow: "0 2px 8px rgba(240,34,110,0.25)",
                                 flexShrink: 0,
                             }}
@@ -310,8 +282,8 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                     content: isMobile ? { borderRadius: 0, minHeight: "100dvh" } : {},
                 }}
                 centered={!isMobile}
-                destroyOnHidden             >
-                {/* Form tạo token */}
+                destroyOnHidden
+            >
                 {showForm && (
                     <CreateTokenForm
                         form={form}
@@ -321,20 +293,18 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                         onCancel={handleCancelForm}
                         isCreating={createMutation.isPending}
                         newTokenQr={newTokenQr}
-                        procedureCode={procedure?.procedureCode}
+                        documentCode={document?.documentCode}
                         isMobile={isMobile}
                     />
                 )}
 
-                {/* Danh sách token */}
                 {isMobile ? (
-                    // Mobile: card layout
                     <div>
                         {isLoading ? (
                             <div style={{ textAlign: "center", padding: 24, color: "#9ca3af" }}>Đang tải...</div>
                         ) : tokens.length === 0 ? (
                             <div style={{ textAlign: "center", padding: 24, color: "#9ca3af" }}>Chưa có link nào được tạo</div>
-                        ) : tokens.map((token) => (
+                        ) : tokens.map(token => (
                             <TokenCard
                                 key={token.id}
                                 token={token}
@@ -342,13 +312,12 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 onToggle={() => toggleExpand(token.id)}
                                 onRevoke={() => revokeMutation.mutate(token.id)}
                                 onSystemEmail={() => openEmailModal(token)}
-                                onGmailEmail={() => handleSendPersonalEmail(token)}
-                                procedureCode={procedure?.procedureCode}
+                                onGmailEmail={() => handleSendGmailEmail(token)}
+                                documentCode={document?.documentCode}
                             />
                         ))}
                     </div>
                 ) : (
-                    // Desktop: table layout
                     <Table
                         rowKey="id"
                         size="small"
@@ -361,20 +330,19 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                             expandedRowKeys: expandedKey !== null ? [expandedKey] : [],
                             showExpandColumn: false,
                             expandedRowRender: (r: IResShareTokenDTO) => (
-                                <ExpandedRow token={r} procedureCode={procedure?.procedureCode} />
+                                <ExpandedRow token={r} documentCode={document?.documentCode} />
                             ),
                         }}
                     />
                 )}
             </Modal>
 
-            {/* ── Modal gửi email qua hệ thống ── */}
+            {/* Modal gửi email qua hệ thống */}
             <Modal
                 open={emailModalOpen}
                 onCancel={() => { setEmailModalOpen(false); setSelectedToken(null); setEmailInput(""); }}
                 onOk={() => selectedToken && handleSendSystemEmail(selectedToken.id)}
-                okText="Gửi email"
-                cancelText="Huỷ"
+                okText="Gửi email" cancelText="Huỷ"
                 confirmLoading={sendEmailMutation.isPending}
                 okButtonProps={{
                     style: {
@@ -395,11 +363,8 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                 {selectedToken && (
                     <>
                         <div style={{
-                            background: "#f8fafc",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: 8,
-                            padding: "12px 14px",
-                            marginBottom: 16,
+                            background: "#f8fafc", border: "1px solid #e2e8f0",
+                            borderRadius: 8, padding: "12px 14px", marginBottom: 16,
                         }}>
                             <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 8 }}>
                                 Nội dung sẽ được gửi kèm trong mail
@@ -419,12 +384,11 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
                                 )}
                             </Flex>
                         </div>
-
                         <Text style={{ fontSize: 13, display: "block", marginBottom: 8 }}>Email người nhận</Text>
                         <Input
                             placeholder="Nhập email người nhận..."
                             value={emailInput}
-                            onChange={(e) => setEmailInput(e.target.value)}
+                            onChange={e => setEmailInput(e.target.value)}
                             onPressEnter={() => selectedToken && handleSendSystemEmail(selectedToken.id)}
                             prefix={<MailOutlined style={{ color: "#9ca3af" }} />}
                             size="large"
@@ -440,4 +404,4 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
     );
 };
 
-export default ModalShareToken;
+export default ModalDocumentShareToken;

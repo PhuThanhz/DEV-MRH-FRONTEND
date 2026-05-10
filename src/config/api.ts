@@ -32,7 +32,7 @@ export const callFetchAccount = () => {
 }
 
 export const callRefreshToken = () => {
-    return axios.get<IBackendRes<IAccount>>('/api/v1/auth/refresh')
+    return axios.post<IBackendRes<IAccount>>('/api/v1/auth/refresh')
 }
 
 export const callLogout = () => {
@@ -1914,4 +1914,40 @@ export const callFetchDocumentsByCategory = (categoryId: number) =>
 export const callFetchDocumentsByDepartment = (departmentId: number) =>
     axios.get<IBackendRes<IDocument[]>>(
         `/api/v1/documents/by-department/${departmentId}`
+    );
+/* ===================== DOCUMENT SHARE TOKEN ===================== */
+
+// Tạo share token cho văn bản
+export const callCreateDocumentShareToken = (
+    documentId: number,
+    data: Omit<ICreateShareTokenRequest, 'procedureType'>
+) =>
+    axios.post<IBackendRes<IResShareTokenDTO>>(
+        `/api/v1/documents/${documentId}/share-tokens`,
+        data
+    );
+
+// Danh sách share token của văn bản
+export const callFetchDocumentShareTokens = (documentId: number) =>
+    axios.get<IBackendRes<IResShareTokenDTO[]>>(
+        `/api/v1/documents/${documentId}/share-tokens`
+    );
+
+// Thu hồi share token
+export const callRevokeDocumentShareToken = (tokenId: number) =>
+    axios.patch<IBackendRes<void>>(
+        `/api/v1/documents/share-tokens/${tokenId}/revoke`
+    );
+
+// Lịch sử truy cập
+export const callFetchDocumentShareTokenAccessLogs = (tokenId: number) =>
+    axios.get<IBackendRes<any[]>>(
+        `/api/v1/documents/share-tokens/${tokenId}/access-logs`
+    );
+
+// Gửi email chia sẻ
+export const callSendDocumentShareEmail = (tokenId: number, email: string) =>
+    axios.post<IBackendRes<void>>(
+        `/api/v1/documents/share-tokens/${tokenId}/send-email`,
+        { email }
     );

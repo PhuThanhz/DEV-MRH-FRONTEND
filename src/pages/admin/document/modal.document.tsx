@@ -147,7 +147,6 @@ const ModalDocument = ({
                     departmentId: departmentId,
                     sectionId: dataInit.section?.id,
                     status: dataInit.status,
-                    planYear: dataInit.planYear,
                     issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : undefined,
                     note: dataInit.note,
                     fileUrls: urls,
@@ -255,7 +254,6 @@ const ModalDocument = ({
             documentName: values.documentName?.trim(),
             categoryId: values.categoryId,
             status: values.status,
-            planYear: values.planYear ? Number(values.planYear) : undefined,
             issuedDate: values.issuedDate ? dayjs(values.issuedDate).toISOString() : undefined,
             note: values.note,
             fileUrls: values.fileUrls ?? [],
@@ -369,7 +367,6 @@ const ModalDocument = ({
                         </Form.Item>
                     </Col>
 
-                    {/* ← THAY: dùng UserSelectField thay Select cho CONFIDENTIAL */}
                     {procedureType === "CONFIDENTIAL" && (
                         <Col span={12}>
                             <UserSelectField
@@ -429,7 +426,6 @@ const ModalDocument = ({
                             />
                         </Form.Item>
                     </Col>
-                    {/* ← THAY: dùng UserSelectField thay Select cho non-mapping */}
                     <Col span={12}>
                         <UserSelectField
                             companyId={selectedCompanyId}
@@ -537,6 +533,7 @@ const ModalDocument = ({
             {renderProcedureLocationFields()}
             {renderNonProcedureLocationFields()}
 
+            {/* ✅ Bỏ planYear, chỉ còn Trạng thái + Ngày ban hành */}
             <Row gutter={16}>
                 <Col span={12}>
                     <Form.Item label="Trạng thái" name="status">
@@ -548,14 +545,6 @@ const ModalDocument = ({
                     </Form.Item>
                 </Col>
                 <Col span={12}>
-                    <Form.Item label="Kế hoạch năm" name="planYear">
-                        <Input type="number" placeholder="VD: 2025" />
-                    </Form.Item>
-                </Col>
-            </Row>
-
-            <Row gutter={16}>
-                <Col span={12}>
                     <Form.Item label="Ngày ban hành" name="issuedDate">
                         <DatePicker
                             format="DD/MM/YYYY"
@@ -564,12 +553,11 @@ const ModalDocument = ({
                         />
                     </Form.Item>
                 </Col>
-                <Col span={12}>
-                    <Form.Item label="Ghi chú" name="note">
-                        <Input placeholder="Ghi chú thêm..." />
-                    </Form.Item>
-                </Col>
             </Row>
+
+            <Form.Item label="Ghi chú" name="note">
+                <Input placeholder="Ghi chú thêm..." />
+            </Form.Item>
 
             <Form.Item label="File văn bản">
                 <Upload {...uploadProps}>

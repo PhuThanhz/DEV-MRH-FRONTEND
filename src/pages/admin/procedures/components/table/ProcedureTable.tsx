@@ -2,6 +2,8 @@ import { Button, Modal, Image } from "antd";
 import { DownloadOutlined, LockOutlined } from "@ant-design/icons";
 import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
 
+// ❌ bỏ import Access — không dùng nữa
+
 import DataTable from "@/components/common/data-table";
 import ModalProcedure from "../../modal.procedure";
 import ModalRevise from "../modal.revise";
@@ -26,6 +28,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const columns = buildProcedureColumns({
         type, companyId, departmentId,
         isAdmin: ctx.isAdmin,
+        canShare: ctx.canShare, // 👈 thêm
         meta: ctx.meta,
         permission: ctx.permission,
         deleteMutation: ctx.deleteMutation,
@@ -33,6 +36,10 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         onEdit: (record) => { ctx.setDataInit(record); ctx.setOpenModal(true); },
         onRevise: (record) => { ctx.setDataInit(record); ctx.setOpenRevise(true); },
         onQrClick: (record) => { ctx.setSelectedProcedure(record); ctx.setOpenQrModal(true); },
+        onShare: (record) => {
+            ctx.setSelectedProcedure(record);
+            ctx.setOpenShareModal(true);
+        },
     });
 
     return (
@@ -199,10 +206,16 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                     }}>Chưa có mã QR</div>
                                 )}
                             </div>
+
                             <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                                 <Button
                                     icon={<DownloadOutlined />}
-                                    style={{ flex: 1, height: 42, borderRadius: 14, fontWeight: 500, borderColor: "#fcc", color: "#e8256b" }}
+                                    style={{
+                                        // 👇 nếu có quyền share thì flex: 1, không thì full width
+                                        flex: 1,
+                                        height: 42, borderRadius: 14, fontWeight: 500,
+                                        borderColor: "#fcc", color: "#e8256b",
+                                    }}
                                     onClick={() => {
                                         if (!ctx.selectedProcedure?.qrCode) return;
                                         const a = document.createElement("a");
@@ -211,17 +224,25 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                                         a.click();
                                     }}
                                 >Tải xuống</Button>
-                                <Button
-                                    icon={<ShareAltOutlined />}
-                                    style={{
-                                        flex: 1, height: 42, borderRadius: 14, fontWeight: 500,
-                                        background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
-                                        border: "none", color: "white",
-                                        boxShadow: "0 4px 14px rgba(240,34,110,0.3)",
-                                    }}
-                                    onClick={() => { ctx.setOpenQrModal(false); ctx.setOpenShareModal(true); }}
-                                >Chia sẻ công khai</Button>
+
+                                {/* 👇 chỉ hiện khi có quyền, thay vì dùng <Access> */}
+                                {ctx.canShare && (
+                                    <Button
+                                        icon={<ShareAltOutlined />}
+                                        style={{
+                                            flex: 1, height: 42, borderRadius: 14, fontWeight: 500,
+                                            background: "linear-gradient(135deg,#f0226e,#ff5fa0)",
+                                            border: "none", color: "white",
+                                            boxShadow: "0 4px 14px rgba(240,34,110,0.3)",
+                                        }}
+                                        onClick={() => {
+                                            ctx.setOpenQrModal(false);
+                                            ctx.setOpenShareModal(true);
+                                        }}
+                                    >Chia sẻ công khai</Button>
+                                )}
                             </div>
+
                             <div style={{
                                 display: "flex", alignItems: "center", gap: 8,
                                 padding: "11px 14px", background: "#fff7fa",

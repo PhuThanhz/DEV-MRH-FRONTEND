@@ -7,14 +7,17 @@ type Permission = {
     module: string;
 };
 
-// So khớp apiPath có hỗ trợ tham số động {id}, {departmentId},...
+// So khớp apiPath có hỗ trợ tham số động {id}, {departmentId},... và wildcard *
 const matchApiPath = (pattern: string, path: string): boolean => {
     if (!pattern || !path) return false;
 
-    // Chuyển {param} thành regex
-    const regexPattern = '^' + pattern.replace(/\{[^/]+\}/g, '[^/]+') + '$';
-    const regex = new RegExp(regexPattern);
+    const regexPattern = '^' +
+        pattern
+            .replace(/\{[^/]+\}/g, '[^/]+')  // {id}, {departmentId},... → [^/]+
+            .replace(/\*/g, '[^/]+')           // * → [^/]+
+        + '$';
 
+    const regex = new RegExp(regexPattern);
     return regex.test(path);
 };
 

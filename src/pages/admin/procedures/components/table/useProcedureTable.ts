@@ -22,6 +22,7 @@ interface UseProcedureTableProps {
 export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedureTableProps) => {
     const tableRef = useRef<ActionType>(null);
     const isAdmin = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_ALL);
+    const canShare = useAccess(ALL_PERMISSIONS.PROCEDURES.CREATE_SHARE_TOKEN); // 👈 thêm
 
     // ── Modal states ──
     const [openQrModal, setOpenQrModal] = useState(false);
@@ -87,6 +88,7 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         create: type === "COMPANY" ? ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE
             : type === "DEPARTMENT" ? ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE
                 : ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
+        shareToken: ALL_PERMISSIONS.PROCEDURES.CREATE_SHARE_TOKEN,
     };
 
     // ── Filter builder ──
@@ -181,6 +183,7 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         tableRef,
         procedures, meta, isFetching, refetch, deleteMutation,
         permission, isAdmin,
+        canShare, // 👈 thêm
         openQrModal, setOpenQrModal,
         openShareModal, setOpenShareModal,
         openPrintModal, setOpenPrintModal,

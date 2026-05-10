@@ -1146,6 +1146,31 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/documents/by-department/{departmentId}",
             module: "DOCUMENTS",
         },
+        CREATE_SHARE_TOKEN: {
+            method: "POST",
+            apiPath: "/api/v1/documents/*/share-tokens",
+            module: "DOCUMENTS",
+        },
+        GET_SHARE_TOKENS: {
+            method: "GET",
+            apiPath: "/api/v1/documents/*/share-tokens",
+            module: "DOCUMENTS",
+        },
+        REVOKE_SHARE_TOKEN: {
+            method: "PATCH",
+            apiPath: "/api/v1/documents/share-tokens/*/revoke",
+            module: "DOCUMENTS",
+        },
+        GET_SHARE_TOKEN_ACCESS_LOGS: {
+            method: "GET",
+            apiPath: "/api/v1/documents/share-tokens/*/access-logs",
+            module: "DOCUMENTS",
+        },
+        SEND_SHARE_EMAIL: {
+            method: "POST",
+            apiPath: "/api/v1/documents/share-tokens/*/send-email",
+            module: "DOCUMENTS",
+        },
     },
 };
 export const ALL_MODULES = {

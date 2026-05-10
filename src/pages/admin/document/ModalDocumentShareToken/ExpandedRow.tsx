@@ -1,27 +1,29 @@
 /**
  * ExpandedRow.tsx
- * Dùng để: hiển thị phần mở rộng của mỗi token — gồm mã QR và bảng lịch sử truy cập
- * Dùng trong: index.tsx (desktop table expandable) và TokenCard.tsx (mobile)
+ * Dùng để: hiển thị QR + bảng lịch sử truy cập của từng document share token
  */
 
 import { Table, Image, Button, Typography, Flex, Badge, Tooltip } from "antd";
 import { EyeOutlined, DownloadOutlined, GlobalOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { IResShareTokenDTO } from "@/types/backend";
-import { useShareTokenAccessLogsQuery } from "@/hooks/useProcedure";
+import { useDocumentShareTokenAccessLogsQuery } from "@/hooks/useDocuments";
 import { useIsMobile } from "@/hooks/useIsMobile";
- import { parseUserAgentDetail, getDeviceIcon, parseIp } from "./parseUserAgent";
+import { parseUserAgentDetail, getDeviceIcon, parseIp } from "./parseUserAgent";
+
+
+
 
 const { Text } = Typography;
 
 interface Props {
     token: IResShareTokenDTO;
-    procedureCode?: string;
+    documentCode?: string;
 }
 
-export const ExpandedRow = ({ token, procedureCode }: Props) => {
+export const ExpandedRow = ({ token, documentCode }: Props) => {
     const isMobile = useIsMobile();
-    const { data: logs = [], isLoading } = useShareTokenAccessLogsQuery(token.id, true);
+    const { data: logs = [], isLoading } = useDocumentShareTokenAccessLogsQuery(token.id, true);
 
     const logColumns = [
         {
@@ -34,7 +36,6 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                 </Text>
             ),
         },
-        // Ẩn cột IP trên mobile
         ...(!isMobile ? [{
             title: "Địa chỉ IP",
             dataIndex: "ipAddress",
@@ -82,7 +83,6 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                 margin: "4px 0",
             }}
         >
-            {/* QR Code */}
             {token.qrCode && (
                 <Flex gap={12} align="center" style={{ flexShrink: 0 }} vertical={!isMobile}>
                     <div>
@@ -90,10 +90,8 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                             Mã QR
                         </Text>
                         <div style={{
-                            padding: 8,
-                            background: "#fff",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: 8,
+                            padding: 8, background: "#fff",
+                            border: "1px solid #e5e7eb", borderRadius: 8,
                             display: "inline-block",
                             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
                         }}>
@@ -113,7 +111,7 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                         onClick={() => {
                             const a = document.createElement("a");
                             a.href = `data:image/png;base64,${token.qrCode}`;
-                            a.download = `qr-${procedureCode}-${token.id}.png`;
+                            a.download = `qr-${documentCode}-${token.id}.png`;
                             a.click();
                         }}
                     >
@@ -126,7 +124,6 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                 <div style={{ width: 1, background: "#e2e8f0", flexShrink: 0, margin: "0 4px" }} />
             )}
 
-            {/* Access log table */}
             <div style={{ flex: 1, minWidth: 0 }}>
                 <Flex align="center" gap={8} style={{ marginBottom: 8 }}>
                     <Text type="secondary" style={{ fontSize: 11 }}>Lịch sử truy cập</Text>

@@ -8,11 +8,17 @@ import {
     callDeleteDocument,
     callFetchDocumentsByCategory,
     callFetchDocumentsByDepartment,
+    callCreateDocumentShareToken,
+    callFetchDocumentShareTokens,
+    callRevokeDocumentShareToken,
+    callSendDocumentShareEmail,
+    callFetchDocumentShareTokenAccessLogs,
 } from "@/config/api";
 import type {
     IDocument,
     IDocumentRequest,
     IModelPaginate,
+    IResShareTokenDTO,
 } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
@@ -147,6 +153,99 @@ export const useDeleteDocumentMutation = () => {
         },
         onError: (error: any) => {
             notify.error(error.message || "Lỗi khi xoá văn bản");
+        },
+    });
+};
+
+/* ===================== FETCH SHARE TOKENS ===================== */
+export const useDocumentShareTokensQuery = (documentId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["document-share-tokens", documentId],
+        enabled: !!documentId && enabled,
+        queryFn: async () => {
+            const res = await callFetchDocumentShareTokens(documentId!);
+            return (res.data as IResShareTokenDTO[]) ?? [];
+        },
+    });
+};
+
+/* ===================== CREATE SHARE TOKEN ===================== */
+export const useCreateDocumentShareTokenMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({
+            documentId,
+            data,
+        }: {
+            documentId: number;
+            data: Omit<any, "procedureType">;
+        }) => {
+            const res = await callCreateDocumentShareToken(documentId, data);
+            if (!res?.data) throw new Error(res?.message || "Không thể tạo link chia sẻ");
+            return res.data as IResShareTokenDTO;
+        },
+        onSuccess: (_, variables) => {
+            notify.created("Tạo link chia sẻ thành công");
+            queryClient.invalidateQueries({
+                queryKey: ["document-share-tokens", variables.documentId],
+            });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi tạo link chia sẻ");
+        },
+    });
+};
+
+/* ===================== REVOKE SHARE TOKEN ===================== */
+export const useRevokeDocumentShareTokenMutation = (documentId?: number) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (tokenId: number) => {
+            const res = await callRevokeDocumentShareToken(tokenId);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Thu hồi thất bại");
+            }
+            return res;
+        },
+        onSuccess: () => {
+            notify.deleted("Thu hồi link chia sẻ thành công");
+            queryClient.invalidateQueries({
+                queryKey: ["document-share-tokens", documentId],
+            });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi thu hồi link chia sẻ");
+        },
+    });
+};
+
+/* ===================== GỬI EMAIL SHARE TOKEN ===================== */
+export const useSendDocumentShareEmailMutation = () => {
+    return useMutation({
+        mutationFn: async ({ tokenId, email }: { tokenId: number; email: string }) => {
+            const res = await callSendDocumentShareEmail(tokenId, email);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Gửi email thất bại");
+            }
+            return res;
+        },
+        onSuccess: () => {
+            notify.updated("Gửi email thành công!");
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Lỗi khi gửi email");
+        },
+    });
+};
+
+/* ===================== ACCESS LOGS CỦA SHARE TOKEN ===================== */
+export const useDocumentShareTokenAccessLogsQuery = (tokenId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["document-share-token-logs", tokenId],
+        enabled: !!tokenId && enabled,
+        queryFn: async () => {
+            const res = await callFetchDocumentShareTokenAccessLogs(tokenId!);
+            return (res.data as any[]) ?? [];
         },
     });
 };
