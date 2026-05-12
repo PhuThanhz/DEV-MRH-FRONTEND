@@ -2,7 +2,7 @@ import type { IBackendRes } from "@/types/backend";
 import axios from "axios";
 import { Mutex } from "async-mutex";
 import { store } from "@/redux/store";
-import { setRefreshTokenAction } from "@/redux/slice/accountSlide";
+import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { notification } from "antd";
 
 interface AccessTokenResponse {
@@ -22,8 +22,8 @@ const NO_RETRY_HEADER = "x-no-retry";
 const isAuthEndpoint = (url?: string) => {
     if (!url) return false;
     return (
-        url === "/api/v1/auth/login" ||
-        url === "/api/v1/auth/refresh"
+        url.includes("/api/v1/auth/login") ||
+        url.includes("/api/v1/auth/refresh")
     );
 };
 
@@ -91,28 +91,29 @@ instance.interceptors.response.use(
                 localStorage.setItem("access_token", newAccessToken);
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return instance.request(originalRequest);
+            } else {
+                // Refresh token fail -> Bắt buộc logout
+                store.dispatch(setLogoutAction());
+                localStorage.removeItem("access_token");
+                window.location.href = '/login';
+                return Promise.reject(error);
             }
         }
 
 
+        // Xử lý lỗi khi API refresh token thất bại (Refresh Token hết hạn trả về 400 hoặc lỗi khác)
         if (
             originalRequest &&
-            error.response?.status === 400 &&
-            originalRequest.url === "/api/v1/auth/refresh" &&
-            location.pathname.startsWith("/admin")
+            originalRequest.url?.includes("/api/v1/auth/refresh")
         ) {
+            // 1. Xóa sạch mọi token lưu trong localStorage và reset Redux
+            store.dispatch(setLogoutAction());
             localStorage.removeItem("access_token");
 
-            const message =
-                error?.response?.data?.error ??
-                "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.";
+            // 2. Ép người dùng văng thẳng về trang Đăng nhập
+            window.location.href = '/login';
 
-            store.dispatch(
-                setRefreshTokenAction({
-                    status: true,
-                    message,
-                })
-            );
+            return Promise.reject(error?.response?.data ?? error);
         }
 
 
