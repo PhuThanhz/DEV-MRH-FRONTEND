@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAppSelector } from "@/redux/hooks";
-import NotPermitted from "../not-permitted";
+import NotFound from "@/components/share/not.found";
 import Loading from "@/components/common/loading/loading";
 
 const RoleBaseRoute = ({ children }: any) => {
@@ -11,7 +11,7 @@ const RoleBaseRoute = ({ children }: any) => {
     const isEmployee = roleName === "EMPLOYEE";
 
     if (!isAdmin && !isEmployee) {
-        return <NotPermitted message="Bạn không có quyền truy cập trang này." />;
+        return <NotFound />;
     }
 
     return <>{children}</>;

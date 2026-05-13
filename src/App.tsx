@@ -11,7 +11,7 @@ import DashboardPage from './pages/admin/dashboard/dashboard';
 import PermissionPage from './pages/admin/permission/permission';
 import RolePage from './pages/admin/role/role';
 import UserPage from './pages/admin/user/user';
-import { fetchAccount } from './redux/slice/accountSlide';
+import { fetchAccount, setLogoutAction } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
 import LayoutClient from './components/layout/client/layout.client';
 import { PATHS } from '@/constants/paths';
@@ -55,7 +55,10 @@ export default function App() {
   useEffect(() => {
     if (window.location.pathname === PATHS.LOGIN) return;
     const token = localStorage.getItem("access_token");
-    if (!token) return;
+    if (!token) {
+        dispatch(setLogoutAction());
+        return;
+    }
     dispatch(fetchAccount());
   }, []);
 
