@@ -229,9 +229,9 @@ const DepartmentObjectivesPage = () => {
                         )}
                     </Space>
                 </Space>
+                <Access permission={ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.CREATE} hideChildren>
+                    <Space>
 
-                <Space>
-                    <Access permission={ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.CREATE} hideChildren>
                         {!editMode && (
                             <Button
                                 icon={<EditOutlined />}
@@ -240,28 +240,29 @@ const DepartmentObjectivesPage = () => {
                                 Chỉnh sửa
                             </Button>
                         )}
-                    </Access>
 
-                    {editMode && (
-                        <>
-                            <Button
-                                icon={<CloseOutlined />}
-                                onClick={() => setEditMode(false)}
-                                disabled={isPending}
-                            >
-                                Huỷ
-                            </Button>
-                            <Button
-                                type="primary"
-                                icon={<SaveOutlined />}
-                                loading={isPending}
-                                onClick={handleSave}
-                            >
-                                Lưu thay đổi
-                            </Button>
-                        </>
-                    )}
-                </Space>
+
+                        {editMode && (
+                            <>
+                                <Button
+                                    icon={<CloseOutlined />}
+                                    onClick={() => setEditMode(false)}
+                                    disabled={isPending}
+                                >
+                                    Huỷ
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    icon={<SaveOutlined />}
+                                    loading={isPending}
+                                    onClick={handleSave}
+                                >
+                                    Lưu thay đổi
+                                </Button>
+                            </>
+                        )}
+                    </Space>
+                </Access>
             </div>
 
             {/* EDIT BANNER */}
