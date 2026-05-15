@@ -1455,7 +1455,7 @@ export const callConfirmResetPassword = (
 
 // Tạo mới
 export const callCreateProcedure = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     data: {
         procedureName: string;
         status?: string;
@@ -1476,7 +1476,7 @@ export const callCreateProcedure = (
 
 // Cập nhật
 export const callUpdateProcedure = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     id: number,
     data: {
         procedureName: string;
@@ -1497,7 +1497,7 @@ export const callUpdateProcedure = (
 
 // Xoá
 export const callDeleteProcedure = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     id: number
 ) => {
     return axios.delete<IBackendRes<void>>(
@@ -1507,7 +1507,7 @@ export const callDeleteProcedure = (
 
 // Bật/tắt active
 export const callToggleActiveProcedure = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     id: number
 ) => {
     return axios.put<IBackendRes<void>>(
@@ -1567,7 +1567,7 @@ export const callFetchProcedureHistory = (
 
 // Theo công ty
 export const callFetchProceduresByCompany = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     companyId: number
 ) => {
     return axios.get<IBackendRes<any[]>>(
@@ -1598,7 +1598,7 @@ export const callFetchConfidentialProceduresWithFilter = (query: string) => {
 
 // Tạo phiên bản mới
 export const callReviseProcedure = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← ĐỔI
     id: number,
     data: {
         procedureName: string;

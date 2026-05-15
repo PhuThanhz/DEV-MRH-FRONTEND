@@ -7,7 +7,7 @@ import {
 } from "@ant-design/pro-components";
 import { Col, Form, Row, message, Upload, Input, DatePicker } from "antd";
 import {
-    UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined,
+    UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined, FileTextOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 
@@ -62,6 +62,14 @@ const TYPE_OPTIONS = [
         activeColor: "#be123c",
         activeBorder: "#fecdd3",
     },
+    {
+        key: "DOCUMENT" as ProcedureType,
+        label: "Văn bản",
+        icon: <FileTextOutlined />,
+        activeBg: "#f5f3ff",
+        activeColor: "#7c3aed",
+        activeBorder: "#ddd6fe",
+    },
 ] as const;
 
 const TypeSelector: React.FC<{
@@ -111,6 +119,7 @@ const TYPE_PERMISSION_MAP: Record<ProcedureType, { method: string; apiPath: stri
     COMPANY: ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE,
     DEPARTMENT: ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE,
     CONFIDENTIAL: ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
+    DOCUMENT: ALL_PERMISSIONS.DOCUMENTS.CREATE,
 };
 
 const TypeSelectorFiltered: React.FC<{
@@ -121,11 +130,13 @@ const TypeSelectorFiltered: React.FC<{
     const canCompany = useAccess(TYPE_PERMISSION_MAP.COMPANY);
     const canDepartment = useAccess(TYPE_PERMISSION_MAP.DEPARTMENT);
     const canConfidential = useAccess(TYPE_PERMISSION_MAP.CONFIDENTIAL);
+    const canDocument = useAccess(TYPE_PERMISSION_MAP.DOCUMENT);
 
     const accessMap: Record<ProcedureType, boolean> = {
         COMPANY: canCompany,
         DEPARTMENT: canDepartment,
         CONFIDENTIAL: canConfidential,
+        DOCUMENT: canDocument,
     };
 
     const visibleOptions = TYPE_OPTIONS.filter((opt) => accessMap[opt.key]);
