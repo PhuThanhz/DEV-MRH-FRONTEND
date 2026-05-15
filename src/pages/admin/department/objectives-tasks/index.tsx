@@ -11,11 +11,14 @@ import {
 } from "@/hooks/useDepartmentObjectives";
 import { useSectionsQuery } from "@/hooks/useSections";
 import DeptPageNav from "@/components/common/navigation/DeptPageNav";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 import ObjectivesSection from "./components/ObjectivesSection";
 import TasksSection from "./components/TasksSection";
 import AuthoritiesSection from "./components/AuthoritiesSection";
 import { useDeptNavPages } from "@/hooks/useDeptNavPages";
+import { notify } from "@/components/common/notification/notify";
 
 import type { IDepartmentMissionTree } from "@/types/backend";
 
@@ -65,10 +68,16 @@ const DepartmentObjectivesPage = () => {
     const idNumber = departmentId ? Number(departmentId) : undefined;
     const deptNavPages = useDeptNavPages();
 
-    const { data, isLoading } = useDepartmentObjectivesQuery(idNumber);
+    const { data, isLoading, error } = useDepartmentObjectivesQuery(idNumber);
     const { data: sectionData } = useSectionsQuery(
         `page=1&size=100&filter=department.id:${idNumber}`
     );
+
+    useEffect(() => {
+        if (error) {
+            notify.error((error as any)?.message || "Lỗi khi tải dữ liệu mục tiêu phòng ban");
+        }
+    }, [error]);
     const { mutateAsync: createObjective, isPending } =
         useCreateDepartmentObjectiveMutation();
 
@@ -95,7 +104,7 @@ const DepartmentObjectivesPage = () => {
             mission.objectives?.map((o, i) => ({
                 id: o.id,
                 content: o.content,
-                orderNo: i + 1,
+                orderNo: o.orderNo || (i + 1),
                 createdBy: o.createdBy,
                 updatedBy: o.updatedBy,
                 createdAt: o.createdAt,
@@ -109,7 +118,7 @@ const DepartmentObjectivesPage = () => {
             mission.authorities?.map((a, i) => ({
                 id: a.id,
                 content: a.content,
-                orderNo: i + 1,
+                orderNo: a.orderNo || (i + 1),
                 createdBy: a.createdBy,
                 updatedBy: a.updatedBy,
                 createdAt: a.createdAt,
@@ -117,40 +126,40 @@ const DepartmentObjectivesPage = () => {
             })) || []
         );
 
+        // ĐỒNG BỘ CÁC BỘ PHẬN (SECTIONS) - Ưu tiên mảng từ mission.tasks để giữ đúng thứ tự Backend trả về
         if (mission.hasSections) {
-            const allSections = sectionData?.result || [];
             const missionTasks = mission.tasks || [];
             setSections(
-                allSections.map((sec) => {
-                    const found = missionTasks.find((t) => t.sectionId === sec.id);
-                    return {
-                        sectionId: sec.id!,
-                        sectionName: sec.name,
-                        items: found?.tasks?.map((t, i) => ({
-                            id: t.id,
-                            content: t.content,
-                            orderNo: i + 1,
-                            createdBy: t.createdBy,
-                            updatedBy: t.updatedBy,
-                            createdAt: t.createdAt,
-                            updatedAt: t.updatedAt,
-                        })) || [],
-                    };
-                })
+                missionTasks.map((sec) => ({
+                    sectionId: sec.sectionId,
+                    sectionName: sec.sectionName,
+                    items: sec.tasks?.map((t, i) => ({
+                        id: t.id,
+                        content: t.content,
+                        orderNo: t.orderNo || (i + 1),
+                        createdBy: t.createdBy,
+                        updatedBy: t.updatedBy,
+                        createdAt: t.createdAt,
+                        updatedAt: t.updatedAt,
+                    })) || [],
+                }))
             );
         } else {
-            setGeneralTasks(
-                mission.generalTasks?.map((t, i) => ({
-                    id: t.id,
-                    content: t.content,
-                    orderNo: i + 1,
-                    createdBy: t.createdBy,
-                    updatedBy: t.updatedBy,
-                    createdAt: t.createdAt,
-                    updatedAt: t.updatedAt,
-                })) || []
-            );
+            setSections([]);
         }
+
+        // LUÔN KIỂM TRA VÀ HIỂN THỊ generalTasks (Nhiệm vụ chung)
+        setGeneralTasks(
+            mission.generalTasks?.map((t, i) => ({
+                id: t.id,
+                content: t.content,
+                orderNo: t.orderNo || (i + 1),
+                createdBy: t.createdBy,
+                updatedBy: t.updatedBy,
+                createdAt: t.createdAt,
+                updatedAt: t.updatedAt,
+            })) || []
+        );
     }, [mission, sectionData]);
 
     const handleSave = async () => {
@@ -160,9 +169,10 @@ const DepartmentObjectivesPage = () => {
                 departmentId: idNumber,
                 issueDate: issueDate ? issueDate.format("YYYY-MM-DD") : undefined,
                 objectives,
-                tasks: hasSections
-                    ? sections.map((s) => ({ sectionId: s.sectionId, items: s.items }))
-                    : [{ sectionId: undefined, items: generalTasks }],
+                tasks: [
+                    ...(hasSections ? sections.map((s) => ({ sectionId: s.sectionId, items: s.items })) : []),
+                    { sectionId: undefined, items: generalTasks }
+                ],
                 authorities,
             } as any);
             setEditMode(false);
@@ -221,14 +231,18 @@ const DepartmentObjectivesPage = () => {
                 </Space>
 
                 <Space>
-                    {!editMode ? (
-                        <Button
-                            icon={<EditOutlined />}
-                            onClick={() => setEditMode(true)}
-                        >
-                            Chỉnh sửa
-                        </Button>
-                    ) : (
+                    <Access permission={ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.CREATE} hideChildren>
+                        {!editMode && (
+                            <Button
+                                icon={<EditOutlined />}
+                                onClick={() => setEditMode(true)}
+                            >
+                                Chỉnh sửa
+                            </Button>
+                        )}
+                    </Access>
+
+                    {editMode && (
                         <>
                             <Button
                                 icon={<CloseOutlined />}

@@ -1121,6 +1121,7 @@ export interface IDepartmentMissionTree {
 export interface IDepartmentObjectiveItem {
     id: number
     content: string
+    orderNo?: number     // ← THÊM
     createdBy?: string   // ← THÊM
     updatedBy?: string   // ← THÊM
     createdAt?: string   // ← THÊM
@@ -1136,6 +1137,7 @@ export interface IDepartmentSectionTask {
 export interface IDepartmentTaskItem {
     id: number
     content: string
+    orderNo?: number     // ← THÊM
     createdBy?: string   // ← THÊM
     updatedBy?: string   // ← THÊM
     createdAt?: string   // ← THÊM
@@ -1146,6 +1148,7 @@ export interface IDepartmentTaskItem {
 export interface IDepartmentAuthorityItem {
     id: number
     content: string
+    orderNo?: number     // ← THÊM
     createdBy?: string   // ← THÊM
     updatedBy?: string   // ← THÊM
     createdAt?: string   // ← THÊM
