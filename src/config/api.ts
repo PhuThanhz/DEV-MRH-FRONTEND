@@ -18,7 +18,7 @@ import type {
     IResPublicProcedureDTO, IReqCreateNodeTree, IDocumentCategory,
     IDocument,
     IDocumentRequest,
-
+    ProcedureType
 } from '@/types/backend';
 
 import axios from 'config/axios-customize';
@@ -1517,7 +1517,7 @@ export const callToggleActiveProcedure = (
 
 // Danh sách (phân trang)
 export const callFetchProcedures = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← THÊM
     query: string
 ) => {
     return axios.get<IBackendRes<IModelPaginate<any>>>(
@@ -1527,7 +1527,7 @@ export const callFetchProcedures = (
 
 // Chi tiết
 export const callFetchProcedureById = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← THÊM
     id: number
 ) => {
     return axios.get<IBackendRes<any>>(
@@ -1537,7 +1537,7 @@ export const callFetchProcedureById = (
 
 // Theo phòng ban
 export const callFetchProceduresByDepartment = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← THÊM
     departmentId: number
 ) => {
     return axios.get<IBackendRes<any[]>>(
@@ -1547,7 +1547,7 @@ export const callFetchProceduresByDepartment = (
 
 // Theo bộ phận
 export const callFetchProceduresBySection = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← THÊM
     sectionId: number
 ) => {
     return axios.get<IBackendRes<any[]>>(
@@ -1557,7 +1557,7 @@ export const callFetchProceduresBySection = (
 
 // Xem lịch sử version
 export const callFetchProcedureHistory = (
-    type: 'COMPANY' | 'DEPARTMENT' | 'CONFIDENTIAL', // ← THÊM
+    type: ProcedureType, // ← THÊM
     id: number
 ) => {
     return axios.get<IBackendRes<any[]>>(

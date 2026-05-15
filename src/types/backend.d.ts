@@ -1401,10 +1401,11 @@ export interface IJdInbox {
 /* ============================================
     PROCEDURE (DÙNG CHUNG CHO COMPANY & DEPARTMENT)
 ============================================ */
-export type ProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
+export type ProcedureType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL" | "DOCUMENT";
 
 export interface IProcedure {
     procedureCode?: string;
+    documentCode?: string;
     id?: number;
     type?: ProcedureType;
     companyId?: number;   // ✅ THÊM
@@ -1428,7 +1429,8 @@ export interface IProcedure {
     sectionId?: number;
     sectionName?: string;
 
-    procedureName: string;
+    procedureName?: string;
+    documentName?: string;
     fileUrls?: string[];
     status?: string;
     planYear?: number;
@@ -1451,10 +1453,12 @@ export interface IProcedure {
 
 export interface IProcedureHistory {
     procedureCode?: string; // 🔥 THÊM
+    documentCode?: string;
     id?: number;
     procedureId?: number;
     version?: number;
     procedureName?: string;
+    documentName?: string;
     status?: string;
     issuedDate?: string; // ← THÊM
 

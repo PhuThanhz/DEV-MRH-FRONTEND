@@ -1,5 +1,5 @@
 import {
-    Modal, Button, Tag, Badge, Typography, Avatar, Image,
+    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin,
 } from "antd";
 import {
     FileTextOutlined, UserOutlined, ApartmentOutlined,
@@ -9,6 +9,8 @@ import {
 import type { IDocument } from "@/types/backend";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
+import { useDocumentByIdQuery } from "@/hooks/useDocuments";
+import FileSection from "../procedures/components/file-section.procedure";
 
 const { Text, Title } = Typography;
 
@@ -88,9 +90,17 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
         return () => window.removeEventListener("resize", check);
     }, []);
 
+    // ← GỌI API LẤY CHI TIẾT MỚI NHẤT QUA ENDPOINT VĂN BẢN GỐC
+    const { data: detail, isLoading: detailLoading } = useDocumentByIdQuery(
+        open && dataInit?.id ? dataInit.id : undefined
+    );
+
     if (!dataInit) return null;
 
-    const status = STATUS_MAP[dataInit.status ?? ""] ?? { label: dataInit.status ?? "--", color: "default" };
+    // Dùng dữ liệu mới nhất từ API, nếu chưa có thì dùng dataInit truyền từ ngoài vào
+    const data = detail ?? dataInit;
+
+    const status = STATUS_MAP[data?.status ?? ""] ?? { label: data?.status ?? "--", color: "default" };
 
     const handleClose = () => {
         onClose(false);
@@ -98,10 +108,13 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
     };
 
     const handleDownloadQr = () => {
-        if (!dataInit?.qrCode) return;
+        if (!data?.qrCode) return;
         const a = document.createElement("a");
-        a.href = `data:image/png;base64,${dataInit.qrCode}`;
-        a.download = `qr-${dataInit.documentCode ?? "document"}.png`;
+        const qrSrc = data.qrCode.startsWith("data:image") 
+            ? data.qrCode 
+            : `data:image/png;base64,${data.qrCode}`;
+        a.href = qrSrc;
+        a.download = `qr-${data.documentCode ?? "document"}.png`;
         a.click();
     };
 
@@ -109,7 +122,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
     const col2 = isMobile ? "1fr" : "1fr 1fr";
     const col4 = isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr";
 
-    const QrPanel = dataInit?.qrCode ? (
+    const QrPanel = data?.qrCode ? (
         <div style={isMobile ? {
             display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
             borderTop: "0.5px solid #e5e7eb", paddingTop: 14, marginTop: 14, width: "100%",
@@ -120,7 +133,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
         }}>
             <div style={{ padding: 5, background: "#fff", border: "0.5px solid #e5e7eb", borderRadius: 4, flexShrink: 0 }}>
                 <Image
-                    src={`data:image/png;base64,${dataInit.qrCode}`}
+                    src={data.qrCode.startsWith("data:image") ? data.qrCode : `data:image/png;base64,${data.qrCode}`}
                     width={isMobile ? 80 : 120}
                     height={isMobile ? 80 : 120}
                     preview={{ mask: <EyeOutlined /> }}
@@ -134,8 +147,8 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                         Mã QR
                     </Text>
                 </div>
-                {dataInit.documentCode && (
-                    <Tag color="purple" style={TAG_STYLE}>{dataInit.documentCode}</Tag>
+                {data.documentCode && (
+                    <Tag color="purple" style={TAG_STYLE}>{data.documentCode}</Tag>
                 )}
                 <Text type="secondary" style={{ fontSize: 11, textAlign: isMobile ? "left" : "center", lineHeight: 1.4, color: "#9ca3af" }}>
                     Quét để truy cập nhanh văn bản
@@ -151,6 +164,14 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
     const MainContent = (
         <div style={{ flex: 1, minWidth: 0 }}>
 
+            {/* Tài liệu đính kèm */}
+            {(data?.fileUrls ?? []).length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                    <SectionHeading icon={<FileTextOutlined />} label="Tài liệu đính kèm" />
+                    <FileSection fileNames={data?.fileUrls} />
+                </div>
+            )}
+
             <SectionHeading icon={<ApartmentOutlined />} label="Thông tin chung" />
 
             {/* Tên văn bản */}
@@ -159,7 +180,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     Tên văn bản
                 </Text>
                 <Text style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-                    {dataInit.documentName || "--"}
+                    {data.documentName || (data as any).procedureName || "--"}
                 </Text>
             </div>
 
@@ -169,12 +190,12 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     <Tag color={status.color} style={TAG_STYLE}>{status.label}</Tag>
                 </Field>
                 <Field label="Mã văn bản">
-                    {dataInit.documentCode
-                        ? <Tag color="blue" style={TAG_STYLE}>{dataInit.documentCode}</Tag>
+                    {data.documentCode
+                        ? <Tag color="blue" style={TAG_STYLE}>{data.documentCode}</Tag>
                         : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
                 </Field>
                 <Field label="Kích hoạt">
-                    {dataInit.active
+                    {data.active
                         ? <Badge status="success" text={<Text style={{ fontSize: 13 }}>Hoạt động</Text>} />
                         : <Badge status="error" text={<Text style={{ fontSize: 13 }}>Tắt</Text>} />}
                 </Field>
@@ -183,36 +204,36 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             {/* Row 2: Loại văn bản, Ký hiệu, Công ty, Phòng ban, Bộ phận, Ngày ban hành */}
             <div style={{ display: "grid", gridTemplateColumns: col2, gap: "10px 16px", marginBottom: 12 }}>
                 <Field label="Loại văn bản">
-                    {dataInit.category
-                        ? <Tag color="purple" style={TAG_STYLE}>{dataInit.category.categoryName}</Tag>
+                    {data.category?.categoryName
+                        ? <Tag color="purple" style={TAG_STYLE}>{data.category.categoryName}</Tag>
                         : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
                 </Field>
                 <Field label="Ký hiệu">
-                    {dataInit.category?.symbol
-                        ? <Tag style={TAG_STYLE}>{dataInit.category.symbol}</Tag>
+                    {data.category?.symbol
+                        ? <Tag style={TAG_STYLE}>{data.category.symbol}</Tag>
                         : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
                 </Field>
                 <Field label="Công ty">
-                    <Text ellipsis={{ tooltip: dataInit.department?.companyName }} style={{ fontSize: 13, fontWeight: 400 }}>
-                        {dataInit.department?.companyName || "--"}
+                    <Text ellipsis={{ tooltip: data.department?.companyName }} style={{ fontSize: 13, fontWeight: 400 }}>
+                        {data.department?.companyName || "--"}
                     </Text>
                 </Field>
                 <Field label="Phòng ban">
-                    <Text ellipsis={{ tooltip: dataInit.department?.name }} style={{ fontSize: 13, fontWeight: 400 }}>
-                        {dataInit.department?.name || "--"}
+                    <Text ellipsis={{ tooltip: data.department?.name }} style={{ fontSize: 13, fontWeight: 400 }}>
+                        {data.department?.name || "--"}
                     </Text>
                 </Field>
                 <Field label="Bộ phận">
-                    <Text ellipsis={{ tooltip: dataInit.section?.name }} style={{ fontSize: 13, fontWeight: 400 }}>
-                        {dataInit.section?.name || "--"}
+                    <Text ellipsis={{ tooltip: data.section?.name }} style={{ fontSize: 13, fontWeight: 400 }}>
+                        {data.section?.name || "--"}
                     </Text>
                 </Field>
                 <Field label="Ngày ban hành">
-                    {dataInit.issuedDate ? (
+                    {data.issuedDate ? (
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <CalendarOutlined style={{ color: "#eb2f96", fontSize: 11 }} />
                             <Text style={{ fontSize: 13, fontWeight: 500 }}>
-                                {dayjs(dataInit.issuedDate).format("DD/MM/YYYY")}
+                                {dayjs(data.issuedDate).format("DD/MM/YYYY")}
                             </Text>
                         </span>
                     ) : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
@@ -220,15 +241,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             </div>
 
             {/* Mapping Procedure */}
-            {dataInit.category?.mappingProcedure && (
+            {data.category?.mappingProcedure && (
                 <div style={{ display: "grid", gridTemplateColumns: col2, gap: "10px 16px", marginBottom: 12 }}>
                     <Field label="Loại quy trình">
                         <Tag color="geekblue" style={TAG_STYLE}>
-                            {PROCEDURE_TYPE_LABEL[dataInit.procedureType || ""] || dataInit.procedureType || "--"}
+                            {PROCEDURE_TYPE_LABEL[data.procedureType || ""] || data.procedureType || "--"}
                         </Tag>
                     </Field>
                     <Field label="ID quy trình">
-                        <Text style={{ fontSize: 13, fontWeight: 400 }}>{dataInit.procedureId || "--"}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: 400 }}>{data.procedureId || "--"}</Text>
                     </Field>
                 </div>
             )}
@@ -238,8 +259,8 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                 <Text style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500, display: "block", marginBottom: 3 }}>
                     Ghi chú
                 </Text>
-                <Text style={{ fontSize: 13, fontWeight: 400, color: dataInit.note ? "#111827" : "#9ca3af", fontStyle: dataInit.note ? "normal" : "italic" }}>
-                    {dataInit.note || "Không có ghi chú"}
+                <Text style={{ fontSize: 13, fontWeight: 400, color: data.note ? "#111827" : "#9ca3af", fontStyle: data.note ? "normal" : "italic" }}>
+                    {data.note || "Không có ghi chú"}
                 </Text>
             </div>
 
@@ -248,24 +269,24 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             <SectionHeading icon={<UserOutlined />} label="Người thực hiện & Thời gian" />
 
             <div style={{ display: "grid", gridTemplateColumns: col4, gap: "10px 16px" }}>
-                <UserField label="Tạo bởi" name={dataInit.createdBy} avatarColor="#e6f4ff" textColor="#1677ff" />
-                <UserField label="Cập nhật bởi" name={dataInit.updatedBy} avatarColor="#f9f0ff" textColor="#531dab" />
+                <UserField label="Tạo bởi" name={data.createdBy} avatarColor="#e6f4ff" textColor="#1677ff" />
+                <UserField label="Cập nhật bởi" name={data.updatedBy} avatarColor="#f9f0ff" textColor="#531dab" />
                 <Field label="Ngày tạo">
-                    {dataInit.createdAt ? (
+                    {data.createdAt ? (
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <CalendarOutlined style={{ color: "#52c41a", fontSize: 11 }} />
                             <Text style={{ fontSize: 12, fontWeight: 400 }}>
-                                {dayjs(dataInit.createdAt).format("DD-MM-YYYY HH:mm")}
+                                {dayjs(data.createdAt).format("DD-MM-YYYY HH:mm")}
                             </Text>
                         </span>
                     ) : <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>--</Text>}
                 </Field>
                 <Field label="Ngày cập nhật">
-                    {dataInit.updatedAt ? (
+                    {data.updatedAt ? (
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             <CalendarOutlined style={{ color: "#fa8c16", fontSize: 11 }} />
                             <Text style={{ fontSize: 12, fontWeight: 400 }}>
-                                {dayjs(dataInit.updatedAt).format("DD-MM-YYYY HH:mm")}
+                                {dayjs(data.updatedAt).format("DD-MM-YYYY HH:mm")}
                             </Text>
                         </span>
                     ) : <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>--</Text>}
@@ -296,7 +317,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <Title level={5} style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Chi tiết văn bản</Title>
                         <Text type="secondary" ellipsis style={{ fontSize: 12, fontWeight: 400 }}>
-                            {dataInit.documentName}
+                            {data.documentName}
                         </Text>
                     </div>
                 </div>
@@ -307,13 +328,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                 </div>
             }
         >
-            <div style={{
-                display: "flex", flexDirection: "row", alignItems: "flex-start",
-                padding: isMobile ? "14px 16px 16px" : "16px 20px 18px 24px",
-            }}>
-                {MainContent}
-                {!isMobile && QrPanel}
-            </div>
+            <Spin spinning={detailLoading}>
+                <div style={{
+                    display: "flex", flexDirection: "row", alignItems: "flex-start",
+                    padding: isMobile ? "14px 16px 16px" : "16px 20px 18px 24px",
+                }}>
+                    {MainContent}
+                    {!isMobile && QrPanel}
+                </div>
+            </Spin>
         </Modal>
     );
 };

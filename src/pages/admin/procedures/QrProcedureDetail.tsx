@@ -5,7 +5,8 @@ import { QrcodeOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
 import axios from "@/config/axios-customize";
 import ViewProcedure from "./view.procedure";
-import type { IProcedure, ProcedureType } from "@/types/backend";
+import ViewDetailDocument from "../document/view.document";
+import type { IProcedure, ProcedureType, IDocument } from "@/types/backend";
 
 const QrProcedureDetail = () => {
     const { token } = useParams<{ token: string }>();
@@ -44,8 +45,10 @@ const QrProcedureDetail = () => {
             const procedure = res?.data;
             if (!procedure) throw new Error("Không tìm thấy quy trình");
 
-            // Xác định type từ data trả về
-            if (procedure.departments !== undefined) {
+            // Ưu tiên dùng type từ API trả về, nếu không có mới xác định tay (backward compatibility)
+            if (procedure.type) {
+                setType(procedure.type);
+            } else if (procedure.departments !== undefined) {
                 setType("DEPARTMENT");
             } else if (procedure.accessList !== undefined) {
                 setType("CONFIDENTIAL");
@@ -99,7 +102,18 @@ const QrProcedureDetail = () => {
     // Không có data
     if (!data) return null;
 
-    // Có data → mở ViewProcedure luôn
+    // Có data → Mở giao diện tương ứng
+    if (type === "DOCUMENT") {
+        return (
+            <ViewDetailDocument
+                open={true}
+                onClose={() => navigate("/admin")}
+                dataInit={data as unknown as IDocument}
+                setDataInit={() => setData(null)}
+            />
+        );
+    }
+
     return (
         <ViewProcedure
             type={type}

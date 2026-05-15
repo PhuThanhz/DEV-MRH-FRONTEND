@@ -128,7 +128,7 @@ const getAncestorIds = (nodeId: string, edges: Edge[]): Set<string> => {
     let current = nodeId;
     for (; ;) {
         const p = edges.find((e) => e.target === current);
-        if (!p) break;
+        if (!p || result.has(p.source)) break;
         result.add(p.source);
         current = p.source;
     }
@@ -141,7 +141,10 @@ const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
     while (queue.length > 0) {
         const cur = queue.shift()!;
         for (const e of edges) {
-            if (e.source === cur) { result.add(e.target); queue.push(e.target); }
+            if (e.source === cur && !result.has(e.target)) {
+                result.add(e.target);
+                queue.push(e.target);
+            }
         }
     }
     return result;
@@ -451,10 +454,23 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const handleConnect = useCallback(async (connection: Connection) => {
         if (!chartId || !connection.source || !connection.target) return;
+
+        // Chặn tạo vòng lặp ngay tại UI
+        const ancestors = getAncestorIds(connection.source, edgesRef.current);
+        if (ancestors.has(connection.target) || connection.source === connection.target) {
+            message.error("Không thể tạo vòng lặp! Node đích không thể là tổ tiên của node nguồn.");
+            return;
+        }
+
         setEdges((eds) => addEdge({ ...connection, ...EDGE_DEFAULTS }, eds));
-        await updateNode.mutateAsync({ id: Number(connection.target), parentId: Number(connection.source) });
-        message.success("Đã kết nối node!");
-    }, [chartId, updateNode]);
+        try {
+            await updateNode.mutateAsync({ id: Number(connection.target), parentId: Number(connection.source) });
+            message.success("Đã kết nối node!");
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Kết nối thất bại!");
+            loadNodes(chartId); // Reload để xóa edge vừa nối tạm trên UI
+        }
+    }, [chartId, updateNode, loadNodes]);
 
     const onNodesChange = useCallback((changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
     const onEdgesChange = useCallback((changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
@@ -474,20 +490,26 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         parentId?: number | null; isGoal?: boolean; jobDescriptionId?: number | null;
     }) => {
         if (!chartId) return;
-        if (editingNode) {
-            await updateNode.mutateAsync({
-                id: Number(editingNode.id), name: values.title, level: values.levelCode,
-                holderName: values.holderName ?? null, parentId: values.parentId ?? null,
-                isGoal: values.isGoal ?? false, jobDescriptionId: values.jobDescriptionId ?? null,
-            });
-        } else {
-            await createNode.mutateAsync({
-                chartId, name: values.title, level: values.levelCode,
-                holderName: values.holderName ?? null, parentId: values.parentId ?? null,
-                isGoal: values.isGoal ?? false, jobDescriptionId: values.jobDescriptionId ?? null,
-            });
+        try {
+            if (editingNode) {
+                await updateNode.mutateAsync({
+                    id: Number(editingNode.id), name: values.title, level: values.levelCode,
+                    holderName: values.holderName ?? null, parentId: values.parentId ?? null,
+                    isGoal: values.isGoal ?? false, jobDescriptionId: values.jobDescriptionId ?? null,
+                });
+            } else {
+                await createNode.mutateAsync({
+                    chartId, name: values.title, level: values.levelCode,
+                    holderName: values.holderName ?? null, parentId: values.parentId ?? null,
+                    isGoal: values.isGoal ?? false, jobDescriptionId: values.jobDescriptionId ?? null,
+                });
+            }
+            setOpenModal(false);
+            setEditingNode(null);
+            loadNodes(chartId);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Lưu thất bại!");
         }
-        setOpenModal(false); setEditingNode(null); loadNodes(chartId);
     }, [chartId, editingNode, createNode, updateNode, loadNodes]);
 
     const handleBulkSubmit = useCallback(async (items: BulkNodeItem[]) => {

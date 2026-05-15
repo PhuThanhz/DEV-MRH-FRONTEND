@@ -9,6 +9,8 @@ import {
 import { Html5Qrcode } from "html5-qrcode";
 import axios from "@/config/axios-customize";
 import ViewProcedure from "@/pages/admin/procedures/view.procedure";
+import ViewDetailDocument from "@/pages/admin/document/view.document";
+import type { IDocument } from "@/types/backend";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -192,6 +194,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
     }, []);
 
     const getProcedureType = (r: any) => {
+        if (r?.type) return r.type;
         if (r?.accessList !== undefined) return "CONFIDENTIAL";
         if (r?.departments !== undefined) return "DEPARTMENT";
         return "COMPANY";
@@ -431,14 +434,23 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 )}
             </Modal>
 
-            {/* ── Procedure detail modal ── */}
+            {/* ── Procedure/Document detail modal ── */}
             {result && !result.isTextOnly && (
-                <ViewProcedure
-                    type={getProcedureType(result)}
-                    open={openDetail}
-                    onClose={handleCloseDetail}
-                    dataInit={result}
-                />
+                getProcedureType(result) === "DOCUMENT" ? (
+                    <ViewDetailDocument
+                        open={openDetail}
+                        onClose={handleCloseDetail}
+                        dataInit={result as IDocument}
+                        setDataInit={setResult}
+                    />
+                ) : (
+                    <ViewProcedure
+                        type={getProcedureType(result)}
+                        open={openDetail}
+                        onClose={handleCloseDetail}
+                        dataInit={result}
+                    />
+                )
             )}
         </>
     );
