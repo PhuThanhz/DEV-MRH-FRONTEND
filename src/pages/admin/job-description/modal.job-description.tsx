@@ -624,6 +624,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     ...t, orderNo: idx + 1,
                 })),
                 positions,
+                version: fullJd?.version, // ✅ Thêm version để hỗ trợ Optimistic Locking
             };
 
             if (isEdit && jdId) {

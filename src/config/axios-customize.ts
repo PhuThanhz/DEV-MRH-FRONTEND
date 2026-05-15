@@ -124,6 +124,20 @@ instance.interceptors.response.use(
             });
         }
 
+        if (error.response?.status === 409) {
+            notification.error({
+                message: "Dữ liệu đã bị thay đổi",
+                description: "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại trang",
+            });
+        }
+
+        if (error.response?.status === 400 && error.response?.data?.message === "Mã đã tồn tại") {
+            notification.error({
+                message: "Lỗi dữ liệu",
+                description: "Mã đã tồn tại, vui lòng kiểm tra lại",
+            });
+        }
+
         return Promise.reject(error?.response?.data ?? error);
     }
 );
