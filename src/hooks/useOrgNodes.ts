@@ -6,6 +6,7 @@ import {
     callUpdateOrgNode,
     callDeleteOrgNode,
     callCreateOrgNodeBulkTree,  // ⭐ THÊM
+    callUpdateOrgNodePositions,
 } from "@/config/api";
 
 import { notify } from "@/components/common/notification/notify";
@@ -123,6 +124,39 @@ export const useUpdateOrgNodeMutation = () => {
         onSuccess: () => {
 
             notify.updated("Cập nhật node thành công");
+
+            queryClient.invalidateQueries({
+                queryKey: ["orgNodes"]
+            });
+
+        }
+
+    });
+
+};
+
+
+/* ===================== UPDATE NODE POSITIONS (BULK) ===================== */
+
+export const useUpdateOrgNodePositionsMutation = () => {
+
+    const queryClient = useQueryClient();
+
+    return useMutation<any, Error, { id: number; posX: number; posY: number }[]>({
+
+        mutationFn: async (data: { id: number; posX: number; posY: number }[]) => {
+
+            const res = await callUpdateOrgNodePositions(data);
+
+            const backendRes = res.data as IBackendRes<any> | undefined;
+
+            return backendRes?.data;
+
+        },
+
+        onSuccess: () => {
+
+            notify.updated("Cập nhật vị trí thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]

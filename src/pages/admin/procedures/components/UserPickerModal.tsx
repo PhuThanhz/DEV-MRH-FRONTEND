@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Modal, Input, Checkbox, Avatar, Badge, Button,
-    Spin, Empty,
+    Spin, Empty, Select,
 } from "antd";
 import {
     SearchOutlined, CloseOutlined, CheckOutlined,
 } from "@ant-design/icons";
-import { callFetchUsersByCompany } from "@/config/api";
+import { callFetchUsersByCompany, callFetchUsersCrossCompany, callFetchCompany } from "@/config/api";
 
 interface UserOption {
     value: string;
@@ -23,6 +23,7 @@ interface UserPickerModalProps {
     selectedIds: string[];
     onChange: (ids: string[]) => void;
     cachedUsers?: Map<string, UserOption>;
+    isCrossCompany?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -47,6 +48,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     selectedIds,
     onChange,
     cachedUsers, // ← nhận prop nhưng trước đây không dùng → fix ở đây
+    isCrossCompany,
 }) => {
     const [search, setSearch] = useState("");
     const [allUsers, setAllUsers] = useState<UserOption[]>([]);
@@ -54,47 +56,113 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     const [page, setPage] = useState(1);
     const [localSelected, setLocalSelected] = useState<string[]>([]);
 
+    const [companies, setCompanies] = useState<any[]>([]); // Danh sách công ty cho dropdown
+    const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null); // Công ty đang chọn để lọc
+    const [total, setTotal] = useState(0); // Tổng số kết quả từ backend
+    const [totalPages, setTotalPages] = useState(0); // Tổng số trang từ backend
+
+    // Reset states when modal is opened
     useEffect(() => {
-        if (!open || !companyId) return;
+        if (!open) return;
         setLocalSelected(selectedIds);
         setSearch("");
         setPage(1);
+        setSelectedCompanyId(null);
+    }, [open]);
 
-        // ✅ FIX: Nếu đã có cachedUsers từ parent thì dùng luôn, không gọi API lại
-        // → fix bug "User #2683a8" vì userMap đã load sẵn ở UserSelectField
-        if (cachedUsers && cachedUsers.size > 0) {
-            setAllUsers(Array.from(cachedUsers.values()));
-        } else {
-            loadUsers();
-        }
-    }, [open, companyId]);
+    // Load companies when cross-company is true and modal is open
+    useEffect(() => {
+        if (!open || !isCrossCompany) return;
+        const fetchCompanies = async () => {
+            try {
+                const res = await callFetchCompany("page=1&size=100");
+                setCompanies(res?.data?.result ?? []);
+            } catch {
+                // ignore
+            }
+        };
+        fetchCompanies();
+    }, [open, isCrossCompany]);
 
     const loadUsers = async () => {
         setLoading(true);
         try {
-            const res = await callFetchUsersByCompany(companyId!);
-            const positions: any[] = res?.data ?? [];
-            const seen = new Set<string>();
-            const users: UserOption[] = positions
-                .filter((p) => {
-                    const uid = p.user?.id ?? p.id;
-                    if (seen.has(uid)) return false;
-                    seen.add(uid);
-                    return true;
-                })
-                .map((p) => ({
-                    value: p.user?.id ?? p.id,
-                    name: p.user?.name ?? p.name ?? "",
-                    email: p.user?.email ?? p.email ?? "",
-                    department: p.department?.name,
+            if (isCrossCompany) {
+                // Chuẩn bị query params gửi lên Backend
+                let query = `page=${page}&size=${PAGE_SIZE}`;
+                if (search.trim()) {
+                    query += `&search=${encodeURIComponent(search.trim())}`;
+                }
+                if (selectedCompanyId) {
+                    query += `&companyId=${selectedCompanyId}`;
+                }
+
+                // Gọi API mới
+                const res = await callFetchUsersCrossCompany(query);
+                
+                // Map kết quả
+                const users: UserOption[] = (res?.data?.result ?? []).map((u) => ({
+                    value: String(u.id),
+                    name: u.name ?? "",
+                    email: u.email ?? "",
+                    department: u.departmentName ?? u.companyName, // Hiển thị phòng ban hoặc tên công ty
                 }));
-            setAllUsers(users);
+                
+                setAllUsers(users);
+                
+                // Cập nhật thông tin phân trang từ Backend
+                if (res?.data?.meta) {
+                    setTotal(res.data.meta.total);
+                    setTotalPages(res.data.meta.pages);
+                }
+            } else {
+                // Giữ nguyên logic tải user theo công ty hiện tại (Non cross-company)
+                const res = await callFetchUsersByCompany(companyId!);
+                const positions: any[] = res?.data ?? [];
+                const seen = new Set<string>();
+                const users: UserOption[] = positions
+                    .filter((p) => {
+                        const uid = String(p.user?.id ?? p.id);
+                        if (seen.has(uid)) return false;
+                        seen.add(uid);
+                        return true;
+                    })
+                    .map((p) => ({
+                        value: String(p.user?.id ?? p.id),
+                        name: p.user?.name ?? p.name ?? "",
+                        email: p.user?.email ?? p.email ?? "",
+                        department: p.department?.name,
+                    }));
+                setAllUsers(users);
+                setTotal(users.length);
+                setTotalPages(Math.ceil(users.length / PAGE_SIZE));
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    // Load users based on dependencies
+    useEffect(() => {
+        if (!open) return;
+        if (!isCrossCompany && !companyId) return;
+
+        // If not cross-company and cachedUsers is available, use it (avoid duplicate API call)
+        if (!isCrossCompany && cachedUsers && cachedUsers.size > 0) {
+            const users = Array.from(cachedUsers.values());
+            setAllUsers(users);
+            setTotal(users.length);
+            setTotalPages(Math.ceil(users.length / PAGE_SIZE));
+            return;
+        }
+
+        loadUsers();
+    }, [open, page, search, selectedCompanyId, companyId, isCrossCompany]);
+
     const filtered = useMemo(() => {
+        if (isCrossCompany) {
+            return allUsers;
+        }
         const q = search.toLowerCase().trim();
         if (!q) return allUsers;
         return allUsers.filter(
@@ -103,10 +171,16 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                 u.email.toLowerCase().includes(q) ||
                 u.department?.toLowerCase().includes(q)
         );
-    }, [allUsers, search]);
+    }, [allUsers, search, isCrossCompany]);
 
-    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const paginated = useMemo(() => {
+        if (isCrossCompany) {
+            return filtered;
+        }
+        return filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    }, [filtered, page, isCrossCompany]);
+
+    const displayedTotalPages = isCrossCompany ? totalPages : Math.ceil(filtered.length / PAGE_SIZE);
 
     const toggle = (id: string) => {
         setLocalSelected((prev) =>
@@ -170,7 +244,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         Chọn người được xem
                     </div>
                     <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                        {allUsers.length} người dùng trong công ty
+                        {isCrossCompany ? total : allUsers.length} người dùng {isCrossCompany ? "trên hệ thống" : "trong công ty"}
                     </div>
                 </div>
                 <button
@@ -200,6 +274,22 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         />
                     </div>
 
+                    {isCrossCompany && (
+                        <div style={{ padding: "8px 16px", borderBottom: "1px solid #f3f4f6" }}>
+                            <Select
+                                placeholder="Lọc theo công ty"
+                                allowClear
+                                style={{ width: "100%" }}
+                                value={selectedCompanyId}
+                                onChange={(val) => {
+                                    setSelectedCompanyId(val);
+                                    setPage(1); // Reset về trang 1 khi đổi bộ lọc
+                                }}
+                                options={companies.map(c => ({ label: c.name, value: c.id }))}
+                            />
+                        </div>
+                    )}
+
                     {!loading && paginated.length > 0 && (
                         <div style={{
                             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -217,7 +307,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                 </span>
                             </Checkbox>
                             <span style={{ fontSize: 12, color: "#9ca3af" }}>
-                                {filtered.length} kết quả
+                                {isCrossCompany ? total : filtered.length} kết quả
                             </span>
                         </div>
                     )}
@@ -281,7 +371,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         )}
                     </div>
 
-                    {totalPages > 1 && (
+                    {displayedTotalPages > 1 && (
                         <div style={{
                             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                             padding: "10px 16px",
@@ -298,15 +388,15 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                     fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center",
                                 }}
                             >‹</button>
-                            <span style={{ fontSize: 12, color: "#6b7280" }}>{page} / {totalPages}</span>
+                            <span style={{ fontSize: 12, color: "#6b7280" }}>{page} / {displayedTotalPages}</span>
                             <button
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
+                                onClick={() => setPage((p) => Math.min(displayedTotalPages, p + 1))}
+                                disabled={page === displayedTotalPages}
                                 style={{
                                     width: 28, height: 28, borderRadius: 6, border: "1px solid #e5e7eb",
-                                    background: page === totalPages ? "#f9fafb" : "#fff",
-                                    cursor: page === totalPages ? "not-allowed" : "pointer",
-                                    color: page === totalPages ? "#d1d5db" : "#374151",
+                                    background: page === displayedTotalPages ? "#f9fafb" : "#fff",
+                                    cursor: page === displayedTotalPages ? "not-allowed" : "pointer",
+                                    color: page === displayedTotalPages ? "#d1d5db" : "#374151",
                                     fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center",
                                 }}
                             >›</button>

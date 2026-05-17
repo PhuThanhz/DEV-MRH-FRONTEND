@@ -1,7 +1,16 @@
-import { Badge, Descriptions, Modal, Spin } from "antd";
+import { Spin, Empty } from "antd";
+import {
+    TagOutlined, GlobalOutlined, StarOutlined,
+    BankOutlined, CalendarOutlined, UserAddOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
+
 import type { IJobTitle } from "@/types/backend";
 import { useJobTitleByIdQuery } from "@/hooks/useJobTitles";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -11,7 +20,6 @@ interface IProps {
 }
 
 const ViewDetailJobTitle = ({ open, onClose, dataInit, setDataInit }: IProps) => {
-
     const { data: detail, isLoading } = useJobTitleByIdQuery(
         open && dataInit?.id ? dataInit.id : undefined
     );
@@ -21,74 +29,68 @@ const ViewDetailJobTitle = ({ open, onClose, dataInit, setDataInit }: IProps) =>
         onClose(false);
     };
 
+    const isActive = detail?.active;
+
     return (
-        <Modal
-            title="Chi tiết chức danh"
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết chức danh</span>}
             open={open}
             onCancel={handleClose}
-            footer={null}
-            width={{ xs: "95vw", sm: "80vw", md: "60vw", lg: "50vw", xl: "45vw" }}
-            centered
             destroyOnHidden
-            styles={{
-                mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.2)" },
-            }}
+            maskClosable={false}
+            moduleClass="job-title"
+            desktopWidth={540}
         >
-            <Spin spinning={isLoading}>
-                <Descriptions
-                    bordered
-                    column={{ xs: 1, sm: 2 }}
-                    size="middle"
-                    layout="vertical"
-                    labelStyle={{ fontWeight: 600, color: "#6b7280", background: "#fafafa", fontSize: 12 }}
-                    contentStyle={{ fontSize: 13, color: "#111827" }}
-                >
-                    <Descriptions.Item label="Tên VI">
-                        {detail?.nameVi || "--"}
-                    </Descriptions.Item>
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : !detail ? (
+                <Empty description="Không tìm thấy thông tin chức danh" style={{ padding: "32px 0" }} />
+            ) : (
+                <>
+                    <ProfileHeader
+                        avatarIcon={<TagOutlined />}
+                        title={detail.nameVi || "--"}
+                        subtitle={detail.nameEn || undefined}
+                        badges={[isActive ? <ActiveTag key="s" label="Đang hoạt động" /> : <InactiveTag key="s" />]}
+                        tags={[
+                            detail.positionLevel?.code
+                                ? <OutlineTag key="pl" icon={<StarOutlined />} label={`Bậc: ${detail.positionLevel.code}`} />
+                                : null,
+                            detail.positionLevel?.companyName
+                                ? <OutlineTag key="co" icon={<BankOutlined />} label={detail.positionLevel.companyName} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
 
-                    <Descriptions.Item label="Tên EN">
-                        {detail?.nameEn || "--"}
-                    </Descriptions.Item>
+                    <InfoCard>
+                        <SectionTitle>Thông tin chức danh</SectionTitle>
+                        <InfoRow icon={<TagOutlined />}    label="Tên chức danh (VI)" value={detail.nameVi}                       highlight />
+                        <InfoRow icon={<GlobalOutlined />} label="Tên chức danh (EN)" value={detail.nameEn} />
+                        <InfoRow icon={<StarOutlined />}   label="Bậc chức danh"      value={detail.positionLevel?.code} />
+                        <InfoRow icon={<BankOutlined />}   label="Công ty"            value={detail.positionLevel?.companyName}   noBorder />
+                    </InfoCard>
 
-                    <Descriptions.Item label="Bậc chức danh">
-                        {detail?.positionLevel?.code || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Công ty">
-                        {detail?.positionLevel?.companyName || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Trạng thái" span={2}>
-                        {detail?.active ? (
-                            <Badge status="success" text="Đang hoạt động" />
-                        ) : (
-                            <Badge status="error" text="Ngừng hoạt động" />
-                        )}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày tạo">
-                        {detail?.createdAt
-                            ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày cập nhật">
-                        {detail?.updatedAt
-                            ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người tạo">
-                        {detail?.createdBy || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người cập nhật">
-                        {detail?.updatedBy || "--"}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Spin>
-        </Modal>
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow icon={<UserAddOutlined />} label="Người tạo"      value={detail.createdBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={detail.createdAt ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm") : undefined}
+                        />
+                        <InfoRow icon={<UserAddOutlined />} label="Người cập nhật" value={detail.updatedBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            value={detail.updatedAt ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm") : undefined}
+                            noBorder
+                        />
+                    </InfoCard>
+                </>
+            )}
+        </DetailModal>
     );
 };
 

@@ -16,6 +16,7 @@ const HomePage = () => {
                 alignItems: "center",
                 margin: 0,
                 padding: 0,
+                overflowX: "hidden",
             }}
         >
             {/* Subtle animated grid */}
@@ -172,11 +173,11 @@ const HomePage = () => {
                 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
 
                 :root {
-                    --logo-size: clamp(100px, 20vw, 180px);
-                    --orbital-size: clamp(140px, 28vw, 240px);
-                    --hrm-font-size: clamp(52px, 13vw, 120px);
-                    --hrm-letter-spacing: clamp(6px, 1.5vw, 20px);
-                    --content-gap: clamp(24px, 4vw, 50px);
+                    --logo-size: clamp(90px, 10vw, 160px);
+                    --orbital-size: clamp(130px, 14vw, 220px);
+                    --hrm-font-size: clamp(48px, 8vw, 110px);
+                    --hrm-letter-spacing: clamp(6px, 1vw, 18px);
+                    --content-gap: clamp(20px, 2.5vw, 40px);
                 }
 
                 .main-content {
@@ -188,7 +189,7 @@ const HomePage = () => {
                     align-items: center;
                     gap: var(--content-gap);
                     padding: clamp(16px, 4vw, 40px) clamp(16px, 5vw, 40px);
-                    max-width: 100vw;
+                    max-width: 100%;
                     box-sizing: border-box;
                 }
 

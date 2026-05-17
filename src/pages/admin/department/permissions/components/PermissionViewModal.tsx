@@ -14,6 +14,9 @@ import type {
 } from "@/types/backend";
 
 const ACCENT = "#e8637a";
+const HOVER_BG = "#f5f5f5";
+const HOVER_TEXT = "#1a1a1a";
+const STYLE_PINK = { bg: "#ffffff", border: "#ffd6d9", color: "#e8637a" };
 
 const PALETTE = [
     { bg: "#f6ffed", border: "#b7eb8f", color: "#389e0d" },
@@ -157,24 +160,25 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     // ── Badge với Tooltip hiện tên + mô tả ────────────────────────────────────
     const renderBadge = (code: string | null) => {
-        if (!code) return <span style={{ color: "#d9d9d9", fontSize: 16 }}>—</span>;
+        if (!code) return <span style={{ color: "#cbd5e1", fontSize: 16 }}>—</span>;
 
         const entry = actionMap[code];
-        const style = entry?.style ?? { bg: "#f5f5f5", border: "#d9d9d9", color: "#595959" };
         const action = entry?.action;
 
         const badge = (
             <span style={{
                 display: "inline-block",
-                padding: "3px 10px",
+                padding: "2px 8px",
                 borderRadius: 5,
-                background: style.bg,
-                border: `1px solid ${style.border}`,
-                color: style.color,
+                background: "#ffffff",
+                border: `1px solid ${STYLE_PINK.border}`,
+                color: STYLE_PINK.color,
                 fontWeight: 700,
-                fontSize: 12,
-                letterSpacing: 0.4,
+                fontSize: 11.5,
+                fontFamily: "monospace",
+                letterSpacing: 0.5,
                 cursor: action ? "help" : "default",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.01)",
             }}>
                 {code}
             </span>
@@ -208,8 +212,9 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
             <div style={{
                 marginBottom: 20,
                 borderRadius: 8,
-                border: "1px solid #f0f0f0",
+                border: "1px solid #e2e8f0",
                 overflow: "hidden",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
             }}>
                 <button
                     onClick={() => setLegendOpen((v) => !v)}
@@ -218,23 +223,27 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
-                        padding: "10px 16px",
-                        background: "#fafafa",
+                        padding: "12px 18px",
+                        background: "#f8fafc",
                         border: "none",
-                        borderBottom: legendOpen ? "1px solid #f0f0f0" : "none",
+                        borderBottom: legendOpen ? "1px solid #e2e8f0" : "none",
                         cursor: "pointer",
                         fontWeight: 600,
                         fontSize: 13,
-                        color: "#555",
+                        color: "#475569",
                         textAlign: "left",
+                        outline: "none",
+                        transition: "background 0.15s",
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#f8fafc")}
                 >
                     <span style={{
                         display: "inline-block",
                         transform: legendOpen ? "rotate(90deg)" : "rotate(0deg)",
                         transition: "transform 0.18s",
                         fontSize: 10,
-                        color: "#999",
+                        color: "#94a3b8",
                     }}>
                         ▶
                     </span>
@@ -244,44 +253,47 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                 {legendOpen && (
                     <div style={{
                         padding: "16px 20px",
-                        background: "#fff",
+                        background: "#ffffff",
                         display: "grid",
                         gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
                         gap: "12px 20px",
                     }}>
-                        {processActions.map((a, i) => {
-                            const s = getPalette(i);
+                        {processActions.map((a) => {
                             return (
                                 <div key={a.code} style={{
                                     display: "flex",
                                     alignItems: "flex-start",
-                                    gap: 10,
-                                    padding: "10px 14px",
+                                    gap: 12,
+                                    padding: "12px 14px",
                                     borderRadius: 8,
-                                    background: s.bg,
-                                    border: `1px solid ${s.border}`,
+                                    background: "#ffffff",
+                                    border: "1px solid #e2e8f0",
+                                    boxShadow: "0 1px 2px rgba(0,0,0,0.01)",
                                 }}>
                                     <span style={{
                                         flexShrink: 0,
-                                        display: "inline-block",
-                                        padding: "2px 10px",
-                                        borderRadius: 5,
-                                        background: "#fff",
-                                        border: `1.5px solid ${s.border}`,
-                                        color: s.color,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: 44,
+                                        padding: "3px 6px",
+                                        borderRadius: 4,
+                                        background: "#f8fafc",
+                                        border: "1px solid #cbd5e1",
+                                        color: "#475569",
                                         fontWeight: 800,
-                                        fontSize: 12,
-                                        letterSpacing: 0.5,
-                                        marginTop: 1,
+                                        fontSize: 11,
+                                        fontFamily: "monospace",
+                                        textAlign: "center",
                                     }}>
                                         {a.code}
                                     </span>
                                     <div>
-                                        <div style={{ fontWeight: 700, fontSize: 13, color: s.color, lineHeight: 1.3 }}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, color: "#334155", lineHeight: 1.3 }}>
                                             {a.name ?? a.code}
                                         </div>
                                         {a.shortDescription && (
-                                            <div style={{ fontSize: 12, color: "#666", marginTop: 3, lineHeight: 1.5 }}>
+                                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, lineHeight: 1.5 }}>
                                                 {a.shortDescription}
                                             </div>
                                         )}
@@ -388,12 +400,12 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                                             textAlign: "center",
                                             minWidth: 110,
                                             zIndex: 2,
-                                            background: isHovered ? "#fff5f7" : "#ffffff",
-                                            color: isHovered ? ACCENT : "#1a1a1a",
+                                            background: isHovered ? HOVER_BG : "#ffffff",
+                                            color: isHovered ? HOVER_TEXT : "#1a1a1a",
                                             transition: "background 0.15s, color 0.15s",
                                             cursor: "default",
                                             borderBottom: isHovered
-                                                ? `2px solid ${ACCENT}`
+                                                ? `2px solid ${HOVER_TEXT}`
                                                 : "2px solid #f0f0f0",
                                         }}
                                     >
@@ -462,7 +474,7 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                                                 style={{
                                                     ...baseTdStyle,
                                                     textAlign: "center",
-                                                    background: isHovered ? "#fff5f7" : rowBg,
+                                                    background: isHovered ? HOVER_BG : rowBg,
                                                     transition: "background 0.15s",
                                                 }}
                                             >

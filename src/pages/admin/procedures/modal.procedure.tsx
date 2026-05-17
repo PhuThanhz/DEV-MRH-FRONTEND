@@ -7,7 +7,7 @@ import {
 } from "@ant-design/pro-components";
 import { Col, Form, Row, message, Upload, Input, DatePicker } from "antd";
 import {
-    UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined, FileTextOutlined,
+    UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 
@@ -62,14 +62,6 @@ const TYPE_OPTIONS = [
         activeColor: "#be123c",
         activeBorder: "#fecdd3",
     },
-    {
-        key: "DOCUMENT" as ProcedureType,
-        label: "Văn bản",
-        icon: <FileTextOutlined />,
-        activeBg: "#f5f3ff",
-        activeColor: "#7c3aed",
-        activeBorder: "#ddd6fe",
-    },
 ] as const;
 
 const TypeSelector: React.FC<{
@@ -78,7 +70,10 @@ const TypeSelector: React.FC<{
     disabled?: boolean;
     options?: typeof TYPE_OPTIONS[number][];
 }> = ({ value, onChange, disabled, options = [...TYPE_OPTIONS] }) => (
-    <div style={{ display: "flex", gap: 6 }}>
+    <div style={{
+        display: "flex", gap: 6, flexWrap: "wrap",
+        background: "#f3f4f6", borderRadius: 10, padding: 4,
+    }}>
         {options.map((opt) => {
             const isActive = value === opt.key;
             return (
@@ -89,22 +84,28 @@ const TypeSelector: React.FC<{
                     onClick={() => !disabled && onChange(opt.key)}
                     style={{
                         flex: 1,
+                        minWidth: 80,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 6,
-                        padding: "8px 0",
-                        borderRadius: 9,
-                        border: `1.5px solid ${isActive ? opt.activeBorder : "#e5e7eb"}`,
-                        background: isActive ? opt.activeBg : "#fafafa",
-                        color: isActive ? opt.activeColor : "#6b7280",
+                        padding: "7px 12px",
+                        borderRadius: 7,
+                        border: "none",
+                        background: isActive
+                            ? "linear-gradient(135deg,#f5317f,#ff6aaa)"
+                            : "transparent",
+                        color: isActive ? "#fff" : "#6b7280",
                         fontSize: 13,
-                        fontWeight: isActive ? 600 : 400,
+                        fontWeight: isActive ? 600 : 500,
                         cursor: disabled ? "not-allowed" : "pointer",
-                        opacity: disabled ? 0.5 : 1,
-                        transition: "all 0.15s ease",
+                        opacity: disabled ? 0.55 : 1,
+                        transition: "all 0.18s ease",
                         letterSpacing: "-0.01em",
                         whiteSpace: "nowrap",
+                        boxShadow: isActive
+                            ? "0 2px 8px rgba(245,49,127,0.30)"
+                            : "none",
                     }}
                 >
                     {opt.icon}
@@ -115,11 +116,12 @@ const TypeSelector: React.FC<{
     </div>
 );
 
-const TYPE_PERMISSION_MAP: Record<ProcedureType, { method: string; apiPath: string; module: string }> = {
+type ProcedureTabType = "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
+
+const TYPE_PERMISSION_MAP: Record<ProcedureTabType, { method: string; apiPath: string; module: string }> = {
     COMPANY: ALL_PERMISSIONS.PROCEDURE_COMPANY.CREATE,
     DEPARTMENT: ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.CREATE,
     CONFIDENTIAL: ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.CREATE,
-    DOCUMENT: ALL_PERMISSIONS.DOCUMENTS.CREATE,
 };
 
 const TypeSelectorFiltered: React.FC<{
@@ -130,13 +132,11 @@ const TypeSelectorFiltered: React.FC<{
     const canCompany = useAccess(TYPE_PERMISSION_MAP.COMPANY);
     const canDepartment = useAccess(TYPE_PERMISSION_MAP.DEPARTMENT);
     const canConfidential = useAccess(TYPE_PERMISSION_MAP.CONFIDENTIAL);
-    const canDocument = useAccess(TYPE_PERMISSION_MAP.DOCUMENT);
 
-    const accessMap: Record<ProcedureType, boolean> = {
+    const accessMap: Partial<Record<ProcedureType, boolean>> = {
         COMPANY: canCompany,
         DEPARTMENT: canDepartment,
         CONFIDENTIAL: canConfidential,
-        DOCUMENT: canDocument,
     };
 
     const visibleOptions = TYPE_OPTIONS.filter((opt) => accessMap[opt.key]);

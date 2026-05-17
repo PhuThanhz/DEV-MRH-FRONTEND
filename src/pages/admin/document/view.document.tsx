@@ -1,5 +1,5 @@
 import {
-    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin,
+    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin, Table, Input, Progress,
 } from "antd";
 import {
     FileTextOutlined, UserOutlined, ApartmentOutlined,
@@ -9,8 +9,11 @@ import {
 import type { IDocument } from "@/types/backend";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
-import { useDocumentByIdQuery } from "@/hooks/useDocuments";
+import { useSelector } from "react-redux";
+import { useDocumentByIdQuery, useMarkDocumentReadMutation } from "@/hooks/useDocuments";
 import FileSection from "../procedures/components/file-section.procedure";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Text, Title } = Typography;
 
@@ -82,6 +85,8 @@ interface Props {
 
 const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => {
     const [isMobile, setIsMobile] = useState(false);
+    const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
+    const [recipientSearch, setRecipientSearch] = useState("");
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
@@ -95,12 +100,27 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
         open && dataInit?.id ? dataInit.id : undefined
     );
 
-    if (!dataInit) return null;
+    const account = useSelector((state: any) => state.account?.user);
+    const markReadMutation = useMarkDocumentReadMutation();
 
     // Dùng dữ liệu mới nhất từ API, nếu chưa có thì dùng dataInit truyền từ ngoài vào
     const data = detail ?? dataInit;
 
-    const status = STATUS_MAP[data?.status ?? ""] ?? { label: data?.status ?? "--", color: "default" };
+    useEffect(() => {
+        if (open && data?.id && account?.id && data?.userIds) {
+            const isRecipient = data.userIds.includes(String(account.id));
+            if (isRecipient) {
+                const access = data.accessDetails?.find((a: any) => String(a.userId) === String(account.id));
+                if (!access?.isRead) {
+                    markReadMutation.mutate(data.id);
+                }
+            }
+        }
+    }, [open, data?.id, account?.id, data?.userIds, data?.accessDetails]);
+
+    if (!dataInit || !data) return null;
+
+    const status = STATUS_MAP[data.status ?? ""] ?? { label: data.status ?? "--", color: "default" };
 
     const handleClose = () => {
         onClose(false);
@@ -294,6 +314,86 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             </div>
 
             {isMobile && QrPanel}
+
+            {data?.accessDetails && data.accessDetails.length > 0 && (() => {
+                const total = data.accessDetails.length;
+                const readCount = data.accessDetails.filter((a: any) => a.isRead).length;
+                const percent = total > 0 ? Math.round((readCount / total) * 100) : 0;
+                return (
+                    <Access permission={ALL_PERMISSIONS.DOCUMENTS.UPDATE} hideChildren={true}>
+                        <div style={{ marginTop: 24 }}>
+                            <SectionHeading icon={<EyeOutlined />} label="Trạng thái người nhận" />
+                            <div style={{
+                                background: "#ffffff",
+                                borderRadius: 12,
+                                padding: "16px 20px",
+                                border: "1px solid #f0f0f0",
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 16,
+                                marginTop: 12
+                            }}>
+                                {/* Left Icon */}
+                                <div style={{
+                                    width: 42,
+                                    height: 42,
+                                    borderRadius: "50%",
+                                    background: "#fff0f6",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0
+                                }}>
+                                    <EyeOutlined style={{ color: "#ff4d9f", fontSize: 18 }} />
+                                </div>
+
+                                {/* Center Progress */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                        <Text style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                                            Tiến độ người nhận đã đọc tài liệu
+                                        </Text>
+                                        <Text style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>
+                                            {readCount} / {total} đã xem ({percent}%)
+                                        </Text>
+                                    </div>
+                                    <Progress
+                                        percent={percent}
+                                        strokeColor={{
+                                            "0%": "#ff75b5",
+                                            "100%": "#ff4d9f",
+                                        }}
+                                        showInfo={false}
+                                        size="small"
+                                        style={{ margin: 0 }}
+                                    />
+                                </div>
+
+                                {/* Right Action Button */}
+                                <Button
+                                    icon={<EyeOutlined />}
+                                    onClick={() => setIsRecipientModalOpen(true)}
+                                    style={{
+                                        borderRadius: 6,
+                                        fontSize: 13,
+                                        fontWeight: 500,
+                                        color: "#ff4d9f",
+                                        borderColor: "#ffd6e7",
+                                        background: "#fff0f6",
+                                        height: 36,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 6
+                                    }}
+                                >
+                                    Chi tiết
+                                </Button>
+                            </div>
+                        </div>
+                    </Access>
+                );
+            })()}
         </div>
     );
 
@@ -337,6 +437,77 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     {!isMobile && QrPanel}
                 </div>
             </Spin>
+
+            {/* Recipient Details Sub-Modal */}
+            <Modal
+                title={
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <EyeOutlined style={{ color: "#1677ff" }} />
+                        <span style={{ fontWeight: 600, fontSize: 15 }}>Chi tiết trạng thái người nhận</span>
+                    </div>
+                }
+                open={isRecipientModalOpen}
+                onCancel={() => setIsRecipientModalOpen(false)}
+                footer={[
+                    <Button key="close" onClick={() => setIsRecipientModalOpen(false)} style={{ borderRadius: 3 }}>
+                        Đóng
+                    </Button>
+                ]}
+                width={650}
+                centered
+            >
+                <div style={{ marginBottom: 16, marginTop: 8 }}>
+                    <Input.Search
+                        placeholder="Tìm kiếm người nhận..."
+                        allowClear
+                        onChange={(e) => setRecipientSearch(e.target.value)}
+                        style={{ width: "100%" }}
+                    />
+                </div>
+                <Table
+                    dataSource={(data.accessDetails || []).filter((acc: any) => {
+                        const name = (acc.userName || acc.fullName || acc.userId || "").toLowerCase();
+                        return name.includes(recipientSearch.toLowerCase());
+                    })}
+                    rowKey="userId"
+                    pagination={{ pageSize: 10, showSizeChanger: false }}
+                    size="small"
+                    columns={[
+                        {
+                            title: "Người nhận",
+                            dataIndex: "userId",
+                            key: "userId",
+                            render: (_, record: any) => (
+                                <Text style={{ fontWeight: 500, color: "#1e293b" }}>
+                                    {record.userName || record.fullName || record.userId}
+                                </Text>
+                            )
+                        },
+                        {
+                            title: "Trạng thái",
+                            dataIndex: "isRead",
+                            key: "isRead",
+                            width: 130,
+                            render: (isRead: boolean) => isRead ? (
+                                <Badge status="success" text={<Text style={{ color: "#52c41a", fontSize: 13 }}>Đã xem</Text>} />
+                            ) : (
+                                <Badge status="default" text={<Text style={{ color: "#9ca3af", fontSize: 13 }}>Chưa xem</Text>} />
+                            )
+                        },
+                        {
+                            title: "Thời gian xem",
+                            dataIndex: "readAt",
+                            key: "readAt",
+                            width: 180,
+                            render: (_, record: any) => record.isRead && record.readAt ? (
+                                <span style={{ color: "#64748b" }}>
+                                    {dayjs(record.readAt).format("DD/MM/YYYY HH:mm")}
+                                </span>
+                            ) : "--"
+                        }
+                    ]}
+                />
+            </Modal>
         </Modal>
     );
 };

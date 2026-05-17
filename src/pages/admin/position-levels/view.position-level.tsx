@@ -1,7 +1,17 @@
-import type { IPositionLevel } from "@/types/backend";
-import { Badge, Descriptions, Modal, Spin } from "antd";
+import { Spin, Empty } from "antd";
+import {
+    StarOutlined, CodeOutlined, BankOutlined,
+    CalendarOutlined, UserAddOutlined, OrderedListOutlined,
+    SortAscendingOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
+
+import type { IPositionLevel } from "@/types/backend";
 import { usePositionLevelByIdQuery } from "@/hooks/usePositionLevels";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -11,7 +21,6 @@ interface IProps {
 }
 
 const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProps) => {
-
     const { data: detail, isLoading } = usePositionLevelByIdQuery(
         open && dataInit?.id ? dataInit.id : undefined
     );
@@ -21,168 +30,71 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
         setDataInit(null);
     };
 
+    const isActive = detail?.status === 1;
+
     return (
-        <>
-            <style>{`
-                .position-level-modal .ant-modal-content {
-                    border-radius: 16px !important;
-                    padding: 0 !important;
-                    overflow: hidden;
-                }
-                .position-level-modal .ant-modal-header {
-                    padding: 18px 24px 0 24px !important;
-                    border-bottom: none !important;
-                    background: #fff !important;
-                    margin-bottom: 0 !important;
-                }
-                .position-level-modal .ant-modal-title {
-                    font-size: 15px !important;
-                    font-weight: 700 !important;
-                    color: #111827 !important;
-                    letter-spacing: -0.02em !important;
-                }
-                .position-level-modal .ant-modal-body {
-                    padding: 16px 24px 24px !important;
-                    overflow-y: auto !important;
-                    max-height: 85vh !important;
-                }
-                .position-level-modal .ant-modal-close {
-                    top: 16px !important;
-                    right: 18px !important;
-                    width: 28px !important;
-                    height: 28px !important;
-                    border-radius: 8px !important;
-                    background: #f7f7f8 !important;
-                    border: 1.5px solid #efefef !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    transition: all 0.2s !important;
-                }
-                .position-level-modal .ant-modal-close:hover {
-                    background: #f0f0f0 !important;
-                    border-color: #e0e0e0 !important;
-                }
-                .position-level-modal .ant-modal-close .ant-modal-close-x {
-                    width: 28px !important;
-                    height: 28px !important;
-                    line-height: 28px !important;
-                    font-size: 11px !important;
-                    color: #6b7280 !important;
-                }
-                .position-level-modal .ant-descriptions-bordered .ant-descriptions-item-label {
-                    font-size: 12px !important;
-                    font-weight: 600 !important;
-                    color: #6b7280 !important;
-                    background: #fafafa !important;
-                    padding: 10px 14px !important;
-                    white-space: nowrap;
-                }
-                .position-level-modal .ant-descriptions-bordered .ant-descriptions-item-content {
-                    font-size: 13px !important;
-                    color: #111827 !important;
-                    padding: 10px 14px !important;
-                }
-                .position-level-modal.ant-modal {
-                    min-width: 560px !important;
-                }
-                @media (max-width: 768px) {
-                    .position-level-modal.ant-modal {
-                        min-width: unset !important;
-                        width: calc(100vw - 32px) !important;
-                        max-width: 600px !important;
-                        margin: 16px auto !important;
-                    }
-                }
-                @media (max-width: 480px) {
-                    .position-level-modal.ant-modal {
-                        width: calc(100vw - 24px) !important;
-                        max-width: unset !important;
-                        margin: 12px auto !important;
-                    }
-                    .position-level-modal .ant-modal-body {
-                        padding: 12px 12px 20px !important;
-                    }
-                    .position-level-modal .ant-modal-header {
-                        padding: 14px 12px 0 12px !important;
-                    }
-                    .position-level-modal .ant-descriptions-bordered .ant-descriptions-item-label {
-                        font-size: 11px !important;
-                        padding: 8px 10px !important;
-                    }
-                    .position-level-modal .ant-descriptions-bordered .ant-descriptions-item-content {
-                        font-size: 12px !important;
-                        padding: 8px 10px !important;
-                    }
-                }
-            `}</style>
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết bậc chức danh</span>}
+            open={open}
+            onCancel={close}
+            destroyOnHidden
+            maskClosable={false}
+            moduleClass="position-level"
+            desktopWidth={540}
+        >
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : !detail ? (
+                <Empty description="Không tìm thấy thông tin bậc chức danh" style={{ padding: "32px 0" }} />
+            ) : (
+                <>
+                    <ProfileHeader
+                        avatarIcon={<StarOutlined />}
+                        title={detail.code || "--"}
+                        badges={[isActive ? <ActiveTag key="s" label="Đang hoạt động" /> : <InactiveTag key="s" />]}
+                        tags={[
+                            detail.band
+                                ? <OutlineTag key="band" icon={<OrderedListOutlined />} label={`Nhóm: ${detail.band}`} />
+                                : null,
+                            detail.levelNumber !== undefined && detail.levelNumber !== null
+                                ? <OutlineTag key="lvl" icon={<SortAscendingOutlined />} label={`Cấp ${detail.levelNumber}`} />
+                                : null,
+                            detail.companyName
+                                ? <OutlineTag key="co" icon={<BankOutlined />} label={detail.companyName} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
 
-            <Modal
-                title="Chi tiết bậc chức danh"
-                open={open}
-                onCancel={close}
-                footer={null}
-                width="45vw"
-                centered
-                destroyOnHidden
-                className="position-level-modal"
-                styles={{
-                    mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.2)" },
-                }}
-            >
-                <Spin spinning={isLoading}>
-                    <Descriptions bordered column={{ xs: 2, sm: 2, md: 2 }} layout="vertical">
-                        <Descriptions.Item label="Code">
-                            {detail?.code ?? "--"}
-                        </Descriptions.Item>
+                    <InfoCard>
+                        <SectionTitle>Thông tin bậc chức danh</SectionTitle>
+                        <InfoRow icon={<CodeOutlined />}           label="Mã bậc"      value={detail.code}        highlight />
+                        <InfoRow icon={<OrderedListOutlined />}    label="Nhóm (Band)" value={detail.band} />
+                        <InfoRow icon={<SortAscendingOutlined />}  label="Cấp (Level)" value={detail.levelNumber !== undefined && detail.levelNumber !== null ? String(detail.levelNumber) : undefined} />
+                        <InfoRow icon={<StarOutlined />}           label="Thứ tự nhóm" value={detail.bandOrder !== undefined && detail.bandOrder !== null ? String(detail.bandOrder) : undefined} />
+                        <InfoRow icon={<BankOutlined />}           label="Công ty"     value={detail.companyName} noBorder />
+                    </InfoCard>
 
-                        <Descriptions.Item label="Band">
-                            {detail?.band ?? "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Level">
-                            {detail?.levelNumber ?? "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Band Order">
-                            {detail?.bandOrder ?? "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Công ty" span={2}>
-                            {detail?.companyName ?? "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Trạng thái" span={2}>
-                            {detail?.status === 1 ? (
-                                <Badge status="success" text="Đang hoạt động" />
-                            ) : (
-                                <Badge status="error" text="Ngừng hoạt động" />
-                            )}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Ngày tạo">
-                            {detail?.createdAt
-                                ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                                : "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Ngày cập nhật">
-                            {detail?.updatedAt
-                                ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                                : "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Người tạo">
-                            {detail?.createdBy ?? "--"}
-                        </Descriptions.Item>
-
-                        <Descriptions.Item label="Người cập nhật">
-                            {detail?.updatedBy ?? "--"}
-                        </Descriptions.Item>
-                    </Descriptions>
-                </Spin>
-            </Modal>
-        </>
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow icon={<UserAddOutlined />} label="Người tạo"      value={detail.createdBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={detail.createdAt ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm") : undefined}
+                        />
+                        <InfoRow icon={<UserAddOutlined />} label="Người cập nhật" value={detail.updatedBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            value={detail.updatedAt ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm") : undefined}
+                            noBorder
+                        />
+                    </InfoCard>
+                </>
+            )}
+        </DetailModal>
     );
 };
 

@@ -1,8 +1,17 @@
-import { Modal, Descriptions, Tag, Spin } from "antd";
+import { Spin, Empty, Tag } from "antd";
+import {
+    SafetyCertificateOutlined, TagOutlined, BankOutlined,
+    ApartmentOutlined, UserAddOutlined, CalendarOutlined,
+    CheckCircleOutlined, StopOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
-import { useState, useEffect } from "react";
+
 import type { IPermissionCategory } from "@/types/backend";
 import { usePermissionCategoryByIdQuery } from "@/hooks/usePermissionCategory";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -12,14 +21,6 @@ interface IProps {
 }
 
 const ViewCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
-
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 640);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-
     const { data: detail, isLoading } = usePermissionCategoryByIdQuery(
         open && dataInit?.id ? Number(dataInit.id) : null
     );
@@ -29,100 +30,122 @@ const ViewCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
         setDataInit(null);
     };
 
+    const isActive = detail?.active;
+
     return (
-        <Modal
-            title="Chi tiết danh mục phân quyền"
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết danh mục phân quyền</span>}
             open={open}
             onCancel={handleClose}
-            footer={null}
-            width={isMobile ? "95vw" : "50vw"}
-            centered
+            destroyOnHidden
+            maskClosable={false}
+            moduleClass="permission-category"
+            desktopWidth={500}
         >
-            <Spin spinning={isLoading}>
-                <Descriptions
-                    bordered
-                    column={isMobile ? 1 : 2}
-                    layout="vertical"
-                    size={isMobile ? "small" : "middle"}
-                >
-                    <Descriptions.Item label="Mã danh mục">
-                        {detail?.code || "--"}
-                    </Descriptions.Item>
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : !detail ? (
+                <Empty description="Không tìm thấy thông tin" style={{ padding: "32px 0" }} />
+            ) : (
+                <>
+                    <ProfileHeader
+                        avatarIcon={<SafetyCertificateOutlined />}
+                        title={detail.name || "--"}
+                        subtitle={detail.code ? `Mã: ${detail.code}` : undefined}
+                        badges={[
+                            isActive
+                                ? <ActiveTag key="s" />
+                                : <InactiveTag key="s" />,
+                        ]}
+                        tags={[
+                            detail.code
+                                ? <OutlineTag key="code" icon={<TagOutlined />} label={detail.code} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
 
-                    <Descriptions.Item label="Tên danh mục">
-                        {detail?.name || "--"}
-                    </Descriptions.Item>
+                    <InfoCard>
+                        <SectionTitle>Thông tin chung</SectionTitle>
+                        <InfoRow
+                            icon={<TagOutlined />}
+                            label="Mã danh mục"
+                            value={detail.code}
+                            highlight
+                        />
+                        <InfoRow
+                            icon={<SafetyCertificateOutlined />}
+                            label="Tên danh mục"
+                            value={detail.name}
+                        />
+                        <InfoRow
+                            icon={<BankOutlined />}
+                            label="Công ty"
+                            value={
+                                detail.companyName
+                                    ? <Tag style={{
+                                        borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12,
+                                        border: "1px solid #d3adf7", background: "#f9f0ff", color: "#531dab",
+                                    }}>{detail.companyName}</Tag>
+                                    : undefined
+                            }
+                        />
+                        <InfoRow
+                            icon={<ApartmentOutlined />}
+                            label="Phòng ban"
+                            value={
+                                detail.departmentName
+                                    ? <Tag style={{
+                                        borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12,
+                                        border: "1px solid #91caff", background: "#e6f4ff", color: "#0958d9",
+                                    }}>{detail.departmentName}</Tag>
+                                    : undefined
+                            }
+                        />
+                        <InfoRow
+                            icon={isActive ? <CheckCircleOutlined /> : <StopOutlined />}
+                            label="Trạng thái"
+                            noBorder
+                            value={
+                                isActive
+                                    ? <Tag color="success" style={{ borderRadius: 6, fontWeight: 600, margin: 0 }}>Hoạt động</Tag>
+                                    : <Tag color="error" style={{ borderRadius: 6, fontWeight: 600, margin: 0 }}>Ngừng hoạt động</Tag>
+                            }
+                        />
+                    </InfoCard>
 
-                    <Descriptions.Item label="Công ty" span={isMobile ? 1 : 2}>
-                        {detail?.companyName ? (
-                            <Tag
-                                style={{
-                                    borderRadius: 4,
-                                    padding: "0px 8px",
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    height: 22,
-                                    lineHeight: "20px",
-                                    border: "1px solid #d3adf7",
-                                    background: "#f9f0ff",
-                                    color: "#531dab",
-                                }}
-                            >
-                                {detail.companyName}
-                            </Tag>
-                        ) : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Phòng ban" span={isMobile ? 1 : 2}>
-                        {detail?.departmentName ? (
-                            <Tag
-                                style={{
-                                    borderRadius: 4,
-                                    padding: "0px 8px",
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    height: 22,
-                                    lineHeight: "20px",
-                                    border: "1px solid #91caff",
-                                    background: "#e6f4ff",
-                                    color: "#0958d9",
-                                }}
-                            >
-                                {detail.departmentName}
-                            </Tag>
-                        ) : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Trạng thái">
-                        {detail?.active ? (
-                            <Tag color="green">Hoạt động</Tag>
-                        ) : (
-                            <Tag color="red">Ngừng hoạt động</Tag>
-                        )}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người tạo">
-                        {detail?.createdBy || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày tạo">
-                        {detail?.createdAt
-                            ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người cập nhật">
-                        {detail?.updatedBy || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày cập nhật" span={isMobile ? 1 : 2}>
-                        {detail?.updatedAt
-                            ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Spin>
-        </Modal>
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow
+                            icon={<UserAddOutlined />}
+                            label="Người tạo"
+                            value={detail.createdBy}
+                        />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={detail.createdAt
+                                ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm")
+                                : undefined}
+                        />
+                        <InfoRow
+                            icon={<UserAddOutlined />}
+                            label="Người cập nhật"
+                            value={detail.updatedBy}
+                        />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            noBorder
+                            value={detail.updatedAt
+                                ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm")
+                                : undefined}
+                        />
+                    </InfoCard>
+                </>
+            )}
+        </DetailModal>
     );
 };
 

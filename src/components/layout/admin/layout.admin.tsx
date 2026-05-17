@@ -70,7 +70,7 @@ const LayoutAdmin = () => {
                 <Content
                     style={{
                         margin: 0,
-                        padding: "16px",
+                        padding: "clamp(10px, 2vw, 16px)",
                         background: "transparent",
                         minHeight: "calc(100vh - 64px)",
                     }}

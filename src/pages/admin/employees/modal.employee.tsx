@@ -18,7 +18,6 @@ import {
     Upload,
     Avatar,
 } from "antd";
-import { isMobile } from "react-device-detect";
 import dayjs from "dayjs";
 import {
     CheckOutlined,
@@ -41,6 +40,41 @@ const { Option } = Select;
 const ACCENT = "#f5317f";
 const ACCENT_HOVER = "#d4206a";
 
+// Hook detect màn hình nhỏ (chính xác hơn react-device-detect)
+const useIsMobile = (breakpoint = 768) => {
+    const [val, setVal] = useState(
+        typeof window !== "undefined" && window.innerWidth < breakpoint
+    );
+    useEffect(() => {
+        const h = () => setVal(window.innerWidth < breakpoint);
+        window.addEventListener("resize", h);
+        return () => window.removeEventListener("resize", h);
+    }, [breakpoint]);
+    return val;
+};
+
+const useModalWidth = () => {
+    const [width, setWidth] = useState(() => {
+        if (typeof window === "undefined") return 620;
+        const vw = window.innerWidth;
+        if (vw < 480) return vw;
+        if (vw < 768) return vw * 0.96;
+        return 620;
+    });
+    useEffect(() => {
+        const h = () => {
+            const vw = window.innerWidth;
+            if (vw < 480) setWidth(vw);
+            else if (vw < 768) setWidth(vw * 0.96);
+            else setWidth(620);
+        };
+        window.addEventListener("resize", h);
+        return () => window.removeEventListener("resize", h);
+    }, []);
+    return width;
+};
+
+
 interface IProps {
     openModal: boolean;
     setOpenModal: (v: boolean) => void;
@@ -56,6 +90,9 @@ const ModalEmployee = ({
     setDataInit,
     onSuccess,
 }: IProps) => {
+    const isMobile = useIsMobile();
+    const modalWidth = useModalWidth();
+
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(0);
@@ -238,6 +275,26 @@ const ModalEmployee = ({
 
     return (
         <ConfigProvider theme={modalTheme}>
+            {/* Fix: form tag bên trong ModalForm phải là flex container để footer luôn hiển thị */}
+            <style>{`
+                .employee-modal .ant-modal-body > form {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    flex: 1 !important;
+                    min-height: 0 !important;
+                    overflow: hidden !important;
+                }
+                .employee-modal .ant-modal-body {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    flex: 1 !important;
+                    min-height: 0 !important;
+                    overflow: hidden !important;
+                    padding: 0 !important;
+                }
+                .employee-modal-scroll::-webkit-scrollbar { width: 0; background: transparent; }
+                .employee-modal-scroll { scrollbar-width: none; }
+            `}</style>
             <ModalForm
                 title={
                     <Text strong style={{ fontSize: 16, letterSpacing: "-0.02em", color: "#111827" }}>
@@ -249,8 +306,10 @@ const ModalEmployee = ({
                     onCancel: handleReset,
                     afterClose: handleReset,
                     destroyOnClose: true,
-                    width: isMobile ? "100%" : 620, maskClosable: false,
+                    width: modalWidth,
+                    centered: true,
                     footer: null,
+                    className: "employee-modal",
                     styles: {
                         mask: {
                             backdropFilter: "blur(4px)",
@@ -260,12 +319,12 @@ const ModalEmployee = ({
                             borderRadius: 16,
                             padding: 0,
                             overflow: "hidden",
-                            maxHeight: "90vh",
+                            maxHeight: isMobile ? "95dvh" : "90vh",
                             display: "flex",
                             flexDirection: "column",
                         },
                         header: {
-                            padding: "18px 24px 0 24px",
+                            padding: isMobile ? "14px 16px 0 16px" : "18px 24px 0 24px",
                             borderBottom: "none",
                             background: "#fff",
                             marginBottom: 0,
@@ -304,20 +363,30 @@ const ModalEmployee = ({
 
                 {/* ===== CONTENT ===== */}
                 <div
+                    className="employee-modal-scroll"
                     style={{
                         flex: 1,
                         overflowY: "auto",
-                        padding: "12px 24px 0 24px",
+                        WebkitOverflowScrolling: "touch",
+                        padding: isMobile ? "10px 16px 16px 16px" : "12px 24px 16px 24px",
                         minHeight: 0,
                     }}
                 >
                     {/* ── BƯỚC 1: FORM ── */}
                     {currentStep === 0 && (
                         <>
-                            {/* Avatar + Account info side by side */}
-                            <Row gutter={16} align="middle" style={{ marginBottom: 4 }}>
+                            {/* Avatar + Account info — xếp dọc trên mobile, ngang trên desktop */}
+                            <Row
+                                gutter={16}
+                                align="top"
+                                style={{ marginBottom: 4 }}
+                                wrap={isMobile}
+                            >
                                 {/* Avatar upload */}
-                                <Col flex="none">
+                                <Col
+                                    flex="none"
+                                    style={isMobile ? { marginBottom: 8 } : undefined}
+                                >
                                     <Upload
                                         accept="image/*"
                                         showUploadList={false}
@@ -325,7 +394,7 @@ const ModalEmployee = ({
                                     >
                                         <div style={{ position: "relative", cursor: "pointer", display: "inline-block" }}>
                                             <Avatar
-                                                size={76}
+                                                size={isMobile ? 60 : 76}
                                                 src={previewUrl || undefined}
                                                 icon={!previewUrl ? <UserOutlined /> : undefined}
                                                 style={{
@@ -356,10 +425,10 @@ const ModalEmployee = ({
                                     </Upload>
                                 </Col>
 
-                                {/* Name + Email */}
-                                <Col flex="1">
+                                {/* Name + Email — xếp dọc trên mobile */}
+                                <Col flex="1" style={{ minWidth: 0 }}>
                                     <Row gutter={10}>
-                                        <Col span={12}>
+                                        <Col xs={24} sm={12}>
                                             <Form.Item
                                                 name="name"
                                                 label="Tên nhân viên"
@@ -369,7 +438,7 @@ const ModalEmployee = ({
                                                 <Input placeholder="Nhập tên" />
                                             </Form.Item>
                                         </Col>
-                                        <Col span={12}>
+                                        <Col xs={24} sm={12}>
                                             <Form.Item
                                                 name="email"
                                                 label="Email"
@@ -382,7 +451,7 @@ const ModalEmployee = ({
                                                 <Input placeholder="Nhập email" disabled={isEdit} />
                                             </Form.Item>
                                         </Col>
-                                        <Col span={12}>
+                                        <Col xs={24} sm={12}>
                                             <Form.Item
                                                 name="active"
                                                 label="Trạng thái"
@@ -406,7 +475,7 @@ const ModalEmployee = ({
                             </Divider>
 
                             <Row gutter={10}>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item
                                         name="employeeCode"
                                         label="Mã nhân viên"
@@ -415,12 +484,12 @@ const ModalEmployee = ({
                                         <Input placeholder="Mã NV" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="phone" label="Số điện thoại">
                                         <Input placeholder="SĐT" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="gender" label="Giới tính">
                                         <Select placeholder="Chọn" allowClear>
                                             <Option value="MALE">Nam</Option>
@@ -432,17 +501,17 @@ const ModalEmployee = ({
                             </Row>
 
                             <Row gutter={10}>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="dateOfBirth" label="Ngày sinh">
                                         <DatePicker style={{ width: "100%" }} placeholder="DD/MM/YYYY" format="DD/MM/YYYY" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="startDate" label="Ngày vào làm">
                                         <DatePicker style={{ width: "100%" }} placeholder="DD/MM/YYYY" format="DD/MM/YYYY" />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
+                                <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="contractSignDate" label="Ngày ký HĐ">
                                         <DatePicker style={{ width: "100%" }} placeholder="DD/MM/YYYY" format="DD/MM/YYYY" />
                                     </Form.Item>
@@ -464,7 +533,7 @@ const ModalEmployee = ({
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
-                        padding: "12px 24px 18px 24px",
+                        padding: isMobile ? "12px 16px calc(12px + env(safe-area-inset-bottom)) 16px" : "12px 24px 18px 24px",
                         borderTop: "1px solid #f0f0f0",
                         background: "#fff",
                         flexShrink: 0,

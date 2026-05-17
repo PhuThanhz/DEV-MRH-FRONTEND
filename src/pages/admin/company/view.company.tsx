@@ -1,10 +1,15 @@
-// ViewCompany.tsx
-
-import { Modal, Descriptions, Badge, Spin, Empty } from "antd";
+import { Spin, Empty } from "antd";
+import {
+    BankOutlined, CodeOutlined, GlobalOutlined,
+    CalendarOutlined, UserAddOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
-import { isMobile } from "react-device-detect";
 
 import { useCompanyByIdQuery } from "@/hooks/useCompanies";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -13,87 +18,70 @@ interface IProps {
 }
 
 const ViewCompany = ({ open, onClose, companyId }: IProps) => {
-    const {
-        data: company,
-        isLoading,
-        isError,
-    } = useCompanyByIdQuery(companyId ? String(companyId) : undefined);
+    const { data: company, isLoading, isError } = useCompanyByIdQuery(
+        companyId ? String(companyId) : undefined
+    );
+
+    const isActive = company?.status === 1;
 
     return (
-        <Modal
-            title={`Chi tiết công ty${company?.name ? `: ${company.name}` : ""}`}
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết công ty</span>}
             open={open}
             onCancel={onClose}
-            footer={null}
-            width={isMobile ? "100%" : "70vw"}
-            centered
             destroyOnClose
             maskClosable={false}
+            moduleClass="company"
+            desktopWidth={600}
         >
             {isLoading ? (
-                <div style={{ textAlign: "center", padding: "50px 0" }}>
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
                     <Spin size="large" />
                 </div>
             ) : isError || !company ? (
-                <Empty description="Không tìm thấy thông tin công ty" />
+                <Empty description="Không tìm thấy thông tin công ty" style={{ padding: "32px 0" }} />
             ) : (
-                <Descriptions
-                    bordered
-                    column={2}
-                    size="middle"
-                    layout="vertical"
-                    labelStyle={{
-                        fontWeight: 600,
-                        color: "#595959",
-                        background: "#fafafa",
-                    }}
-                    contentStyle={{
-                        fontSize: 14,
-                        color: "#262626",
-                    }}
-                >
-                    <Descriptions.Item label="Mã công ty">
-                        {company?.code || "--"}
-                    </Descriptions.Item>
+                <>
+                    <ProfileHeader
+                        avatarIcon={<BankOutlined />}
+                        title={company.name || "--"}
+                        badges={[isActive ? <ActiveTag key="s" /> : <InactiveTag key="s" />]}
+                        tags={[
+                            company.code
+                                ? <OutlineTag key="code" icon={<CodeOutlined />} label={company.code} />
+                                : null,
+                            company.englishName
+                                ? <OutlineTag key="en" icon={<GlobalOutlined />} label={company.englishName} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
 
-                    <Descriptions.Item label="Tên công ty">
-                        {company?.name || "--"}
-                    </Descriptions.Item>
+                    <InfoCard>
+                        <SectionTitle>Thông tin công ty</SectionTitle>
+                        <InfoRow icon={<CodeOutlined />}   label="Mã công ty"    value={company.code}        highlight />
+                        <InfoRow icon={<BankOutlined />}   label="Tên công ty"   value={company.name} />
+                        <InfoRow icon={<GlobalOutlined />} label="Tên tiếng Anh" value={company.englishName} noBorder />
+                    </InfoCard>
 
-                    <Descriptions.Item label="Tên tiếng Anh">
-                        {company?.englishName || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Trạng thái">
-                        {company?.status === 1 ? (
-                            <Badge status="success" text="Hoạt động" />
-                        ) : (
-                            <Badge status="error" text="Ngừng hoạt động" />
-                        )}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người tạo">
-                        {company?.createdBy || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày tạo">
-                        {company?.createdAt
-                            ? dayjs(company.createdAt).format("DD/MM/YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày cập nhật">
-                        {company?.updatedAt
-                            ? dayjs(company.updatedAt).format("DD/MM/YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người cập nhật">
-                        {company?.updatedBy || "--"}
-                    </Descriptions.Item>
-                </Descriptions>
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow icon={<UserAddOutlined />} label="Người tạo"      value={company.createdBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={company.createdAt ? dayjs(company.createdAt).format("DD/MM/YYYY HH:mm") : undefined}
+                        />
+                        <InfoRow icon={<UserAddOutlined />} label="Người cập nhật" value={company.updatedBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            value={company.updatedAt ? dayjs(company.updatedAt).format("DD/MM/YYYY HH:mm") : undefined}
+                            noBorder
+                        />
+                    </InfoCard>
+                </>
             )}
-        </Modal>
+        </DetailModal>
     );
 };
 

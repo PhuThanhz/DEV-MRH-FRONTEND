@@ -10,6 +10,7 @@ interface UserSelectFieldProps {
     companyId: number | null;
     selectedUserCount: number;
     onCountChange: (count: number) => void;
+    isCrossCompany?: boolean;
 }
 
 interface UserOption {
@@ -34,6 +35,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
     companyId,
     selectedUserCount,
     onCountChange,
+    isCrossCompany,
 }) => {
     const form = Form.useFormInstance();
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -42,33 +44,49 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
 
     const selectedIds: string[] = Form.useWatch("userIds", form) ?? [];
 
-    // ✅ FIX CHÍNH: Load userMap ngay khi companyId có giá trị
+    // ✅ FIX CHÍNH: Load userMap ngay khi companyId có giá trị (hoặc isCrossCompany = true)
     // Không chờ user bấm mở picker → fix bug hiển thị UUID khi edit
     useEffect(() => {
-        if (!companyId) {
+        if (!isCrossCompany && !companyId) {
             setUserMap(new Map());
             return;
         }
         const load = async () => {
             setLoadingMap(true);
             try {
-                const res = await callFetchUsersByCompany(companyId);
-                const positions: any[] = res?.data ?? [];
-                const seen = new Set<string>();
-                const map = new Map<string, UserOption>();
-                positions.forEach((p) => {
-                    const uid = String(p.user?.id ?? p.id);
-                    if (!seen.has(uid)) {
-                        seen.add(uid);
+                if (isCrossCompany) {
+                    const { callFetchUser } = await import("@/config/api");
+                    const res = await callFetchUser("page=1&size=9999");
+                    const users = res?.data?.result ?? [];
+                    const map = new Map<string, UserOption>();
+                    users.forEach((u) => {
+                        const uid = String(u.id);
                         map.set(uid, {
                             value: uid,
-                            name: p.user?.name ?? p.name ?? "",
-                            email: p.user?.email ?? p.email ?? "",
-                            department: p.department?.name,
+                            name: u.name ?? "",
+                            email: u.email ?? "",
                         });
-                    }
-                });
-                setUserMap(map);
+                    });
+                    setUserMap(map);
+                } else {
+                    const res = await callFetchUsersByCompany(companyId!);
+                    const positions: any[] = res?.data ?? [];
+                    const seen = new Set<string>();
+                    const map = new Map<string, UserOption>();
+                    positions.forEach((p) => {
+                        const uid = String(p.user?.id ?? p.id);
+                        if (!seen.has(uid)) {
+                            seen.add(uid);
+                            map.set(uid, {
+                                value: uid,
+                                name: p.user?.name ?? p.name ?? "",
+                                email: p.user?.email ?? p.email ?? "",
+                                department: p.department?.name,
+                            });
+                        }
+                    });
+                    setUserMap(map);
+                }
             } catch {
                 // ignore
             } finally {
@@ -76,7 +94,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
             }
         };
         load();
-    }, [companyId]); // re-load khi đổi công ty
+    }, [companyId, isCrossCompany]); // re-load khi đổi công ty hoặc cờ crossCompany
 
     const handleChange = (ids: string[]) => {
         form.setFieldValue("userIds", ids);
@@ -116,7 +134,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                     </span>
                 }
                 extra={
-                    !companyId ? (
+                    (!isCrossCompany && !companyId) ? (
                         <Text type="secondary" style={{ fontSize: 12 }}>
                             <InfoCircleOutlined style={{ marginRight: 4 }} />
                             Chọn công ty để thêm người dùng
@@ -126,18 +144,18 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 style={{ marginBottom: 0 }}
             >
                 <div
-                    onClick={() => companyId && !loadingMap && handleOpen()}
+                    onClick={() => (isCrossCompany || companyId) && !loadingMap && handleOpen()}
                     style={{
                         display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8,
                         minHeight: 40, padding: "8px 12px",
                         border: "1px solid #e5e7eb", borderRadius: 8,
-                        cursor: companyId && !loadingMap ? "pointer" : "not-allowed",
-                        background: companyId ? "#fff" : "#f9fafb",
+                        cursor: (isCrossCompany || companyId) && !loadingMap ? "pointer" : "not-allowed",
+                        background: (isCrossCompany || companyId) ? "#fff" : "#f9fafb",
                         transition: "border-color 0.15s",
                         opacity: loadingMap ? 0.6 : 1,
                     }}
                     onMouseEnter={(e) => {
-                        if (companyId && !loadingMap)
+                        if ((isCrossCompany || companyId) && !loadingMap)
                             (e.currentTarget as HTMLElement).style.borderColor = "#3b82f6";
                     }}
                     onMouseLeave={(e) => {
@@ -148,7 +166,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                         <span style={{ color: "#9ca3af", fontSize: 13 }}>Đang tải danh sách...</span>
                     ) : selectedIds.length === 0 ? (
                         <span style={{ color: "#9ca3af", fontSize: 13 }}>
-                            {companyId ? "Nhấn để chọn người được xem..." : "Vui lòng chọn công ty trước"}
+                            {(isCrossCompany || companyId) ? "Nhấn để chọn người được xem..." : "Vui lòng chọn công ty trước"}
                         </span>
                     ) : (
                         <>
@@ -224,6 +242,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 onChange={handleChange}
                 // ✅ Truyền userMap xuống để picker không phải load lại
                 cachedUsers={userMap}
+                isCrossCompany={isCrossCompany}
             />
         </>
     );

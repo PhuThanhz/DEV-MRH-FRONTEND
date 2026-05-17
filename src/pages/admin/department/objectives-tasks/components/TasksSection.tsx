@@ -123,12 +123,26 @@ const TasksSection = ({
                         count={`${sections.length} bộ phận`}
                     />
 
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: `repeat(${Math.min(sections.length, 4)}, 1fr)`,
-                        gap: 14,
-                        alignItems: "stretch",
-                    }}>
+                    <style>{`
+                        .sections-grid {
+                            display: grid;
+                            grid-template-columns: repeat(${Math.min(sections.length, 4)}, 1fr);
+                            gap: 14px;
+                            align-items: stretch;
+                        }
+                        @media (max-width: 1024px) {
+                            .sections-grid {
+                                grid-template-columns: repeat(${Math.min(sections.length, 2)}, 1fr) !important;
+                            }
+                        }
+                        @media (max-width: 640px) {
+                            .sections-grid {
+                                grid-template-columns: 1fr !important;
+                            }
+                        }
+                    `}</style>
+
+                    <div className="sections-grid">
                         {sections.map((sec: LocalSectionTask, si: number) => {
                             const initial = sec.sectionName.trim().charAt(0).toUpperCase();
                             const color = COLORS[si % COLORS.length];

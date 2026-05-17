@@ -1083,6 +1083,7 @@ export interface IJobDescription {
     updatedAt?: string
     createdBy?: string
     updatedBy?: string
+    publishDirectly?: boolean
 }
 // types/job-title.ts
 
@@ -1673,6 +1674,7 @@ export interface IDocumentCategory {
     definition?: string;
     active: boolean;
     mappingProcedure: boolean;
+    isCrossCompany?: boolean;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: string;
@@ -1693,6 +1695,7 @@ export interface IDocument {
         categoryName: string;
         symbol?: string;
         mappingProcedure: boolean;
+        isCrossCompany?: boolean;
     };
 
     department?: {
@@ -1719,6 +1722,13 @@ export interface IDocument {
     procedureType?: DocumentProcedureType;
     procedureId?: number;
     userIds?: string[];
+    accessDetails?: {
+        userId: string;
+        userName?: string;
+        isRead: boolean;
+        readAt: string;
+        assignedAt: string;
+    }[];
 
     createdAt?: string;
     updatedAt?: string;

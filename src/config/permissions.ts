@@ -1171,6 +1171,11 @@ export const ALL_PERMISSIONS = {
             apiPath: "/api/v1/documents/share-tokens/*/send-email",
             module: "DOCUMENTS",
         },
+        MARK_READ: {
+            method: "PUT",
+            apiPath: "/api/v1/documents/{id}/read",
+            module: "DOCUMENTS",
+        },
     },
 };
 export const ALL_MODULES = {

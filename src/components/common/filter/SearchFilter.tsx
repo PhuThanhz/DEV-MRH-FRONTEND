@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Input, Button, Popover, Form } from "antd";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Input, Button, Popover, Form, Badge } from "antd";
 import {
     FilterOutlined,
     SearchOutlined,
@@ -26,139 +26,211 @@ interface SearchFilterProps {
     showFilterButton?: boolean;
     showResetButton?: boolean;
     addPermission?: { method: string; apiPath: string; module: string };
+    /** Số filter đang active (để hiện badge trên nút Bộ lọc) */
+    activeFilterCount?: number;
+    /** Debounce delay khi gõ tìm kiếm (ms). Mặc định 400ms */
+    debounceMs?: number;
 }
 
+const BTN_H = 40;
+const BTN_RADIUS = 10;
+
 const SearchFilter: React.FC<SearchFilterProps> = ({
-    searchPlaceholder = "Search...",
+    searchPlaceholder = "Tìm kiếm...",
     filterFields = [],
     onSearch,
     onFilterApply,
     onReset,
     onAddClick,
-    addLabel = "Add Item",
+    addLabel = "Thêm mới",
     showAddButton = true,
     showFilterButton = true,
-    showResetButton = true,
+    showResetButton = false,
     addPermission,
+    activeFilterCount = 0,
+    debounceMs = 400,
 }) => {
     const [open, setOpen] = useState(false);
     const [form] = Form.useForm();
+    const [searchValue, setSearchValue] = useState("");
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, []);
+
+    // ── Auto-search với debounce ──────────────────────────────────────────
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchValue(value);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(() => {
+            onSearch?.(value);
+        }, debounceMs);
+    }, [onSearch, debounceMs]);
+
+    const handleSearchClear = useCallback(() => {
+        setSearchValue("");
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        onSearch?.("");
+    }, [onSearch]);
+
+    // ── Filter popover ────────────────────────────────────────────────────
     const handleApply = () => {
         const values = form.getFieldsValue();
         onFilterApply?.(values);
         setOpen(false);
     };
 
-    const content = (
-        <div className="w-64">
+    const filterPopoverContent = (
+        <div style={{ width: 256 }}>
             <Form layout="vertical" form={form}>
                 {filterFields.map((f) => (
                     <Form.Item
                         key={f.name}
                         label={f.label}
                         name={f.name}
-                        className="mb-3 text-sm font-medium"
+                        style={{ marginBottom: 12 }}
                     >
                         <Input placeholder={f.placeholder || `Nhập ${f.label.toLowerCase()}...`} />
                     </Form.Item>
                 ))}
-                <div className="flex justify-between gap-2 mt-2">
-                    <Button onClick={onReset} className="flex-1">
-                        Reset
-                    </Button>
-                    <Button type="primary" onClick={handleApply} className="flex-1">
-                        Apply
-                    </Button>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <Button onClick={onReset} style={{ flex: 1 }}>Đặt lại</Button>
+                    <Button type="primary" onClick={handleApply} style={{ flex: 1 }}>Áp dụng</Button>
                 </div>
             </Form>
         </div>
     );
 
-    const addButton = (
-        <div className="flex items-center gap-2">
-            {React.isValidElement(addLabel) ? (
-                addLabel
-            ) : (
-                <Button
-                    icon={<PlusOutlined />}
-                    onClick={onAddClick}
-                    className="h-9 text-sm flex items-center justify-center px-5 w-auto sm:ml-0"
-                    style={{
-                        backgroundColor: "#ff5fa2",
-                        color: "#ffffff",
-                        border: "none",
-                        borderRadius: 10,
-                        boxShadow: "0 2px 6px rgba(255, 95, 162, 0.35)",
-                        fontWeight: 500,
-                        transition: "background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#ff4b97";
-                        e.currentTarget.style.boxShadow = "0 4px 10px rgba(255, 95, 162, 0.45)";
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "#ff5fa2";
-                        e.currentTarget.style.boxShadow = "0 2px 6px rgba(255, 95, 162, 0.35)";
-                        e.currentTarget.style.transform = "translateY(0)";
-                    }}
-                    onMouseDown={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(255, 95, 162, 0.4)";
-                    }}
-                >
-                    {addLabel}
-                </Button>
-            )}
-        </div>
+    // ── Add button ────────────────────────────────────────────────────────
+    const AddBtn = React.isValidElement(addLabel) ? addLabel : (
+        <Button
+            icon={<PlusOutlined />}
+            onClick={onAddClick}
+            style={{
+                height: BTN_H,
+                borderRadius: BTN_RADIUS,
+                backgroundColor: "#ff5fa2",
+                color: "#fff",
+                border: "none",
+                fontWeight: 600,
+                fontSize: 14,
+                boxShadow: "0 2px 8px rgba(255, 95, 162, 0.35)",
+                paddingInline: 18,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                transition: "all 0.2s ease",
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#ff4b97";
+                e.currentTarget.style.boxShadow = "0 4px 14px rgba(255, 95, 162, 0.5)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#ff5fa2";
+                e.currentTarget.style.boxShadow = "0 2px 8px rgba(255, 95, 162, 0.35)";
+                e.currentTarget.style.transform = "translateY(0)";
+            }}
+        >
+            {addLabel}
+        </Button>
     );
 
     return (
-        <div className="flex flex-col gap-3 bg-transparent w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full flex-wrap">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1 min-w-[250px]">
-                    <Input
-                        placeholder={searchPlaceholder}
-                        prefix={<SearchOutlined className="text-gray-400" />}
-                        onPressEnter={(e) => onSearch?.((e.target as HTMLInputElement).value)}
-                        className="h-10 rounded-md flex-1"
-                    />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
 
-                    <div className="flex flex-row items-center gap-2 sm:gap-3 flex-wrap justify-start sm:justify-end">
-                        {showFilterButton && (
-                            <Popover
-                                open={open}
-                                onOpenChange={setOpen}
-                                trigger="click"
-                                placement="bottomRight"
-                                content={content}
-                            >
-                                <Button
-                                    icon={<FilterOutlined />}
-                                    className="h-9 text-sm flex items-center justify-center px-4 w-auto"
-                                >
-                                    Bộ Lọc
-                                </Button>
-                            </Popover>
-                        )}
+            {/* Row duy nhất: Search + Bộ lọc (với badge) + Thêm */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 
-                        {showResetButton && (
+                {/* Search input — auto-search debounce */}
+                <Input
+                    placeholder={searchPlaceholder}
+                    prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
+                    value={searchValue}
+                    onChange={handleSearchChange}
+                    onPressEnter={() => {
+                        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                        onSearch?.(searchValue);
+                    }}
+                    onClear={handleSearchClear}
+                    style={{
+                        height: BTN_H,
+                        borderRadius: BTN_RADIUS,
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 14,
+                    }}
+                    allowClear
+                />
+
+                {/* Bộ lọc với badge đếm filter đang active */}
+                {showFilterButton && (
+                    <Popover
+                        open={open}
+                        onOpenChange={setOpen}
+                        trigger="click"
+                        placement="bottomRight"
+                        content={filterPopoverContent}
+                    >
+                        <Badge count={activeFilterCount} size="small" offset={[-2, 2]}>
                             <Button
-                                icon={<ReloadOutlined />}
-                                onClick={onReset}
-                                className="h-9 text-sm flex items-center justify-center px-4 w-auto"
-                            />
-                        )}
+                                icon={<FilterOutlined />}
+                                style={{
+                                    height: BTN_H,
+                                    borderRadius: BTN_RADIUS,
+                                    fontSize: 14,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    paddingInline: 14,
+                                    flexShrink: 0,
+                                    ...(activeFilterCount > 0 ? {
+                                        borderColor: "#ec4899",
+                                        color: "#ec4899",
+                                        background: "#fff0f6",
+                                    } : {}),
+                                }}
+                            >
+                                Bộ lọc
+                            </Button>
+                        </Badge>
+                    </Popover>
+                )}
 
-                        {showAddButton && (
-                            addPermission
-                                ? <Access permission={addPermission} hideChildren>{addButton}</Access>
-                                : addButton
-                        )}
-                    </div>
-                </div>
+                {/* Nút thêm mới */}
+                {showAddButton && (
+                    addPermission
+                        ? <Access permission={addPermission} hideChildren>{AddBtn}</Access>
+                        : AddBtn
+                )}
             </div>
+
+            {/* Reset — ẩn mặc định */}
+            {showResetButton && (
+                <div>
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={onReset}
+                        style={{
+                            height: BTN_H,
+                            borderRadius: BTN_RADIUS,
+                            fontSize: 13,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            paddingInline: 14,
+                        }}
+                    >
+                        Đặt lại
+                    </Button>
+                </div>
+            )}
         </div>
     );
 };

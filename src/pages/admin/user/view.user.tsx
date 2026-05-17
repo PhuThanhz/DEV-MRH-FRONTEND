@@ -7,8 +7,32 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
-import { useUserByIdQuery } from "@/hooks/useUsers"; // ← THÊM
+import { useUserByIdQuery } from "@/hooks/useUsers";
 import type { IUserPosition } from "@/types/backend";
+import { useState, useEffect } from "react";
+
+// Tính width modal theo màn hình
+const useModalWidth = () => {
+    const [width, setWidth] = useState(() => {
+        if (typeof window === "undefined") return 760;
+        const vw = window.innerWidth;
+        if (vw < 480) return vw * 0.95;
+        if (vw < 768) return vw * 0.92;
+        return Math.min(vw * 0.72, 960);
+    });
+    useEffect(() => {
+        const handler = () => {
+            const vw = window.innerWidth;
+            if (vw < 480) setWidth(vw * 0.95);
+            else if (vw < 768) setWidth(vw * 0.92);
+            else setWidth(Math.min(vw * 0.72, 960));
+        };
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+    return width;
+};
+
 
 const { Text } = Typography;
 
@@ -250,6 +274,7 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
+    const modalWidth = useModalWidth();
     const backendURL = import.meta.env.VITE_BACKEND_URL;
     const userId = dataInit?.id ? String(dataInit.id) : undefined;
 
@@ -308,12 +333,12 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     letter-spacing: -0.03em !important;
                 }
                 .detail-modal .ant-modal-body {
-                    padding: 16px 24px 24px !important;
+                    padding: 20px 24px 24px !important;
                     overflow-y: auto !important;
                     max-height: 85vh !important;
                 }
                 .detail-modal .ant-modal-close {
-                    top: 18px !important; right: 20px !important;
+                    top: 12px !important; right: 20px !important;
                     width: 30px !important; height: 30px !important;
                     border-radius: 8px !important;
                     background: #f7f7f8 !important;
@@ -330,26 +355,34 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                     color: #6b7280 !important;
                 }
                 .detail-pos-row:hover td { background: #fafafa !important; }
+
+                /* Tablet */
                 @media (max-width: 768px) {
-                    .detail-modal .ant-modal-body { padding: 12px 16px 20px !important; }
+                    .detail-modal .ant-modal-body { padding: 12px 14px 18px !important; }
+                    .detail-modal .ant-modal-header { padding: 16px 14px 0 !important; }
                     .detail-two-col { grid-template-columns: 1fr !important; }
                     .pos-table-wrap { display: none !important; }
                     .pos-cards-wrap { display: block !important; }
                 }
+
+                /* Mobile */
                 @media (max-width: 480px) {
-                    .detail-modal .ant-modal-content { border-radius: 16px !important; }
+                    .detail-modal .ant-modal-content { border-radius: 14px !important; }
                     .detail-modal .ant-modal-body { padding: 10px 12px 16px !important; }
                     .detail-profile-header {
                         flex-direction: column !important;
                         align-items: flex-start !important;
-                        gap: 12px !important;
+                        gap: 10px !important;
                         padding: 12px !important;
                     }
                     .detail-profile-header .ant-avatar {
-                        width: 60px !important;
-                        height: 60px !important;
-                        line-height: 60px !important;
+                        width: 56px !important;
+                        height: 56px !important;
+                        line-height: 56px !important;
+                        font-size: 22px !important;
                     }
+                    .detail-profile-name { font-size: 15px !important; }
+                    .detail-profile-email { font-size: 12px !important; }
                 }
                 .pos-cards-wrap { display: none; }
                 .pos-table-wrap { display: block; }
@@ -360,8 +393,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                 open={open}
                 onCancel={handleClose}
                 footer={null}
-                width="72vw"
-                style={{ maxWidth: 960, minWidth: 320 }}
+                width={modalWidth}
                 centered
                 className="detail-modal"
                 styles={{
@@ -393,14 +425,14 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                             flexShrink: 0,
                         }}
                     >
-                        {user?.name?.charAt(0)?.toUpperCase()} {/* ← đổi dataInit → user */}
+                        {user?.name?.charAt(0)?.toUpperCase()}
                     </Avatar>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
-                            <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
-                                {user?.name || "--"} {/* ← đổi */}
+                            <Text className="detail-profile-name" style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
+                                {user?.name || "--"}
                             </Text>
-                            {user?.active ? ( // ← đổi
+                            {user?.active ? (
                                 <Tag icon={<CheckCircleFilled />} color="success"
                                     style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
                                     Hoạt động

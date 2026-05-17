@@ -260,7 +260,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         ...(checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE)
             ? [
                 {
-                    label: <Link to="/admin/document-categories">Danh mục văn bản</Link>,
+                    label: <Link to="/admin/document-categories">Danh mục loại văn bản</Link>,
                     key: "/admin/document-categories",
                     icon: <FolderOpenOutlined />,
                 },

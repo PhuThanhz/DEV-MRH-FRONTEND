@@ -111,28 +111,36 @@ const DocumentCategoryPage = () => {
             dataIndex: "categoryCode",
             sorter: true,
             width: 140,
-            render: (val) => <Tag color="blue">{val}</Tag>,
+            align: "center",
+            render: (val) => (
+                <Tag style={{
+                    borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                    fontWeight: 500, height: 22, lineHeight: "20px",
+                    border: "1px solid #AFA9EC", background: "#EEEDFE",
+                    color: "#3C3489", fontFamily: "monospace",
+                }}>
+                    {val}
+                </Tag>
+            ),
         },
         {
             title: "Tên danh mục",
             dataIndex: "categoryName",
             sorter: true,
+            render: (val) => <span style={{ fontWeight: 500 }}>{val}</span>,
         },
         {
             title: "Ký hiệu",
             dataIndex: "symbol",
-            width: 100,
+            width: 110,
             align: "center",
             render: (val) =>
                 val ? (
-                    <Tag
-                        color="geekblue"
-                        style={{
-                            fontWeight: 500,
-                            borderRadius: 4,
-                            padding: "0 8px",
-                        }}
-                    >
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: "1px solid #91caff", background: "#e6f4ff", color: "#0958d9",
+                    }}>
                         {val}
                     </Tag>
                 ) : (
@@ -146,9 +154,45 @@ const DocumentCategoryPage = () => {
             align: "center",
             render: (val) =>
                 val ? (
-                    <Tag color="green">Có mapping</Tag>
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: "1px solid #b7eb8f", background: "#f6ffed", color: "#389e0d",
+                    }}>
+                        Có mapping
+                    </Tag>
                 ) : (
-                    <Tag color="default">Không</Tag>
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: "1px solid #e5e7eb", background: "#f9fafb", color: "#9ca3af",
+                    }}>
+                        Không
+                    </Tag>
+                ),
+        },
+        {
+            title: "Liên công ty",
+            dataIndex: "isCrossCompany",
+            width: 130,
+            align: "center",
+            render: (val) =>
+                val ? (
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: "1px solid #87e8de", background: "#e6fffb", color: "#08979c",
+                    }}>
+                        Liên công ty
+                    </Tag>
+                ) : (
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: "1px solid #e5e7eb", background: "#f9fafb", color: "#9ca3af",
+                    }}>
+                        Nội bộ
+                    </Tag>
                 ),
         },
         {
@@ -158,21 +202,14 @@ const DocumentCategoryPage = () => {
             align: "center",
             render: (_, record) => {
                 const isActive = record.active === true;
-
                 return (
-                    <Tag
-                        style={{
-                            borderRadius: 4,
-                            padding: "0px 8px",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            height: 22,
-                            lineHeight: "20px",
-                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
-                            background: isActive ? "#f6ffed" : "#fff2f0",
-                            color: isActive ? "#389e0d" : "#cf1322",
-                        }}
-                    >
+                    <Tag style={{
+                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
+                        fontWeight: 500, height: 22, lineHeight: "20px",
+                        border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                        background: isActive ? "#f6ffed" : "#fff2f0",
+                        color: isActive ? "#389e0d" : "#cf1322",
+                    }}>
                         {isActive ? "Hoạt động" : "Ngừng hoạt động"}
                     </Tag>
                 );
@@ -182,8 +219,9 @@ const DocumentCategoryPage = () => {
             title: "Hành động",
             align: "center",
             width: 120,
+            fixed: "right",
             render: (_, entity) => (
-                <Space>
+                <Space size={4}>
                     <Access
                         permission={ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_BY_ID}
                         hideChildren
@@ -222,6 +260,7 @@ const DocumentCategoryPage = () => {
                             }
                             okText="Xác nhận"
                             cancelText="Huỷ"
+                            placement="topRight"
                             onConfirm={() =>
                                 entity.id && toggleMutation.mutate(entity.id)
                             }
@@ -306,6 +345,7 @@ const DocumentCategoryPage = () => {
                     loading={isFetching}
                     columns={columns}
                     dataSource={categories}
+                    scroll={{ x: 1100 }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);

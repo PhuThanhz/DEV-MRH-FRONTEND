@@ -231,6 +231,12 @@ export const callFetchUsersByCompany = (companyId: number) => {
         `/api/v1/users/by-company/${companyId}`
     );
 };
+
+export const callFetchUsersCrossCompany = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<any>>>(
+        `/api/v1/users/cross-company?${query}`
+    );
+};
 /* ===================== DEPARTMENTS ===================== */
 
 export const callFetchDepartment = (query: string) => {
@@ -1307,6 +1313,13 @@ export const callUpdateOrgNode = (data: any) => {
     );
 };
 
+export const callUpdateOrgNodePositions = (data: { id: number; posX: number; posY: number }[]) => {
+    return axios.put<IBackendRes<any>>(
+        `/api/v1/job-position-nodes/positions`,
+        data
+    );
+};
+
 export const callDeleteOrgNode = (id: number) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/job-position-nodes/${id}`
@@ -1879,6 +1892,11 @@ export const callFetchDocuments = (query: string) =>
 export const callFetchDocumentById = (id: number) =>
     axios.get<IBackendRes<IDocument>>(
         `/api/v1/documents/${id}`
+    );
+
+export const callMarkDocumentRead = (id: number) =>
+    axios.put<IBackendRes<void>>(
+        `/api/v1/documents/${id}/read`
     );
 
 export const callCreateDocument = (data: IDocumentRequest) =>

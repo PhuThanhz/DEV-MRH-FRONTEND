@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useIsMobile } from "@/components/common/modal/detail";
 import {
     Modal, Form, Input, Select, DatePicker,
     Button, Spin, Alert, Tag,
@@ -20,6 +21,9 @@ import {
     callFetchOrgCharts,
     callFetchOrgNodes,
 } from "@/config/api";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import { useAppSelector } from "@/redux/hooks";
 import dayjs from "dayjs";
 import dagre from "dagre";
 
@@ -296,7 +300,12 @@ interface Props {
 
 export default function ModalJobDescription({ open, onClose, editRecord }: Props) {
     const [form] = Form.useForm();
+    const isMobile = useIsMobile();
     const isEdit = !!editRecord;
+
+    const isSuperAdmin = useAppSelector((state) => state.account?.user?.role?.name === "SUPER_ADMIN");
+    const hasIssuePermission = useAccess(ALL_PERMISSIONS.JD_FLOW.ISSUE);
+    const canPublishDirectly = isSuperAdmin || hasIssuePermission;
 
     const jdId = useMemo(() => {
         if (!editRecord) return undefined;
@@ -588,7 +597,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     }, [buildRfNodes, handleToggleNode]);
 
     // ─── Submit ──────────────────────────────────────────────────────────────
-    const handleSubmit = async () => {
+    const handleSubmit = async (publishDirectly = false) => {
         try {
             const values = await form.validateFields();
 
@@ -625,6 +634,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                 })),
                 positions,
                 version: fullJd?.version, // ✅ Thêm version để hỗ trợ Optimistic Locking
+                publishDirectly,
             };
 
             if (isEdit && jdId) {
@@ -793,9 +803,9 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     {isEdit ? "Chỉnh sửa Job Description" : "Tạo Job Description mới"}
                 </span>
             }
-            width={1000}
-            style={{ top: 20 }}
-            styles={{ body: { padding: "20px 24px 8px", background: "#f5f6fa" } }}
+            width={isMobile ? "calc(100vw - 20px)" : Math.min(1000, (typeof window !== "undefined" ? window.innerWidth : 1200) - 32)}
+            style={{ top: isMobile ? 12 : 20, maxWidth: "calc(100vw - 20px)" }}
+            styles={{ body: { padding: isMobile ? "12px 14px 8px" : "20px 24px 8px", background: "#f5f6fa" } }}
             footer={
                 <div style={{
                     display: "flex",
@@ -853,15 +863,52 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                         </button>
                     )}
 
-                    {(isEdit || isLastTab) && (
-                        <Button
-                            type="primary"
-                            onClick={handleSubmit}
-                            loading={isPending}
-                            style={{ background: ACCENT, borderColor: ACCENT }}
-                        >
-                            {isEdit ? "Cập nhật" : "Tạo mới"}
-                        </Button>
+                    {isEdit && (
+                        <>
+                            <Button
+                                type="primary"
+                                onClick={() => handleSubmit(false)}
+                                loading={isPending}
+                                style={{ background: ACCENT, borderColor: ACCENT }}
+                            >
+                                Cập nhật
+                            </Button>
+
+                            {isLastTab && canPublishDirectly && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => handleSubmit(true)}
+                                    loading={isPending}
+                                    style={{ background: "#52c41a", borderColor: "#52c41a" }}
+                                >
+                                    Ban hành ngay
+                                </Button>
+                            )}
+                        </>
+                    )}
+
+                    {!isEdit && isLastTab && (
+                        <>
+                            <Button
+                                type="primary"
+                                onClick={() => handleSubmit(false)}
+                                loading={isPending}
+                                style={{ background: ACCENT, borderColor: ACCENT }}
+                            >
+                                Tạo bản nháp
+                            </Button>
+
+                            {canPublishDirectly && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => handleSubmit(true)}
+                                    loading={isPending}
+                                    style={{ background: "#52c41a", borderColor: "#52c41a" }}
+                                >
+                                    Ban hành ngay
+                                </Button>
+                            )}
+                        </>
                     )}
                 </div>
             }
@@ -879,22 +926,25 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     {/* ── Tab bar ── */}
                     <div style={{
                         display: "flex", gap: 4, marginBottom: 16,
-                        background: "#fff", borderRadius: 12, padding: 6,
+                        background: "#fff", borderRadius: 12, padding: 5,
                         border: "1px solid #eef0f5",
                         boxShadow: "0 1px 4px rgba(0,0,0,.04)",
-                    }}>
+                        overflowX: "auto",
+                        WebkitOverflowScrolling: "touch",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                    } as React.CSSProperties}>
                         {MODAL_TABS.map((tab) => {
                             const isActive = activeTab === tab.key;
-
                             return (
                                 <button
                                     key={tab.key}
                                     onClick={() => handleTabClick(tab.key)}
                                     style={{
-                                        flex: 1,
-                                        padding: "9px 12px",
+                                        flex: isMobile ? "0 0 auto" : 1,
+                                        padding: isMobile ? "8px 12px" : "9px 12px",
                                         borderRadius: 8,
-                                        fontSize: 13,
+                                        fontSize: isMobile ? 12 : 13,
                                         fontWeight: isActive ? 700 : 500,
                                         color: isActive ? "#fff" : "#6b7280",
                                         background: isActive ? ACCENT : "transparent",
@@ -903,6 +953,8 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                         transition: "all 0.18s ease",
                                         fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
                                         boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
+                                        whiteSpace: "nowrap",
+                                        minWidth: "fit-content",
                                     }}
                                 >
                                     {tab.label}
@@ -910,6 +962,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             );
                         })}
                     </div>
+                    <style>{`div::-webkit-scrollbar { display: none; }`}</style>
 
                     <Form form={form} layout="vertical">
                         <div style={{
@@ -922,7 +975,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
                             {/* ── TAB 1 ── */}
                             <div style={{ display: activeTab === "1" ? "block" : "none" }}>
-                                <div className="grid grid-cols-2 gap-x-4 pt-2">
+                                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 16px", paddingTop: 8 }}>
                                     <Form.Item
                                         name="companyId" label="Công ty"
                                         rules={[{ required: true, message: "Chọn công ty" }]}
@@ -1004,7 +1057,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
                                     <Form.Item name="effectiveDate" label="Ngày hiệu lực">
                                         <DatePicker
-                                            className="w-full"
+                                            style={{ width: "100%" }}
                                             format="DD/MM/YYYY"
                                             placeholder="Chọn ngày"
                                         />
@@ -1040,6 +1093,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                                         display: "flex",
                                                         alignItems: "center",
                                                         justifyContent: "space-between",
+                                                        gap: 8,
                                                         marginBottom: 12,
                                                     }}>
                                                         <span style={{
@@ -1049,14 +1103,19 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                                             fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
                                                             letterSpacing: "0.04em",
                                                             textTransform: "uppercase",
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            minWidth: 0,
                                                         }}>
                                                             Danh sách nhiệm vụ
                                                         </span>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                                                             <span style={{
                                                                 fontSize: 12,
                                                                 color: fields.length >= MAX_TASKS ? "#ef4444" : "#9ca3af",
                                                                 fontWeight: 500,
+                                                                whiteSpace: "nowrap",
                                                             }}>
                                                                 {fields.length}/{MAX_TASKS}
                                                             </span>
@@ -1071,7 +1130,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                                                     display: "inline-flex",
                                                                     alignItems: "center",
                                                                     gap: 5,
-                                                                    padding: "5px 14px",
+                                                                    padding: "5px 12px",
                                                                     borderRadius: 6,
                                                                     border: `1.5px solid ${fields.length >= MAX_TASKS ? "#e5e7eb" : ACCENT}`,
                                                                     background: fields.length >= MAX_TASKS ? "#f9fafb" : "#fff",
@@ -1081,6 +1140,8 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                                                     cursor: fields.length >= MAX_TASKS ? "not-allowed" : "pointer",
                                                                     transition: "all 0.18s ease",
                                                                     fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
+                                                                    whiteSpace: "nowrap",
+                                                                    flexShrink: 0,
                                                                 }}
                                                                 onMouseEnter={(e) => {
                                                                     if (fields.length >= MAX_TASKS) return;
@@ -1133,7 +1194,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
                             {/* ── TAB 4 ── */}
                             <div style={{ display: activeTab === "4" ? "block" : "none" }}>
-                                <div className="pt-2 grid grid-cols-2 gap-x-4">
+                                <div style={{ paddingTop: 8, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 16px" }}>
                                     <Form.Item name="knowledge" label="Kiến thức">
                                         <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kiến thức..." />
                                     </Form.Item>
@@ -1149,7 +1210,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                     <Form.Item
                                         name="otherRequirements"
                                         label="Yêu cầu khác"
-                                        className="col-span-2"
+                                        style={{ gridColumn: isMobile ? "1" : "1 / -1" }}
                                     >
                                         <TextArea autoSize={{ minRows: 3, maxRows: 12 }} placeholder="Các yêu cầu khác (nếu có)..." />
                                     </Form.Item>

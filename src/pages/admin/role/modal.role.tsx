@@ -83,7 +83,7 @@ const ModalRole = (props: IProps) => {
                     onCancel: handleReset,
                     afterClose: handleReset,
                     destroyOnClose: true,
-                    width: isMobile ? '100%' : 1200,
+                    width: 1200, // Dynamic responsive width is handled gracefully by our CSS media queries!
                     keyboard: false,
                     maskClosable: false,
                     className: 'apple-modal',
@@ -98,7 +98,7 @@ const ModalRole = (props: IProps) => {
                 submitter={false}
             >
                 {/* ── HEADER ── */}
-                <div style={s.header}>
+                <div style={s.header} className="apple-modal-header">
                     <div style={s.headerIcon}>
                         {isEdit ? (
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -132,7 +132,10 @@ const ModalRole = (props: IProps) => {
                             <rect x="3" y="3" width="7" height="18" rx="2" stroke="#636366" strokeWidth="1.8" />
                             <path d="M14 7h5M14 12h5M14 17h5" stroke="#636366" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
-                        <span style={s.toggleBtnLabel}>{showLeft ? 'Ẩn thông tin' : 'Hiện thông tin'}</span>
+                        <span style={s.toggleBtnLabel} className="apple-toggle-label">
+                            <span className="label-desktop">{showLeft ? 'Ẩn thông tin' : 'Hiện thông tin'}</span>
+                            <span className="label-mobile">{showLeft ? 'Xem phân quyền' : 'Xem thông tin'}</span>
+                        </span>
                     </button>
 
                     <button style={s.closeBtn} onClick={handleReset} type="button" className="apple-close-btn">
@@ -143,18 +146,18 @@ const ModalRole = (props: IProps) => {
                 </div>
 
                 {/* ── BODY ── */}
-                <div style={s.body}>
+                <div style={s.body} className="apple-modal-body-layout">
 
                     {/* ── LEFT PANEL ── */}
                     <div style={{
                         ...s.leftPanel,
-                        width: showLeft ? 280 : 0,
+                        width: showLeft ? 280 : 0, // Desktop base width
                         opacity: showLeft ? 1 : 0,
                         paddingLeft: showLeft ? 18 : 0,
                         paddingRight: showLeft ? 18 : 0,
                         pointerEvents: showLeft ? 'auto' : 'none',
-                    }}>
-                        <div style={{ width: 244, minWidth: 244 }}>
+                    }} className={`apple-left-panel ${showLeft ? 'active' : ''}`}>
+                        <div className="apple-left-panel-inner" style={{ width: 244, minWidth: 244 }}>
                             <div style={s.sectionLabel}>
                                 <span style={s.sectionDot} />
                                 Thông tin cơ bản
@@ -261,10 +264,10 @@ const ModalRole = (props: IProps) => {
                     </div>
 
                     {/* ── DIVIDER ── */}
-                    {showLeft && <div style={s.vDivider} />}
+                    {showLeft && <div style={s.vDivider} className="apple-v-divider" />}
 
                     {/* ── RIGHT PANEL ── */}
-                    <div style={s.rightPanel}>
+                    <div style={s.rightPanel} className={`apple-right-panel ${showLeft ? 'has-left' : ''}`}>
                         <div style={s.rightHeader}>
                             <div style={s.rightHeaderLeft}>
                                 <div style={s.sectionLabel}>
@@ -297,7 +300,7 @@ const ModalRole = (props: IProps) => {
                 </div>
 
                 {/* ── FOOTER ── */}
-                <div style={s.footer}>
+                <div style={s.footer} className="apple-modal-footer">
                     <Form.Item noStyle shouldUpdate>
                         {({ getFieldValue }) => {
                             const perms = getFieldValue('permissions') || {};
@@ -729,6 +732,100 @@ const globalCss = `
   }
   .apple-modal ::-webkit-scrollbar-thumb:hover {
     background: #AEAEB2;
+  }
+
+  /* ── Mobile Responsive Overrides ── */
+  .apple-toggle-label .label-mobile {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    /* Modal full-screen wrapper overrides */
+    .apple-modal {
+      width: 100% !important;
+      max-width: 100vw !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      top: 0 !important;
+    }
+    .apple-modal .ant-modal-content {
+      border-radius: 0 !important;
+      height: 100vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      box-shadow: none !important;
+    }
+    
+    /* Header & Footer overrides */
+    .apple-modal-header {
+      padding: 12px 16px !important;
+      height: 64px !important;
+      flex-shrink: 0 !important;
+    }
+    .apple-modal-footer {
+      padding: 12px 16px !important;
+      height: 64px !important;
+      flex-shrink: 0 !important;
+      gap: 8px !important;
+    }
+    
+    .apple-submit-btn, .apple-cancel-btn {
+      padding: 8px 16px !important;
+      font-size: 12px !important;
+    }
+    
+    /* Toggle Labels responsive */
+    .apple-toggle-label .label-desktop {
+      display: none !important;
+    }
+    .apple-toggle-label .label-mobile {
+      display: inline !important;
+    }
+    
+    /* Layout overrides */
+    .apple-modal-body-layout {
+      height: calc(100vh - 128px) !important;
+      min-height: unset !important;
+      flex-direction: column !important;
+    }
+    
+    /* Divider */
+    .apple-v-divider {
+      display: none !important;
+    }
+    
+    /* Left Panel (Basic Info) responsive */
+    .apple-left-panel {
+      width: 0 !important;
+      flex: 0 0 0 !important;
+      opacity: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      pointer-events: none !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .apple-left-panel.active {
+      width: 100% !important;
+      flex: 1 1 100% !important;
+      opacity: 1 !important;
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+      pointer-events: auto !important;
+    }
+    .apple-left-panel-inner {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+    
+    /* Right Panel (Permissions) responsive */
+    .apple-right-panel {
+      width: 100% !important;
+      flex: 1 1 100% !important;
+      display: flex !important;
+    }
+    .apple-right-panel.has-left {
+      display: none !important;
+    }
   }
 `;
 

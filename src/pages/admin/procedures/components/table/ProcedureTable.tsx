@@ -64,7 +64,6 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                     ctx.setStatusFilter(filters.status ?? null);
                     ctx.setPlanYearFilter(filters.planYear ?? null);
                 }}
-                onDateRangeChange={ctx.setCreatedAtFilter}
             />
 
             <DataTable<IProcedure>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { ModalForm } from "@ant-design/pro-components";
 import { Form, message, Steps, Button, Typography, ConfigProvider } from "antd";
-import { isMobile } from "react-device-detect";
 import dayjs from "dayjs";
 import { CheckOutlined, ArrowLeftOutlined, ArrowRightOutlined } from "@ant-design/icons";
 
@@ -24,7 +23,45 @@ interface IProps {
 const ACCENT = "#f5317f";
 const CONNECTOR_COLOR = "#e5e7eb";
 
+// Hook detect màn hình nhỏ (chính xác hơn react-device-detect)
+const useIsMobile = (breakpoint = 768) => {
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== "undefined" && window.innerWidth < breakpoint
+    );
+    useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < breakpoint);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, [breakpoint]);
+    return isMobile;
+};
+
+// Hook tính modal width
+const useModalWidth = () => {
+    const [width, setWidth] = useState(() => {
+        if (typeof window === "undefined") return 680;
+        const vw = window.innerWidth;
+        if (vw < 480) return vw;          // full width trên mobile nhỏ
+        if (vw < 768) return vw * 0.96;   // gần full trên mobile lớn
+        return 680;                        // cố định 680px trên desktop
+    });
+    useEffect(() => {
+        const handler = () => {
+            const vw = window.innerWidth;
+            if (vw < 480) setWidth(vw);
+            else if (vw < 768) setWidth(vw * 0.96);
+            else setWidth(680);
+        };
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+    }, []);
+    return width;
+};
+
 const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) => {
+    const isMobile = useIsMobile();
+    const modalWidth = useModalWidth();
+
     const [selectedRole, setSelectedRole] = useState<IRoleSelect | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -191,14 +228,14 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             <style>{`
                 /* ===== Modal ===== */
                 .elegant-modal .ant-modal-content {
-                    border-radius: ${isMobile ? "16px 16px 0 0" : "16px"} !important;
+                    border-radius: ${isMobile ? "14px" : "16px"} !important;
                     box-shadow: 0 12px 40px rgba(0,0,0,0.10), 0 2px 10px rgba(0,0,0,0.06) !important;
                     overflow: hidden;
                     padding: 0 !important;
                     display: flex !important;
                     flex-direction: column !important;
                     ${isMobile
-                    ? "max-height: 92dvh !important; height: 92dvh !important;"
+                    ? "max-height: 90dvh !important; height: 90dvh !important;"
                     : "max-height: 82vh !important;"
                 }
                 }
@@ -360,16 +397,6 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     color: #374151 !important;
                 }
 
-                ${isMobile ? `
-                .elegant-modal {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    max-width: 100vw !important;
-                    top: auto !important;
-                    bottom: 0 !important;
-                    position: fixed !important;
-                }
-                ` : ""}
             `}</style>
 
             <ModalForm
@@ -383,14 +410,15 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     onCancel: handleReset,
                     afterClose: handleReset,
                     destroyOnClose: true,
-                    // ← WIDTH nhỏ lại: desktop 680, mobile 100%
-                    width: isMobile ? "100%" : 680,
+                    // WIDTH: full trên mobile, 680px trên desktop
+                    width: modalWidth,
                     maskClosable: false,
                     footer: null,
                     className: "elegant-modal",
+                    centered: true,
                     style: isMobile
-                        ? { top: "auto", bottom: 0, margin: 0, padding: 0, maxWidth: "100vw" }
-                        : { top: 60 }, // ← top 60 thay vì 40 để không quá sát đầu
+                        ? { margin: 0, padding: 0 }
+                        : { top: 40 },
                     styles: {
                         mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.25)" },
                     },

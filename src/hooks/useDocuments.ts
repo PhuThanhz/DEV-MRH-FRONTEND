@@ -13,6 +13,7 @@ import {
     callRevokeDocumentShareToken,
     callSendDocumentShareEmail,
     callFetchDocumentShareTokenAccessLogs,
+    callMarkDocumentRead,
 } from "@/config/api";
 import type {
     IDocument,
@@ -44,6 +45,26 @@ export const useDocumentByIdQuery = (id?: number) => {
             const res = await callFetchDocumentById(id);
             if (!res?.data) throw new Error("Không tìm thấy văn bản");
             return res.data as IDocument;
+        },
+    });
+};
+
+/* ===================== MARK READ ===================== */
+export const useMarkDocumentReadMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callMarkDocumentRead(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể cập nhật trạng thái đã xem");
+            }
+            return res;
+        },
+        onSuccess: (_, id) => {
+            queryClient.invalidateQueries({ queryKey: ["document", id] });
+        },
+        onError: (error: any) => {
+            console.error("Lỗi khi đánh dấu đã xem:", error);
         },
     });
 };

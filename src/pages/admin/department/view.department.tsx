@@ -1,8 +1,16 @@
-import { Modal, Descriptions, Badge, Spin } from "antd";
+import { Spin, Empty } from "antd";
+import {
+    ApartmentOutlined, CodeOutlined, GlobalOutlined,
+    CalendarOutlined, UserAddOutlined, BankOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 
 import type { IDepartment } from "@/types/backend";
 import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -12,7 +20,6 @@ interface IProps {
 }
 
 const ViewDepartment = ({ open, onClose, dataInit, setDataInit }: IProps) => {
-
     const { data: detail, isLoading } = useDepartmentByIdQuery(
         open && dataInit?.id ? dataInit.id : undefined
     );
@@ -22,60 +29,67 @@ const ViewDepartment = ({ open, onClose, dataInit, setDataInit }: IProps) => {
         setDataInit(null);
     };
 
+    const isActive = detail?.status === 1;
+
     return (
-        <Modal
-            title="Chi tiết phòng ban"
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết phòng ban</span>}
             open={open}
             onCancel={handleClose}
-            footer={null}
-            width="70vw"
-            centered
             destroyOnHidden
+            maskClosable={false}
+            moduleClass="department"
+            desktopWidth={580}
         >
-            <Spin spinning={isLoading}>
-                <Descriptions
-                    bordered
-                    column={2}
-                    size="middle"
-                    layout="vertical"
-                    labelStyle={{ fontWeight: 600, color: "#595959", background: "#fafafa" }}
-                    contentStyle={{ fontSize: 14, color: "#262626" }}
-                >
-                    <Descriptions.Item label="Mã phòng ban">
-                        {detail?.code || "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Tên phòng ban">
-                        {detail?.name || "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Tên tiếng Anh">
-                        {detail?.englishName || "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Công ty">
-                        {detail?.company?.name || "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Trạng thái">
-                        {detail?.status === 1 ? (
-                            <Badge status="success" text="Hoạt động" />
-                        ) : (
-                            <Badge status="error" text="Ngừng hoạt động" />
-                        )}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Người tạo">
-                        {detail?.createdBy || "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Ngày tạo">
-                        {detail?.createdAt
-                            ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Ngày cập nhật">
-                        {detail?.updatedAt
-                            ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Spin>
-        </Modal>
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : !detail ? (
+                <Empty description="Không tìm thấy thông tin phòng ban" style={{ padding: "32px 0" }} />
+            ) : (
+                <>
+                    <ProfileHeader
+                        avatarIcon={<ApartmentOutlined />}
+                        title={detail.name || "--"}
+                        badges={[isActive ? <ActiveTag key="s" /> : <InactiveTag key="s" />]}
+                        tags={[
+                            detail.code
+                                ? <OutlineTag key="code" icon={<CodeOutlined />} label={detail.code} />
+                                : null,
+                            detail.company?.name
+                                ? <OutlineTag key="co" icon={<BankOutlined />} label={detail.company.name} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
+
+                    <InfoCard>
+                        <SectionTitle>Thông tin phòng ban</SectionTitle>
+                        <InfoRow icon={<CodeOutlined />}       label="Mã phòng ban"   value={detail.code}             highlight />
+                        <InfoRow icon={<ApartmentOutlined />}  label="Tên phòng ban"  value={detail.name} />
+                        <InfoRow icon={<GlobalOutlined />}     label="Tên tiếng Anh"  value={detail.englishName} />
+                        <InfoRow icon={<BankOutlined />}       label="Công ty"        value={detail.company?.name}    noBorder />
+                    </InfoCard>
+
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow icon={<UserAddOutlined />} label="Người tạo"      value={detail.createdBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={detail.createdAt ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm") : undefined}
+                        />
+                        <InfoRow icon={<UserAddOutlined />} label="Người cập nhật" value={detail.updatedBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            value={detail.updatedAt ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm") : undefined}
+                            noBorder
+                        />
+                    </InfoCard>
+                </>
+            )}
+        </DetailModal>
     );
 };
 

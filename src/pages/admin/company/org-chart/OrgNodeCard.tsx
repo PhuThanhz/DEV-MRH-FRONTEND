@@ -21,7 +21,7 @@ export interface OrgNodeData {
     allowDelete?: boolean;
     isMobile?: boolean;
     isTablet?: boolean;
-    viewMode?: "compact" | "full"; // ⭐ THÊM
+    viewMode?: "compact" | "full";
     onEdit: () => void;
     onDelete: () => void;
     onJD?: () => void;
@@ -30,21 +30,42 @@ export interface OrgNodeData {
     onMouseLeave?: () => void;
     highlightState?: "idle" | "active" | "ancestor" | "descendant" | "dimmed";
     isSelected?: boolean;
+    childCount?: number;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
-const T = "0.15s ease";
+const T = "0.2s cubic-bezier(0.4, 0, 0.2, 1)";
 const TRANS = `border-color ${T}, box-shadow ${T}, opacity ${T}, transform ${T}`;
 
-const BORDER_CFG = {
-    idle: { borderColor: "#94a3b8", borderStyle: "solid" as const, borderWidth: "1.5px", boxShadow: "none", opacity: 1, scale: "scale(1)" },
-    active: { borderColor: "#d97706", borderStyle: "solid" as const, borderWidth: "2px", boxShadow: "0 0 0 3px rgba(217,119,6,0.18), 0 6px 24px rgba(217,119,6,0.14)", opacity: 1, scale: "scale(1.03)" },
-    ancestor: { borderColor: "#3b82f6", borderStyle: "dashed" as const, borderWidth: "2px", boxShadow: "0 0 0 3px rgba(59,130,246,0.12)", opacity: 1, scale: "scale(1)" },
-    descendant: { borderColor: "#f59e0b", borderStyle: "solid" as const, borderWidth: "1.5px", boxShadow: "0 0 0 2px rgba(245,158,11,0.16)", opacity: 1, scale: "scale(1)" },
-    dimmed: { borderColor: "#e5e7eb", borderStyle: "solid" as const, borderWidth: "1.5px", boxShadow: "none", opacity: 0.3, scale: "scale(1)" },
+const ACCENT_COLORS = {
+    idle: { shadow: "0 4px 12px -2px rgba(15, 23, 42, 0.03), 0 2px 6px -1px rgba(15, 23, 42, 0.02)" },
+    active: { shadow: "0 8px 24px -4px rgba(217, 119, 6, 0.12), 0 4px 12px -2px rgba(217, 119, 6, 0.08)" },
+    ancestor: { shadow: "0 8px 20px -4px rgba(59, 130, 246, 0.08), 0 4px 10px -2px rgba(59, 130, 246, 0.04)" },
+    descendant: { shadow: "0 8px 20px -4px rgba(245, 158, 11, 0.08), 0 4px 10px -2px rgba(245, 158, 11, 0.04)" },
+    dimmed: { shadow: "none" }
 } as const;
 
-const SEL_BORDER = "#f9a8b4";
-const SEL_SHADOW = "0 0 0 3px rgba(232,99,122,0.10)";
+// Beautiful colorful band styles mapped from standard level prefixes
+const getBandStyle = (code: string): { bg: string; border: string; color: string } => {
+    if (!code) return { bg: "#f1f5f9", border: "1px solid #cbd5e1", color: "#334155" };
+    const cleanCode = code.trim().toUpperCase();
+    
+    // Core Executives/BOD/CEO/GMS get extremely premium Gold/Amber theme
+    if (cleanCode === "CEO" || cleanCode === "BOD" || cleanCode === "GMS" || cleanCode.startsWith("DIR") || cleanCode.startsWith("PRES")) {
+        return { bg: "#fffbeb", border: "1px solid #fde047", color: "#a16207" }; // Gold
+    }
+    
+    const prefix = cleanCode.charAt(0);
+    const map: Record<string, { bg: string; border: string; color: string }> = {
+        M: { bg: "#fdf2f8", border: "1px solid #fbcfe8", color: "#be185d" }, // Management (Rose)
+        S: { bg: "#faf5ff", border: "1px solid #e9d5ff", color: "#7e22ce" }, // Specialist (Violet)
+        P: { bg: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d" }, // Project (Green)
+        E: { bg: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }, // Executive (Orange)
+        T: { bg: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8" }, // Technical (Blue)
+    };
+    return map[prefix] ?? { bg: "#f8fafc", border: "1px solid #cbd5e1", color: "#475569" };
+};
 
 const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const [cardHover, setCardHover] = useState(false);
@@ -55,52 +76,65 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const isMobile = data.isMobile ?? false;
     const isTablet = data.isTablet ?? false;
-
-    // ⭐ compact mode: node nhỏ hơn vì chỉ hiện tên
     const isCompactMode = data.viewMode === "compact";
-
-    const NODE_W = isCompactMode
-        ? (isMobile ? 130 : isTablet ? 150 : 170)
-        : (isMobile ? 158 : isTablet ? 182 : 220);
-    const NODE_H = isCompactMode
-        ? (isMobile ? 56 : isTablet ? 64 : 72)
-        : (isMobile ? 118 : isTablet ? 148 : 185);
-
-    // Font sizes
-    const titleSize = isMobile ? 12 : isTablet ? 13.5 : 14.5;
-    const holderSize = isMobile ? 10 : isTablet ? 10.5 : 11;
-    const levelSize = isMobile ? 8 : isTablet ? 8.5 : 9.5;
-    const jdBtnSize = isMobile ? 9 : isTablet ? 9.5 : 10;
-    const actionBtnW = isMobile ? 22 : 26;
-    const actionBtnH = isMobile ? 22 : 26;
-    const actionIconS = isMobile ? 9 : 11;
-    const holderIconW = isMobile ? 20 : 24;
-    const holderIconH = isMobile ? 20 : 24;
-    const footerH = isMobile ? 28 : 34;
-    const headerH = isMobile ? 3 : 4;
-    const cardPadT = isMobile ? "7px 9px 6px" : isTablet ? "8px 10px 7px" : "10px 12px 8px";
-    const cardGap = isMobile ? 5 : 7;
 
     const hasHolder = !!data.holderName;
     const hasLevel = !!data.levelCode;
+    
+    // If a node does not have a level code, it represents a Department structural node
+    const isDepartment = !data.levelCode;
 
-    // ⭐ isSimple = compact mode HOẶC không có holder/level
-    const isSimple = isCompactMode || (!hasHolder && !hasLevel);
+    // Both views have the exact same dimensions for perfect card symmetry! (W widened to 240px to prevent truncation!)
+    const NODE_W = isMobile ? 158 : isTablet ? 196 : 240;
+    const NODE_H = isMobile ? 116 : isTablet ? 142 : 176;
+
+    // Font sizes (increased for maximum legibility, title slightly adjusted to fit)
+    const titleSize = isMobile ? 12.5 : isTablet ? 13.5 : 15;
+    const holderSize = isMobile ? 9.5 : isTablet ? 10.2 : 11;
+    const levelSize = isMobile ? 8.5 : isTablet ? 9.5 : 10;
+    const jdBtnSize = isMobile ? 9.5 : isTablet ? 10 : 11;
+    const actionBtnW = isMobile ? 22 : 25;
+    const actionBtnH = isMobile ? 22 : 25;
+    const actionIconS = isMobile ? 9 : 10.5;
+    const holderIconW = isMobile ? 18 : 22;
+    const holderIconH = isMobile ? 18 : 22;
+    const cardPad = isMobile ? "10px 12px" : isTablet ? "12px 14px" : "14px 16px";
+    const cardGap = isMobile ? 4 : 6;
+    
+    // Always render full structured layout in both views, never simple!
+    const isSimple = false;
 
     const hs = data.highlightState ?? "idle";
-    const bc = BORDER_CFG[hs];
+    const accent = ACCENT_COLORS[hs];
 
     const showEdit = data.allowEdit !== false;
     const showDelete = data.allowDelete !== false;
     const showActions = showEdit || showDelete;
 
-    const borderColor = data.isSelected
-        ? SEL_BORDER
-        : hs === "idle" && data.isGoal
-            ? "#e9d8fd"
-            : bc.borderColor;
+    // Pure white background for ALL cards as requested
+    const cardBg = "#ffffff";
 
-    const boxShadow = data.isSelected ? SEL_SHADOW : bc.boxShadow;
+    // Dynamic border colors based on active / highlight states
+    let cardBorderColor = "#cbd5e1"; // Sleek crisp standard border
+    let cardShadow: string = accent.shadow;
+
+    // Border highlights (1.5px thick, extremely crisp)
+    if (data.isGoal) {
+        cardBorderColor = "#c084fc";
+    }
+
+    if (data.isSelected) {
+        cardBorderColor = "#1677ff"; // Vibrant blue focus border
+        cardShadow = "0 8px 24px rgba(22, 119, 255, 0.15), 0 4px 12px rgba(22, 119, 255, 0.08)";
+    } else if (hs === "active") {
+        cardBorderColor = "#fbbf24";
+    } else if (hs === "ancestor") {
+        cardBorderColor = "#3b82f6";
+    } else if (hs === "descendant") {
+        cardBorderColor = "#f59e0b";
+    } else if (hs === "dimmed") {
+        cardBorderColor = "#f1f5f9";
+    }
 
     const handleMouseEnter = () => {
         if (leaveTimer.current) clearTimeout(leaveTimer.current);
@@ -117,14 +151,6 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
         data.onSelect?.();
     };
 
-    const headerBar = data.isGoal
-        ? "linear-gradient(90deg,#c084fc,#e9d8fd)"
-        : "linear-gradient(90deg,#e2e8f0,#f1f5f9)";
-
-    const cardBg = data.isGoal
-        ? "linear-gradient(160deg,#fdf8ff 0%,#f5f0ff 100%)"
-        : "#ffffff";
-
     return (
         <>
             <Handle
@@ -138,7 +164,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                 onMouseEnter={handleCardMouseEnter}
                 onMouseLeave={handleCardMouseLeave}
             >
-                {/* ── Action buttons ── */}
+                {/* ── Floating Capsule Action Buttons ── */}
                 {showActions && (
                     <div
                         onMouseEnter={handleMouseEnter}
@@ -146,13 +172,13 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                         style={{
                             position: "absolute",
                             top: isMobile ? -10 : -13,
-                            right: isMobile ? -4 : -6,
+                            right: isMobile ? -2 : -4,
                             display: "flex",
-                            gap: 4,
+                            gap: 5,
                             zIndex: 10,
                             opacity: cardHover ? 1 : 0,
-                            transform: cardHover ? "translateY(0)" : "translateY(5px)",
-                            transition: "opacity 0.15s ease, transform 0.15s ease",
+                            transform: cardHover ? "translateY(0) scale(1)" : "translateY(4px) scale(0.95)",
+                            transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
                             pointerEvents: cardHover ? "auto" : "none",
                         }}
                     >
@@ -165,14 +191,14 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                     style={{
                                         width: actionBtnW, height: actionBtnH,
                                         borderRadius: "50%",
-                                        background: editHover ? "#1e293b" : "#fff",
-                                        border: "1.5px solid #e5e7eb",
+                                        background: editHover ? "#1677ff" : "#ffffff",
+                                        border: "1px solid #cbd5e1",
                                         cursor: "pointer",
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        color: editHover ? "#fff" : "#9ca3af",
+                                        color: editHover ? "#ffffff" : "#475569",
                                         padding: 0,
-                                        boxShadow: "0 2px 8px rgba(0,0,0,.10)",
-                                        transition: "all 0.15s ease",
+                                        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                                        transition: "all 0.12s ease",
                                     }}
                                 >
                                     <EditOutlined style={{ fontSize: actionIconS }} />
@@ -183,7 +209,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                         {showDelete && (
                             <Popconfirm
                                 title="Xóa vị trí này?"
-                                description="Các node con sẽ mất liên kết cha."
+                                description="Các vị trí con trực thuộc sẽ mất liên kết cha."
                                 okText="Xóa" cancelText="Hủy"
                                 okButtonProps={{ danger: true }}
                                 onConfirm={(e) => { e?.stopPropagation(); data.onDelete(); }}
@@ -196,14 +222,14 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                     style={{
                                         width: actionBtnW, height: actionBtnH,
                                         borderRadius: "50%",
-                                        background: deleteHover ? "#ef4444" : "#fff",
-                                        border: `1.5px solid ${deleteHover ? "#ef4444" : "#e5e7eb"}`,
+                                        background: deleteHover ? "#ef4444" : "#ffffff",
+                                        border: `1px solid ${deleteHover ? "#ef4444" : "#cbd5e1"}`,
                                         cursor: "pointer",
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        color: deleteHover ? "#fff" : "#9ca3af",
+                                        color: deleteHover ? "#ffffff" : "#475569",
                                         padding: 0,
-                                        boxShadow: "0 2px 8px rgba(0,0,0,.10)",
-                                        transition: "all 0.15s ease",
+                                        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                                        transition: "all 0.12s ease",
                                     }}
                                 >
                                     <DeleteOutlined style={{ fontSize: actionIconS }} />
@@ -213,248 +239,360 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                     </div>
                 )}
 
-                {/* ── Card body ── */}
+                {/* ── Symmetrical Premium Card Body ── */}
                 <div
                     onClick={handleCardClick}
                     style={{
                         width: NODE_W,
                         minHeight: NODE_H,
                         background: cardBg,
-                        borderRadius: isMobile ? 10 : 14,
-                        border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
-                        boxShadow,
+                        borderRadius: 12,
+                        // Clean solid uniform border for all cards
+                        border: `1.5px solid ${cardBorderColor}`,
+                        boxShadow: cardShadow,
+                        position: "relative",
                         overflow: "hidden",
                         cursor: data.onSelect ? "pointer" : "default",
                         display: "flex", flexDirection: "column",
-                        opacity: bc.opacity, transform: bc.scale,
-                        transition: TRANS, willChange: "transform, opacity",
+                        opacity: hs === "dimmed" ? 0.8 : 1,
+                        transform: hs === "active" ? "scale(1.02)" : "scale(1)",
+                        transition: TRANS,
+                        willChange: "transform, opacity",
                     }}
                 >
                     {isSimple ? (
-                        /* ── Simple / Compact mode ── */
+                        /* ── Symmetrical Compact Mode (Unused) ── */
                         <div style={{
                             flex: 1,
-                            margin: isCompactMode ? (isMobile ? 2 : 3) : (isMobile ? 3 : 4),
-                            borderRadius: isMobile ? 7 : 10,
-                            border: `${bc.borderWidth} ${bc.borderStyle} ${borderColor}`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            padding: isCompactMode
-                                ? (isMobile ? "6px 8px" : "8px 12px")
-                                : (isMobile ? "8px 10px" : "12px 14px"),
-                            transition: `border-color ${T}`,
+                            padding: "8px 10px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            position: "relative",
                         }}>
-                            {/* ⭐ Goal badge nhỏ gọn khi compact */}
-                            {isCompactMode && data.isGoal && (
-                                <span style={{
-                                    position: "absolute",
-                                    top: isMobile ? 3 : 4,
-                                    left: isMobile ? 5 : 7,
-                                    fontSize: isMobile ? 7 : 8,
-                                    fontWeight: 700,
-                                    color: "#7c3aed",
-                                    lineHeight: 1,
-                                }}>🎯</span>
-                            )}
                             <span style={{
                                 fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
-                                fontWeight: 700,
-                                fontSize: isCompactMode
-                                    ? (isMobile ? 11 : isTablet ? 12.5 : 13.5)
-                                    : (isMobile ? 13 : 15.5),
-                                color: "#111827",
-                                lineHeight: 1.4,
+                                fontWeight: 800,
+                                fontSize: isMobile ? 12 : isTablet ? 13.5 : 15,
+                                color: "#0f172a",
+                                lineHeight: 1.35,
                                 letterSpacing: "-0.01em",
                                 textAlign: "center",
-                                display: "-webkit-box",
-                                WebkitLineClamp: isCompactMode ? 2 : 3,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                width: "100%",
                             }}>
                                 {data.title}
                             </span>
                         </div>
                     ) : (
-                        /* ── Full mode ── */
+                        /* ── Symmetrical Dashboard Mode (Beautifully Segmented) ── */
                         <>
-                            {/* Header bar */}
-                            <div style={{ height: headerH, flexShrink: 0, background: headerBar }} />
-
-                            {/* Content area */}
-                            <div style={{
-                                flex: 1,
-                                padding: cardPadT,
-                                display: "flex", flexDirection: "column",
-                                gap: cardGap, overflow: "hidden",
-                            }}>
-                                {/* Goal badge row */}
-                                <div style={{ height: isMobile ? 16 : 20, flexShrink: 0, display: "flex", alignItems: "center" }}>
-                                    {data.isGoal && (
-                                        <span style={{
-                                            fontSize: isMobile ? 8 : 9,
-                                            fontWeight: 700,
-                                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                                            background: "linear-gradient(135deg,#f5f0ff,#ede9fe)",
-                                            color: "#7c3aed",
-                                            border: "1px solid #ddd6fe",
-                                            borderRadius: 5,
-                                            padding: isMobile ? "1px 5px" : "2px 7px",
-                                            letterSpacing: "0.04em",
-                                            flexShrink: 0,
-                                        }}>
-                                            🎯 Mục tiêu
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Title */}
-                                <div style={{ flex: 1, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {isDepartment ? (
+                                /* ── 🏢 Premium Department Card Layout (Symmetrical Tall White Card with centered title and bottom pill) ── */
+                                <div style={{
+                                    flex: 1,
+                                    padding: cardPad,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 12,
+                                }}>
+                                    {/* Department Name centered beautifully */}
                                     <span style={{
                                         fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
-                                        fontWeight: 600,
-                                        fontSize: titleSize,
-                                        color: "#111827",
-                                        lineHeight: 1.5,
-                                        letterSpacing: "-0.01em",
+                                        fontWeight: 800,
+                                        fontSize: titleSize + 1,
+                                        color: "#0f172a", // Beautiful bold slate-dark title
+                                        lineHeight: 1.4,
                                         textAlign: "center",
                                         display: "-webkit-box",
-                                        WebkitLineClamp: isMobile ? 2 : 3,
+                                        WebkitLineClamp: 3,
                                         WebkitBoxOrient: "vertical",
                                         overflow: "hidden",
                                         width: "100%",
                                     }}>
                                         {data.title}
                                     </span>
-                                </div>
 
-                                {/* Holder row */}
-                                {hasHolder ? (
+                                    {/* Minimalist modern pill displaying the number of sub-positions */}
                                     <div style={{
-                                        minHeight: isMobile ? 28 : 34,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        background: "#f8fafc",
+                                        border: "1px solid #cbd5e1",
+                                        borderRadius: 20,
+                                        padding: isMobile ? "2px 8px" : "3px 12px",
                                         flexShrink: 0,
-                                        display: "flex", alignItems: "center", gap: isMobile ? 6 : 8,
-                                        background: "#ffffff",
-                                        border: "1.5px solid #e5e7eb",
-                                        borderRadius: isMobile ? 6 : 8,
-                                        padding: isMobile ? "4px 7px" : "6px 10px",
                                     }}>
-                                        <div style={{
-                                            width: holderIconW, height: holderIconH,
-                                            borderRadius: isMobile ? 6 : 8,
-                                            flexShrink: 0,
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            background: "linear-gradient(135deg,#f43f5e,#fb923c)",
-                                        }}>
-                                            <UserOutlined style={{ fontSize: isMobile ? 9 : 11, color: "#fff" }} />
-                                        </div>
-                                        <span style={{
-                                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                                            fontSize: holderSize,
-                                            fontWeight: 700,
-                                            color: "#374151",
-                                            overflow: "hidden",
-                                            display: "-webkit-box",
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: "vertical",
-                                            lineHeight: 1.35,
-                                            wordBreak: "break-word",
-                                        }}>
-                                            {data.holderName}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        height: isMobile ? 28 : 34,
-                                        flexShrink: 0,
-                                        display: "flex", alignItems: "center", gap: isMobile ? 6 : 8,
-                                        background: "#fafafa",
-                                        border: "1px dashed #e5e7eb",
-                                        borderRadius: isMobile ? 6 : 8,
-                                        padding: isMobile ? "0 7px" : "0 10px",
-                                    }}>
-                                        <div style={{
-                                            width: holderIconW, height: holderIconH,
-                                            borderRadius: isMobile ? 6 : 8,
-                                            flexShrink: 0,
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            background: "#f1f5f9",
-                                            border: "1.5px dashed #e2e8f0",
-                                        }}>
-                                            <UserOutlined style={{ fontSize: isMobile ? 9 : 11, color: "#cbd5e1" }} />
-                                        </div>
                                         <span style={{
                                             fontFamily: "'Be Vietnam Pro',sans-serif",
                                             fontSize: isMobile ? 9.5 : 11,
-                                            fontWeight: 400,
-                                            color: "#9ca3af",
-                                            fontStyle: "italic",
+                                            fontWeight: 700,
+                                            color: "#64748b",
                                         }}>
-                                            {isMobile ? "Chưa có P.trách" : "Chưa có người phụ trách"}
+                                            {data.childCount || 0} vị trí trực thuộc
                                         </span>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Footer */}
-                            <div style={{
-                                height: footerH,
-                                flexShrink: 0,
-                                borderTop: "1px solid #f3f4f6",
-                                background: "#fafafa",
-                                padding: isMobile ? "0 8px" : "0 12px",
-                                display: "flex", alignItems: "center", justifyContent: "space-between",
-                            }}>
-                                {hasLevel ? (
-                                    <span style={{
-                                        fontSize: levelSize,
-                                        fontWeight: 600,
-                                        fontFamily: "'JetBrains Mono',monospace",
-                                        letterSpacing: "0.08em",
-                                        color: "#e8637a",
-                                        background: "linear-gradient(135deg,#fff0f3,#ffe4ea)",
-                                        border: "1px solid #ffd6e0",
-                                        borderRadius: 5,
-                                        padding: isMobile ? "1px 5px" : "2px 8px",
-                                        textTransform: "uppercase",
-                                        flexShrink: 0,
-                                        maxWidth: isMobile ? 72 : 100,
+                                </div>
+                            ) : (
+                                /* ── 👤 Premium Position/Job Title Card Layout ── */
+                                <>
+                                    {/* Card Body content (Padded) */}
+                                    <div style={{
+                                        padding: cardPad,
+                                        display: "flex", flexDirection: "column",
+                                        gap: cardGap,
                                         overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
+                                        flex: 1,
+                                        justifyContent: "space-between",
                                     }}>
-                                        {data.levelCode}
-                                    </span>
-                                ) : <span />}
+                                        {/* Header row: Goal & Level badges */}
+                                        <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            height: isMobile ? 16 : 20,
+                                            flexShrink: 0,
+                                            width: "100%",
+                                        }}>
+                                            {data.isGoal ? (
+                                                <span style={{
+                                                    fontSize: isMobile ? 8 : 9,
+                                                    fontWeight: 700,
+                                                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                                                    background: "rgba(124, 58, 237, 0.08)",
+                                                    color: "#7c3aed",
+                                                    borderRadius: 5,
+                                                    padding: isMobile ? "1px 5px" : "2px 7px",
+                                                    letterSpacing: "0.03em",
+                                                    border: "1px solid rgba(124, 58, 237, 0.15)",
+                                                }}>
+                                                    🎯 Mục tiêu
+                                                </span>
+                                            ) : <span />}
 
-                                {data.jobDescriptionId ? (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); data.onJD?.(); }}
-                                        onMouseEnter={() => setJdHover(true)}
-                                        onMouseLeave={() => setJdHover(false)}
-                                        style={{
-                                            display: "flex", alignItems: "center", gap: isMobile ? 3 : 4,
-                                            fontSize: jdBtnSize,
-                                            fontWeight: 600,
-                                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                                            letterSpacing: "0.05em",
-                                            color: jdHover ? "#374151" : "#6b7280",
-                                            background: jdHover ? "#f3f4f6" : "#ffffff",
-                                            border: `1px solid ${jdHover ? "#d1d5db" : "#e5e7eb"}`,
-                                            borderRadius: 5,
-                                            cursor: "pointer",
-                                            padding: isMobile ? "2px 6px" : "3px 10px",
-                                            transition: "all 0.15s ease",
-                                            boxShadow: jdHover ? "0 1px 4px rgba(0,0,0,.08)" : "none",
-                                        }}
-                                    >
-                                        <FileTextOutlined style={{ fontSize: isMobile ? 8 : 9 }} />
-                                        {isMobile ? "JD" : "Xem JD"}
-                                    </button>
-                                ) : <span />}
-                            </div>
+                                            {/* Hide level/grade badge ONLY when in compact mode! */}
+                                            {hasLevel && !isCompactMode ? (() => {
+                                                const badgeStyle = getBandStyle(data.levelCode);
+                                                return (
+                                                    <span style={{
+                                                        fontSize: levelSize,
+                                                        fontWeight: 700,
+                                                        fontFamily: "'JetBrains Mono',monospace",
+                                                        letterSpacing: "0.05em",
+                                                        color: badgeStyle.color,
+                                                        background: badgeStyle.bg,
+                                                        border: badgeStyle.border,
+                                                        borderRadius: 5,
+                                                        padding: isMobile ? "1px 5px" : "2px 8px",
+                                                        textTransform: "uppercase",
+                                                        maxWidth: isMobile ? 60 : 80,
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        whiteSpace: "nowrap",
+                                                    }}>
+                                                        {data.levelCode}
+                                                    </span>
+                                                );
+                                            })() : null}
+                                        </div>
+
+                                        {/* Job Title (Centered, 15px Extra Bold) */}
+                                        <div style={{
+                                            flex: 1,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                            margin: "4px 0",
+                                        }}>
+                                            <span style={{
+                                                fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
+                                                fontWeight: 800,
+                                                fontSize: titleSize,
+                                                color: "#0f172a",
+                                                lineHeight: 1.35,
+                                                letterSpacing: "-0.01em",
+                                                textAlign: "center",
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: isMobile ? 2 : 3,
+                                                WebkitBoxOrient: "vertical",
+                                                overflow: "hidden",
+                                                width: "100%",
+                                            }}>
+                                                {data.title}
+                                            </span>
+                                        </div>
+
+                                        {/* Holder Block (Centered User Chip - ONLY show if NOT in compact mode!) */}
+                                        <div style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            width: "100%",
+                                            flexShrink: 0,
+                                            gap: 5,
+                                        }}>
+                                            {!isCompactMode && (
+                                                <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                                                    {hasHolder ? (
+                                                        <div style={{
+                                                            minHeight: isMobile ? 22 : 28,
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: isMobile ? 4 : 5,
+                                                            background: "#ffffff",
+                                                            border: "1px solid #cbd5e1",
+                                                            borderRadius: 20,
+                                                            padding: isMobile ? "2px 6px" : "3px 10px",
+                                                            maxWidth: "100%",
+                                                        }}>
+                                                            <div style={{
+                                                                width: holderIconW, height: holderIconH,
+                                                                borderRadius: "50%",
+                                                                flexShrink: 0,
+                                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                                background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                                                                color: "#ffffff",
+                                                                fontSize: isMobile ? 9 : 10,
+                                                                fontWeight: 700,
+                                                            }}>
+                                                                {data.holderName?.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span style={{
+                                                                fontFamily: "'Be Vietnam Pro',sans-serif",
+                                                                fontSize: holderSize,
+                                                                fontWeight: 700,
+                                                                color: "#1e293b",
+                                                                lineHeight: 1.3,
+                                                                textAlign: "left",
+                                                                whiteSpace: "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                            }}>
+                                                                {data.holderName ?? ""}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{
+                                                            height: isMobile ? 22 : 28,
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: isMobile ? 5 : 6,
+                                                            background: "#ffffff",
+                                                            border: "1px dashed #cbd5e1",
+                                                            borderRadius: 20,
+                                                            padding: isMobile ? "0 8px" : "0 12px",
+                                                            maxWidth: "100%",
+                                                        }}>
+                                                            <div style={{
+                                                                width: holderIconW, height: holderIconH,
+                                                                borderRadius: "50%",
+                                                                flexShrink: 0,
+                                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                                background: "#f1f5f9",
+                                                                border: "1px dashed #cbd5e1",
+                                                            }}>
+                                                                <UserOutlined style={{ fontSize: isMobile ? 8 : 9, color: "#94a3b8" }} />
+                                                            </div>
+                                                            <span style={{
+                                                                fontFamily: "'Be Vietnam Pro',sans-serif",
+                                                                fontSize: isMobile ? 9.5 : 10.5,
+                                                                fontWeight: 500,
+                                                                color: "#64748b",
+                                                                fontStyle: "italic",
+                                                            }}>
+                                                                Chưa bổ nhiệm
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Full-width elegant footer block (Only if JD exists) */}
+                                    {data.jobDescriptionId ? (
+                                        <div style={{
+                                            background: "#f8fafc",
+                                            borderTop: "1px solid #f1f5f9",
+                                            padding: isMobile ? "6px 0" : "8px 0",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                            marginTop: "auto",
+                                            flexShrink: 0,
+                                        }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); data.onJD?.(); }}
+                                                onMouseEnter={() => setJdHover(true)}
+                                                onMouseLeave={() => setJdHover(false)}
+                                                style={{
+                                                    display: "flex", alignItems: "center", gap: 4,
+                                                    fontSize: jdBtnSize,
+                                                    fontWeight: 700,
+                                                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                                                    color: jdHover ? "#1677ff" : "#475569",
+                                                    background: jdHover ? "#e6f4ff" : "#ffffff",
+                                                    border: `1px solid ${jdHover ? "#91caee" : "#cbd5e1"}`,
+                                                    borderRadius: 6,
+                                                    cursor: "pointer",
+                                                    padding: isMobile ? "3px 8px" : "4px 12px",
+                                                    transition: "all 0.15s ease",
+                                                }}
+                                            >
+                                                <FileTextOutlined style={{ fontSize: isMobile ? 8 : 9 }} />
+                                                Mô tả công việc
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </>
+                            )}
                         </>
                     )}
                 </div>
+
+                {/* ── Circular Sleek Expand/Collapse Button (Only for Department Cards with children, overlapping bottom border) ── */}
+                {isDepartment && data.childCount && data.childCount > 0 ? (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); data.onToggleCollapse?.(); }}
+                        style={{
+                            position: "absolute",
+                            bottom: -11,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            zIndex: 10,
+                            width: 22,
+                            height: 22,
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            border: `1.5px solid ${data.isCollapsed ? "#1677ff" : "#cbd5e1"}`,
+                            color: data.isCollapsed ? "#1677ff" : "#4b5563",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                            transition: "all 0.15s ease",
+                            padding: 0,
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "#1677ff";
+                            e.currentTarget.style.color = "#1677ff";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = data.isCollapsed ? "#1677ff" : "#cbd5e1";
+                            e.currentTarget.style.color = data.isCollapsed ? "#1677ff" : "#4b5563";
+                        }}
+                    >
+                        {data.isCollapsed ? (
+                            <span style={{ fontSize: 9, fontWeight: 800 }}>▼</span>
+                        ) : (
+                            <span style={{ fontSize: 9, fontWeight: 800 }}>▲</span>
+                        )}
+                    </button>
+                ) : null}
             </div>
 
             <Handle

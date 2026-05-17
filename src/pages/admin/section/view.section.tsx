@@ -1,7 +1,16 @@
-import { Badge, Descriptions, Modal, Spin } from "antd";
+import { Spin, Empty } from "antd";
+import {
+    AppstoreOutlined, CodeOutlined, ApartmentOutlined,
+    CalendarOutlined, UserAddOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
+
 import type { ISection } from "@/types/backend";
 import { useSectionByIdQuery } from "@/hooks/useSections";
+import {
+    DetailModal, InfoRow, InfoCard, SectionTitle,
+    ProfileHeader, ActiveTag, InactiveTag, OutlineTag,
+} from "@/components/common/modal/detail";
 
 interface IProps {
     open: boolean;
@@ -11,7 +20,6 @@ interface IProps {
 }
 
 const ViewDetailSection = ({ open, onClose, dataInit, setDataInit }: IProps) => {
-
     const { data: detail, isLoading } = useSectionByIdQuery(
         open && dataInit?.id ? dataInit.id : undefined
     );
@@ -21,67 +29,66 @@ const ViewDetailSection = ({ open, onClose, dataInit, setDataInit }: IProps) => 
         setDataInit(null);
     };
 
+    const isActive = detail?.active;
+
     return (
-        <Modal
-            title="Chi tiết bộ phận"
+        <DetailModal
+            title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết bộ phận</span>}
             open={open}
             onCancel={handleClose}
-            footer={null}
-            width="60vw"
-            centered
             destroyOnHidden
+            maskClosable={false}
+            moduleClass="section"
+            desktopWidth={560}
         >
-            <Spin spinning={isLoading}>
-                <Descriptions
-                    bordered
-                    size="middle"
-                    column={2}
-                    layout="vertical"
-                    labelStyle={{ fontWeight: 600, background: "#fafafa" }}
-                    contentStyle={{ fontSize: 14 }}
-                >
-                    <Descriptions.Item label="Mã bộ phận">
-                        {detail?.code || "--"}
-                    </Descriptions.Item>
+            {isLoading ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <Spin size="large" />
+                </div>
+            ) : !detail ? (
+                <Empty description="Không tìm thấy thông tin bộ phận" style={{ padding: "32px 0" }} />
+            ) : (
+                <>
+                    <ProfileHeader
+                        avatarIcon={<AppstoreOutlined />}
+                        title={detail.name || "--"}
+                        badges={[isActive ? <ActiveTag key="s" /> : <InactiveTag key="s" label="Vô hiệu hóa" />]}
+                        tags={[
+                            detail.code
+                                ? <OutlineTag key="code" icon={<CodeOutlined />} label={detail.code} />
+                                : null,
+                            detail.department?.name
+                                ? <OutlineTag key="dept" icon={<ApartmentOutlined />} label={detail.department.name} />
+                                : null,
+                        ].filter(Boolean) as React.ReactNode[]}
+                    />
 
-                    <Descriptions.Item label="Tên bộ phận">
-                        {detail?.name || "--"}
-                    </Descriptions.Item>
+                    <InfoCard>
+                        <SectionTitle>Thông tin bộ phận</SectionTitle>
+                        <InfoRow icon={<CodeOutlined />}      label="Mã bộ phận"  value={detail.code}               highlight />
+                        <InfoRow icon={<AppstoreOutlined />}  label="Tên bộ phận" value={detail.name} />
+                        <InfoRow icon={<ApartmentOutlined />} label="Phòng ban"   value={detail.department?.name}   noBorder />
+                    </InfoCard>
 
-                    <Descriptions.Item label="Phòng ban">
-                        {detail?.department?.name || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Trạng thái">
-                        {detail?.active ? (
-                            <Badge status="success" text="Hoạt động" />
-                        ) : (
-                            <Badge status="error" text="Vô hiệu hóa" />
-                        )}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày tạo">
-                        {detail?.createdAt
-                            ? dayjs(detail.createdAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Ngày cập nhật">
-                        {detail?.updatedAt
-                            ? dayjs(detail.updatedAt).format("DD-MM-YYYY HH:mm:ss")
-                            : "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người tạo">
-                        {detail?.createdBy || "--"}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Người cập nhật">
-                        {detail?.updatedBy || "--"}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Spin>
-        </Modal>
+                    <InfoCard style={{ marginBottom: 0 }}>
+                        <SectionTitle>Lịch sử</SectionTitle>
+                        <InfoRow icon={<UserAddOutlined />} label="Người tạo"      value={detail.createdBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày tạo"
+                            value={detail.createdAt ? dayjs(detail.createdAt).format("DD/MM/YYYY HH:mm") : undefined}
+                        />
+                        <InfoRow icon={<UserAddOutlined />} label="Người cập nhật" value={detail.updatedBy} />
+                        <InfoRow
+                            icon={<CalendarOutlined />}
+                            label="Ngày cập nhật"
+                            value={detail.updatedAt ? dayjs(detail.updatedAt).format("DD/MM/YYYY HH:mm") : undefined}
+                            noBorder
+                        />
+                    </InfoCard>
+                </>
+            )}
+        </DetailModal>
     );
 };
 

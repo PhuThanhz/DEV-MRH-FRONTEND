@@ -1,4 +1,4 @@
-import { Col, Row } from 'antd';
+import { Col, Form, Row } from 'antd';
 import { ProFormSwitch } from '@ant-design/pro-components';
 import { groupByPermission } from '@/config/utils';
 import type { IPermission, IRole } from '@/types/backend';
@@ -20,27 +20,31 @@ interface IProps {
 
 /* ── Method badge ── */
 const METHOD_META: Record<string, { bg: string; text: string; dot: string }> = {
-  GET: { bg: '#F0FBF4', text: '#2D7A4F', dot: '#52C07A' },
-  POST: { bg: '#EEF4FF', text: '#3358C4', dot: '#5B80F0' },
-  PUT: { bg: '#FFF9EE', text: '#9A6A10', dot: '#E0A030' },
-  PATCH: { bg: '#FFF5EE', text: '#A04A1A', dot: '#E07840' },
-  DELETE: { bg: '#FFF0F0', text: '#A02828', dot: '#D85050' },
+  GET: { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },     // Quiet slate gray (safe read actions)
+  POST: { bg: '#EFF6FF', text: '#1D4ED8', dot: '#60A5FA' },    // Soft blue (creation)
+  PUT: { bg: '#FEF3C7', text: '#B45309', dot: '#FBBF24' },     // Soft amber (update)
+  PATCH: { bg: '#FEF3C7', text: '#B45309', dot: '#FBBF24' },   // Soft amber (update)
+  DELETE: { bg: '#FEF2F2', text: '#B91C1C', dot: '#F87171' },  // Soft red (destructive actions)
 };
 
 const getMethod = (method: string) =>
-  METHOD_META[method?.toUpperCase()] ?? { bg: '#F2F2F7', text: '#8E8E93', dot: '#C7C7CC' };
+  METHOD_META[method?.toUpperCase()] ?? { bg: '#F1F5F9', text: '#64748B', dot: '#CBD5E1' };
 
-/* ── Module accents — chỉ dùng cho icon + border-left, header về neutral ── */
-const MODULE_ACCENTS = [
-  { icon: '#6B8AF5', iconBg: '#F0F2FF', iconBorder: '#D5DCFF' },
-  { icon: '#3DA870', iconBg: '#F0FAF5', iconBorder: '#C2E8D2' },
-  { icon: '#9B6FD8', iconBg: '#F5F0FF', iconBorder: '#DEC8F8' },
-  { icon: '#C49030', iconBg: '#FDF8F0', iconBorder: '#F0DFB8' },
-  { icon: '#3A8FD0', iconBg: '#F0F7FF', iconBorder: '#C0DCFA' },
-  { icon: '#C85888', iconBg: '#FFF0F5', iconBorder: '#F8C8DC' },
-  { icon: '#2AA880', iconBg: '#F0FDF8', iconBorder: '#B8EEE0' },
-  { icon: '#B89020', iconBg: '#FDFBF0', iconBorder: '#F0E4B0' },
-];
+/* ── Dynamic Module Theme ── */
+const getModuleTheme = (isExpanded: boolean) => {
+  if (isExpanded) {
+    return {
+      icon: '#007AFF',       // Active Brand Blue
+      iconBg: '#EFF6FF',     // Light Brand Blue wash
+      iconBorder: '#BFDBFE', // Soft border
+    };
+  }
+  return {
+    icon: '#64748B',         // Inactive Slate Grey
+    iconBg: '#F8FAFC',       // Clean background
+    iconBorder: '#E2E8F0',   // Neutral border
+  };
+};
 
 const ModuleApi = (props: IProps) => {
   const { form, listPermissions, singleRole, openModal } = props;
@@ -223,7 +227,7 @@ const ModuleApi = (props: IProps) => {
         const isExpanded = expandedModules.has(item.module);
         const moduleName = MODULE_TRANSLATIONS[item.module] || item.module || 'Chưa dịch';
         const permCount = item.permissions?.length ?? 0;
-        const accent = MODULE_ACCENTS[index % MODULE_ACCENTS.length];
+        const accent = getModuleTheme(isExpanded);
         const isHiddenBySearch = filteredModuleKeys !== null && !filteredModuleKeys.has(item.module);
 
         const mn = (MODULE_TRANSLATIONS[item.module] || item.module || '').toLowerCase();
@@ -286,9 +290,9 @@ const ModuleApi = (props: IProps) => {
                     <span
                       style={{
                         ...s.slugTag,
-                        color: accent.icon,
-                        background: 'transparent',
-                        border: `1px solid ${accent.iconBorder}`,
+                        color: '#475569',
+                        background: '#F1F5F9',
+                        border: '1px solid #E2E8F0',
                       }}
                     >
                       {item.module}
@@ -329,56 +333,66 @@ const ModuleApi = (props: IProps) => {
 
                   const m = getMethod(value?.method as string);
                   return (
-                    <Col lg={12} md={12} sm={24} key={`${i}-child-${item.module}`}>
-                      <div
-                        style={{
-                          ...s.permCard,
-                          opacity: isMatchedPerm ? 1 : 0.35,
-                        }}
-                        className="ma-perm-card"
-                      >
-                        <div style={s.permToggle}>
-                          <ProFormSwitch
-                            name={['permissions', value.id as string]}
-                            noStyle
-                            fieldProps={{
-                              size: 'small',
-                              onChange: (v) =>
-                                handleSingleCheck(v, value.id as string, item.module),
-                            }}
-                          />
-                        </div>
-
-                        <div style={s.permInfo}>
-                          <div style={s.permName}>{value?.name || '—'}</div>
-                          <div style={s.permMeta}>
-                            {value?.method && (
-                              <span
-                                style={{
-                                  ...s.methodBadge,
-                                  background: m.bg,
-                                  color: m.text,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    width: 5,
-                                    height: 5,
-                                    borderRadius: '50%',
-                                    background: m.dot,
-                                    marginRight: 4,
-                                    verticalAlign: 'middle',
-                                    flexShrink: 0,
+                    <Col xs={24} sm={24} md={12} lg={12} style={{ display: 'flex' }} key={`${i}-child-${item.module}`}>
+                      <Form.Item noStyle shouldUpdate={(prev, curr) => prev.permissions?.[value.id as string] !== curr.permissions?.[value.id as string]}>
+                        {({ getFieldValue }) => {
+                          const isChecked = !!getFieldValue(['permissions', value.id as string]);
+                          return (
+                            <div
+                              style={{
+                                ...s.permCard,
+                                opacity: isMatchedPerm ? 1 : 0.35,
+                                borderColor: isChecked ? '#BFDBFE' : '#EBEBEB',
+                                background: isChecked ? '#F8FAFC' : '#FFFFFF',
+                                boxShadow: isChecked ? '0 2px 8px rgba(0, 122, 255, 0.04)' : 'none',
+                              }}
+                              className={`ma-perm-card ${isChecked ? 'active' : ''}`}
+                            >
+                              <div style={s.permToggle}>
+                                <ProFormSwitch
+                                  name={['permissions', value.id as string]}
+                                  noStyle
+                                  fieldProps={{
+                                    size: 'small',
+                                    onChange: (v) =>
+                                      handleSingleCheck(v, value.id as string, item.module),
                                   }}
                                 />
-                                {value.method}
-                              </span>
-                            )}
-                            <span style={s.apiPath}>{value?.apiPath || ''}</span>
-                          </div>
-                        </div>
-                      </div>
+                              </div>
+
+                              <div style={s.permInfo}>
+                                <div style={s.permName}>{value?.name || '—'}</div>
+                                <div style={s.permMeta}>
+                                  {value?.method && (
+                                    <span
+                                      style={{
+                                        ...s.methodBadge,
+                                        background: m.bg,
+                                        color: m.text,
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          display: 'inline-block',
+                                          width: 5,
+                                          height: 5,
+                                          borderRadius: '50%',
+                                          background: m.dot,
+                                          marginRight: 4,
+                                          verticalAlign: 'middle',
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                      {value.method}
+                                    </span>
+                                  )}
+                                  <span style={s.apiPath}>{value?.apiPath || ''}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      </Form.Item>
                     </Col>
                   );
                 })}
@@ -554,6 +568,7 @@ const s: Record<string, React.CSSProperties> = {
     transition: 'border-color 0.15s, opacity 0.15s',
     overflow: 'hidden',
     minHeight: 54,
+    width: '100%',
   },
   permToggle: {
     flexShrink: 0,
@@ -627,14 +642,31 @@ const css = `
   .ma-search-clear:hover {
     background: #E5E5EA !important;
   }
+  .ma-module-card {
+    transition: all 0.2s ease-in-out !important;
+  }
   .ma-module-card:hover {
-    border-color: #D1D1D6 !important;
+    border-color: #CBD5E1 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+  }
+  .ma-module-header {
+    transition: background 0.2s !important;
   }
   .ma-module-header:hover {
-    filter: brightness(0.98);
+    background: #F1F5F9 !important;
+  }
+  .ma-perm-card {
+    width: 100% !important;
+    transition: all 0.2s ease-in-out !important;
   }
   .ma-perm-card:hover {
-    border-color: #C7C7CC !important;
+    border-color: #94A3B8 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    transform: translateY(-1px);
+  }
+  .ma-perm-card.active:hover {
+    border-color: #3B82F6 !important;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.08) !important;
   }
   .ant-switch-checked {
     background: #007AFF !important;

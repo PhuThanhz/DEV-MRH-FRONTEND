@@ -278,18 +278,18 @@ const DocumentPage = () => {
                         key: "toggle",
                         icon: (
                             <PoweroffOutlined
-                                style={{ color: entity.active ? "#52c41a" : "#d9d9d9" }}
+                                style={{ color: (entity.active && entity.status !== "TERMINATED") ? "#52c41a" : "#d9d9d9" }}
                             />
                         ),
                         label: (
                             <Access permission={ALL_PERMISSIONS.DOCUMENTS.TOGGLE_ACTIVE} hideChildren>
                                 <Popconfirm
-                                    title={entity.active ? "Xác nhận tắt văn bản này?" : "Xác nhận bật văn bản này?"}
+                                    title={(entity.active && entity.status !== "TERMINATED") ? "Xác nhận ngưng hoạt động văn bản này?" : "Xác nhận kích hoạt văn bản này?"}
                                     okText="Xác nhận"
                                     cancelText="Huỷ"
                                     onConfirm={() => entity.id && toggleMutation.mutate(entity.id)}
                                 >
-                                    <span>{entity.active ? "Tắt" : "Bật"}</span>
+                                    <span>{(entity.active && entity.status !== "TERMINATED") ? "Ngưng hoạt động" : "Kích hoạt"}</span>
                                 </Popconfirm>
                             </Access>
                         ),
@@ -307,23 +307,6 @@ const DocumentPage = () => {
                             </span>
                         ),
                     }] : []),
-                    {
-                        key: "delete",
-                        icon: <DeleteOutlined style={{ color: "red" }} />,
-                        label: (
-                            <Access permission={ALL_PERMISSIONS.DOCUMENTS.DELETE} hideChildren>
-                                <Popconfirm
-                                    title="Xác nhận xoá văn bản này?"
-                                    okText="Xoá"
-                                    cancelText="Huỷ"
-                                    okButtonProps={{ danger: true }}
-                                    onConfirm={() => entity.id && deleteMutation.mutate(entity.id)}
-                                >
-                                    <span style={{ color: "red" }}>Xóa</span>
-                                </Popconfirm>
-                            </Access>
-                        ),
-                    },
                 ];
 
                 return (
@@ -369,7 +352,7 @@ const DocumentPage = () => {
                                     label: "Trạng thái",
                                     options: [
                                         { label: "Hoạt động", value: true, color: "green" },
-                                        { label: "Tắt", value: false, color: "red" },
+                                        { label: "Ngưng hoạt động", value: false, color: "red" },
                                     ],
                                 },
                             ]}
@@ -416,6 +399,7 @@ const DocumentPage = () => {
                         ),
                     }}
                     rowSelection={false}
+                    scroll={{ x: 'max-content' }}
                 />
             </Access>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button, message, Tooltip } from "antd";
-import { PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined } from "@ant-design/icons";
+import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined } from "@ant-design/icons";
 import { unstable_batchedUpdates } from "react-dom";
 
 import ReactFlow, {
@@ -28,6 +28,7 @@ import {
     useCreateOrgNodeBulkTreeMutation,
     useUpdateOrgNodeMutation,
     useDeleteOrgNodeMutation,
+    useUpdateOrgNodePositionsMutation,
 } from "@/hooks/useOrgNodes";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
@@ -102,11 +103,11 @@ const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) =>
 const getLayoutedElements = (
     nodes: Node[],
     edges: Edge[],
-    nodeW = 200,
-    nodeH = 130,
+    nodeW = 220,
+    nodeH = 185,
 ) => {
     const g = new dagre.graphlib.Graph();
-    g.setGraph({ rankdir: "TB", ranksep: 80, nodesep: 40 });
+    g.setGraph({ rankdir: "TB", ranksep: 110, nodesep: 75 });
     g.setDefaultEdgeLabel(() => ({}));
     nodes.forEach((n) => g.setNode(n.id, { width: nodeW, height: nodeH }));
     edges.forEach((e) => g.setEdge(e.source, e.target));
@@ -148,6 +149,23 @@ const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
         }
     }
     return result;
+};
+
+const getHiddenNodeIds = (collapsedIds: Set<string>, edges: Edge[]): Set<string> => {
+    const hidden = new Set<string>();
+    const queue = Array.from(collapsedIds);
+    while (queue.length > 0) {
+        const parentId = queue.shift()!;
+        for (const e of edges) {
+            if (e.source === parentId) {
+                if (!hidden.has(e.target)) {
+                    hidden.add(e.target);
+                    queue.push(e.target);
+                }
+            }
+        }
+    }
+    return hidden;
 };
 
 // ── Pure highlight calculator ─────────────────────────────────────────────────
@@ -221,6 +239,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const bulkTreeNode = useCreateOrgNodeBulkTreeMutation();
     const updateNode = useUpdateOrgNodeMutation();
     const deleteNode = useDeleteOrgNodeMutation();
+    const updateNodePositions = useUpdateOrgNodePositionsMutation();
 
     const [chartId, setChartId] = useState<number | null>(null);
     const [nodes, setNodes] = useState<Node[]>([]);
@@ -229,22 +248,27 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const [editingNode, setEditingNode] = useState<Node | null>(null);
     const [pendingSaves, setPendingSaves] = useState<Map<string, { x: number; y: number }>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
+    const [isDragLocked, setIsDragLocked] = useState(true);
 
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedNodePos, setSelectedNodePos] = useState<{ x: number; y: number } | null>(null);
+
+    const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
+    const collapsedNodeIdsRef = useRef<Set<string>>(new Set());
+    collapsedNodeIdsRef.current = collapsedNodeIds;
 
     const nodesRef = useRef<Node[]>([]);
     const edgesRef = useRef<Edge[]>([]);
     nodesRef.current = nodes;
     edgesRef.current = edges;
 
-    const nodeW = isMobile ? 160 : isTablet ? 185 : 220;
-    const nodeH = isMobile ? 120 : isTablet ? 150 : 185;
-    const layoutNodeW = isMobile ? 150 : isTablet ? 175 : 200;
-    const layoutNodeH = isMobile ? 110 : isTablet ? 140 : 130;
+    const nodeW = isMobile ? 158 : isTablet ? 182 : 220;
+    const nodeH = isMobile ? 118 : isTablet ? 148 : 185;
+    const layoutNodeW = isMobile ? 158 : isTablet ? 182 : 220;
+    const layoutNodeH = isMobile ? 118 : isTablet ? 148 : 185;
 
-    const compactLayoutNodeW = isMobile ? 120 : isTablet ? 140 : 160;
-    const compactLayoutNodeH = isMobile ? 50 : isTablet ? 58 : 66;
+    const compactLayoutNodeW = isMobile ? 158 : isTablet ? 182 : 220;
+    const compactLayoutNodeH = isMobile ? 118 : isTablet ? 148 : 185;
 
     const nodeTypes = useMemo(() => ({ orgNode: OrgNodeCard }), []);
     const edgeTypes = useMemo(() => ({ orgEdge: OrgEdge }), []);
@@ -265,14 +289,32 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     }, [selectedNodeId]);
 
     useEffect(() => {
-        setNodes((prev) =>
-            prev.map((n) =>
-                n.data.viewMode === viewMode
-                    ? n
-                    : { ...n, data: { ...n.data, viewMode } }
-            )
+        if (nodesRef.current.length === 0) return;
+
+        const lW = viewMode === "compact" ? compactLayoutNodeW : layoutNodeW;
+        const lH = viewMode === "compact" ? compactLayoutNodeH : layoutNodeH;
+
+        const { nodes: laid } = getLayoutedElements(
+            nodesRef.current.map((n) => ({ ...n, position: { x: 0, y: 0 } })),
+            edgesRef.current,
+            lW,
+            lH,
         );
-    }, [viewMode]);
+
+        setNodes(laid.map((node) => {
+            const originalNode = nodesRef.current.find((n) => n.id === node.id);
+            return {
+                ...node,
+                data: {
+                    ...(originalNode?.data ?? node.data),
+                    viewMode
+                }
+            };
+        }));
+
+        setPendingSaves(new Map());
+        setTimeout(() => fitView({ padding: 0.08, minZoom: 0.5, maxZoom: 0.9, duration: 400 }), 50);
+    }, [viewMode, compactLayoutNodeW, compactLayoutNodeH, layoutNodeW, layoutNodeH, fitView]);
 
     useEffect(() => {
         callFetchJobDescriptions("filter=status='PUBLISHED'&page=1&pageSize=200")
@@ -292,9 +334,44 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     }, [nodes.length]); // eslint-disable-line
 
     useEffect(() => {
+        if (nodes.length === 0) return;
+        const hiddenNodeIds = getHiddenNodeIds(collapsedNodeIds, edges);
+
+        unstable_batchedUpdates(() => {
+            setNodes((prev) =>
+                prev.map((n) => {
+                    const isHidden = hiddenNodeIds.has(n.id);
+                    const isCollapsed = collapsedNodeIds.has(n.id);
+                    if (n.hidden === isHidden && n.data.isCollapsed === isCollapsed) return n;
+                    return {
+                        ...n,
+                        hidden: isHidden,
+                        data: {
+                            ...n.data,
+                            isCollapsed,
+                        },
+                    };
+                })
+            );
+
+            setEdges((prev) =>
+                prev.map((e) => {
+                    const isHidden = hiddenNodeIds.has(e.source) || hiddenNodeIds.has(e.target);
+                    if (e.hidden === isHidden) return e;
+                    return {
+                        ...e,
+                        hidden: isHidden,
+                    };
+                })
+            );
+        });
+    }, [collapsedNodeIds]);
+
+    useEffect(() => {
         setChartId(null); setNodes([]); setEdges([]);
         setPendingSaves(new Map());
         setSelectedNodeId(null);
+        setCollapsedNodeIds(new Set());
     }, [ownerId]);
 
     useEffect(() => {
@@ -340,6 +417,8 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             ...EDGE_DEFAULTS, data: { edgeType: "none", dimmed: false },
         }));
 
+        const hiddenNodeIds = getHiddenNodeIds(collapsedNodeIdsRef.current, rfEdges);
+
         const { nodes: dagreNodes, edges: dagreEdges } = getLayoutedElements(rfNodes, rfEdges, layoutNodeW, layoutNodeH);
         const finalNodes = dagreNodes.map((node) => {
             const saved = nodeList.find((n) => String(n.id) === node.id);
@@ -350,9 +429,13 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
         const withCbs = finalNodes.map((node) => {
             const jdId = node.data.jobDescriptionId as number | null;
+            const directChildren = rfEdges.filter((e) => e.source === node.id);
+            const childCount = directChildren.length;
+            const isHidden = hiddenNodeIds.has(node.id);
 
             return {
                 ...node,
+                hidden: isHidden,
                 data: {
                     ...node.data,
                     allowEdit: canEdit,
@@ -361,6 +444,19 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     isMobile,
                     isTablet,
                     viewMode: viewModeRef.current,
+                    childCount,
+                    isCollapsed: collapsedNodeIdsRef.current.has(node.id),
+                    onToggleCollapse: () => {
+                        setCollapsedNodeIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(node.id)) {
+                                next.delete(node.id);
+                            } else {
+                                next.add(node.id);
+                            }
+                            return next;
+                        });
+                    },
                     onEdit: () => handleOpenEdit(node),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
@@ -399,7 +495,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             };
         });
 
-        unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(dagreEdges); });
+        const withEdgesCbs = dagreEdges.map((e) => ({
+            ...e,
+            hidden: hiddenNodeIds.has(e.source) || hiddenNodeIds.has(e.target),
+        }));
+
+        unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(withEdgesCbs); });
     }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet]); // eslint-disable-line
 
     const handleSearchSelect = useCallback((nodeId: string, pos: { x: number; y: number } | null = null) => {
@@ -420,14 +521,19 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         setIsSaving(true);
         const count = pendingSaves.size;
         try {
-            await Promise.all(Array.from(pendingSaves.entries()).map(([nodeId, pos]) =>
-                callUpdateOrgNode({ id: Number(nodeId), posX: Math.round(pos.x), posY: Math.round(pos.y) })
-            ));
+            const payload = Array.from(pendingSaves.entries()).map(([nodeId, pos]) => ({
+                id: Number(nodeId),
+                posX: Math.round(pos.x),
+                posY: Math.round(pos.y),
+            }));
+            await updateNodePositions.mutateAsync(payload);
             setPendingSaves(new Map());
-            message.success(`Đã lưu vị trí ${count} node!`);
-        } catch { message.error("Lưu vị trí thất bại, thử lại nhé!"); }
-        finally { setIsSaving(false); }
-    }, [chartId, pendingSaves]);
+        } catch {
+            message.error("Lưu vị trí thất bại, thử lại nhé!");
+        } finally {
+            setIsSaving(false);
+        }
+    }, [chartId, pendingSaves, updateNodePositions]);
 
     const handleResetPositions = useCallback(async () => {
         if (!chartId) return;
@@ -669,6 +775,44 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     )}
                 </Access>
 
+                {/* ── Khóa/Mở khóa kéo thả ── */}
+                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                    {isMobile ? (
+                        <Tooltip title={isDragLocked ? "Mở khóa kéo thả vị trí" : "Khóa kéo thả vị trí"}>
+                            <Button
+                                icon={isDragLocked ? <LockOutlined /> : <UnlockOutlined />}
+                                onClick={() => setIsDragLocked(!isDragLocked)}
+                                size="small"
+                                style={{
+                                    ...btnBase,
+                                    borderColor: isDragLocked ? "#cbd5e1" : "#1677ff",
+                                    color: isDragLocked ? "#475569" : "#1677ff",
+                                }}
+                            />
+                        </Tooltip>
+                    ) : (
+                        <Button
+                            icon={isDragLocked ? <LockOutlined /> : <UnlockOutlined />}
+                            onClick={() => {
+                                setIsDragLocked(!isDragLocked);
+                                if (isDragLocked) {
+                                    message.info("Đã mở khóa di chuyển. Bạn có thể kéo thả để sắp xếp các vị trí!");
+                                } else {
+                                    message.success("Đã khóa di chuyển. Vị trí các node hiện đã được cố định!");
+                                }
+                            }}
+                            style={{
+                                ...btnBase,
+                                borderColor: isDragLocked ? "#cbd5e1" : "#1677ff",
+                                color: isDragLocked ? "#475569" : "#1677ff",
+                                fontWeight: isDragLocked ? 500 : 600,
+                            }}
+                        >
+                            {isTablet ? "" : (isDragLocked ? "Khóa di chuyển" : "Mở khóa di chuyển")}
+                        </Button>
+                    )}
+                </Access>
+
                 {/* ── Toggle: Tổng quan / Chi tiết ── */}
                 {isMobile ? (
                     <Tooltip title={viewMode === "full" ? "Tổng quan" : "Chi tiết"}>
@@ -739,7 +883,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
             <ReactFlow
                 nodes={nodes} edges={edges}
                 nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-                nodesDraggable={!isMobile}
+                nodesDraggable={!isMobile && !isDragLocked}
                 nodesConnectable={!isMobile}
                 elementsSelectable
                 onNodesChange={onNodesChange}

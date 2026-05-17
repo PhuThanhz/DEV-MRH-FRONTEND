@@ -3,7 +3,6 @@ import { PrinterOutlined, CloseOutlined } from "@ant-design/icons";
 
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
-import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
 import type { FilterField } from "@/components/common/filter/AdvancedFilterSelect";
 import {
     callFetchCompany,
@@ -26,7 +25,6 @@ interface ProcedureToolbarProps {
     onPrintClick: () => void;
     onExitPrintMode: () => void;
     onFilterChange: (filters: Record<string, any>) => void;
-    onDateRangeChange: (filter: string | null) => void;
 }
 
 const ProcedureToolbar = ({
@@ -43,7 +41,6 @@ const ProcedureToolbar = ({
     onPrintClick,
     onExitPrintMode,
     onFilterChange,
-    onDateRangeChange,
 }: ProcedureToolbarProps) => {
     const filterFields: FilterField[] = [
         ...(!companyId && !departmentId ? [{
@@ -153,7 +150,7 @@ const ProcedureToolbar = ({
                 )}
 
                 {/* Nút In QR */}
-                <Tooltip
+                {/* <Tooltip
                     title={printMode && selectedCount === 0 ? "Chọn ít nhất 1 quy trình" : ""}
                     placement="bottom"
                 >
@@ -181,7 +178,7 @@ const ProcedureToolbar = ({
                     >
                         {printMode && selectedCount > 0 ? `In QR (${selectedCount})` : "In QR"}
                     </Button>
-                </Tooltip>
+                </Tooltip> */}
             </Flex>
 
 
@@ -192,10 +189,6 @@ const ProcedureToolbar = ({
                     resetSignal={resetSignal}
                     fields={filterFields}
                     onChange={(filters) => onFilterChange(filters)}
-                />
-                <DateRangeFilter
-                    fieldName="createdAt"
-                    onChange={onDateRangeChange}
                 />
             </div>
         </div>

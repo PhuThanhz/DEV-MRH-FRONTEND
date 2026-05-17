@@ -47,6 +47,7 @@ const ModalDocument = ({
     const isEdit = !!dataInit?.id;
 
     const [showProcedureFields, setShowProcedureFields] = useState(false);
+    const [isCrossCompany, setIsCrossCompany] = useState(false);
     const [procedureType, setProcedureType] = useState<DocumentProcedureType | null>(null);
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
@@ -67,6 +68,7 @@ const ModalDocument = ({
             label: `[${c.symbol || c.categoryCode}] ${c.categoryName}`,
             value: c.id!,
             mappingProcedure: c.mappingProcedure,
+            isCrossCompany: c.isCrossCompany,
         })) ?? [];
 
     const companyOptions =
@@ -104,6 +106,7 @@ const ModalDocument = ({
         form.resetFields();
         setFileList([]);
         setShowProcedureFields(false);
+        setIsCrossCompany(false);
         setProcedureType(null);
         setSelectedCompanyId(null);
         setSelectedDepartmentId(null);
@@ -115,6 +118,7 @@ const ModalDocument = ({
             if (dataInit) {
                 const isMappingProcedure = dataInit.category?.mappingProcedure ?? false;
                 setShowProcedureFields(isMappingProcedure);
+                setIsCrossCompany(dataInit.category?.isCrossCompany ?? false);
 
                 const pType = dataInit.procedureType ?? null;
                 setProcedureType(pType);
@@ -163,6 +167,7 @@ const ModalDocument = ({
         const selected = categoryOptions.find((c) => c.value === categoryId);
         const hasMappingProcedure = selected?.mappingProcedure ?? false;
         setShowProcedureFields(hasMappingProcedure);
+        setIsCrossCompany(selected?.isCrossCompany ?? false);
         setProcedureType(null);
         resetCascadeFields();
         form.setFieldsValue({ procedureType: undefined });
@@ -258,6 +263,11 @@ const ModalDocument = ({
             note: values.note,
             fileUrls: values.fileUrls ?? [],
         };
+
+        if (isCrossCompany && (!values.userIds || values.userIds.length === 0)) {
+            message.error("Vui lòng chọn danh sách người nhận cho văn bản liên công ty");
+            return;
+        }
 
         if (showProcedureFields && procedureType) {
             payload.procedureType = procedureType;
@@ -373,6 +383,7 @@ const ModalDocument = ({
                                 companyId={selectedCompanyId}
                                 selectedUserCount={userCount}
                                 onCountChange={setUserCount}
+                                isCrossCompany={isCrossCompany}
                             />
                         </Col>
                     )}
@@ -431,6 +442,7 @@ const ModalDocument = ({
                             companyId={selectedCompanyId}
                             selectedUserCount={userCount}
                             onCountChange={setUserCount}
+                            isCrossCompany={isCrossCompany}
                         />
                     </Col>
                 </Row>
@@ -478,6 +490,7 @@ const ModalDocument = ({
                         rules={[
                             { required: true, message: "Vui lòng nhập mã văn bản" },
                             { max: 100, message: "Tối đa 100 ký tự" },
+                            { pattern: /^[A-Za-z0-9_.\-/]+$/, message: "Chỉ chấp nhận chữ, số, dấu chấm, gạch ngang, gạch dưới, dấu /" },
                         ]}
                     >
                         <Input
@@ -507,7 +520,10 @@ const ModalDocument = ({
             <Form.Item
                 label="Tên văn bản"
                 name="documentName"
-                rules={[{ required: true, message: "Vui lòng nhập tên văn bản" }]}
+                rules={[
+                    { required: true, message: "Vui lòng nhập tên văn bản" },
+                    { max: 250, message: "Tối đa 250 ký tự" },
+                ]}
             >
                 <Input placeholder="VD: Quy chế nhân sự" />
             </Form.Item>
