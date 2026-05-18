@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Button, Typography, Tag, Space, Divider, theme, Flex, Card, Slider } from "antd";
+import { Button, Typography, Tag, Space, Divider, theme, Flex, Card } from "antd";
 import {
     QrcodeOutlined, ReloadOutlined, CheckCircleFilled,
     WarningFilled, BankOutlined, CalendarOutlined, TeamOutlined,
-    CameraOutlined, StopOutlined, BulbOutlined, ZoomInOutlined, ZoomOutOutlined,
+    CameraOutlined, StopOutlined, BulbOutlined,
 } from "@ant-design/icons";
 import axios from "@/config/axios-customize";
 import dayjs from "dayjs";
@@ -132,11 +132,6 @@ const QrScanPage = () => {
     const [mounted, setMounted] = useState(false);
     const [hasTorch, setHasTorch] = useState(false);
     const [torchOn, setTorchOn] = useState(false);
-    const [hasZoom, setHasZoom] = useState(false);
-    const [zoomMin, setZoomMin] = useState(1);
-    const [zoomMax, setZoomMax] = useState(4);
-    const [zoomStep, setZoomStep] = useState(0.1);
-    const [zoomValue, setZoomValue] = useState(1);
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 50);
@@ -185,12 +180,6 @@ const QrScanPage = () => {
         setResult(null);
         setHasTorch(false);
         setTorchOn(false);
-        // Bật Zoom Slider theo mặc định (CSS Zoom luôn khả dụng trên mọi thiết bị)
-        setHasZoom(true);
-        setZoomMin(1);
-        setZoomMax(3);
-        setZoomStep(0.1);
-        setZoomValue(1);
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
 
@@ -202,8 +191,6 @@ const QrScanPage = () => {
             setScanning(false);
             setHasTorch(false);
             setTorchOn(false);
-            setHasZoom(false);
-            setZoomValue(1);
             handleScanSuccess(decodedText);
         };
 
@@ -243,52 +230,19 @@ const QrScanPage = () => {
             }
         }
 
-        // Kiểm tra khả năng bật Đèn pin và Thu phóng của camera sau khi mở thành công
+        // Kiểm tra khả năng bật Đèn pin sau khi mở thành công
         if (scannerRef.current) {
             setTimeout(() => {
                 try {
                     const capabilities = scanner.getRunningTrackCapabilities() as any;
-                    if (capabilities) {
-                        if (capabilities.torch) {
-                            setHasTorch(true);
-                        }
-                        if (capabilities.zoom) {
-                            // Nếu thiết bị có hardware zoom xịn, nâng cấp giới hạn tối đa theo phần cứng
-                            setZoomMin(capabilities.zoom.min || 1);
-                            setZoomMax(capabilities.zoom.max || 4);
-                            setZoomStep(capabilities.zoom.step || 0.1);
-                        }
+                    if (capabilities && capabilities.torch) {
+                        setHasTorch(true);
                     }
                 } catch {}
             }, 800);
         }
     };
 
-    const handleZoomChange = async (value: number) => {
-        setZoomValue(value);
-        
-        // 1. Áp dụng Hardware zoom của camera phần cứng (nếu điện thoại hỗ trợ)
-        if (scannerRef.current) {
-            try {
-                const track = (scannerRef.current as any).getRunningTrack();
-                if (track) {
-                    await track.applyConstraints({
-                        advanced: [{ zoom: value } as any]
-                    });
-                }
-            } catch {}
-        }
-
-        // 2. Luôn áp dụng CSS digital zoom trên thẻ <video> để hoạt động hoàn hảo trên mọi thiết bị (Macbook, Laptop, PC, iOS/Android)
-        try {
-            const videoElem = document.querySelector("#qr-reader video") as HTMLVideoElement;
-            if (videoElem) {
-                videoElem.style.transform = `scale(${value})`;
-                videoElem.style.transformOrigin = "center center";
-                videoElem.style.transition = "transform 0.1s ease-out";
-            }
-        } catch {}
-    };
 
     const toggleTorch = async () => {
         if (!scannerRef.current) return;
@@ -328,8 +282,6 @@ const QrScanPage = () => {
         setScanning(false);
         setHasTorch(false);
         setTorchOn(false);
-        setHasZoom(false);
-        setZoomValue(1);
     };
 
     const handleScanSuccess = async (url: string) => {
@@ -510,52 +462,6 @@ const QrScanPage = () => {
                                     </button>
                                 )}
 
-                                {scanning && hasZoom && (
-                                    <div style={{
-                                        position: "absolute",
-                                        bottom: 16,
-                                        left: "50%",
-                                        transform: "translateX(-50%)",
-                                        width: "80%",
-                                        maxWidth: 240,
-                                        background: "rgba(15, 23, 42, 0.65)",
-                                        backdropFilter: "blur(8px)",
-                                        borderRadius: 20,
-                                        padding: "6px 14px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 10,
-                                        zIndex: 10,
-                                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                                        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.35)",
-                                    }}>
-                                        <ZoomOutOutlined style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: 13 }} />
-                                        <Slider
-                                            min={zoomMin}
-                                            max={zoomMax}
-                                            step={zoomStep}
-                                            value={zoomValue}
-                                            onChange={handleZoomChange}
-                                            tooltip={{ formatter: (v) => `${Number(v).toFixed(1)}x` }}
-                                            style={{ flex: 1, margin: "0 4px" }}
-                                            styles={{
-                                                track: { background: "linear-gradient(90deg, #ec4899, #f472b6)" },
-                                                handle: { border: "2px solid #ec4899", background: "#fff", boxShadow: "0 0 8px #ec4899" }
-                                            }}
-                                        />
-                                        <ZoomInOutlined style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: 13 }} />
-                                        <span style={{
-                                            color: "#fff",
-                                            fontSize: 11,
-                                            fontWeight: 600,
-                                            minWidth: 26,
-                                            textAlign: "right",
-                                            fontFamily: "monospace"
-                                        }}>
-                                            {zoomValue.toFixed(1)}x
-                                        </span>
-                                    </div>
-                                )}
                             </div>
 
                             <div style={{ padding: "20px 20px 24px" }}>
@@ -592,7 +498,7 @@ const QrScanPage = () => {
                                     </>
                                 ) : (
                                     <div>
-                                        <Flex align="center" justify="center" gap={8} style={{ margin: "4px 0 12px" }}>
+                                        <Flex align="center" justify="center" gap={8} style={{ margin: "4px 0 16px" }}>
                                             <span style={{
                                                 width: 8, height: 8, borderRadius: "50%",
                                                 background: C.primaryLight,
