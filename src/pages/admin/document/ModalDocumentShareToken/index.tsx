@@ -63,7 +63,7 @@ const ModalDocumentShareToken = ({ open, onClose, document }: IProps) => {
             data: {
                 autoGeneratePin: autoPin,
                 pin: autoPin ? undefined : (values.pin || undefined),
-                expiresAt: values.expiresAt ? values.expiresAt.toISOString() : undefined,
+                expiresAt: values.expiresAt ? values.expiresAt.endOf("day").toISOString() : undefined,
                 maxAccessCount: values.maxAccessCount || undefined,
             },
         });
@@ -106,13 +106,13 @@ const ModalDocumentShareToken = ({ open, onClose, document }: IProps) => {
 
     const handleSendGmailEmail = (r: IResShareTokenDTO) => {
         const shareUrl = `${window.location.origin}/public/view/${r.token}`;
-        const pin = r.pin ? `Mã PIN: ${r.pin}\n` : "";
+        const pin = r.pin ? `- Mã PIN bảo mật: ${r.pin}\n` : "";
         const expires = r.expiresAt
-            ? `Hết hạn: ${dayjs(r.expiresAt).format("DD/MM/YYYY")}`
-            : "Hết hạn: Vô thời hạn";
+            ? `- Hạn truy cập: ${dayjs(r.expiresAt).format("DD/MM/YYYY")}`
+            : "- Hạn truy cập: Vô thời hạn";
         const subject = encodeURIComponent(`[Lotus HRM] Chia sẻ văn bản — ${document?.documentCode}`);
         const body = encodeURIComponent(
-            `Xin chào,\n\nBạn được chia sẻ quyền xem văn bản trên hệ thống Lotus HRM.\n\n━━━━━━━━━━━━━━━━━━━━\n${pin}${expires}\n━━━━━━━━━━━━━━━━━━━━\n\nLink truy cập: ${shareUrl}\n\nLưu ý: Link và mã PIN chỉ dành riêng cho bạn, vui lòng không chia sẻ cho người khác.\n\nTrân trọng,\nLotus HRM`
+            `KÍNH GỬI BẠN,\n\nBạn được chia sẻ quyền xem văn bản trên hệ thống Lotus HRM.\n\nThông tin chi tiết để truy cập bao gồm:\n- Đường dẫn truy cập: ${shareUrl}\n${pin}${expires}\n\n* LƯU Ý BẢO MẬT: Đường dẫn và mã PIN trên chỉ dành riêng cho bạn. Vui lòng không chia sẻ thông tin này cho người khác dưới mọi hình thức.\n\nTrân trọng,\nBan Quản trị Lotus HRM`
         );
         window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`, "_blank");
     };
@@ -378,7 +378,7 @@ const ModalDocumentShareToken = ({ open, onClose, document }: IProps) => {
                                     <Tag color="default">Không có PIN</Tag>
                                 )}
                                 {selectedToken.expiresAt ? (
-                                    <Tag color="blue">HH: {dayjs(selectedToken.expiresAt).format("DD/MM/YYYY")}</Tag>
+                                    <Tag color="blue">Hết hạn: {dayjs(selectedToken.expiresAt).format("DD/MM/YYYY")}</Tag>
                                 ) : (
                                     <Tag color="default">Vô thời hạn</Tag>
                                 )}

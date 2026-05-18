@@ -124,15 +124,15 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
             display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
             borderTop: "0.5px solid #e5e7eb", paddingTop: 14, marginTop: 14, width: "100%",
         } : {
-            width: 156, flexShrink: 0, borderLeft: "0.5px solid #e5e7eb",
-            padding: "0 0 0 18px", display: "flex", flexDirection: "column",
+            width: 136, flexShrink: 0, borderLeft: "0.5px solid #e5e7eb",
+            padding: "0 0 0 14px", display: "flex", flexDirection: "column",
             alignItems: "center", gap: 8, alignSelf: "flex-start",
         }}>
             <div style={{ padding: 5, background: "#fff", border: "0.5px solid #e5e7eb", borderRadius: 4, flexShrink: 0 }}>
                 <Image
                     src={`data:image/png;base64,${procedure.qrCode}`}
-                    width={isMobile ? 80 : 120}
-                    height={isMobile ? 80 : 120}
+                    width={isMobile ? 80 : 100}
+                    height={isMobile ? 80 : 100}
                     preview={{ mask: <EyeOutlined /> }}
                     style={{ borderRadius: 3, display: "block" }}
                 />
@@ -194,7 +194,7 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                 </Field>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: col2, gap: "10px 16px", marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: col3, gap: "10px 16px", marginBottom: 12 }}>
                 <Field label="Công ty">
                     <Text ellipsis={{ tooltip: procedure?.companyName }} style={{ fontSize: 13, fontWeight: 400 }}>
                         {procedure?.companyName || "--"}
@@ -288,11 +288,11 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
             <Modal
                 open={open}
                 onCancel={onClose}
-                width={isMobile ? "92vw" : 940}
+                width={isMobile ? "92vw" : 800}
                 centered
                 closeIcon={<CloseOutlined style={{ fontSize: 12 }} />}
                 styles={{
-                    body: { padding: 0 },
+                    body: { padding: 0, maxHeight: "calc(100vh - 220px)", overflowY: "auto" },
                     header: { padding: "12px 20px 10px", marginBottom: 0, borderBottom: "0.5px solid #f0f0f0" },
                     footer: { padding: "10px 20px", borderTop: "0.5px solid #f0f0f0", marginTop: 0 },
                 }}

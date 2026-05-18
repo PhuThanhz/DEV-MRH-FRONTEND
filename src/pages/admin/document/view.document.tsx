@@ -147,15 +147,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             display: "flex", flexDirection: "row", alignItems: "center", gap: 16,
             borderTop: "0.5px solid #e5e7eb", paddingTop: 14, marginTop: 14, width: "100%",
         } : {
-            width: 156, flexShrink: 0, borderLeft: "0.5px solid #e5e7eb",
-            padding: "0 0 0 18px", display: "flex", flexDirection: "column",
+            width: 136, flexShrink: 0, borderLeft: "0.5px solid #e5e7eb",
+            padding: "0 0 0 14px", display: "flex", flexDirection: "column",
             alignItems: "center", gap: 8, alignSelf: "flex-start",
         }}>
             <div style={{ padding: 5, background: "#fff", border: "0.5px solid #e5e7eb", borderRadius: 4, flexShrink: 0 }}>
                 <Image
                     src={data.qrCode.startsWith("data:image") ? data.qrCode : `data:image/png;base64,${data.qrCode}`}
-                    width={isMobile ? 80 : 120}
-                    height={isMobile ? 80 : 120}
+                    width={isMobile ? 80 : 100}
+                    height={isMobile ? 80 : 100}
                     preview={{ mask: <EyeOutlined /> }}
                     style={{ borderRadius: 3, display: "block" }}
                 />
@@ -222,7 +222,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             </div>
 
             {/* Row 2: Loại văn bản, Ký hiệu, Công ty, Phòng ban, Bộ phận, Ngày ban hành */}
-            <div style={{ display: "grid", gridTemplateColumns: col2, gap: "10px 16px", marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: col3, gap: "10px 16px", marginBottom: 12 }}>
                 <Field label="Loại văn bản">
                     {data.category?.categoryName
                         ? <Tag color="purple" style={TAG_STYLE}>{data.category.categoryName}</Tag>
@@ -262,7 +262,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
 
             {/* Mapping Procedure */}
             {data.category?.mappingProcedure && (
-                <div style={{ display: "grid", gridTemplateColumns: col2, gap: "10px 16px", marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: col3, gap: "10px 16px", marginBottom: 12 }}>
                     <Field label="Loại quy trình">
                         <Tag color="geekblue" style={TAG_STYLE}>
                             {PROCEDURE_TYPE_LABEL[data.procedureType || ""] || data.procedureType || "--"}
@@ -321,23 +321,23 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                 const percent = total > 0 ? Math.round((readCount / total) * 100) : 0;
                 return (
                     <Access permission={ALL_PERMISSIONS.DOCUMENTS.UPDATE} hideChildren={true}>
-                        <div style={{ marginTop: 24 }}>
+                        <div style={{ marginTop: 16 }}>
                             <SectionHeading icon={<EyeOutlined />} label="Trạng thái người nhận" />
                             <div style={{
                                 background: "#ffffff",
-                                borderRadius: 12,
-                                padding: "16px 20px",
+                                borderRadius: 10,
+                                padding: "8px 14px",
                                 border: "1px solid #f0f0f0",
-                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)",
                                 display: "flex",
                                 alignItems: "center",
-                                gap: 16,
-                                marginTop: 12
+                                gap: 12,
+                                marginTop: 6
                             }}>
                                 {/* Left Icon */}
                                 <div style={{
-                                    width: 42,
-                                    height: 42,
+                                    width: 30,
+                                    height: 30,
                                     borderRadius: "50%",
                                     background: "#fff0f6",
                                     display: "flex",
@@ -345,16 +345,16 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                                     justifyContent: "center",
                                     flexShrink: 0
                                 }}>
-                                    <EyeOutlined style={{ color: "#ff4d9f", fontSize: 18 }} />
+                                    <EyeOutlined style={{ color: "#ff4d9f", fontSize: 13 }} />
                                 </div>
 
                                 {/* Center Progress */}
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                        <Text style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                                        <Text style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>
                                             Tiến độ người nhận đã đọc tài liệu
                                         </Text>
-                                        <Text style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>
+                                        <Text style={{ fontSize: 11, fontWeight: 500, color: "#64748b" }}>
                                             {readCount} / {total} đã xem ({percent}%)
                                         </Text>
                                     </div>
@@ -376,15 +376,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                                     onClick={() => setIsRecipientModalOpen(true)}
                                     style={{
                                         borderRadius: 6,
-                                        fontSize: 13,
+                                        fontSize: 11,
                                         fontWeight: 500,
                                         color: "#ff4d9f",
                                         borderColor: "#ffd6e7",
                                         background: "#fff0f6",
-                                        height: 36,
+                                        height: 28,
                                         display: "flex",
                                         alignItems: "center",
-                                        gap: 6
+                                        gap: 4
                                     }}
                                 >
                                     Chi tiết
@@ -401,11 +401,11 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
         <Modal
             open={open}
             onCancel={handleClose}
-            width={isMobile ? "92vw" : 940}
+            width={isMobile ? "92vw" : 800}
             centered
             closeIcon={<CloseOutlined style={{ fontSize: 12 }} />}
             styles={{
-                body: { padding: 0 },
+                body: { padding: 0, maxHeight: "calc(100vh - 220px)", overflowY: "auto" },
                 header: { padding: "12px 20px 10px", marginBottom: 0, borderBottom: "0.5px solid #f0f0f0" },
                 footer: { padding: "10px 20px", borderTop: "0.5px solid #f0f0f0", marginTop: 0 },
             }}

@@ -18,10 +18,11 @@ import {
 const { Title, Text, Paragraph } = Typography;
 const { useToken } = theme;
 
-// ─── Brand colours ────────────────────────────────────────────────────────────
-const BRAND = "#e8457a";
-const BRAND_SOFT = "#fff0f5";
-const BRAND_MID = "#fce4ed";
+// ─── Brand colours (Luxury Lotus Rose & Quartz Gray Corporate Theme) ────────────
+const BRAND = "#c83b6c";      // Elegant Luxury Lotus Rose
+const BRAND_SOFT = "#fdf2f8"; // Soft Rose Cream
+const BRAND_MID = "#fbcfe8";  // Rose Quartz Border Gray
+const BRAND_BLUE = "#3b82f6"; // Standard blue
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string; text: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "#b45309", bg: "#fffbeb", text: "#92400e" },
@@ -50,6 +51,18 @@ const buildFileUrl = (fileName: string) =>
 function getFileIcon(ext: string) {
     return EXT_ICON[ext.toUpperCase()] ?? <FileOutlined style={{ color: "#6b7280", fontSize: 22 }} />;
 }
+
+const decodeFileName = (fileName?: string): string => {
+    if (!fileName) return "";
+    let name = fileName.replace(/^\d{10,}-/, "");
+    const dotIdx = name.lastIndexOf(".");
+    const ext = dotIdx !== -1 ? name.slice(dotIdx) : "";
+    const base = dotIdx !== -1 ? name.slice(0, dotIdx) : name;
+    let decoded = base;
+    try { decoded = decodeURIComponent(base); } catch { decoded = base; }
+    decoded = decoded.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    return decoded + ext;
+};
 
 // ─── PIN styles ───────────────────────────────────────────────────────────────
 const PIN_BASE: React.CSSProperties = {
@@ -226,7 +239,7 @@ const PublicProcedureView = () => {
                     style={{
                         borderRadius: 20,
                         borderTop: `3px solid ${BRAND}`,
-                        boxShadow: "0 2px 24px rgba(232,69,122,0.10)",
+                        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
                         border: `1px solid ${BRAND_MID}`,
                     }}
                     styles={{ body: { padding: "40px 36px" } }}
@@ -246,10 +259,10 @@ const PublicProcedureView = () => {
                                 style={{ width: 38, height: 38, objectFit: "contain" }}
                             />
                         </div>
-                        <Title level={4} style={{ margin: "4px 0 0", color: "#374151" }}>
+                        <Title level={4} style={{ margin: "4px 0 0", color: "#1e293b", fontWeight: 700 }}>
                             Nhập mã PIN
                         </Title>
-                        <Text style={{ fontSize: 13, color: "#9ca3af", textAlign: "center" }}>
+                        <Text style={{ fontSize: 13, color: "#64748b", textAlign: "center", fontWeight: 500 }}>
                             Tài liệu được bảo vệ bằng mã PIN 6 số
                         </Text>
                     </Flex>
@@ -282,9 +295,9 @@ const PublicProcedureView = () => {
                         onClick={handleVerifyPin}
                         style={{
                             height: 48, borderRadius: 12, border: "none",
-                            background: `linear-gradient(135deg, #f472b6, ${BRAND})`,
+                            background: BRAND,
                             fontWeight: 600, fontSize: 15,
-                            boxShadow: `0 4px 14px rgba(232,69,122,0.30)`,
+                            boxShadow: `0 4px 12px rgba(15, 23, 42, 0.15)`,
                         }}
                     >
                         Xác nhận
@@ -308,66 +321,83 @@ const PublicProcedureView = () => {
     return (
         <div style={{
             minHeight: "100vh",
-            background: designToken.colorBgLayout,
+            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
             display: "flex", flexDirection: "column", alignItems: "center",
-            padding: "32px 16px 72px",
+            padding: "36px 16px 80px",
+            fontFamily: "Inter, system-ui, -apple-system, sans-serif"
         }}>
             <div style={{ width: "100%", maxWidth: 680 }}>
 
-                {/* ── Nav bar ── */}
-                <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+                {/* ── Brand & Verified Bar ── */}
+                <Flex justify="space-between" align="center" style={{ marginBottom: 20, padding: "0 4px" }}>
                     <Flex align="center" gap={10}>
-                        <img src="/logo/LOGOFINAL.png" alt="LOTUS HRM"
-                            style={{ width: 30, height: 30, objectFit: "contain" }} />
-                        <Text style={{
-                            fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
-                            textTransform: "uppercase", color: "#9ca3af",
+                        <div style={{
+                            width: 36, height: 36, borderRadius: "50%",
+                            background: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 4px 10px rgba(0,0,0,0.04)", border: "0.5px solid #e2e8f0"
                         }}>
-                            Lotus HRM
-                        </Text>
+                            <img src="/logo/LOGOFINAL.png" alt="LOTUS HRM"
+                                style={{ width: 22, height: 22, objectFit: "contain" }} />
+                        </div>
+                        <div>
+                            <div style={{
+                                fontSize: 13, fontWeight: 800, letterSpacing: "0.08em",
+                                textTransform: "uppercase", color: "#1e293b", lineHeight: 1.2
+                            }}>
+                                Lotus HRM
+                            </div>
+                            <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, letterSpacing: "0.05em" }}>
+                                HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP
+                            </div>
+                        </div>
                     </Flex>
                     <Flex align="center" gap={6} style={{
-                        padding: "4px 12px", borderRadius: 20,
-                        background: designToken.colorBgContainer,
-                        border: `1px solid ${designToken.colorBorderSecondary}`,
+                        padding: "5px 12px", borderRadius: 30,
+                        background: "#ecfdf5",
+                        border: "1.5px solid #a7f3d0",
+                        boxShadow: "0 2px 6px rgba(16, 185, 129, 0.05)"
                     }}>
-                        <SafetyCertificateOutlined style={{ fontSize: 11, color: "#9ca3af" }} />
-                        <Text style={{ fontSize: 11, color: "#9ca3af" }}>Tài liệu nội bộ</Text>
+                        <SafetyCertificateOutlined style={{ fontSize: 12, color: "#059669" }} />
+                        <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, letterSpacing: "0.03em" }}>XÁC THỰC</span>
                     </Flex>
                 </Flex>
 
-                {/* ── Header card ── */}
+                {/* ── Main Unified Document Passport Card ── */}
                 <div style={{
                     borderRadius: 16,
-                    marginBottom: 14,
                     overflow: "hidden",
-                    background: designToken.colorBgContainer,
-                    border: `1px solid ${designToken.colorBorderSecondary}`,
-                    boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.03), 0 8px 10px -6px rgba(15, 23, 42, 0.03)",
+                    marginBottom: 24
                 }}>
+                    {/* Top Accent Line */}
                     <div style={{
-                        height: 5,
-                        background: `linear-gradient(90deg, ${BRAND} 0%, #f472b6 100%)`,
+                        height: 4,
+                        background: BRAND,
                     }} />
 
-                    <div style={{ padding: "22px 24px 24px" }}>
-                        <Flex gap={6} wrap="wrap" style={{ marginBottom: 14 }}>
+                    {/* Header Title Section */}
+                    <div style={{ padding: "26px 28px 22px", borderBottom: "1px solid #e2e8f0" }}>
+                        <Flex gap={8} wrap="wrap" style={{ marginBottom: 14 }}>
                             <span style={{
                                 display: "inline-flex", alignItems: "center",
-                                padding: "3px 10px", borderRadius: 6,
-                                background: designToken.colorFillAlter,
-                                border: `1px solid ${designToken.colorBorderSecondary}`,
-                                fontSize: 12, fontWeight: 600,
-                                color: "#6b7280",
+                                padding: "4px 10px", borderRadius: 4,
+                                background: "#f8fafc",
+                                border: "1px solid #e2e8f0",
+                                fontSize: 11, fontWeight: 700,
+                                color: BRAND,
+                                letterSpacing: "0.03em"
                             }}>
-                                {data.procedureCode}
+                                MÃ: {data.procedureCode}
                             </span>
 
                             <span style={{
                                 display: "inline-flex", alignItems: "center",
-                                padding: "3px 10px", borderRadius: 6,
+                                padding: "4px 10px", borderRadius: 4,
                                 background: st.bg,
-                                fontSize: 12, fontWeight: 600,
+                                border: `1px solid ${st.color}30`,
+                                fontSize: 11, fontWeight: 700,
                                 color: st.text,
                             }}>
                                 <span style={{
@@ -375,208 +405,200 @@ const PublicProcedureView = () => {
                                     background: st.color,
                                     display: "inline-block", marginRight: 6,
                                 }} />
-                                {st.label}
+                                {st.label.toUpperCase()}
                             </span>
 
-                            {data.version && (
-                                <span style={{
-                                    display: "inline-flex", alignItems: "center",
-                                    padding: "3px 10px", borderRadius: 6,
-                                    background: designToken.colorFillAlter,
-                                    border: `1px solid ${designToken.colorBorderSecondary}`,
-                                    fontSize: 12, fontWeight: 600,
-                                    color: "#9ca3af",
-                                }}>
-                                    Phiên bản {data.version}
-                                </span>
-                            )}
+
                         </Flex>
 
                         <Title level={3} style={{
-                            margin: 0, lineHeight: 1.4,
-                            color: "#1f2937",
-                            fontWeight: 700,
+                            margin: 0, lineHeight: 1.45,
+                            color: "#1e293b",
+                            fontWeight: 800,
+                            fontSize: "22px",
+                            letterSpacing: "-0.015em"
                         }}>
                             {data.procedureName}
                         </Title>
                     </div>
-                </div>
 
-                {/* ── Info card ── */}
-                <div style={{
-                    borderRadius: 16, marginBottom: 14, overflow: "hidden",
-                    background: designToken.colorBgContainer,
-                    border: `1px solid ${designToken.colorBorderSecondary}`,
-                    boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-                }}>
-                    {data.departmentName && (
-                        <>
-                            <div style={{ padding: "18px 22px" }}>
-                                <MetaLabel icon={<BankOutlined />} text="Phòng ban" />
-                                <Text style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>
-                                    {data.departmentName}
-                                </Text>
-                            </div>
-                            <Divline token={designToken} />
-                        </>
-                    )}
-
-                    {data.sectionName && (
-                        <>
-                            <div style={{ padding: "18px 22px" }}>
-                                <MetaLabel icon={<TeamOutlined />} text="Bộ phận" />
-                                <Text style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>
-                                    {data.sectionName}
-                                </Text>
-                            </div>
-                            <Divline token={designToken} />
-                        </>
-                    )}
-
-                    <Row>
-                        {data.issuedDate && (
-                            <Col span={data.expiresAt ? 12 : 24}>
-                                <div style={{
-                                    padding: "18px 22px",
-                                    borderRight: data.expiresAt
-                                        ? `1px solid ${designToken.colorBorderSecondary}`
-                                        : "none",
-                                }}>
-                                    <MetaLabel icon={<CalendarOutlined />} text="Ngày ban hành" />
-                                    <Text style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>
-                                        {dayjs(data.issuedDate).format("DD/MM/YYYY")}
-                                    </Text>
-                                </div>
-                            </Col>
-                        )}
-                        {data.expiresAt && (
-                            <Col span={data.issuedDate ? 12 : 24}>
-                                <div style={{ padding: "18px 22px", background: "#fffbeb" }}>
-                                    <MetaLabel icon={<ClockCircleOutlined />} text="Link hết hạn" />
-                                    <Text style={{ fontSize: 15, fontWeight: 600, color: "#b45309" }}>
-                                        {dayjs(data.expiresAt).format("DD/MM/YYYY HH:mm")}
-                                    </Text>
-                                </div>
-                            </Col>
-                        )}
-                    </Row>
-                </div>
-
-                {/* ── Note card ── */}
-                {data.note && (
-                    <div style={{
-                        borderRadius: 16, marginBottom: 14, overflow: "hidden",
-                        background: designToken.colorBgContainer,
-                        border: `1px solid ${designToken.colorBorderSecondary}`,
-                        boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-                        padding: "18px 22px",
-                    }}>
-                        <MetaLabel text="Ghi chú" />
-                        <Paragraph style={{
-                            margin: 0, fontSize: 14, lineHeight: 1.7,
-                            color: "#6b7280",
-                        }}>
-                            {data.note}
-                        </Paragraph>
-                    </div>
-                )}
-
-                {/* ── Attachments card ── */}
-                {data.fileUrls && data.fileUrls.length > 0 && (
-                    <div style={{
-                        borderRadius: 16, marginBottom: 14, overflow: "hidden",
-                        background: designToken.colorBgContainer,
-                        border: `1px solid ${designToken.colorBorderSecondary}`,
-                        boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-                        padding: "18px 22px",
-                    }}>
-                        <MetaLabel
-                            icon={<PaperClipOutlined />}
-                            text={`Tài liệu đính kèm (${data.fileUrls.length})`}
-                        />
-                        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                            {data.fileUrls.map((fileName, idx) => {
-                                // ── FIX: dùng fileName thay vì url ──────────
-                                const fileUrl = buildFileUrl(fileName);
-                                const name = decodeURIComponent(fileName.split("/").pop() ?? `Tài liệu ${idx + 1}`);
-                                const ext = name.split(".").pop()?.toUpperCase() ?? "FILE";
-                                return (
-                                    <div key={idx} style={{
-                                        display: "flex", alignItems: "center",
-                                        justifyContent: "space-between",
-                                        background: designToken.colorFillAlter,
-                                        border: `1px solid ${designToken.colorBorderSecondary}`,
-                                        borderRadius: 12, padding: "12px 14px", gap: 10,
-                                    }}>
-                                        <Flex align="center" gap={12} style={{ minWidth: 0, flex: 1 }}>
-                                            <div style={{
-                                                width: 40, height: 40, borderRadius: 10,
-                                                background: designToken.colorBgContainer,
-                                                border: `1px solid ${designToken.colorBorderSecondary}`,
-                                                display: "flex", alignItems: "center", justifyContent: "center",
-                                                flexShrink: 0,
-                                            }}>
-                                                {getFileIcon(ext)}
-                                            </div>
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 13, fontWeight: 600,
-                                                        display: "block", color: "#374151",
-                                                    }}
-                                                    ellipsis={{ tooltip: name }}
-                                                >
-                                                    {name}
-                                                </Text>
-                                                <Text style={{ fontSize: 11, color: "#9ca3af" }}>
-                                                    {ext} · Tài liệu đính kèm
-                                                </Text>
-                                            </div>
-                                        </Flex>
-                                        <Flex gap={6} style={{ flexShrink: 0 }}>
-                                            <Button
-                                                size="small"
-                                                icon={<EyeOutlined />}
-                                                href={fileUrl}      // ← FIX
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                style={{
-                                                    borderRadius: 8, height: 32,
-                                                    fontSize: 12, fontWeight: 500,
-                                                }}
-                                            >
-                                                Xem
-                                            </Button>
-                                            {data.allowDownload && (
-                                                <Button
-                                                    size="small"
-                                                    icon={<DownloadOutlined />}
-                                                    href={fileUrl}  // ← FIX
-                                                    download={name}
-                                                    style={{
-                                                        borderRadius: 8, height: 32,
-                                                        fontSize: 12, fontWeight: 600,
-                                                        background: BRAND,
-                                                        color: "#fff",
-                                                        border: "none",
-                                                    }}
-                                                >
-                                                    Tải về
-                                                </Button>
-                                            )}
-                                        </Flex>
+                    {/* Unified Metadata Datasheet Grid */}
+                    <div style={{ background: "#f8fafc", padding: "26px 28px", borderBottom: "1px solid #e2e8f0" }}>
+                        <Row gutter={[24, 20]}>
+                            {data.departmentName && (
+                                <Col xs={24} sm={12}>
+                                    <div>
+                                        <MetaLabel icon={<BankOutlined style={{ color: "#64748b" }} />} text="Phòng ban ban hành" />
+                                        <Text style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>
+                                            {data.departmentName}
+                                        </Text>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+                                </Col>
+                            )}
 
-                {/* ── Footer ── */}
-                <Flex justify="center" align="center" gap={8} style={{ paddingTop: 12 }}>
-                    <img src="/logo/LOGOFINAL.png" alt="" style={{ width: 14, height: 14, objectFit: "contain", opacity: 0.4 }} />
-                    <Text style={{ fontSize: 11, color: "#c4c7ce", letterSpacing: "0.03em" }}>
-                        © Lotus HRM · Tài liệu nội bộ · Không sao chép hoặc phân phối trái phép
+                            {data.sectionName && (
+                                <Col xs={24} sm={12}>
+                                    <div>
+                                        <MetaLabel icon={<TeamOutlined style={{ color: "#64748b" }} />} text="Bộ phận / Phân nhóm" />
+                                        <Text style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>
+                                            {data.sectionName}
+                                        </Text>
+                                    </div>
+                                </Col>
+                            )}
+
+                            {data.issuedDate && (
+                                <Col xs={12} sm={12}>
+                                    <div>
+                                        <MetaLabel icon={<CalendarOutlined style={{ color: "#64748b" }} />} text="Ngày ban hành" />
+                                        <Text style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>
+                                            {dayjs(data.issuedDate).format("DD/MM/YYYY")}
+                                        </Text>
+                                    </div>
+                                </Col>
+                            )}
+
+                            {data.expiresAt && (
+                                <Col xs={12} sm={12}>
+                                    <div>
+                                        <MetaLabel icon={<ClockCircleOutlined style={{ color: "#d97706" }} />} text="Hiệu lực liên kết" />
+                                        <Text style={{ fontSize: 14, fontWeight: 700, color: "#b45309" }}>
+                                            {dayjs(data.expiresAt).format("DD/MM/YYYY HH:mm")}
+                                        </Text>
+                                    </div>
+                                </Col>
+                            )}
+                        </Row>
+                    </div>
+
+                    {/* Note Box Section */}
+                    {data.note && (
+                        <div style={{ padding: "20px 28px", borderBottom: "1px solid #e2e8f0" }}>
+                            <MetaLabel text="Ghi chú hệ thống" />
+                            <div style={{
+                                background: "#f8fafc",
+                                borderLeft: `3.5px solid ${BRAND}`,
+                                padding: "12px 16px",
+                                borderRadius: "0 6px 6px 0"
+                            }}>
+                                <Paragraph style={{
+                                    margin: 0, fontSize: 13, lineHeight: 1.65,
+                                    color: "#334155",
+                                    fontWeight: 500
+                                }}>
+                                    {data.note}
+                                </Paragraph>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Attachments Section */}
+                    {data.fileUrls && data.fileUrls.length > 0 && (
+                        <div style={{ padding: "26px 28px 28px" }}>
+                            <MetaLabel
+                                icon={<PaperClipOutlined style={{ color: "#475569" }} />}
+                                text={`Tài liệu đính kèm chính thức (${data.fileUrls.length})`}
+                            />
+                            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                                {data.fileUrls.map((fileName, idx) => {
+                                    const fileUrl = buildFileUrl(fileName);
+                                    const name = decodeFileName(fileName);
+                                    const ext = name.split(".").pop()?.toUpperCase() ?? "FILE";
+                                    return (
+                                        <div key={idx} style={{
+                                            display: "flex", alignItems: "center",
+                                            justifyContent: "space-between",
+                                            background: "#ffffff",
+                                            border: "1px solid #e2e8f0",
+                                            borderRadius: 8, padding: "14px 18px", gap: 12,
+                                            boxShadow: "0 1px 2px rgba(0,0,0,0.01)",
+                                            transition: "all 0.15s ease"
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            const el = e.currentTarget as HTMLDivElement;
+                                            el.style.borderColor = "#94a3b8";
+                                            el.style.background = "#f8fafc";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            const el = e.currentTarget as HTMLDivElement;
+                                            el.style.borderColor = "#e2e8f0";
+                                            el.style.background = "#ffffff";
+                                        }}
+                                        >
+                                            <Flex align="center" gap={12} style={{ minWidth: 0, flex: 1 }}>
+                                                <div style={{
+                                                    width: 40, height: 40, borderRadius: 8,
+                                                    background: "#f8fafc",
+                                                    border: "1px solid #e2e8f0",
+                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                    flexShrink: 0,
+                                                }}>
+                                                    {getFileIcon(ext)}
+                                                </div>
+                                                <div style={{ minWidth: 0, flex: 1 }}>
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 13, fontWeight: 700,
+                                                            display: "block", color: "#1e293b",
+                                                        }}
+                                                        ellipsis={{ tooltip: name }}
+                                                    >
+                                                        {name}
+                                                    </Text>
+                                                    <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+                                                        {ext} · Tài liệu lưu trữ hệ thống
+                                                    </Text>
+                                                </div>
+                                            </Flex>
+                                            <Flex gap={8} style={{ flexShrink: 0 }}>
+                                                <Button
+                                                    size="middle"
+                                                    icon={<EyeOutlined />}
+                                                    href={fileUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    style={{
+                                                        borderRadius: 6,
+                                                        fontSize: 12, fontWeight: 600,
+                                                        color: "#475569",
+                                                        borderColor: "#cbd5e1",
+                                                        height: 32
+                                                    }}
+                                                >
+                                                    Xem
+                                                </Button>
+                                                {data.allowDownload && (
+                                                    <Button
+                                                        size="middle"
+                                                        icon={<DownloadOutlined />}
+                                                        href={fileUrl}
+                                                        download={name}
+                                                        style={{
+                                                            borderRadius: 6,
+                                                            fontSize: 12, fontWeight: 600,
+                                                            background: BRAND,
+                                                            color: "#fff",
+                                                            border: "none",
+                                                            height: 32
+                                                        }}
+                                                    >
+                                                        Tải về
+                                                    </Button>
+                                                )}
+                                            </Flex>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── System Footer ── */}
+                <Flex justify="center" align="center" gap={6} style={{ paddingTop: 8, opacity: 0.5 }}>
+                    <img src="/logo/LOGOFINAL.png" alt="" style={{ width: 14, height: 14, objectFit: "contain" }} />
+                    <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 500, letterSpacing: "0.02em" }}>
+                        © Lotus HRM · Tài liệu nội bộ
                     </Text>
                 </Flex>
 

@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+/* TÙY CHỈNH THANH CUỘN (SCROLLBAR) TOÀN HỆ THỐNG - GIÚP BẢNG & TRANG SLEEK HƠN */
+/* Cho tất cả các trình duyệt (Firefox) - Mặc định thanh cuộn trong suốt hoàn toàn, chỉ hiện màu nhẹ khi hover, loại bỏ 100% giật layout */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+*:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 6px;  /* Chiều rộng scrollbar dọc */
+    height: 6px; /* Chiều cao scrollbar ngang */
+}
+
+::-webkit-scrollbar-track {
+    background: transparent; /* Đường ray trong suốt */
+}
+
+/* Mặc định ẩn hoàn toàn thanh trượt */
+::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+}
+
+/* Chỉ hiển thị thanh trượt khi người dùng di chuột vào vùng chứa cuộn (bảng, trang, v.v.) */
+*:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* Khi di chuột trực tiếp lên thanh trượt thì hiện rõ nét hơn */
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
 /* file: src/index.css hoặc globals.css */
 .no-scrollbar::-webkit-scrollbar {
     display: none;

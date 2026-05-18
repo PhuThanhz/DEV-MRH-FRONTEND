@@ -53,6 +53,8 @@ const STATUS_LABEL: Record<string, string> = {
 
 const DocumentPage = () => {
     const canShare = useAccess(ALL_PERMISSIONS.DOCUMENTS.CREATE_SHARE_TOKEN);
+    const canUpdate = useAccess(ALL_PERMISSIONS.DOCUMENTS.UPDATE);
+    const canToggle = useAccess(ALL_PERMISSIONS.DOCUMENTS.TOGGLE_ACTIVE);
 
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IDocument | null>(null);
@@ -263,18 +265,16 @@ const DocumentPage = () => {
             fixed: "right",
             render: (_, entity) => {
                 const menuItems = [
-                    {
+                    ...(canUpdate ? [{
                         key: "edit",
                         icon: <EditOutlined style={{ color: "#fa8c16" }} />,
                         label: (
-                            <Access permission={ALL_PERMISSIONS.DOCUMENTS.UPDATE} hideChildren>
-                                <span onClick={() => { setDataInit(entity); setOpenModal(true); }}>
-                                    Chỉnh sửa
-                                </span>
-                            </Access>
+                            <span onClick={() => { setDataInit(entity); setOpenModal(true); }}>
+                                Chỉnh sửa
+                            </span>
                         ),
-                    },
-                    {
+                    }] : []),
+                    ...(canToggle ? [{
                         key: "toggle",
                         icon: (
                             <PoweroffOutlined
@@ -282,18 +282,16 @@ const DocumentPage = () => {
                             />
                         ),
                         label: (
-                            <Access permission={ALL_PERMISSIONS.DOCUMENTS.TOGGLE_ACTIVE} hideChildren>
-                                <Popconfirm
-                                    title={(entity.active && entity.status !== "TERMINATED") ? "Xác nhận ngưng hoạt động văn bản này?" : "Xác nhận kích hoạt văn bản này?"}
-                                    okText="Xác nhận"
-                                    cancelText="Huỷ"
-                                    onConfirm={() => entity.id && toggleMutation.mutate(entity.id)}
-                                >
-                                    <span>{(entity.active && entity.status !== "TERMINATED") ? "Ngưng hoạt động" : "Kích hoạt"}</span>
-                                </Popconfirm>
-                            </Access>
+                            <Popconfirm
+                                title={(entity.active && entity.status !== "TERMINATED") ? "Xác nhận ngưng hoạt động văn bản này?" : "Xác nhận kích hoạt văn bản này?"}
+                                okText="Xác nhận"
+                                cancelText="Huỷ"
+                                onConfirm={() => entity.id && toggleMutation.mutate(entity.id)}
+                            >
+                                <span>{(entity.active && entity.status !== "TERMINATED") ? "Ngưng hoạt động" : "Kích hoạt"}</span>
+                            </Popconfirm>
                         ),
-                    },
+                    }] : []),
                     // 👇 chỉ hiện khi có quyền share
                     ...(canShare ? [{
                         key: "share",
@@ -317,9 +315,11 @@ const DocumentPage = () => {
                                 onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
                             />
                         </Access>
-                        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                            <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
-                        </Dropdown>
+                        {menuItems.length > 0 && (
+                            <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+                                <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+                            </Dropdown>
+                        )}
                     </Space>
                 );
             },
