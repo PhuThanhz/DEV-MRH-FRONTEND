@@ -28,7 +28,11 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const columns = buildProcedureColumns({
         type, companyId, departmentId,
         isAdmin: ctx.isAdmin,
-        canShare: ctx.canShare, // 👈 thêm
+        canShare: ctx.canShare,
+        canView: ctx.canView,
+        canUpdate: ctx.canUpdate,
+        canRevise: ctx.canRevise,
+        canDelete: ctx.canDelete,
         meta: ctx.meta,
         permission: ctx.permission,
         deleteMutation: ctx.deleteMutation,

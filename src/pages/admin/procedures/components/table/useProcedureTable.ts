@@ -91,6 +91,11 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         shareToken: ALL_PERMISSIONS.PROCEDURES.CREATE_SHARE_TOKEN,
     };
 
+    const canView = useAccess(permission.view);
+    const canUpdate = useAccess(permission.update);
+    const canRevise = useAccess(permission.revise);
+    const canDelete = useAccess(permission.delete);
+
     // ── Filter builder ──
     const buildFilters = (
         search: string,
@@ -184,6 +189,7 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         procedures, meta, isFetching, refetch, deleteMutation,
         permission, isAdmin,
         canShare, // 👈 thêm
+        canView, canUpdate, canRevise, canDelete,
         openQrModal, setOpenQrModal,
         openShareModal, setOpenShareModal,
         openPrintModal, setOpenPrintModal,

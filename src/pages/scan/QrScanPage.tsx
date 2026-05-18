@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Button, Typography, Tag, Space, Divider, theme, Flex, Card } from "antd";
+import { Button, Typography, Tag, Space, Divider, theme, Flex, Card, Slider } from "antd";
 import {
     QrcodeOutlined, ReloadOutlined, CheckCircleFilled,
     WarningFilled, BankOutlined, CalendarOutlined, TeamOutlined,
-    CameraOutlined, StopOutlined,
+    CameraOutlined, StopOutlined, BulbOutlined, ZoomInOutlined, ZoomOutOutlined,
 } from "@ant-design/icons";
 import axios from "@/config/axios-customize";
 import dayjs from "dayjs";
@@ -13,18 +13,20 @@ const { Title, Text } = Typography;
 const { useToken } = theme;
 
 const C = {
-    primary: "#1d4ed8",
-    primaryLight: "#3b82f6",
-    primarySoft: "#eff6ff",
-    primaryBorder: "#bfdbfe",
+    primary: "#be185d",
+    primaryLight: "#ec4899",
+    primarySoft: "#fdf2f8",
+    primaryBorder: "#fbcfe8",
     success: "#16a34a",
     successBg: "#f0fdf4",
     successBorder: "#bbf7d0",
     warning: "#d97706",
     warningBg: "#fffbeb",
     warningBorder: "#fde68a",
-    scan: "#60a5fa",
+    scan: "#f472b6",
 };
+
+const BOX = 220; // Hộp quét 220px rộng rãi, nhận diện siêu nhạy
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "warning" },
@@ -68,26 +70,42 @@ const ScanOverlay = () => (
         display: "flex", alignItems: "center", justifyContent: "center",
         pointerEvents: "none",
     }}>
-        <div style={{
-            position: "absolute", inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            maskImage: "radial-gradient(ellipse 220px 220px at 50% 50%, transparent 100px, black 101px)",
-            WebkitMaskImage: "radial-gradient(ellipse 220px 220px at 50% 50%, transparent 100px, black 101px)",
-        }} />
-        {[
-            { top: "calc(50% - 90px)", left: "calc(50% - 90px)", borderTop: `3px solid ${C.primary}`, borderLeft: `3px solid ${C.primary}`, borderRadius: "4px 0 0 0" },
-            { top: "calc(50% - 90px)", right: "calc(50% - 90px)", borderTop: `3px solid ${C.primary}`, borderRight: `3px solid ${C.primary}`, borderRadius: "0 4px 0 0" },
-            { bottom: "calc(50% - 90px)", left: "calc(50% - 90px)", borderBottom: `3px solid ${C.primary}`, borderLeft: `3px solid ${C.primary}`, borderRadius: "0 0 0 4px" },
-            { bottom: "calc(50% - 90px)", right: "calc(50% - 90px)", borderBottom: `3px solid ${C.primary}`, borderRight: `3px solid ${C.primary}`, borderRadius: "0 0 4px 0" },
-        ].map((s, i) => (
-            <div key={i} style={{ position: "absolute", width: 22, height: 22, ...s }} />
-        ))}
+        {/* Lớp phủ kính mờ (Frosted Glass) xung quanh tạo hiệu ứng Focus chuyên nghiệp */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, left: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, right: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
+
+        {/* Khung quét trung tâm viền mỏng màu thương hiệu cực tinh tế */}
         <div style={{
             position: "absolute",
-            left: "calc(50% - 90px)", width: 180, height: 2,
-            background: `linear-gradient(90deg, transparent, ${C.primary}, transparent)`,
-            animation: "scanline 2s ease-in-out infinite",
-            borderRadius: 2,
+            width: BOX,
+            height: BOX,
+            border: "1px solid rgba(236, 72, 153, 0.4)",
+            borderRadius: 16,
+            boxShadow: "0 0 25px rgba(236, 72, 153, 0.12), inset 0 0 15px rgba(236, 72, 153, 0.05)",
+        }} />
+
+        {/* 4 Góc khung quét Neon Hồng phát sáng */}
+        {[
+            { top: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, borderTop: `4px solid ${C.primaryLight}`, borderLeft: `4px solid ${C.primaryLight}`, borderRadius: "8px 0 0 0", boxShadow: "-2px -2px 8px rgba(236, 72, 153, 0.6)" },
+            { top: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, borderTop: `4px solid ${C.primaryLight}`, borderRight: `4px solid ${C.primaryLight}`, borderRadius: "0 8px 0 0", boxShadow: "2px -2px 8px rgba(236, 72, 153, 0.6)" },
+            { bottom: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, borderBottom: `4px solid ${C.primaryLight}`, borderLeft: `4px solid ${C.primaryLight}`, borderRadius: "0 0 0 8px", boxShadow: "-2px 2px 8px rgba(236, 72, 153, 0.6)" },
+            { bottom: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, borderBottom: `4px solid ${C.primaryLight}`, borderRight: `4px solid ${C.primaryLight}`, borderRadius: "0 0 8px 0", boxShadow: "2px 2px 8px rgba(236, 72, 153, 0.6)" },
+        ].map((s, i) => (
+            <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }} />
+        ))}
+
+        {/* Laser Quét màu Hồng Neon cực sang trọng */}
+        <div style={{
+            position: "absolute",
+            left: `calc(50% - ${BOX / 2}px)`,
+            width: BOX,
+            height: 4,
+            background: "linear-gradient(90deg, transparent, #ec4899, #f472b6, #ec4899, transparent)",
+            boxShadow: "0 0 12px #ec4899, 0 0 4px #ec4899",
+            animation: "scanline 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite",
+            borderRadius: "50%",
         }} />
     </div>
 );
@@ -112,6 +130,13 @@ const QrScanPage = () => {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
+    const [hasTorch, setHasTorch] = useState(false);
+    const [torchOn, setTorchOn] = useState(false);
+    const [hasZoom, setHasZoom] = useState(false);
+    const [zoomMin, setZoomMin] = useState(1);
+    const [zoomMax, setZoomMax] = useState(4);
+    const [zoomStep, setZoomStep] = useState(0.1);
+    const [zoomValue, setZoomValue] = useState(1);
 
     useEffect(() => {
         const t = setTimeout(() => setMounted(true), 50);
@@ -132,27 +157,155 @@ const QrScanPage = () => {
         };
     }, []);
 
+    const playSuccessFeedback = () => {
+        // 1. Web Audio API bíp âm thanh chất lượng cao
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(987.77, ctx.currentTime); // Tần số nốt B5 trong trẻo
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        } catch {}
+
+        // 2. Rung phản hồi haptic trên thiết bị di động
+        if (navigator.vibrate) {
+            try { navigator.vibrate(60); } catch {}
+        }
+    };
+
+
+
     const startScan = async () => {
         setError(null);
         setResult(null);
+        setHasTorch(false);
+        setTorchOn(false);
+        // Bật Zoom Slider theo mặc định (CSS Zoom luôn khả dụng trên mọi thiết bị)
+        setHasZoom(true);
+        setZoomMin(1);
+        setZoomMax(3);
+        setZoomStep(0.1);
+        setZoomValue(1);
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
+
+        const onSuccess = async (decodedText: string) => {
+            playSuccessFeedback();
+            await scanner.stop();
+            try { scanner.clear(); } catch { }
+            scannerRef.current = null;
+            setScanning(false);
+            setHasTorch(false);
+            setTorchOn(false);
+            setHasZoom(false);
+            setZoomValue(1);
+            handleScanSuccess(decodedText);
+        };
+
         try {
+            // Mở camera với cấu hình tương thích cao nhất, tăng FPS lên 25 và thu hẹp vùng quét (qrbox) để tối ưu CPU tối đa
             await scanner.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 200, height: 200 } },
-                async (decodedText) => {
-                    await scanner.stop();
-                    try { scanner.clear(); } catch { }
-                    scannerRef.current = null;
-                    setScanning(false);
-                    handleScanSuccess(decodedText);
+                { 
+                    fps: 25,
+                    qrbox: (width, height) => {
+                        const size = Math.min(width, height) * 0.7;
+                        return { width: size, height: size };
+                    }
                 },
+                onSuccess,
                 () => { }
             );
             setScanning(true);
+        } catch (err) {
+            try {
+                // Fallback nếu máy tính chỉ có camera trước (laptop/PC)
+                await scanner.start(
+                    { facingMode: "user" },
+                    { 
+                        fps: 25,
+                        qrbox: (width, height) => {
+                            const size = Math.min(width, height) * 0.7;
+                            return { width: size, height: size };
+                        }
+                    },
+                    onSuccess,
+                    () => { }
+                );
+                setScanning(true);
+            } catch (fallbackErr) {
+                setError("Không thể mở camera. Kiểm tra quyền truy cập camera.");
+            }
+        }
+
+        // Kiểm tra khả năng bật Đèn pin và Thu phóng của camera sau khi mở thành công
+        if (scannerRef.current) {
+            setTimeout(() => {
+                try {
+                    const capabilities = scanner.getRunningTrackCapabilities() as any;
+                    if (capabilities) {
+                        if (capabilities.torch) {
+                            setHasTorch(true);
+                        }
+                        if (capabilities.zoom) {
+                            // Nếu thiết bị có hardware zoom xịn, nâng cấp giới hạn tối đa theo phần cứng
+                            setZoomMin(capabilities.zoom.min || 1);
+                            setZoomMax(capabilities.zoom.max || 4);
+                            setZoomStep(capabilities.zoom.step || 0.1);
+                        }
+                    }
+                } catch {}
+            }, 800);
+        }
+    };
+
+    const handleZoomChange = async (value: number) => {
+        setZoomValue(value);
+        
+        // 1. Áp dụng Hardware zoom của camera phần cứng (nếu điện thoại hỗ trợ)
+        if (scannerRef.current) {
+            try {
+                const track = (scannerRef.current as any).getRunningTrack();
+                if (track) {
+                    await track.applyConstraints({
+                        advanced: [{ zoom: value } as any]
+                    });
+                }
+            } catch {}
+        }
+
+        // 2. Luôn áp dụng CSS digital zoom trên thẻ <video> để hoạt động hoàn hảo trên mọi thiết bị (Macbook, Laptop, PC, iOS/Android)
+        try {
+            const videoElem = document.querySelector("#qr-reader video") as HTMLVideoElement;
+            if (videoElem) {
+                videoElem.style.transform = `scale(${value})`;
+                videoElem.style.transformOrigin = "center center";
+                videoElem.style.transition = "transform 0.1s ease-out";
+            }
+        } catch {}
+    };
+
+    const toggleTorch = async () => {
+        if (!scannerRef.current) return;
+        const nextState = !torchOn;
+        try {
+            await scannerRef.current.applyVideoConstraints({
+                advanced: [{ torch: nextState } as any]
+            });
+            setTorchOn(nextState);
         } catch {
-            setError("Không thể mở camera. Kiểm tra quyền truy cập camera.");
+            try {
+                const track = (scannerRef.current as any).getRunningTrack();
+                await track.applyConstraints({
+                    advanced: [{ torch: nextState } as any]
+                });
+                setTorchOn(nextState);
+            } catch {}
         }
     };
 
@@ -160,23 +313,50 @@ const QrScanPage = () => {
     const stopScan = async () => {
         try {
             if (scannerRef.current) {
+                if (torchOn) {
+                    try {
+                        await scannerRef.current.applyVideoConstraints({
+                            advanced: [{ torch: false } as any]
+                        });
+                    } catch {}
+                }
                 await scannerRef.current.stop();
                 try { scannerRef.current.clear(); } catch { }
                 scannerRef.current = null;
             }
         } catch { }
         setScanning(false);
+        setHasTorch(false);
+        setTorchOn(false);
+        setHasZoom(false);
+        setZoomValue(1);
     };
 
     const handleScanSuccess = async (url: string) => {
         setLoading(true);
         try {
+            // Trường hợp 1: Quét mã liên kết chia sẻ công khai (Public view QR)
+            if (url.includes("/public/view/")) {
+                const token = url.split("/public/view/")[1]?.split("?")[0];
+                if (!token) throw new Error("Mã QR không hợp lệ");
+                window.open(`/public/view/${token}`, "_blank");
+                handleReset();
+                return;
+            }
+
+            // Trường hợp 2: Quét mã QR nội bộ hệ thống (Internal view QR)
             const t = url.split("/qr/")[1]?.split("?")[0];
-            if (!t) throw new Error("QR không hợp lệ");
+            if (!t) throw new Error("Mã QR không thuộc hệ thống hoặc không hợp lệ");
             const res = await axios.get(`/api/v1/procedures/qr/${t}`);
             setResult(res.data?.data);
         } catch (err: any) {
-            setError(err?.response?.data?.message ?? err.message ?? "Không có quyền xem quy trình này");
+            const serverMsg = err?.response?.data?.message ?? err.message ?? "Không có quyền xem quy trình này";
+            let userFriendlyMsg = serverMsg;
+            // Dịch thông báo kỹ thuật "endpoint" của backend thành thông báo thân thiện dễ hiểu với người dùng doanh nghiệp
+            if (serverMsg.includes("endpoint") || serverMsg.includes("quyền truy cập")) {
+                userFriendlyMsg = "Bạn không có quyền xem thông tin quy trình/văn bản này. Vui lòng liên hệ Quản trị viên để được cấp quyền.";
+            }
+            setError(userFriendlyMsg);
         } finally {
             setLoading(false);
         }
@@ -223,6 +403,17 @@ const QrScanPage = () => {
                 #qr-reader__scan_region { border: none !important; }
                 #qr-reader__scan_region img { display: none !important; }
                 #qr-reader__dashboard { display: none !important; }
+
+                /* Ẩn hoàn toàn khung nét đứt màu trắng mặc định của thư viện */
+                #qr-reader div[style*="border"],
+                #qr-reader .qr-shaded-region,
+                #qr-reader #qr-shaded-region,
+                #qr-reader div[id*="shaded-region"] {
+                    border: none !important;
+                }
+                #qr-reader div[id*="shaded-region"] > div {
+                    display: none !important;
+                }
             `}</style>
 
             <div style={{
@@ -250,10 +441,10 @@ const QrScanPage = () => {
                             <QrcodeOutlined style={{ fontSize: 26, color: "#fff" }} />
                         </div>
                         <Title level={4} style={{ margin: 0, letterSpacing: "-0.3px" }}>
-                            Quét mã QR quy trình
+                            Quét mã QR tài liệu
                         </Title>
-                        <Text type="secondary" style={{ fontSize: 13, textAlign: "center", maxWidth: 280 }}>
-                            Quét mã QR nội bộ để xem thông tin quy trình nhanh chóng
+                        <Text type="secondary" style={{ fontSize: 13, textAlign: "center", maxWidth: 300 }}>
+                            Quét mã QR nội bộ để xem thông tin tài liệu nhanh chóng
                         </Text>
                     </Flex>
 
@@ -268,10 +459,10 @@ const QrScanPage = () => {
                             }}
                             styles={{ body: { padding: 0 } }}
                         >
-                            <div style={{
-                                height: 3,
-                                background: `linear-gradient(90deg, ${C.primary}, ${C.primaryLight}, #a5b4fc)`,
-                            }} />
+                             <div style={{
+                                 height: 2,
+                                 background: `linear-gradient(90deg, ${C.primary}, ${C.primaryLight})`,
+                             }} />
 
                             <div style={{
                                 position: "relative",
@@ -290,6 +481,81 @@ const QrScanPage = () => {
                                     }}
                                 />
                                 {scanning && <ScanOverlay />}
+
+                                {scanning && hasTorch && (
+                                    <button
+                                        onClick={toggleTorch}
+                                        style={{
+                                            position: "absolute",
+                                            top: 16,
+                                            right: 16,
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: "50%",
+                                            background: torchOn ? "#eab308" : "rgba(15, 23, 42, 0.6)",
+                                            border: torchOn ? "1px solid #facc15" : "1px solid rgba(255, 255, 255, 0.2)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            cursor: "pointer",
+                                            color: "#fff",
+                                            boxShadow: torchOn ? "0 0 15px rgba(234, 179, 8, 0.6)" : "0 4px 12px rgba(0, 0, 0, 0.25)",
+                                            backdropFilter: "blur(6px)",
+                                            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                            zIndex: 10,
+                                            padding: 0
+                                        }}
+                                    >
+                                        <BulbOutlined style={{ fontSize: 18, color: torchOn ? "#fff" : "#e2e8f0" }} />
+                                    </button>
+                                )}
+
+                                {scanning && hasZoom && (
+                                    <div style={{
+                                        position: "absolute",
+                                        bottom: 16,
+                                        left: "50%",
+                                        transform: "translateX(-50%)",
+                                        width: "80%",
+                                        maxWidth: 240,
+                                        background: "rgba(15, 23, 42, 0.65)",
+                                        backdropFilter: "blur(8px)",
+                                        borderRadius: 20,
+                                        padding: "6px 14px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        zIndex: 10,
+                                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                                        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.35)",
+                                    }}>
+                                        <ZoomOutOutlined style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: 13 }} />
+                                        <Slider
+                                            min={zoomMin}
+                                            max={zoomMax}
+                                            step={zoomStep}
+                                            value={zoomValue}
+                                            onChange={handleZoomChange}
+                                            tooltip={{ formatter: (v) => `${Number(v).toFixed(1)}x` }}
+                                            style={{ flex: 1, margin: "0 4px" }}
+                                            styles={{
+                                                track: { background: "linear-gradient(90deg, #ec4899, #f472b6)" },
+                                                handle: { border: "2px solid #ec4899", background: "#fff", boxShadow: "0 0 8px #ec4899" }
+                                            }}
+                                        />
+                                        <ZoomInOutlined style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: 13 }} />
+                                        <span style={{
+                                            color: "#fff",
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            minWidth: 26,
+                                            textAlign: "right",
+                                            fontFamily: "monospace"
+                                        }}>
+                                            {zoomValue.toFixed(1)}x
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ padding: "20px 20px 24px" }}>
@@ -399,7 +665,7 @@ const QrScanPage = () => {
                                 }}>
                                     <WarningFilled style={{ fontSize: 26, color: C.warning }} />
                                 </div>
-                                <Text strong style={{ fontSize: 15 }}>Không thể xem quy trình</Text>
+                                <Text strong style={{ fontSize: 15 }}>Không thể xem thông tin</Text>
                                 <Text type="secondary" style={{ fontSize: 13, textAlign: "center" }}>{error}</Text>
                             </Flex>
                             <Button

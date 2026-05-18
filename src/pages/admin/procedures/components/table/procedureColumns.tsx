@@ -20,7 +20,11 @@ interface BuildColumnsParams {
     companyId?: number;
     departmentId?: number;
     isAdmin: boolean;
-    canShare: boolean; // 👈 thêm
+    canShare: boolean;
+    canView: boolean;
+    canUpdate: boolean;
+    canRevise: boolean;
+    canDelete: boolean;
     meta: { page?: number; pageSize?: number };
     permission: Record<string, any>;
     deleteMutation: { mutateAsync: (id: number) => Promise<any> };
@@ -36,7 +40,11 @@ export const buildProcedureColumns = ({
     companyId,
     departmentId,
     isAdmin,
-    canShare, // 👈 thêm
+    canShare,
+    canView,
+    canUpdate,
+    canRevise,
+    canDelete,
     meta,
     permission,
     deleteMutation,
@@ -234,19 +242,22 @@ export const buildProcedureColumns = ({
             width: type === "CONFIDENTIAL" ? 120 : 100,
             fixed: "right",
             render: (_, record) => {
-                const menuItems = [
-                    {
+                const menuItems = [];
+
+                if (canUpdate) {
+                    menuItems.push({
                         key: "edit",
                         icon: <EditOutlined style={{ color: "#fa8c16" }} />,
                         label: (
-                            <Access permission={permission.update} hideChildren>
-                                <Tooltip title="Chỉnh sửa">
-                                    <span onClick={() => onEdit(record)}>Chỉnh sửa</span>
-                                </Tooltip>
-                            </Access>
+                            <Tooltip title="Chỉnh sửa">
+                                <span onClick={() => onEdit(record)}>Chỉnh sửa</span>
+                            </Tooltip>
                         ),
-                    },
-                    {
+                    });
+                }
+
+                if (canRevise) {
+                    menuItems.push({
                         key: "revise",
                         icon: (
                             <Tag color="green" style={{ margin: 0, borderRadius: 6, padding: "0 6px", fontSize: 12 }}>
@@ -254,57 +265,60 @@ export const buildProcedureColumns = ({
                             </Tag>
                         ),
                         label: (
-                            <Access permission={permission.revise} hideChildren>
-                                <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
-                                    <span onClick={() => onRevise(record)}>
-                                        Tạo version v{(record.version ?? 1) + 1}
-                                    </span>
-                                </Tooltip>
-                            </Access>
+                            <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
+                                <span onClick={() => onRevise(record)}>
+                                    Tạo version v{(record.version ?? 1) + 1}
+                                </span>
+                            </Tooltip>
                         ),
-                    },
-                    // 👇 chỉ thêm vào menu khi có quyền
-                    ...(canShare ? [{
+                    });
+                }
+
+                if (canShare) {
+                    menuItems.push({
                         key: "share",
                         icon: <ShareAltOutlined style={{ color: "#f0226e" }} />,
                         label: (
                             <span onClick={() => onShare(record)}>Chia sẻ công khai</span>
                         ),
-                    }] : []),
-                    {
+                    });
+                }
+
+                if (canDelete) {
+                    menuItems.push({
                         key: "delete",
                         icon: <DeleteOutlined style={{ color: "red" }} />,
                         label: (
-                            <Access permission={permission.delete} hideChildren>
-                                <Popconfirm
-                                    title="Xác nhận xoá quy trình này?"
-                                    onConfirm={() => deleteMutation.mutateAsync(record.id!)}
-                                    okText="Xoá"
-                                    cancelText="Huỷ"
-                                    placement="topRight"
-                                >
-                                    <Tooltip title="Xóa">
-                                        <span style={{ color: "red" }}>Xóa</span>
-                                    </Tooltip>
-                                </Popconfirm>
-                            </Access>
+                            <Popconfirm
+                                title="Xác nhận xoá quy trình này?"
+                                onConfirm={() => deleteMutation.mutateAsync(record.id!)}
+                                okText="Xoá"
+                                cancelText="Huỷ"
+                                placement="topRight"
+                            >
+                                <Tooltip title="Xóa">
+                                    <span style={{ color: "red" }}>Xóa</span>
+                                </Tooltip>
+                            </Popconfirm>
                         ),
-                    },
-                ];
+                    });
+                }
 
                 return (
                     <Space size="small">
-                        <Access permission={permission.view} hideChildren>
+                        {canView && (
                             <Tooltip title="Xem chi tiết">
                                 <EyeOutlined
                                     style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                                     onClick={() => onView(record)}
                                 />
                             </Tooltip>
-                        </Access>
-                        <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                            <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
-                        </Dropdown>
+                        )}
+                        {menuItems.length > 0 && (
+                            <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+                                <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+                            </Dropdown>
+                        )}
                     </Space>
                 );
             },

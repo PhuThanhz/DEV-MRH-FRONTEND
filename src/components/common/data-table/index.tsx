@@ -48,7 +48,7 @@ const DataTable = <
                         }
                     }
                     params={params}
-                    request={dataSource ? undefined : request} search={false}
+                    request={request} search={false}
                     polling={polling}
                     toolBarRender={toolBarRender}
                     headerTitle={headerTitle}
