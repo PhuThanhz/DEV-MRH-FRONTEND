@@ -48,6 +48,10 @@ import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
 // ✅ DOCUMENTS
 import DocumentCategoryPage from "@/pages/admin/document-category";
 import DocumentPage from "@/pages/admin/document";
+// ✅ EVALUATION HQCV
+import TemplatePage from "@/pages/admin/evaluation/templates/TemplatePage";
+import TemplateDetailPage from "@/pages/admin/evaluation/templates/TemplateDetailPage";
+import PeriodPage from "@/pages/admin/evaluation/periods/PeriodPage";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -342,6 +346,37 @@ export default function App() {
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE}>
                 <DocumentPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        // ✅ EVALUATION HQCV
+        {
+          path: PATHS.ADMIN.EVALUATION_TEMPLATES,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}>
+                <TemplatePage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.EVALUATION_TEMPLATE_DETAIL,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}>
+                <TemplateDetailPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.EVALUATION_PERIODS,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS}>
+                <PeriodPage />
               </Access>
             </ProtectedRoute>
           ),

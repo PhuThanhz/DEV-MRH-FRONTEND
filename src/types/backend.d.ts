@@ -81,6 +81,9 @@ export interface IUser {
     updatedBy?: string;
     createdAt?: string;
     updatedAt?: string;
+    directManager?: IUser;
+    indirectManager?: IUser;
+    directManagerId?: string;
 }
 // ⭐ THÊM — dùng cho change password
 export interface IReqChangePasswordDTO {
@@ -1521,6 +1524,8 @@ export interface IEmployee {
     email: string;
     avatar?: string;
     active: boolean;
+    directManagerId?: string;
+    directManagerName?: string;
 
     createdAt?: string;
     updatedAt?: string;
@@ -1749,6 +1754,126 @@ export interface IDocumentRequest {
     fileUrls?: string[];
     note?: string;
     procedureType?: DocumentProcedureType;
+}
+
+/* ===================== EVALUATION HQCV ===================== */
+export interface IEvaluationTemplate {
+    id?: number;
+    name: string;
+    type: "STAFF" | "MANAGER";
+    description?: string;
+    status: "DRAFT" | "ACTIVE" | "ARCHIVED";
+    sections?: ITemplateSection[];
+    company?: ICompany | null;
+    jobTitle?: IJobTitle | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface ITemplateSection {
+    id?: number;
+    code: string;
+    name: string;
+    weight: number;
+    displayOrder: number;
+    criteria?: ITemplateCriteria[];
+}
+
+export interface ITemplateCriteria {
+    id?: number;
+    name: string;
+    measurementMethod?: string;
+    weight: number;
+    displayOrder: number;
+    subCriteria?: ITemplateCriteria[];
+    levels?: ITemplateCriteriaLevel[];
+}
+
+export interface ITemplateCriteriaLevel {
+    id?: number;
+    level: number;
+    description: string;
+}
+
+export interface IEvaluationPeriod {
+    id?: number;
+    name: string;
+    description?: string;
+    status: "DRAFT" | "ACTIVE" | "CLOSED";
+    employeeStartDate?: string;
+    employeeDeadline?: string;
+    managerDeadline?: string;
+    approvalDeadline?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface IEvaluationRecord {
+    id?: number;
+    periodId: number;
+    employee: IResEmployeeInfo;
+    directManager: IResEmployeeInfo;
+    indirectManager: IResEmployeeInfo;
+    template: IEvaluationTemplate;
+    status: "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "REVISION_NEEDED" | "PENDING_APPROVAL" | "COMPLETED";
+    employeeTotalScore?: number;
+    managerTotalScore?: number;
+    finalGrade?: string;
+    scores?: IResScoreDTO[];
+    comments?: IResCommentDTO[];
+    trainingPlans?: IResTrainingPlanDTO[];
+    
+    employeeSubmittedAt?: string;
+    managerSubmittedAt?: string;
+    approvedAt?: string;
+    completedAt?: string;
+}
+
+export interface IResEmployeeInfo {
+    id: string;
+    username: string;
+    fullName: string;
+    email: string;
+}
+
+export interface IResScoreDTO {
+    id: number;
+    criteriaId: number;
+    scoredBy: "EMPLOYEE" | "MANAGER";
+    score: number;
+    weightedScore: number;
+}
+
+export interface IResCommentDTO {
+    id: number;
+    commentType: "SELF_REVIEW" | "MANAGER_FEEDBACK" | "REJECTION_REASON";
+    content: string;
+    writtenBy: IResEmployeeInfo;
+    writtenAt: string;
+}
+
+export interface IResTrainingPlanDTO {
+    id: number;
+    trainingGroup: "PROFESSIONAL_SKILLS" | "SOFT_SKILLS" | "MANAGEMENT_SKILLS" | "OTHER";
+    content: string;
+    requirements?: string;
+    solution?: string;
+    completionTimeline?: string;
+}
+
+export interface IResNotificationDTO {
+    id: number;
+    notificationType: string;
+    content: string;
+    actionLink?: string;
+    read: boolean;
+    createdAt: string;
+}
+
+export interface IAddPeriodEmployeeReq {
+    employeeId: string;
+    directManagerId: string;
+    templateId: number;
 }
 
 

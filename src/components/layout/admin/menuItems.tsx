@@ -66,6 +66,11 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE);
 
+    const hasEvaluationGroup =
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS);
+
     const full = [
         // ===================== TỔNG QUAN =====================
         ...(checkPermission(ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY)
@@ -273,6 +278,31 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                     label: <Link to="/admin/documents">Văn bản</Link>,
                     key: "/admin/documents",
                     icon: <FileOutlined />,
+                },
+            ]
+            : []),
+
+        // ===================== ĐÁNH GIÁ HQCV =====================
+        ...(hasEvaluationGroup
+            ? [{ type: "group", label: "ĐÁNH GIÁ HQCV" }]
+            : []),
+
+        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES)
+            ? [
+                {
+                    label: <Link to="/admin/evaluation/templates">Mẫu đánh giá</Link>,
+                    key: "/admin/evaluation/templates",
+                    icon: <FileTextOutlined />,
+                },
+            ]
+            : []),
+        
+        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS)
+            ? [
+                {
+                    label: <Link to="/admin/evaluation/periods">Kỳ đánh giá</Link>,
+                    key: "/admin/evaluation/periods",
+                    icon: <OrderedListOutlined />,
                 },
             ]
             : []),

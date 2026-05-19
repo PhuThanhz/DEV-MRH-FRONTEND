@@ -63,6 +63,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const modalWidth = useModalWidth();
 
     const [selectedRole, setSelectedRole] = useState<IRoleSelect | null>(null);
+    const [selectedDirectManager, setSelectedDirectManager] = useState<any | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(0);
@@ -86,6 +87,14 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 key: dataInit.role?.id ?? "",
             };
             setSelectedRole(roleItem);
+
+            const directManagerItem = dataInit.directManager?.id ? {
+                label: `${dataInit.directManager.name} (${dataInit.directManager.email})`,
+                value: dataInit.directManager.id,
+                key: dataInit.directManager.id
+            } : null;
+            setSelectedDirectManager(directManagerItem);
+
             setPreviewUrl(
                 dataInit.avatar ? `${backendURL}/storage/avatar/${dataInit.avatar}` : ""
             );
@@ -94,6 +103,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 name: dataInit.name,
                 active: dataInit.active ?? true,
                 role: roleItem,
+                directManagerId: directManagerItem,
                 employeeCode: dataInit.userInfo?.employeeCode,
                 phone: dataInit.userInfo?.phone,
                 dateOfBirth: dataInit.userInfo?.dateOfBirth ? dayjs(dataInit.userInfo.dateOfBirth) : null,
@@ -107,6 +117,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
         } else {
             form.resetFields();
             setSelectedRole(null);
+            setSelectedDirectManager(null);
             setAvatarFile(null);
             setPreviewUrl("");
             setCurrentStep(0);
@@ -124,6 +135,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const handleReset = () => {
         form.resetFields();
         setSelectedRole(null);
+        setSelectedDirectManager(null);
         setAvatarFile(null);
         setPreviewUrl("");
         setCurrentStep(0);
@@ -157,11 +169,19 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 if (uploadRes?.data?.fileName) avatarFileName = uploadRes.data.fileName;
             }
 
+            const getManagerId = (val: any) => {
+                if (!val) return null;
+                if (typeof val === "object") return val.value || null;
+                return val;
+            };
+            const dmId = getManagerId(values.directManagerId);
+
             const payload: any = isEdit
                 ? {
                     id: dataInit!.id,
                     name, email, avatar: avatarFileName, active,
                     roleId: role?.value,
+                    directManagerId: dmId,
                     employeeCode: values.employeeCode,
                     phone: values.phone,
                     dateOfBirth: values.dateOfBirth?.toISOString(),
@@ -173,6 +193,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     name, email, avatar: avatarFileName, active,
                     ...(password && password.trim() !== "" ? { password } : {}),
                     roleId: role?.value,
+                    directManagerId: dmId,
                     employeeCode: values.employeeCode,
                     phone: values.phone,
                     dateOfBirth: values.dateOfBirth?.toISOString(),
@@ -480,9 +501,12 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                             previewUrl={previewUrl}
                             selectedRole={selectedRole}
                             setSelectedRole={setSelectedRole}
+                            selectedDirectManager={selectedDirectManager}
+                            setSelectedDirectManager={setSelectedDirectManager}
                             onFileSelect={handleFileSelect}
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
+                            activeUserId={activeUserId}
                         />
                     )}
                     {currentStep === 1 && (

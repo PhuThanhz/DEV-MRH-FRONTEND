@@ -1,6 +1,6 @@
 import {
     Modal, Button, Tag, Drawer, Timeline,
-    Space, Typography, Avatar, Image, Spin,
+    Space, Typography, Avatar, Image, Spin, Tooltip,
 } from "antd";
 import {
     FileTextOutlined, HistoryOutlined, UserOutlined,
@@ -137,7 +137,7 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                     style={{ borderRadius: 3, display: "block" }}
                 />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "center", gap: 6, flex: isMobile ? 1 : undefined, minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "center", gap: 6, flex: isMobile ? 1 : undefined, minWidth: 0, width: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <QrcodeOutlined style={{ color: "#1677ff", fontSize: 11 }} />
                     <Text style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -145,7 +145,11 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                     </Text>
                 </div>
                 {procedure.procedureCode && (
-                    <Tag color="purple" style={TAG_STYLE}>{procedure.procedureCode}</Tag>
+                    <Tooltip title={procedure.procedureCode}>
+                        <Tag color="purple" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", textAlign: "center" }}>
+                            {procedure.procedureCode}
+                        </Tag>
+                    </Tooltip>
                 )}
                 <Text type="secondary" style={{ fontSize: 11, textAlign: isMobile ? "left" : "center", lineHeight: 1.4, color: "#9ca3af" }}>
                     Quét để truy cập nhanh quy trình
@@ -188,9 +192,15 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                     </Tag>
                 </Field>
                 <Field label="Mã quy trình">
-                    {procedure?.procedureCode
-                        ? <Tag color="purple" style={TAG_STYLE}>{procedure.procedureCode}</Tag>
-                        : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
+                    {procedure?.procedureCode ? (
+                        <Tooltip title={procedure.procedureCode}>
+                            <Tag color="purple" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
+                                {procedure.procedureCode}
+                            </Tag>
+                        </Tooltip>
+                    ) : (
+                        <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>
+                    )}
                 </Field>
             </div>
 

@@ -24,7 +24,9 @@ import {
     ArrowRightOutlined,
     UserOutlined,
     CameraOutlined,
+    CloseOutlined,
 } from "@ant-design/icons";
+import ManagerPickerModal from "@/pages/admin/user/components/ManagerPickerModal";
 
 import type { IEmployee } from "@/types/backend";
 import {
@@ -97,6 +99,8 @@ const ModalEmployee = ({
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(0);
     const [createdUserId, setCreatedUserId] = useState<string | null>(null);
+    const [showManagerModal, setShowManagerModal] = useState(false);
+    const [selectedManager, setSelectedManager] = useState<{ label: string; value: string } | null>(null);
 
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
@@ -119,6 +123,14 @@ const ModalEmployee = ({
                     ? `${backendURL}/api/v1/files?fileName=${dataInit.avatar}&folder=avatar`
                     : ""
             );
+            if (dataInit.directManagerId && dataInit.directManagerName) {
+                setSelectedManager({
+                    value: dataInit.directManagerId,
+                    label: dataInit.directManagerName,
+                });
+            } else {
+                setSelectedManager(null);
+            }
             form.setFieldsValue({
                 name: dataInit.name,
                 email: dataInit.email,
@@ -138,6 +150,7 @@ const ModalEmployee = ({
                 contractExpireDate: dataInit.userInfo?.contractExpireDate
                     ? dayjs(dataInit.userInfo.contractExpireDate)
                     : null,
+                directManagerId: dataInit.directManagerId,
             });
             setCurrentStep(0);
             setCreatedUserId((dataInit.id));
@@ -147,6 +160,7 @@ const ModalEmployee = ({
             setPreviewUrl("");
             setCurrentStep(0);
             setCreatedUserId(null);
+            setSelectedManager(null);
         }
     }, [dataInit, form]);
 
@@ -172,6 +186,7 @@ const ModalEmployee = ({
         setPreviewUrl("");
         setCurrentStep(0);
         setCreatedUserId(null);
+        setSelectedManager(null);
         setDataInit(null);
         setOpenModal(false);
     };
@@ -185,6 +200,13 @@ const ModalEmployee = ({
                 if (uploadRes?.data?.fileName) avatarFileName = uploadRes.data.fileName;
             }
 
+            const getManagerId = (val: any) => {
+                if (!val) return "";
+                if (typeof val === "object") return val.value || "";
+                return val;
+            };
+            const dmId = getManagerId(values.directManagerId);
+
             const sharedFields = {
                 employeeCode: values.employeeCode || undefined,
                 phone: values.phone || undefined,
@@ -193,6 +215,7 @@ const ModalEmployee = ({
                 startDate: values.startDate?.toISOString(),
                 contractSignDate: values.contractSignDate?.toISOString(),
                 contractExpireDate: values.contractExpireDate?.toISOString(),
+                directManagerId: dmId || undefined,
             };
 
             if (isEdit) {
@@ -518,6 +541,52 @@ const ModalEmployee = ({
                                 </Col>
                             </Row>
 
+                            <Row gutter={10}>
+                                <Col xs={24} sm={24} md={24}>
+                                    <Form.Item name="directManagerId" label="Quản lý trực tiếp">
+                                        <div
+                                            onClick={() => setShowManagerModal(true)}
+                                            style={{
+                                                background: "#fff",
+                                                border: "1px solid #d9d9d9",
+                                                borderRadius: "8px",
+                                                padding: "0px 16px",
+                                                height: "34px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                cursor: "pointer",
+                                                fontSize: 13,
+                                                color: selectedManager ? "#111827" : "#9ca3af",
+                                                transition: "all 0.2s",
+                                                position: "relative"
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = ACCENT}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = "#d9d9d9"}
+                                        >
+                                            <span style={{ fontWeight: selectedManager ? 500 : 400 }}>
+                                                {selectedManager ? selectedManager.label.split(" - [")[0] : "Chọn người quản lý trực tiếp"}
+                                            </span>
+                                            {selectedManager && (
+                                                <CloseOutlined
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedManager(null);
+                                                        form.setFieldsValue({ directManagerId: undefined });
+                                                    }}
+                                                    style={{
+                                                        position: "absolute",
+                                                        right: 12,
+                                                        color: "#9ca3af",
+                                                        fontSize: 12,
+                                                        cursor: "pointer"
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+
                         </>
                     )}
 
@@ -567,6 +636,16 @@ const ModalEmployee = ({
                     </Space>
                 </div>
             </ModalForm>
+            <ManagerPickerModal
+                open={showManagerModal}
+                onClose={() => setShowManagerModal(false)}
+                onSelect={(mgr: any) => {
+                    const deptOrComp = [mgr.departmentName, mgr.companyName].filter(Boolean).join(" - ");
+                    const label = `${mgr.name}${deptOrComp ? ` - [${deptOrComp}]` : ""}`;
+                    setSelectedManager({ label, value: mgr.id });
+                    form.setFieldsValue({ directManagerId: mgr.id });
+                }}
+            />
         </ConfigProvider>
     );
 };

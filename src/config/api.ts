@@ -1969,3 +1969,160 @@ export const callSendDocumentShareEmail = (tokenId: number, email: string) =>
         `/api/v1/documents/share-tokens/${tokenId}/send-email`,
         { email }
     );
+
+/* ===================== EVALUATION HQCV ===================== */
+
+// TEMPLATES
+export const callFetchEvaluationTemplates = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<any>>>(`/api/v1/evaluation/templates?${query}`);
+
+export const callFetchActiveEvaluationTemplates = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/templates/active`);
+
+export const callFetchEvaluationTemplateById = (id: number) =>
+    axios.get<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}`);
+
+export const callCreateEvaluationTemplate = (data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/templates`, data);
+
+export const callUpdateEvaluationTemplate = (id: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}`, data);
+
+export const callPublishEvaluationTemplate = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}/publish`);
+
+export const callArchiveEvaluationTemplate = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}/archive`);
+
+// SECTIONS
+export const callCreateTemplateSection = (templateId: number, data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/templates/${templateId}/sections`, data);
+
+export const callUpdateTemplateSection = (sectionId: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/evaluation/sections/${sectionId}`, data);
+
+export const callDeleteTemplateSection = (sectionId: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/evaluation/sections/${sectionId}`);
+
+export const callFetchTemplateSections = (templateId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/templates/${templateId}/sections`);
+
+// CRITERIA
+export const callCreateTemplateCriteria = (sectionId: number, data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/sections/${sectionId}/criteria`, data);
+
+export const callUpdateTemplateCriteria = (criteriaId: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/evaluation/criteria/${criteriaId}`, data);
+
+export const callDeleteTemplateCriteria = (criteriaId: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/evaluation/criteria/${criteriaId}`);
+
+// LEVELS
+export const callCreateCriteriaLevel = (criteriaId: number, data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`, data);
+
+export const callUpdateCriteriaLevel = (levelId: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/evaluation/levels/${levelId}`, data);
+
+export const callFetchCriteriaLevels = (criteriaId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`);
+
+// PERIODS
+export const callFetchEvaluationPeriods = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<any>>>(`/api/v1/evaluation/periods?${query}`);
+
+export const callFetchEvaluationPeriodById = (id: number) =>
+    axios.get<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}`);
+
+export const callCreateEvaluationPeriod = (data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods`, data);
+
+export const callUpdateEvaluationPeriod = (id: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}`, data);
+
+export const callAddTemplateToPeriod = (periodId: number, templateId: number, applyToRole: string) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/templates`, { templateId, applyToRole });
+
+export const callFetchTemplatesInPeriod = (periodId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/periods/${periodId}/templates`);
+
+export const callAddEmployeeToPeriod = (periodId: number, data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/employees`, data);
+
+export const callCancelPeriodEmployee = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/period-employees/${id}/cancel`);
+
+export const callFetchEmployeesInPeriod = (periodId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/periods/${periodId}/employees`);
+
+export const callActivateEvaluationPeriod = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}/activate`);
+
+export const callCloseEvaluationPeriod = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}/close`);
+
+// RECORDS
+export const callFetchEvaluationRecordById = (id: number) =>
+    axios.get<IBackendRes<any>>(`/api/v1/evaluation/records/${id}`);
+
+export const callFetchMyEvaluationRecords = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/my-records`);
+
+export const callFetchManagerRecordsByPeriod = (periodId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);
+
+export const callFetchPendingManagerRecords = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/pending`);
+
+export const callFetchApprovalRecordsByPeriod = (periodId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/periods/${periodId}/records`);
+
+export const callFetchPendingApprovalRecords = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/pending`);
+
+// WORKFLOW ACTIONS
+export const callEmployeeSaveScore = (recordId: number, criteriaId: number, score: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-scores`, { criteriaId, score });
+
+export const callEmployeeSubmitRecord = (recordId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-submit`);
+
+export const callEmployeeSaveSelfReview = (recordId: number, content: string) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/self-review`, { content });
+
+export const callManagerSaveScore = (recordId: number, criteriaId: number, score: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-scores`, { criteriaId, score });
+
+export const callManagerSubmitRecord = (recordId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-submit`);
+
+export const callManagerSaveFeedback = (recordId: number, content: string) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-feedback`, { content });
+
+export const callSaveTrainingPlan = (recordId: number, data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/training-plans`, data);
+
+export const callApproveRecord = (recordId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/approve`);
+
+export const callRejectRecord = (recordId: number, reason: string) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/reject`, { reason });
+
+export const callFetchRecordHistory = (recordId: number) =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/records/${recordId}/history`);
+
+// NOTIFICATIONS
+export const callFetchEvaluationNotifications = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/notifications`);
+
+export const callFetchUnreadEvaluationNotifications = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/notifications/unread`);
+
+export const callCountUnreadEvaluationNotifications = () =>
+    axios.get<IBackendRes<any>>(`/api/v1/evaluation/notifications/unread/count`);
+
+export const callReadEvaluationNotification = (id: number) =>
+    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/notifications/${id}/read`);
+
+export const callReadAllEvaluationNotifications = () =>
+    axios.patch<IBackendRes<void>>(`/api/v1/evaluation/notifications/read-all`);

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
     ProForm,
     ProFormText,
@@ -5,11 +6,13 @@ import {
     ProFormDatePicker,
     ProFormSelect,
 } from "@ant-design/pro-components";
-import { Col, Row, Upload, Avatar, Typography, Tabs } from "antd";
-import { CameraOutlined, UserOutlined, IdcardOutlined, LockOutlined } from "@ant-design/icons";
+import { Col, Row, Upload, Avatar, Typography, Tabs, Form } from "antd";
+import { CameraOutlined, UserOutlined, IdcardOutlined, LockOutlined, CloseOutlined } from "@ant-design/icons";
 
 import { DebounceSelect } from "@/components/common/debouce.select";
 import { callFetchRole } from "@/config/api";
+import ManagerPickerModal from "./ManagerPickerModal";
+import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 
 const { Text } = Typography;
 
@@ -25,9 +28,12 @@ interface IProps {
     previewUrl: string;
     selectedRole: IRoleSelect | null;
     setSelectedRole: (v: IRoleSelect | null) => void;
+    selectedDirectManager: any | null;
+    setSelectedDirectManager: (v: any | null) => void;
     onFileSelect: (file: File) => false;
     activeTab: string;
     setActiveTab: (tab: string) => void;
+    activeUserId?: string;
 }
 
 const ACCENT = "#f5317f";
@@ -42,10 +48,19 @@ const UserInfoForm = ({
     previewUrl,
     selectedRole,
     setSelectedRole,
+    selectedDirectManager,
+    setSelectedDirectManager,
     onFileSelect,
     activeTab,
     setActiveTab,
+    activeUserId,
 }: IProps) => {
+    const form = Form.useFormInstance();
+    const [managerPickerOpen, setManagerPickerOpen] = useState(false);
+
+    const { data: positions = [] } = useUserPositionsQuery(activeUserId);
+    const activePositions = positions.filter((p: any) => p.active === true);
+    const displayPositions = activePositions.length > 0 ? activePositions : (positions.length > 0 ? [positions[0]] : []);
 
     async function fetchRoleList(name: string): Promise<IRoleSelect[]> {
         const res = await callFetchRole(`page=1&size=100&name=/${name}/i`);
@@ -268,6 +283,115 @@ const UserInfoForm = ({
                     }}
                 />
             </Col>
+
+            <Col lg={12} md={12} sm={24} xs={24}>
+                <ProForm.Item
+                    name="directManagerId"
+                    label={<span style={labelStyle}>Quản lý trực tiếp</span>}
+                >
+                    <div
+                        onClick={() => setManagerPickerOpen(true)}
+                        style={{
+                            background: "#fff",
+                            border: "1px solid #d9d9d9",
+                            borderRadius: "8px",
+                            padding: "10px 16px",
+                            height: "42px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            fontSize: 14,
+                            fontWeight: 500,
+                            color: selectedDirectManager ? "#111827" : "#9ca3af",
+                            transition: "all 0.2s",
+                            position: "relative"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = ACCENT}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = "#d9d9d9"}
+                    >
+                        <span>
+                            {selectedDirectManager ? selectedDirectManager.label.split(" - [")[0] : "Chọn quản lý trực tiếp"}
+                        </span>
+                        {selectedDirectManager && (
+                            <CloseOutlined
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedDirectManager(null);
+                                    form.setFieldsValue({ directManagerId: undefined });
+                                }}
+                                style={{
+                                    position: "absolute",
+                                    right: 12,
+                                    color: "#9ca3af",
+                                    fontSize: 12,
+                                    cursor: "pointer"
+                                }}
+                            />
+                        )}
+                    </div>
+                </ProForm.Item>
+            </Col>
+
+            <Col span={24} style={{ marginTop: 8 }}>
+                <Form.Item label={<span style={labelStyle}>Chức danh & Đơn vị công tác</span>}>
+                    {displayPositions.length === 0 ? (
+                        <div style={{
+                            background: "#fafafa",
+                            border: "1px dashed #d9d9d9",
+                            borderRadius: "8px",
+                            padding: "14px 20px",
+                            minHeight: "48px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 14,
+                            color: TEXT_MUTED,
+                            textAlign: "center"
+                        }}>
+                            Chưa gán chức danh (Bạn có thể cấu hình ở bước "Gán chức danh" tiếp theo)
+                        </div>
+                    ) : (
+                        displayPositions.map((pos: any, idx: number) => {
+                            const jobTitle = pos.jobTitle?.nameVi || "Chưa gán";
+                            const companyName = pos.company?.name || "";
+                            const deptName = pos.department?.name || "";
+                            const secName = pos.section?.name || "";
+                            const unit = [companyName, deptName ? `${deptName}${secName ? ` (${secName})` : ""}` : secName].filter(Boolean).join(" / ") || "Chưa gán";
+                            const sourceLabel = pos.source === "COMPANY" ? "Cấp Công ty" : pos.source === "DEPARTMENT" ? "Cấp Phòng ban" : "Cấp Bộ phận";
+
+                            return (
+                                <div key={pos.id || idx} style={{
+                                    background: "#fafafa",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "10px",
+                                    padding: "12px 16px",
+                                    marginBottom: idx < displayPositions.length - 1 ? 8 : 0,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 4
+                                }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <span style={{ fontWeight: 600, color: "#111827", fontSize: 14 }}>{jobTitle}</span>
+                                        <span style={{
+                                            fontSize: 11,
+                                            fontWeight: 500,
+                                            padding: "2px 8px",
+                                            borderRadius: "12px",
+                                            background: pos.source === "COMPANY" ? "#e6f4ff" : pos.source === "DEPARTMENT" ? "#f6ffed" : "#fff7e6",
+                                            color: pos.source === "COMPANY" ? "#0958d9" : pos.source === "DEPARTMENT" ? "#389e0d" : "#d46b08",
+                                            border: `1px solid ${pos.source === "COMPANY" ? "#91caff" : pos.source === "DEPARTMENT" ? "#b7eb8f" : "#ffd591"}`
+                                        }}>
+                                            {sourceLabel}
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: 13, color: "#6b7280" }}>{unit}</span>
+                                </div>
+                            );
+                        })
+                    )}
+                </Form.Item>
+            </Col>
         </Row>
     );
 
@@ -418,6 +542,19 @@ const UserInfoForm = ({
                     ]}
                 />
             </div>
+            <ManagerPickerModal
+                open={managerPickerOpen}
+                onClose={() => setManagerPickerOpen(false)}
+                title="Danh sách Quản lý trực tiếp"
+                description="Chọn người dùng làm Quản lý trực tiếp của nhân viên"
+                onSelect={(mgr: any) => {
+                    const deptOrComp = [mgr.departmentName, mgr.companyName].filter(Boolean).join(" - ");
+                    const label = `${mgr.name}${deptOrComp ? ` - [${deptOrComp}]` : ""}`;
+                    const newValue = { label, value: mgr.id };
+                    setSelectedDirectManager(newValue);
+                    form.setFieldsValue({ directManagerId: newValue });
+                }}
+            />
         </>
     );
 };

@@ -1,5 +1,5 @@
 import {
-    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin, Table, Input, Progress,
+    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin, Table, Input, Progress, Tooltip,
 } from "antd";
 import {
     FileTextOutlined, UserOutlined, ApartmentOutlined,
@@ -160,7 +160,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     style={{ borderRadius: 3, display: "block" }}
                 />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "center", gap: 6, flex: isMobile ? 1 : undefined, minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "center", gap: 6, flex: isMobile ? 1 : undefined, minWidth: 0, width: "100%" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <QrcodeOutlined style={{ color: "#1677ff", fontSize: 11 }} />
                     <Text style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -168,7 +168,11 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     </Text>
                 </div>
                 {data.documentCode && (
-                    <Tag color="purple" style={TAG_STYLE}>{data.documentCode}</Tag>
+                    <Tooltip title={data.documentCode}>
+                        <Tag color="purple" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block", textAlign: "center" }}>
+                            {data.documentCode}
+                        </Tag>
+                    </Tooltip>
                 )}
                 <Text type="secondary" style={{ fontSize: 11, textAlign: isMobile ? "left" : "center", lineHeight: 1.4, color: "#9ca3af" }}>
                     Quét để truy cập nhanh văn bản
@@ -210,9 +214,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     <Tag color={status.color} style={TAG_STYLE}>{status.label}</Tag>
                 </Field>
                 <Field label="Mã văn bản">
-                    {data.documentCode
-                        ? <Tag color="blue" style={TAG_STYLE}>{data.documentCode}</Tag>
-                        : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
+                    {data.documentCode ? (
+                        <Tooltip title={data.documentCode}>
+                            <Tag color="blue" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
+                                {data.documentCode}
+                            </Tag>
+                        </Tooltip>
+                    ) : (
+                        <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>
+                    )}
                 </Field>
                 <Field label="Kích hoạt">
                     {data.active
@@ -224,9 +234,15 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             {/* Row 2: Loại văn bản, Ký hiệu, Công ty, Phòng ban, Bộ phận, Ngày ban hành */}
             <div style={{ display: "grid", gridTemplateColumns: col3, gap: "10px 16px", marginBottom: 12 }}>
                 <Field label="Loại văn bản">
-                    {data.category?.categoryName
-                        ? <Tag color="purple" style={TAG_STYLE}>{data.category.categoryName}</Tag>
-                        : <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>}
+                    {data.category?.categoryName ? (
+                        <Tooltip title={data.category.categoryName}>
+                            <Tag color="purple" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
+                                {data.category.categoryName}
+                            </Tag>
+                        </Tooltip>
+                    ) : (
+                        <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>
+                    )}
                 </Field>
                 <Field label="Ký hiệu">
                     {data.category?.symbol

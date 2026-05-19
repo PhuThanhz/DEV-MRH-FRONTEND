@@ -71,14 +71,21 @@ export interface InfoRowProps {
     highlight?: boolean;
     /** Ẩn border dưới (dòng cuối mỗi section) */
     noBorder?: boolean;
+    span?: number;
+    style?: React.CSSProperties;
 }
 
-export const InfoRow = ({ icon, label, value, highlight = false, noBorder = false }: InfoRowProps) => (
-    <div style={{
-        display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "9px 0",
-        borderBottom: noBorder ? "none" : `1px solid ${DETAIL_BORDER}`,
-    }}>
+export const InfoRow = ({ icon, label, value, highlight = false, noBorder = false, span, style }: InfoRowProps) => (
+    <div 
+        className={`detail-modal-info-row ${span === 2 ? "info-row-span-2" : ""}`}
+        style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            padding: "9px 0",
+            borderBottom: noBorder ? "none" : `1px solid ${DETAIL_BORDER}`,
+            gridColumn: span === 2 ? "1 / -1" : undefined,
+            ...style,
+        }}
+    >
         <div style={{
             width: 28, height: 28, borderRadius: 8,
             background: DETAIL_BG_SUBTLE, border: `1px solid ${DETAIL_BORDER_MED}`,
@@ -126,14 +133,17 @@ export const InfoCard = ({
     children: React.ReactNode;
     style?: React.CSSProperties;
 }) => (
-    <div style={{
-        background: "#fff",
-        border: `1.5px solid ${DETAIL_BORDER_MED}`,
-        borderRadius: 14,
-        padding: "14px 16px",
-        marginBottom: 14,
-        ...style,
-    }}>
+    <div 
+        className="detail-modal-info-card"
+        style={{
+            background: "#fff",
+            border: `1.5px solid ${DETAIL_BORDER_MED}`,
+            borderRadius: 14,
+            padding: "14px 16px",
+            marginBottom: 14,
+            ...style,
+        }}
+    >
         {children}
     </div>
 );
@@ -317,6 +327,19 @@ export const DetailModal = ({
                     width: 30px !important; height: 30px !important;
                     line-height: 30px !important; font-size: 12px !important;
                     color: #6b7280 !important;
+                }
+                @media (min-width: 769px) {
+                    .${MODAL_CLASS} .detail-modal-info-card {
+                        display: grid !important;
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        gap: 0 24px !important;
+                    }
+                    .${MODAL_CLASS} .detail-modal-info-card > :first-child {
+                        grid-column: 1 / -1 !important;
+                    }
+                    .${MODAL_CLASS} .detail-modal-info-card > .info-row-span-2 {
+                        grid-column: 1 / -1 !important;
+                    }
                 }
                 @media (max-width: 768px) {
                     .${MODAL_CLASS} .ant-modal-body { padding: 12px 14px 18px !important; }

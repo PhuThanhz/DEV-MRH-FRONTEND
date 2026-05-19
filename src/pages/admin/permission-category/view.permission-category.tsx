@@ -82,6 +82,7 @@ const ViewCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
                         <InfoRow
                             icon={<BankOutlined />}
                             label="Công ty"
+                            span={2}
                             value={
                                 detail.companyName
                                     ? <Tag style={{
@@ -94,6 +95,7 @@ const ViewCategory = ({ open, setOpen, dataInit, setDataInit }: IProps) => {
                         <InfoRow
                             icon={<ApartmentOutlined />}
                             label="Phòng ban"
+                            span={2}
                             value={
                                 detail.departmentName
                                     ? <Tag style={{

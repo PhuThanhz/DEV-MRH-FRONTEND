@@ -497,6 +497,24 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                                     : "--"
                             }
                         />
+                        <InfoRow
+                            icon={<UserOutlined />}
+                            label="Quản lý trực tiếp"
+                            value={
+                                user?.directManager
+                                    ? `${user.directManager.name} (${user.directManager.email})`
+                                    : "--"
+                            }
+                        />
+                        <InfoRow
+                            icon={<UserOutlined />}
+                            label="Quản lý gián tiếp"
+                            value={
+                                user?.indirectManager
+                                    ? `${user.indirectManager.name} (${user.indirectManager.email})`
+                                    : "--"
+                            }
+                        />
                         <div style={{
                             display: "flex", alignItems: "flex-start", gap: 10,
                             padding: "9px 0", borderBottom: `1px solid ${BORDER}`,

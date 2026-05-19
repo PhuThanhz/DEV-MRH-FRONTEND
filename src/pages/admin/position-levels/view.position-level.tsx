@@ -73,7 +73,7 @@ const ViewDetailPositionLevel = ({ open, onClose, dataInit, setDataInit }: IProp
                         <InfoRow icon={<OrderedListOutlined />}    label="Nhóm (Band)" value={detail.band} />
                         <InfoRow icon={<SortAscendingOutlined />}  label="Cấp (Level)" value={detail.levelNumber !== undefined && detail.levelNumber !== null ? String(detail.levelNumber) : undefined} />
                         <InfoRow icon={<StarOutlined />}           label="Thứ tự nhóm" value={detail.bandOrder !== undefined && detail.bandOrder !== null ? String(detail.bandOrder) : undefined} />
-                        <InfoRow icon={<BankOutlined />}           label="Công ty"     value={detail.companyName} noBorder />
+                        <InfoRow icon={<BankOutlined />}           label="Công ty"     value={detail.companyName} noBorder span={2} />
                     </InfoCard>
 
                     <InfoCard style={{ marginBottom: 0 }}>

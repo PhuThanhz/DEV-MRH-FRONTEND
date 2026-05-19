@@ -38,9 +38,18 @@ export const PATHS = {
         EMPLOYEE: '/admin/employees',
         DOCUMENT_CATEGORY: "/admin/document-categories",   // ← THÊM
         DOCUMENT: "/admin/documents",                       // ← THÊM
+        
+        // EVALUATION (HQCV)
+        EVALUATION_TEMPLATES: "/admin/evaluation/templates",
+        EVALUATION_TEMPLATE_DETAIL: "/admin/evaluation/templates/:id",
+        EVALUATION_PERIODS: "/admin/evaluation/periods",
+        EVALUATION_RECORDS: "/admin/evaluation/records",
 
     },
     CLIENT: {
         ROOT: "/",
+        EVALUATION_MY_RECORDS: "/evaluation/my-records",
+        EVALUATION_MANAGER: "/evaluation/manager",
+        EVALUATION_APPROVAL: "/evaluation/approval",
     },
 };
