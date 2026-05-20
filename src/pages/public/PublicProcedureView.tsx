@@ -46,7 +46,7 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL as string;
 
 // ─── FIX: build đường dẫn file đúng ──────────────────────────────────────────
 const buildFileUrl = (fileName: string) =>
-    `${BASE_URL}/uploads/${encodeURIComponent(fileName)}`;
+    `${BASE_URL}/uploads/procedures/${encodeURIComponent(fileName)}`;
 
 function getFileIcon(ext: string) {
     return EXT_ICON[ext.toUpperCase()] ?? <FileOutlined style={{ color: "#6b7280", fontSize: 22 }} />;
