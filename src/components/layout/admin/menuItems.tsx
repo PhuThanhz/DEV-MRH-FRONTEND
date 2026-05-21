@@ -12,6 +12,7 @@ import {
     FolderOpenOutlined,
     FileOutlined,
     QrcodeOutlined,
+    TrophyOutlined, CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -296,7 +297,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
-        
+
         ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS)
             ? [
                 {
@@ -306,6 +307,27 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
                 },
             ]
             : []),
+
+        // "Đánh giá của tôi" — hiển thị cho tất cả user đã đăng nhập (không cần quyền đặc biệt)
+        {
+            label: <Link to="/admin/evaluation/my-records">Đánh giá của tôi</Link>,
+            key: "/admin/evaluation/my-records",
+            icon: <TrophyOutlined />,
+        },
+        
+        // "Quản lý chấm điểm" — Quản lý trực tiếp chấm cho nhân viên
+        {
+            label: <Link to="/admin/evaluation/manager/pending">Quản lý chấm điểm</Link>,
+            key: "/admin/evaluation/manager/pending",
+            icon: <TeamOutlined />,
+        },
+        
+        // "Phê duyệt đánh giá" — Quản lý gián tiếp phê duyệt
+        {
+            label: <Link to="/admin/evaluation/approval/pending">Phê duyệt đánh giá</Link>,
+            key: "/admin/evaluation/approval/pending",
+            icon: <CheckCircleOutlined />,
+        },
 
         // ===================== CÔNG CỤ =====================
         { type: "group", label: "CÔNG CỤ" },

@@ -2108,6 +2108,9 @@ export const callApproveRecord = (recordId: number) =>
 export const callRejectRecord = (recordId: number, reason: string) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/reject`, { reason });
 
+export const callEmployeeConfirmRecord = (recordId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-confirm`);
+
 export const callFetchRecordHistory = (recordId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/records/${recordId}/history`);
 

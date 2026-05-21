@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Button } from "antd";
+import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge } from "antd";
 import { notify } from "@/components/common/notification/notify";
 import {
     EditOutlined,
     SettingOutlined,
     CheckCircleOutlined,
     PoweroffOutlined,
-    CalendarOutlined,
+    ClockCircleOutlined,
+    CheckOutlined,
+    SyncOutlined,
+    StopOutlined,
+    WarningOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -28,6 +32,224 @@ import {
 } from "@/config/api";
 import PeriodModal from "./PeriodModal";
 import PeriodDetailDrawer from "./PeriodDetailDrawer";
+
+const getDiffString = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
+    const diffMs = to.diff(from);
+    if (diffMs <= 0) return "0 phút";
+    const diffDays = to.diff(from, "day");
+    if (diffDays > 0) {
+        const hours = to.diff(from, "hour") % 24;
+        if (hours === 0) return `${diffDays} ngày`;
+        return `${diffDays} ngày ${hours} giờ`;
+    }
+    const diffHours = to.diff(from, "hour");
+    if (diffHours > 0) {
+        const mins = to.diff(from, "minute") % 60;
+        if (mins === 0) return `${diffHours} giờ`;
+        return `${diffHours} giờ ${mins} phút`;
+    }
+    const diffMins = to.diff(from, "minute");
+    return `${diffMins} phút`;
+};
+
+type PhaseType = "none" | "employee" | "manager" | "approval" | "all_closed";
+type BadgeType = "draft" | "active" | "closed" | "upcoming" | "overdue" | "intime";
+
+interface PhaseInfo {
+    activePhase: PhaseType;
+    phaseLabel: string;
+    deadline: string;
+    countdown: string;
+    badgeType: BadgeType;
+    badgeText: string;
+    isOverdue: boolean;
+}
+
+const getPhaseInfo = (record: IEvaluationPeriod): PhaseInfo => {
+    const now = dayjs();
+    const start = record.employeeStartDate ? dayjs(record.employeeStartDate) : null;
+    const empDeadline = record.employeeDeadline ? dayjs(record.employeeDeadline) : null;
+    const mgrDeadline = record.managerDeadline ? dayjs(record.managerDeadline) : null;
+    const appDeadline = record.approvalDeadline ? dayjs(record.approvalDeadline) : null;
+
+    if (record.status === "DRAFT") {
+        return { activePhase: "none", phaseLabel: "Chưa kích hoạt", deadline: "", countdown: "", badgeType: "draft", badgeText: "Bản nháp", isOverdue: false };
+    }
+    if (record.status === "CLOSED") {
+        return { activePhase: "all_closed", phaseLabel: "Đã kết thúc", deadline: "", countdown: "", badgeType: "closed", badgeText: "Đã đóng", isOverdue: false };
+    }
+
+    if (!start || !empDeadline || !mgrDeadline || !appDeadline) {
+        return { activePhase: "none", phaseLabel: "Chưa cấu hình đầy đủ", deadline: "", countdown: "", badgeType: "draft", badgeText: "Thiếu cấu hình", isOverdue: false };
+    }
+
+    if (now.isBefore(start)) {
+        return { activePhase: "none", phaseLabel: "Sắp mở cổng tự chấm", deadline: start.format("DD/MM/YYYY HH:mm"), countdown: `Mở sau ${getDiffString(now, start)}`, badgeType: "upcoming", badgeText: "Sắp mở", isOverdue: false };
+    }
+    if (now.isBefore(empDeadline)) {
+        return { activePhase: "employee", phaseLabel: "Nhân viên tự chấm", deadline: empDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, empDeadline)}`, badgeType: "active", badgeText: "Đang diễn ra", isOverdue: false };
+    }
+    if (now.isBefore(mgrDeadline)) {
+        return { activePhase: "manager", phaseLabel: "Quản lý chấm điểm", deadline: mgrDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, mgrDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
+    }
+    if (now.isBefore(appDeadline)) {
+        return { activePhase: "approval", phaseLabel: "Ban lãnh đạo phê duyệt", deadline: appDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, appDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
+    }
+    return { activePhase: "all_closed", phaseLabel: "Quá hạn phê duyệt", deadline: appDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Trễ ${getDiffString(appDeadline, now)}`, badgeType: "overdue", badgeText: "Quá hạn", isOverdue: true };
+};
+
+const PHASE_CONFIG = {
+    employee: { label: "Tự chấm", color: "#52c41a", bg: "#f6ffed", border: "#b7eb8f" },
+    manager: { label: "Quản lý chấm", color: "#1677ff", bg: "#e6f4ff", border: "#91caff" },
+    approval: { label: "Lãnh đạo duyệt", color: "#722ed1", bg: "#f9f0ff", border: "#d3adf7" },
+};
+
+const PhaseStep = ({ phase, activePhase, status }: { phase: "employee" | "manager" | "approval"; activePhase: PhaseType; status: string }) => {
+    const cfg = PHASE_CONFIG[phase];
+    const phaseOrder = { employee: 0, manager: 1, approval: 2 };
+    const activeOrder = { none: -1, employee: 0, manager: 1, approval: 2, all_closed: 3 };
+
+    const isDone = status === "CLOSED" || activeOrder[activePhase] > phaseOrder[phase];
+    const isActive = activePhase === phase;
+    const isUpcoming = !isDone && !isActive;
+
+    let dotColor = "#d9d9d9";
+    let textColor = "#bfbfbf";
+    let fontWeight: "400" | "600" = "400";
+
+    if (isDone) { dotColor = "#8c8c8c"; textColor = "#8c8c8c"; }
+    if (isActive) { dotColor = cfg.color; textColor = cfg.color; fontWeight = "600"; }
+    if (isUpcoming && status === "DRAFT") { dotColor = "#d9d9d9"; textColor = "#bfbfbf"; }
+
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: dotColor,
+                flexShrink: 0,
+                boxShadow: isActive ? `0 0 0 2px ${cfg.color}33` : "none",
+            }} />
+            <span style={{ fontSize: 11, color: textColor, fontWeight, whiteSpace: "nowrap" }}>
+                {cfg.label}
+            </span>
+        </div>
+    );
+};
+
+const renderTimelineCell = (record: IEvaluationPeriod) => {
+    const info = getPhaseInfo(record);
+
+    const badgeConfig: Record<BadgeType, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
+        draft: { color: "#8c8c8c", bg: "#fafafa", border: "#d9d9d9", icon: <ClockCircleOutlined /> },
+        active: { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f", icon: <SyncOutlined spin /> },
+        intime: { color: "#1677ff", bg: "#e6f4ff", border: "#91caff", icon: <SyncOutlined spin /> },
+        upcoming: { color: "#d46b08", bg: "#fff7e6", border: "#ffd591", icon: <ClockCircleOutlined /> },
+        closed: { color: "#595959", bg: "#f5f5f5", border: "#d9d9d9", icon: <CheckOutlined /> },
+        overdue: { color: "#cf1322", bg: "#fff1f0", border: "#ffa39e", icon: <WarningOutlined /> },
+    };
+
+    const badge = badgeConfig[info.badgeType];
+
+    const hasTimeline = !!(record.employeeStartDate && record.employeeDeadline && record.managerDeadline && record.approvalDeadline);
+
+    const tooltipContent = hasTimeline ? (
+        <div style={{ fontSize: 12, lineHeight: "22px", color: "#1e293b" }}>
+            <div style={{
+                fontWeight: 700,
+                marginBottom: 8,
+                fontSize: 12,
+                borderBottom: "1px solid #e2e8f0",
+                paddingBottom: 6,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                color: "#64748b"
+            }}>
+                Mốc thời gian
+            </div>
+            {[
+                { label: "Mở cổng tự chấm", date: record.employeeStartDate },
+                { label: "Hạn nhân viên nộp", date: record.employeeDeadline },
+                { label: "Hạn quản lý chấm", date: record.managerDeadline },
+                { label: "Hạn lãnh đạo duyệt", date: record.approvalDeadline },
+            ].map(({ label, date }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
+                    <span style={{ color: "#64748b" }}>{label}</span>
+                    <span style={{ color: "#0f172a", fontWeight: 600, whiteSpace: "nowrap" }}>
+                        {dayjs(date).format("DD/MM/YYYY HH:mm")}
+                    </span>
+                </div>
+            ))}
+        </div>
+    ) : null;
+
+    return (
+        <Tooltip
+            title={tooltipContent}
+            color="white"
+            overlayStyle={{ maxWidth: "none" }}
+            overlayInnerStyle={{
+                padding: "14px 18px",
+                borderRadius: "10px",
+                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                border: "1px solid #e2e8f0",
+                minWidth: "320px"
+            }}
+        >
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, cursor: hasTimeline ? "help" : "default", padding: "4px 0" }}>
+                {/* Phase steps */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <PhaseStep phase="employee" activePhase={info.activePhase} status={record.status} />
+                    <span style={{ color: "#d9d9d9", fontSize: 10 }}>›</span>
+                    <PhaseStep phase="manager" activePhase={info.activePhase} status={record.status} />
+                    <span style={{ color: "#d9d9d9", fontSize: 10 }}>›</span>
+                    <PhaseStep phase="approval" activePhase={info.activePhase} status={record.status} />
+                </div>
+
+                {/* Current phase info */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#262626" }}>{info.phaseLabel}</span>
+                    {info.countdown && (
+                        <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 3,
+                            fontSize: 11, fontWeight: 600,
+                            color: badge.color,
+                            background: badge.bg,
+                            border: `1px solid ${badge.border}`,
+                            borderRadius: 4,
+                            padding: "1px 7px",
+                            lineHeight: "18px",
+                        }}>
+                            {badge.icon}
+                            {info.countdown}
+                        </span>
+                    )}
+                </div>
+
+                {/* Deadline line */}
+                {info.deadline && (
+                    <span style={{ fontSize: 11, color: "#8c8c8c" }}>
+                        Hạn: {info.deadline}
+                    </span>
+                )}
+            </div>
+        </Tooltip>
+    );
+};
+
+const StatusTag = ({ status }: { status: string }) => {
+    const config: Record<string, { color: string; text: string; dot: string }> = {
+        DRAFT: { color: "default", text: "Bản nháp", dot: "#8c8c8c" },
+        ACTIVE: { color: "success", text: "Đang diễn ra", dot: "#52c41a" },
+        CLOSED: { color: "error", text: "Đã kết thúc", dot: "#ff4d4f" },
+    };
+    const cfg = config[status] ?? config.DRAFT;
+    return (
+        <Tag color={cfg.color} style={{ borderRadius: 20, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
+            <Badge color={cfg.dot} style={{ marginRight: 4 }} />
+            {cfg.text}
+        </Tag>
+    );
+};
 
 const PeriodPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -78,15 +300,9 @@ const PeriodPage = () => {
             sort: "createdAt,desc",
         };
         const filters: string[] = [];
-        if (searchValue) {
-            filters.push(`name~'${searchValue}'`);
-        }
-        if (statusFilter !== null) {
-            filters.push(`status='${statusFilter}'`);
-        }
-        if (filters.length > 0) {
-            q.filter = filters.join(" and ");
-        }
+        if (searchValue) filters.push(`name~'${searchValue}'`);
+        if (statusFilter !== null) filters.push(`status='${statusFilter}'`);
+        if (filters.length > 0) q.filter = filters.join(" and ");
         const stringified = queryString.stringify(q, { encode: false });
         setQuery(stringified);
         fetchPeriods(stringified);
@@ -98,21 +314,12 @@ const PeriodPage = () => {
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
         };
         const filters: string[] = [];
-        if (searchValue) {
-            filters.push(`name~'${searchValue}'`);
-        }
-        if (statusFilter !== null) {
-            filters.push(`status='${statusFilter}'`);
-        }
-        if (filters.length > 0) {
-            q.filter = filters.join(" and ");
-        }
-
+        if (searchValue) filters.push(`name~'${searchValue}'`);
+        if (statusFilter !== null) filters.push(`status='${statusFilter}'`);
+        if (filters.length > 0) q.filter = filters.join(" and ");
         let temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=createdAt,desc";
-        if (sort?.name) {
-            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
-        }
+        if (sort?.name) sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
         return `${temp}&${sortBy}`;
     };
 
@@ -120,12 +327,11 @@ const PeriodPage = () => {
         try {
             const res = await callActivateEvaluationPeriod(id);
             if (res?.data) {
-                notify.success("Kích hoạt kỳ đánh giá thành công! Tất cả biểu mẫu cá nhân đã được tự động sinh.");
+                notify.success("Kích hoạt thành công! Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
                 fetchPeriods(query);
             }
         } catch (error: any) {
-            const msg = error?.response?.data?.message || "Lỗi kích hoạt kỳ đánh giá";
-            notify.error(msg);
+            notify.error(error?.response?.data?.message || "Lỗi kích hoạt kỳ đánh giá");
         }
     };
 
@@ -133,12 +339,11 @@ const PeriodPage = () => {
         try {
             const res = await callCloseEvaluationPeriod(id);
             if (res?.data) {
-                notify.success("Đã đóng kỳ đánh giá an toàn.");
+                notify.success("Đã đóng kỳ đánh giá.");
                 fetchPeriods(query);
             }
         } catch (error: any) {
-            const msg = error?.response?.data?.message || "Lỗi đóng kỳ đánh giá";
-            notify.error(msg);
+            notify.error(error?.response?.data?.message || "Lỗi đóng kỳ đánh giá");
         }
     };
 
@@ -146,145 +351,126 @@ const PeriodPage = () => {
         {
             title: "STT",
             key: "index",
-            width: 60,
+            width: 55,
             align: "center",
             render: (_text, _record, index) =>
-                index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10),
+                <span style={{ color: "#8c8c8c", fontSize: 13 }}>{index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10)}</span>,
         },
         {
             title: "Tên kỳ đánh giá",
             dataIndex: "name",
             render: (val, record) => (
-                <span
-                    style={{ fontWeight: 600, color: "#1677ff", cursor: "pointer" }}
-                    onClick={() => {
-                        setSelectedPeriod(record);
-                        setOpenDrawer(true);
-                    }}
-                >
-                    {val}
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <Typography.Link
+                        style={{ fontWeight: 600, fontSize: 14, color: "#1677ff" }}
+                        onClick={() => { setSelectedPeriod(record); setOpenDrawer(true); }}
+                    >
+                        {val}
+                    </Typography.Link>
+                    {record.description && (
+                        <span style={{
+                            fontSize: 12, color: "#8c8c8c",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260,
+                        }} title={record.description}>
+                            {record.description}
+                        </span>
+                    )}
+                </div>
             ),
         },
         {
             title: "Trạng thái",
             dataIndex: "status",
-            width: 140,
+            width: 145,
             align: "center",
-            render: (val) => {
-                let border = "#e5e7eb", bg = "#f9fafb", color = "#9ca3af", text = "Bản nháp";
-                if (val === "ACTIVE") {
-                    border = "#b7eb8f"; bg = "#f6ffed"; color = "#389e0d"; text = "Đang diễn ra";
-                } else if (val === "CLOSED") {
-                    border = "#ffccc7"; bg = "#fff2f0"; color = "#cf1322"; text = "Đã kết thúc";
-                }
-                return (
-                    <Tag style={{
-                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
-                        fontWeight: 500, height: 22, lineHeight: "20px",
-                        border: `1px solid ${border}`,
-                        background: bg,
-                        color: color,
-                    }}>
-                        {text}
-                    </Tag>
-                );
-            },
+            render: (_, record) => <StatusTag status={record.status} />,
         },
         {
-            title: "Tự đánh giá (Nhân viên)",
-            key: "employeeTimeline",
-            width: 260,
-            render: (_, record) => {
-                if (!record.employeeStartDate || !record.employeeDeadline) return <span style={{ color: "#9ca3af" }}>Chưa cấu hình</span>;
-                return (
-                    <div style={{ fontSize: 12, display: "flex", flexDirection: "column", gap: 2 }}>
-                        <div><Tag color="cyan">Mở</Tag> {dayjs(record.employeeStartDate).format("DD/MM/YYYY HH:mm")}</div>
-                        <div><Tag color="volcano">Hạn</Tag> {dayjs(record.employeeDeadline).format("DD/MM/YYYY HH:mm")}</div>
-                    </div>
-                );
-            }
-        },
-        {
-            title: "Quản lý chấm",
-            dataIndex: "managerDeadline",
-            width: 160,
-            render: (_, record) => record.managerDeadline ? dayjs(record.managerDeadline).format("DD/MM/YYYY HH:mm") : <span style={{ color: "#9ca3af" }}>Chưa cấu hình</span>,
-        },
-        {
-            title: "BLĐ phê duyệt",
-            dataIndex: "approvalDeadline",
-            width: 160,
-            render: (_, record) => record.approvalDeadline ? dayjs(record.approvalDeadline).format("DD/MM/YYYY HH:mm") : <span style={{ color: "#9ca3af" }}>Chưa cấu hình</span>,
+            title: "Tiến trình",
+            key: "timelineProgress",
+            width: 380,
+            render: (_, record) => renderTimelineCell(record),
         },
         {
             title: "Hành động",
             align: "center",
-            width: 180,
+            width: 140,
             fixed: "right",
             render: (_, entity) => {
                 const isDraft = entity.status === "DRAFT";
                 const isActive = entity.status === "ACTIVE";
-
                 return (
-                    <Space size={14}>
+                    <Space size={12}>
                         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
-                            <SettingOutlined
-                                style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                title="Cấu hình Biểu mẫu & Nhân sự"
-                                onClick={() => {
-                                    setSelectedPeriod(entity);
-                                    setOpenDrawer(true);
-                                }}
-                            />
+                            <Tooltip title="Cấu hình biểu mẫu & nhân sự">
+                                <Button
+                                    type="text"
+                                    icon={<SettingOutlined style={{ fontSize: 16 }} />}
+                                    style={{ color: "#1677ff" }}
+                                    onClick={() => { setSelectedPeriod(entity); setOpenDrawer(true); }}
+                                />
+                            </Tooltip>
                         </Access>
 
                         {isDraft && (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
-                                <EditOutlined
-                                    style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                                    title="Chỉnh sửa kỳ đánh giá"
-                                    onClick={() => {
-                                        setDataInit(entity);
-                                        setOpenModal(true);
-                                    }}
-                                />
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD} hideChildren>
+                                <Tooltip title="Chỉnh sửa">
+                                    <Button
+                                        type="text"
+                                        icon={<EditOutlined style={{ fontSize: 16 }} />}
+                                        style={{ color: "#fa8c16" }}
+                                        onClick={() => { setDataInit(entity); setOpenModal(true); }}
+                                    />
+                                </Tooltip>
                             </Access>
                         )}
 
                         {isDraft && entity.id && (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.ACTIVATE_PERIOD} hideChildren>
                                 <Popconfirm
-                                    title="Bạn có chắc chắn muốn KÍCH HOẠT kỳ đánh giá này?"
-                                    description="Hành động này sẽ gửi thông báo và tự động sinh bản chấm điểm cho toàn bộ nhân viên tham gia."
+                                    title="Kích hoạt kỳ đánh giá?"
+                                    description="Hệ thống sẽ tự động sinh bản chấm điểm cho toàn bộ nhân viên tham gia."
                                     onConfirm={() => handleActivate(entity.id!)}
-                                    okText="Đồng ý"
+                                    okText="Kích hoạt"
                                     cancelText="Hủy"
+                                    okButtonProps={{ type: "primary" }}
                                 >
-                                    <CheckCircleOutlined
-                                        style={{ fontSize: 18, color: "#389e0d", cursor: "pointer" }}
-                                        title="Kích hoạt kỳ đánh giá"
-                                    />
+                                    <Tooltip title="Kích hoạt">
+                                        <Button
+                                            type="text"
+                                            icon={<CheckCircleOutlined style={{ fontSize: 16 }} />}
+                                            style={{ color: "#389e0d" }}
+                                        />
+                                    </Tooltip>
                                 </Popconfirm>
                             </Access>
                         )}
 
                         {isActive && entity.id && (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.CLOSE_PERIOD} hideChildren>
                                 <Popconfirm
-                                    title="Bạn có chắc chắn muốn ĐÓNG kỳ đánh giá này?"
-                                    description="Hành động này sẽ khóa toàn bộ cổng chấm điểm."
+                                    title="Đóng kỳ đánh giá?"
+                                    description="Toàn bộ cổng chấm điểm sẽ bị khóa. Hành động này không thể hoàn tác."
                                     onConfirm={() => handleClose(entity.id!)}
-                                    okText="Đồng ý"
+                                    okText="Đóng kỳ"
                                     cancelText="Hủy"
                                     okButtonProps={{ danger: true }}
                                 >
-                                    <PoweroffOutlined
-                                        style={{ fontSize: 17, color: "#cf1322", cursor: "pointer" }}
-                                        title="Đóng kỳ đánh giá"
-                                    />
+                                    <Tooltip title="Đóng kỳ đánh giá">
+                                        <Button
+                                            type="text"
+                                            icon={<PoweroffOutlined style={{ fontSize: 16 }} />}
+                                            style={{ color: "#cf1322" }}
+                                        />
+                                    </Tooltip>
                                 </Popconfirm>
                             </Access>
+                        )}
+
+                        {entity.status === "CLOSED" && (
+                            <Tooltip title="Kỳ đánh giá đã kết thúc">
+                                <Button type="text" icon={<StopOutlined style={{ fontSize: 16 }} />} style={{ color: "#bfbfbf" }} disabled />
+                            </Tooltip>
                         )}
                     </Space>
                 );
@@ -294,22 +480,17 @@ const PeriodPage = () => {
 
     return (
         <PageContainer
-            title="Quản lý Kỳ đánh giá (Periods)"
+            title="Quản lý Kỳ đánh giá"
             filter={
                 <div className="flex flex-col gap-3">
                     <SearchFilter
                         searchPlaceholder="Tìm theo tên kỳ đánh giá..."
-                        addLabel="Thêm mới"
+                        addLabel="Thêm kỳ mới"
                         showFilterButton={false}
                         onSearch={(val) => setSearchValue(val)}
-                        onReset={() => {
-                            setSearchValue("");
-                            setStatusFilter(null);
-                        }}
-                        onAddClick={() => {
-                            setDataInit(null);
-                            setOpenModal(true);
-                        }}
+                        onReset={() => { setSearchValue(""); setStatusFilter(null); }}
+                        onAddClick={() => { setDataInit(null); setOpenModal(true); }}
+                        addPermission={ALL_PERMISSIONS.EVALUATION.CREATE_PERIOD}
                     />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect
@@ -339,16 +520,12 @@ const PeriodPage = () => {
                     loading={loading}
                     columns={columns}
                     dataSource={periods}
-                    scroll={{ x: 1200 }}
+                    scroll={{ x: 1000 }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);
                         await fetchPeriods(q);
-                        return {
-                            data: periods,
-                            success: true,
-                            total: meta.total,
-                        };
+                        return { data: periods, success: true, total: meta.total };
                     }}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
@@ -357,16 +534,10 @@ const PeriodPage = () => {
                         total: meta.total,
                         showQuickJumper: true,
                         showTotal: (total, range) => (
-                            <div style={{ fontSize: 13 }}>
-                                <span style={{ fontWeight: 500 }}>
-                                    {range[0]}–{range[1]}
-                                </span>{" "}
-                                trên{" "}
-                                <span style={{ fontWeight: 600, color: "#1677ff" }}>
-                                    {total.toLocaleString()}
-                                </span>{" "}
-                                kỳ đánh giá
-                            </div>
+                            <span style={{ fontSize: 13 }}>
+                                <b>{range[0]}–{range[1]}</b> trên{" "}
+                                <b style={{ color: "#1677ff" }}>{total.toLocaleString()}</b> kỳ đánh giá
+                            </span>
                         ),
                     }}
                     rowSelection={false}
@@ -383,11 +554,7 @@ const PeriodPage = () => {
 
             <PeriodDetailDrawer
                 open={openDrawer}
-                onClose={() => {
-                    setOpenDrawer(false);
-                    setSelectedPeriod(null);
-                    fetchPeriods(query);
-                }}
+                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); fetchPeriods(query); }}
                 period={selectedPeriod}
             />
         </PageContainer>

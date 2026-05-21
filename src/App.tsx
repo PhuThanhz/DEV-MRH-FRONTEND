@@ -52,6 +52,12 @@ import DocumentPage from "@/pages/admin/document";
 import TemplatePage from "@/pages/admin/evaluation/templates/TemplatePage";
 import TemplateDetailPage from "@/pages/admin/evaluation/templates/TemplateDetailPage";
 import PeriodPage from "@/pages/admin/evaluation/periods/PeriodPage";
+import MyEvaluationPage from "@/pages/evaluation/my-records/MyEvaluationPage";
+import MyEvaluationDetailPage from "@/pages/evaluation/my-records/MyEvaluationDetailPage";
+import PendingManagerEvaluationPage from "@/pages/evaluation/manager/PendingManagerEvaluationPage";
+import ManagerEvaluationDetailPage from "@/pages/evaluation/manager/ManagerEvaluationDetailPage";
+import PendingApprovalPage from "@/pages/evaluation/approval/PendingApprovalPage";
+import ApprovalDetailPage from "@/pages/evaluation/approval/ApprovalDetailPage";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -378,6 +384,57 @@ export default function App() {
               <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS}>
                 <PeriodPage />
               </Access>
+            </ProtectedRoute>
+          ),
+        },
+        // ✅ EVALUATION — NHÂN VIÊN
+        {
+          path: "evaluation/my-records",
+          element: (
+            <ProtectedRoute>
+              <MyEvaluationPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "evaluation/my-records/:id",
+          element: (
+            <ProtectedRoute>
+              <MyEvaluationDetailPage />
+            </ProtectedRoute>
+          ),
+        },
+        // ✅ EVALUATION — QUẢN LÝ
+        {
+          path: "evaluation/manager/pending",
+          element: (
+            <ProtectedRoute>
+              <PendingManagerEvaluationPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "evaluation/manager/records/:id",
+          element: (
+            <ProtectedRoute>
+              <ManagerEvaluationDetailPage />
+            </ProtectedRoute>
+          ),
+        },
+        // ✅ EVALUATION — APPROVAL
+        {
+          path: "evaluation/approval/pending",
+          element: (
+            <ProtectedRoute>
+              <PendingApprovalPage />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "evaluation/approval/records/:id",
+          element: (
+            <ProtectedRoute>
+              <ApprovalDetailPage />
             </ProtectedRoute>
           ),
         },

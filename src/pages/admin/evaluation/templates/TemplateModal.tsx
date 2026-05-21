@@ -125,7 +125,7 @@ const TemplateModal = (props: IProps) => {
                 </Form.Item>
 
                 <Form.Item
-                    label={<span><span style={{ color: '#ff4d4f', marginRight: 4 }}>*</span>Công ty</span>}
+                    label="Công ty"
                     name="companyId"
                     rules={[{ required: true, message: 'Vui lòng chọn công ty!' }]}
                 >

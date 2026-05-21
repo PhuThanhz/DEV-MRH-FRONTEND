@@ -45,11 +45,13 @@ import {
 } from "@/config/api";
 import type { IEvaluationTemplate, ITemplateSection, ITemplateCriteria, ITemplateCriteriaLevel } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Title, Text, Paragraph } = Typography;
 
-const PINK = "#e91e8c";
-const PINK_HOVER = "#c4177a";
+const PINK = "#1677ff";
+const PINK_HOVER = "#4096ff";
 
 const TemplateDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();

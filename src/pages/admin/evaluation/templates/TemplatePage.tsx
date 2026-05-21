@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, message } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import { Space, Tag, Popconfirm, message, Typography } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
     DeleteOutlined,
     SettingOutlined,
     CheckCircleOutlined,
+    BankOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -22,6 +23,17 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchEvaluationTemplates, callPublishEvaluationTemplate } from "@/config/api";
 import TemplateModal from "./TemplateModal";
+
+const toTitleCase = (str: string) => {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .replace(/(?:^|\s|-)\S/g, (m) => m.toUpperCase())
+        .replace(/\bTnhh\b/g, "TNHH")
+        .replace(/\bCp\b/g, "CP")
+        .replace(/\bJsc\b/g, "JSC")
+        .replace(/\bLtd\b/g, "LTD");
+};
 
 const TemplatePage = () => {
     const navigate = useNavigate();
@@ -146,12 +158,12 @@ const TemplatePage = () => {
             dataIndex: "name",
             sorter: true,
             render: (val, record) => (
-                <span 
-                    style={{ fontWeight: 600, color: "#1677ff", cursor: "pointer" }}
+                <Typography.Link 
+                    style={{ fontWeight: 500, fontSize: "14px", color: "#1677ff" }}
                     onClick={() => navigate(`/admin/evaluation/templates/${record.id}`)}
                 >
                     {val}
-                </span>
+                </Typography.Link>
             ),
         },
         {
@@ -162,13 +174,10 @@ const TemplatePage = () => {
             render: (val) => {
                 const isStaff = val === "STAFF";
                 return (
-                    <Tag style={{
-                        borderRadius: 4, padding: "0px 8px", fontSize: 12,
-                        fontWeight: 500, height: 22, lineHeight: "20px",
-                        border: isStaff ? "1px solid #91caff" : "1px solid #AFA9EC", 
-                        background: isStaff ? "#e6f4ff" : "#EEEDFE", 
-                        color: isStaff ? "#0958d9" : "#3C3489",
-                    }}>
+                    <Tag 
+                        color={isStaff ? "blue" : "purple"}
+                        style={{ borderRadius: 4, fontWeight: 500, padding: "0px 8px", fontSize: 12 }}
+                    >
                         {isStaff ? "Nhân viên" : "Quản lý"}
                     </Tag>
                 );
@@ -177,12 +186,18 @@ const TemplatePage = () => {
         {
             title: "Công ty áp dụng",
             dataIndex: ["company", "name"],
-            width: 180,
-            render: (val) => {
-                return val ? (
-                    <span style={{ fontWeight: 500 }}>{val}</span>
+            width: 280,
+            render: (_, record) => {
+                const compName = record.company?.name;
+                return compName ? (
+                    <Space size={6}>
+                        <BankOutlined style={{ color: "#8c8c8c", fontSize: 14 }} />
+                        <span style={{ fontWeight: 500, color: "#262626", fontSize: 13 }}>
+                            {toTitleCase(compName)}
+                        </span>
+                    </Space>
                 ) : (
-                    <Tag color="default" style={{ borderRadius: 4 }}>Áp dụng chung</Tag>
+                    <span style={{ color: "#bfbfbf", fontStyle: "italic" }}>—</span>
                 );
             },
         },
@@ -233,7 +248,7 @@ const TemplatePage = () => {
 
                     {entity.status === "DRAFT" && (
                         <Access
-                            permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
+                            permission={ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE}
                             hideChildren
                         >
                             <EditOutlined
@@ -249,7 +264,7 @@ const TemplatePage = () => {
 
                     {entity.status === "DRAFT" && entity.id && (
                         <Access
-                            permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
+                            permission={ALL_PERMISSIONS.EVALUATION.PUBLISH_TEMPLATE}
                             hideChildren
                         >
                             <Popconfirm
@@ -273,7 +288,7 @@ const TemplatePage = () => {
 
     return (
         <PageContainer
-            title="Quản lý Mẫu đánh giá (Templates)"
+            title="Quản lý Mẫu đánh giá"
             filter={
                 <div className="flex flex-col gap-3">
                     <SearchFilter
@@ -290,6 +305,7 @@ const TemplatePage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.EVALUATION.CREATE_TEMPLATE}
                     />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect

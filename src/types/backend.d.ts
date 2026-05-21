@@ -1822,7 +1822,7 @@ export interface IEvaluationRecord {
     scores?: IResScoreDTO[];
     comments?: IResCommentDTO[];
     trainingPlans?: IResTrainingPlanDTO[];
-    
+
     employeeSubmittedAt?: string;
     managerSubmittedAt?: string;
     approvedAt?: string;
@@ -1834,6 +1834,8 @@ export interface IResEmployeeInfo {
     username: string;
     fullName: string;
     email: string;
+    jobTitle?: string;
+    positionLevel?: string;
 }
 
 export interface IResScoreDTO {
