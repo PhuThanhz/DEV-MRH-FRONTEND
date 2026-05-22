@@ -122,7 +122,7 @@ const DocumentPage = () => {
         if (issuedDateFilter) filters.push(issuedDateFilter);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
-        let temp = queryString.stringify(q, { encode: false });
+        const temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=createdAt,desc";
         if (sort?.documentCode)
             sortBy = sort.documentCode === "ascend" ? "sort=documentCode,asc" : "sort=documentCode,desc";

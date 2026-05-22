@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Button, message, Tooltip } from "antd";
-import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined } from "@ant-design/icons";
+import { Button, message, Tooltip, Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined } from "@ant-design/icons";
 import { unstable_batchedUpdates } from "react-dom";
 
 import ReactFlow, {
@@ -217,12 +218,13 @@ const applyHighlight = (
 
 const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
-    const { fitView } = useReactFlow();
+    const { fitView, setCenter } = useReactFlow();
     const { width, isMobile, isTablet } = useWindowSize();
     const isCompact = isMobile || isTablet;
 
     const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);
     const canDelete = useAccess(ALL_PERMISSIONS.ORG_NODES.DELETE);
+    const canCreate = useAccess(ALL_PERMISSIONS.ORG_NODES.CREATE);
 
     const [jdOpen, setJdOpen] = useState(false);
     const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
@@ -245,10 +247,13 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const [nodes, setNodes] = useState<Node[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
     const [openModal, setOpenModal] = useState(false);
+    const [prefilledParentId, setPrefilledParentId] = useState<number | null>(null);
     const [editingNode, setEditingNode] = useState<Node | null>(null);
     const [pendingSaves, setPendingSaves] = useState<Map<string, { x: number; y: number }>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
     const [isDragLocked, setIsDragLocked] = useState(true);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedNodePos, setSelectedNodePos] = useState<{ x: number; y: number } | null>(null);
@@ -286,7 +291,38 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 return { ...n, data: { ...n.data, isSelected: shouldBeSelected } };
             })
         );
-    }, [selectedNodeId]);
+
+        if (!selectedNodeId) {
+            setSelectedNodePos(null);
+            return;
+        }
+
+        const found = nodesRef.current.find(n => n.id === selectedNodeId);
+        if (!found) return;
+
+        // Smooth fly to the clicked node (with offset so MiniPanel fits)
+        setCenter(
+            found.position.x + (layoutNodeW / 2),
+            found.position.y + (layoutNodeH / 2) + (isMobile ? 100 : 150),
+            { duration: 500, zoom: 1.2 }
+        );
+
+        // Position MiniPanel next to the node
+        const t = setTimeout(() => {
+            const el = document.querySelector(`.react-flow__node[data-id="${selectedNodeId}"]`);
+            const container = el?.closest(".react-flow");
+            if (el && container) {
+                const elRect = el.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                setSelectedNodePos({
+                    x: elRect.right - containerRect.left + 8,
+                    y: elRect.top - containerRect.top,
+                });
+            }
+        }, 550);
+
+        return () => clearTimeout(t);
+    }, [selectedNodeId, setCenter, layoutNodeW, layoutNodeH, isMobile]);
 
     useEffect(() => {
         if (nodesRef.current.length === 0) return;
@@ -440,6 +476,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     ...node.data,
                     allowEdit: canEdit,
                     allowDelete: canDelete,
+                    allowCreate: canCreate,
                     isSelected: selectedNodeId === node.id,
                     isMobile,
                     isTablet,
@@ -458,6 +495,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         });
                     },
                     onEdit: () => handleOpenEdit(node),
+                    onAddChild: () => handleOpenAddChild(node.id),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
                         if (jdId) {
@@ -468,26 +506,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         }
                     },
                     onSelect: () => {
-                        setSelectedNodeId((prev) => {
-                            const next = prev === node.id ? null : node.id;
-                            if (next) {
-                                const el = document.querySelector(
-                                    `.react-flow__node[data-id="${node.id}"]`
-                                );
-                                const container = el?.closest(".react-flow");
-                                if (el && container) {
-                                    const elRect = el.getBoundingClientRect();
-                                    const containerRect = container.getBoundingClientRect();
-                                    setSelectedNodePos({
-                                        x: elRect.right - containerRect.left + 8,
-                                        y: elRect.top - containerRect.top,
-                                    });
-                                }
-                            } else {
-                                setSelectedNodePos(null);
-                            }
-                            return next;
-                        });
+                        setSelectedNodeId((prev) => prev === node.id ? null : node.id);
                     },
                     onMouseEnter: () => applyHighlightNow(node.id),
                     onMouseLeave: () => applyHighlightNow(null),
@@ -501,7 +520,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         }));
 
         unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(withEdgesCbs); });
-    }, [ownerType, applyHighlightNow, canEdit, canDelete, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet]); // eslint-disable-line
+    }, [ownerType, applyHighlightNow, canEdit, canDelete, canCreate, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet]); // eslint-disable-line
 
     const handleSearchSelect = useCallback((nodeId: string, pos: { x: number; y: number } | null = null) => {
         setSelectedNodeId(nodeId);
@@ -591,6 +610,12 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const handleOpenEdit = useCallback((node: Node) => { setEditingNode(node); setOpenModal(true); }, []);
 
+    const handleOpenAddChild = useCallback((parentId: string) => {
+        setEditingNode(null);
+        setPrefilledParentId(Number(parentId));
+        setOpenModal(true);
+    }, []);
+
     const handleSubmit = useCallback(async (values: {
         title: string; levelCode: string; holderName?: string;
         parentId?: number | null; isGoal?: boolean; jobDescriptionId?: number | null;
@@ -678,15 +703,33 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         }
     }, [chartId, bulkTreeNode, loadNodes]);
 
-    const handleCloseModal = useCallback(() => { setOpenModal(false); setEditingNode(null); }, []);
+    const handleCloseModal = useCallback(() => { setOpenModal(false); setEditingNode(null); setPrefilledParentId(null); }, []);
 
-    const containerHeight = isMobile
-        ? "calc(100vh - 100px)"
-        : isTablet
-            ? "calc(100vh - 130px)"
-            : "calc(100vh - 160px)";
+    const containerHeight = isFullscreen
+        ? "100vh"
+        : isMobile
+            ? "calc(100vh - 100px)"
+            : isTablet
+                ? "calc(100vh - 120px)"
+                : "calc(100vh - 140px)";
 
     const containerMinHeight = isMobile ? 360 : isTablet ? 480 : 600;
+
+    // Fullscreen toggle
+    const toggleFullscreen = useCallback(() => {
+        if (!containerRef.current) return;
+        if (!document.fullscreenElement) {
+            containerRef.current.requestFullscreen().catch(() => { });
+        } else {
+            document.exitFullscreen().catch(() => { });
+        }
+    }, []);
+
+    useEffect(() => {
+        const handler = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", handler);
+        return () => document.removeEventListener("fullscreenchange", handler);
+    }, []);
 
     const btnBase: React.CSSProperties = {
         borderColor: "#d1d5db",
@@ -697,21 +740,47 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     };
 
     // "compact" = Tổng quan, "full" = Chi tiết
-    // Highlight nút khi đang ở chế độ Tổng quan (compact)
     const viewModeBtnStyle: React.CSSProperties = viewMode === "compact"
         ? { borderColor: "#6366f1", color: "#6366f1", fontWeight: 600, fontSize: isMobile ? 12 : 14, background: "#eef2ff" }
         : { ...btnBase };
 
+    const handleMenuClick: MenuProps['onClick'] = (e) => {
+        if (e.key === "reload") handleResetPositions();
+        else if (e.key === "layout") handleAutoLayout();
+        else if (e.key === "lock") {
+            setIsDragLocked(!isDragLocked);
+            if (isDragLocked) {
+                message.info("Đã mở khóa di chuyển. Bạn có thể kéo thả để sắp xếp các vị trí!");
+            } else {
+                message.success("Đã khóa di chuyển. Vị trí các node hiện đã được cố định!");
+            }
+        }
+        else if (e.key === "viewMode") setViewMode((v) => (v === "full" ? "compact" : "full"));
+    };
+
+    const settingMenu: MenuProps = {
+        items: [
+            canEdit ? { key: "reload", icon: <ReloadOutlined />, label: "Hoàn tác" } : null,
+            canEdit ? { key: "layout", icon: <ApartmentOutlined />, label: "Tự căn chỉnh" } : null,
+            canEdit ? { key: "lock", icon: isDragLocked ? <UnlockOutlined /> : <LockOutlined />, label: isDragLocked ? "Mở khóa di chuyển" : "Khóa di chuyển" } : null,
+            { key: "viewMode", icon: viewMode === "full" ? <BarsOutlined /> : <AppstoreOutlined />, label: viewMode === "full" ? "Chế độ: Chi tiết" : "Chế độ: Tổng quan" }
+        ].filter(Boolean) as MenuProps['items'],
+        onClick: handleMenuClick,
+    };
+
     return (
-        <div style={{
-            height: containerHeight,
-            minHeight: containerMinHeight,
-            background: "#f8f9fb",
-            borderRadius: isMobile ? 8 : 12,
-            position: "relative",
-            border: "1px solid #e8ecf0",
-            overflow: "hidden",
-        }}>
+        <div
+            ref={containerRef}
+            style={{
+                height: containerHeight,
+                minHeight: containerMinHeight,
+                background: isFullscreen ? "radial-gradient(circle, #f8f9fb 0%, #e2e8f0 100%)" : "#f8f9fb",
+                borderRadius: isFullscreen ? 0 : (isMobile ? 8 : 12),
+                position: "relative",
+                border: isFullscreen ? "none" : "1px solid #e8ecf0",
+                overflow: "hidden",
+            }}
+        >
             {/* ── Toolbar (top-right) ── */}
             <div style={{
                 position: "absolute",
@@ -749,91 +818,46 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     )}
                 </Access>
 
-                {/* ── Hoàn tác ── */}
-                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                {/* ── Tùy chỉnh (Gom các tính năng phụ) ── */}
+                <Dropdown menu={settingMenu} trigger={["click"]} placement="bottomRight">
                     {isMobile ? (
-                        <Tooltip title="Hoàn tác">
-                            <Button icon={<ReloadOutlined />} onClick={handleResetPositions} size="small" style={btnBase} />
+                        <Tooltip title="Tùy chỉnh">
+                            <Button icon={<SettingOutlined />} size="small" style={btnBase} />
                         </Tooltip>
                     ) : (
-                        <Button icon={<ReloadOutlined />} onClick={handleResetPositions} style={btnBase}>
-                            {isTablet ? "" : "Hoàn tác"}
+                        <Button icon={<SettingOutlined />} style={btnBase}>
+                            {isTablet ? "" : "Tùy chỉnh"}
                         </Button>
                     )}
-                </Access>
+                </Dropdown>
 
-                {/* ── Tự căn chỉnh ── */}
-                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
-                    {isMobile ? (
-                        <Tooltip title="Tự căn chỉnh">
-                            <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout} size="small" style={btnBase} />
-                        </Tooltip>
-                    ) : (
-                        <Button icon={<ApartmentOutlined />} onClick={handleAutoLayout} style={btnBase}>
-                            {isTablet ? "" : "Tự căn chỉnh"}
-                        </Button>
-                    )}
-                </Access>
-
-                {/* ── Khóa/Mở khóa kéo thả ── */}
-                <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
-                    {isMobile ? (
-                        <Tooltip title={isDragLocked ? "Mở khóa kéo thả vị trí" : "Khóa kéo thả vị trí"}>
-                            <Button
-                                icon={isDragLocked ? <LockOutlined /> : <UnlockOutlined />}
-                                onClick={() => setIsDragLocked(!isDragLocked)}
-                                size="small"
-                                style={{
-                                    ...btnBase,
-                                    borderColor: isDragLocked ? "#cbd5e1" : "#1677ff",
-                                    color: isDragLocked ? "#475569" : "#1677ff",
-                                }}
-                            />
-                        </Tooltip>
-                    ) : (
+                {/* ── Toàn màn hình ── */}
+                {isMobile ? (
+                    <Tooltip title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}>
                         <Button
-                            icon={isDragLocked ? <LockOutlined /> : <UnlockOutlined />}
-                            onClick={() => {
-                                setIsDragLocked(!isDragLocked);
-                                if (isDragLocked) {
-                                    message.info("Đã mở khóa di chuyển. Bạn có thể kéo thả để sắp xếp các vị trí!");
-                                } else {
-                                    message.success("Đã khóa di chuyển. Vị trí các node hiện đã được cố định!");
-                                }
-                            }}
+                            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                            onClick={toggleFullscreen}
+                            size="small"
                             style={{
                                 ...btnBase,
-                                borderColor: isDragLocked ? "#cbd5e1" : "#1677ff",
-                                color: isDragLocked ? "#475569" : "#1677ff",
-                                fontWeight: isDragLocked ? 500 : 600,
+                                borderColor: isFullscreen ? "#1677ff" : "#cbd5e1",
+                                color: isFullscreen ? "#1677ff" : "#475569",
                             }}
-                        >
-                            {isTablet ? "" : (isDragLocked ? "Khóa di chuyển" : "Mở khóa di chuyển")}
-                        </Button>
-                    )}
-                </Access>
-
-                {/* ── Toggle: Tổng quan / Chi tiết ── */}
-                {isMobile ? (
-                    <Tooltip title={viewMode === "full" ? "Tổng quan" : "Chi tiết"}>
-                        <Button
-                            icon={viewMode === "full" ? <AppstoreOutlined /> : <BarsOutlined />}
-                            onClick={() => setViewMode((v) => v === "full" ? "compact" : "full")}
-                            size="small"
-                            style={viewModeBtnStyle}
                         />
                     </Tooltip>
                 ) : (
-                    <Tooltip title={viewMode === "full" ? "Chỉ hiện tên chức danh" : "Hiện đầy đủ thông tin"}>
+                    <Tooltip title={isFullscreen ? "Nhấn Esc hoặc bấm để thoát" : "Xem sơ đồ toàn màn hình"}>
                         <Button
-                            icon={viewMode === "full" ? <AppstoreOutlined /> : <BarsOutlined />}
-                            onClick={() => setViewMode((v) => v === "full" ? "compact" : "full")}
-                            style={viewModeBtnStyle}
+                            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                            onClick={toggleFullscreen}
+                            style={{
+                                ...btnBase,
+                                borderColor: isFullscreen ? "#1677ff" : "#cbd5e1",
+                                color: isFullscreen ? "#1677ff" : "#475569",
+                                fontWeight: isFullscreen ? 600 : 500,
+                            }}
                         >
-                            {isTablet
-                                ? (viewMode === "full" ? "Tổng quan" : "Chi tiết")
-                                : (viewMode === "full" ? "Tổng quan" : "Chi tiết")
-                            }
+                            {isTablet ? "" : (isFullscreen ? "Thoát" : "Toàn màn hình")}
                         </Button>
                     </Tooltip>
                 )}
@@ -906,7 +930,11 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     showInteractive={false}
                     style={{ bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 20 }}
                 />
-                <Background color="#e5e7eb" gap={20} />
+                <Background
+                    color={isFullscreen ? "#94a3b8" : "#e5e7eb"}
+                    gap={20}
+                    size={isFullscreen ? 1.5 : 1}
+                />
             </ReactFlow>
 
             {/* ── MiniPanel ── */}
@@ -935,7 +963,11 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         const pe = edges.find((e) => e.target === editingNode.id);
                         return pe ? Number(pe.source) : null;
                     })(),
-                } : undefined}
+                } : (prefilledParentId ? {
+                    title: "",
+                    levelCode: "",
+                    parentId: prefilledParentId,
+                } : undefined)}
                 isEditing={!!editingNode}
             />
 

@@ -796,8 +796,13 @@ const ModalNode = ({
 
     useEffect(() => {
         if (open) {
-            if (isEditing && initialValues) { form.setFieldsValue(initialValues); setMode("single"); }
-            else { form.resetFields(); }
+            form.resetFields();
+            if (initialValues) { 
+                form.setFieldsValue(initialValues); 
+                if (isEditing || initialValues.parentId) {
+                    setMode("single");
+                }
+            }
             if (!isEditing) setRows([emptyRow()]);
         }
     }, [open, isEditing, initialValues, form]);

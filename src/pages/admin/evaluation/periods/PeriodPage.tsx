@@ -317,7 +317,7 @@ const PeriodPage = () => {
         if (searchValue) filters.push(`name~'${searchValue}'`);
         if (statusFilter !== null) filters.push(`status='${statusFilter}'`);
         if (filters.length > 0) q.filter = filters.join(" and ");
-        let temp = queryString.stringify(q, { encode: false });
+        const temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=createdAt,desc";
         if (sort?.name) sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
         return `${temp}&${sortBy}`;

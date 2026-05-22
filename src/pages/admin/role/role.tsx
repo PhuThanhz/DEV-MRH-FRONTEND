@@ -59,7 +59,7 @@ const RolePage = () => {
 
         if (params.name) q.filter = sfLike("name", params.name);
 
-        let temp = queryString.stringify(q, { encode: false });
+        const temp = queryString.stringify(q, { encode: false });
         let sortBy = "";
 
         if (sort?.name)

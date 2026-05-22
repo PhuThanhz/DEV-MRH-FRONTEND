@@ -500,8 +500,8 @@ const ApprovalDetailPage = () => {
                                 </tr>
                             );
 
-                                dynamicEmpTotal += empTotal * section.weight;
-                                dynamicMgrTotal += mgrTotal * section.weight;
+                                dynamicEmpTotal += empTotal;
+                                dynamicMgrTotal += mgrTotal;
                                 return rows;
                             });
 

@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import OrgChartFlow from "./OrgChartFlow";
 import { useEffect, useState } from "react";
@@ -6,12 +6,21 @@ import { callFetchCompanyById } from "@/config/api";
 
 const CompanyOrgChartPage = () => {
     const { companyId } = useParams();
+    const [searchParams] = useSearchParams();
     const id = Number(companyId);
 
-    const [companyName, setCompanyName] = useState<string>("");
+    const [companyName, setCompanyName] = useState<string>(
+        searchParams.get("companyName") || ""
+    );
+
+    // Ensure the page always starts at the very top (React Router sometimes preserves scroll position)
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         if (!id) return;
+        if (companyName) return; // Already initialized from URL
 
         const fetchCompany = async () => {
             try {
@@ -23,7 +32,7 @@ const CompanyOrgChartPage = () => {
         };
 
         fetchCompany();
-    }, [id]);
+    }, [id, companyName]);
 
     if (!id) return null;
 

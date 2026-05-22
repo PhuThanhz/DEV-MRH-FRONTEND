@@ -54,7 +54,7 @@ const ModuleApi = (props: IProps) => {
   useEffect(() => {
     if (listPermissions?.length && singleRole?.id && openModal === true) {
       const userPermissions = groupByPermission(singleRole.permissions);
-      let p: any = {};
+      const p: any = {};
 
       listPermissions.forEach((x) => {
         let allCheck = true;

@@ -107,7 +107,7 @@ const UserPage = () => {
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
-        let temp = queryString.stringify(q, { encode: false });
+        const temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=lastLoginAt,desc";
         if (sort?.name)
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";

@@ -29,7 +29,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         return [];
     }
 
-    const checkPermission = (perm: any) =>
+    const checkPermission = (perm: Permission) =>
         permissions?.find(
             (item) =>
                 item.apiPath === perm.apiPath && item.method === perm.method

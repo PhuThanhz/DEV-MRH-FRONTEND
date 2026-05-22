@@ -1,5 +1,5 @@
 import { Tooltip, Popconfirm } from "antd";
-import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined, PlusOutlined } from "@ant-design/icons";
 import { Handle, Position } from "reactflow";
 import { useState, useRef } from "react";
 
@@ -19,11 +19,13 @@ export interface OrgNodeData {
     jobDescriptionId?: number | null;
     allowEdit?: boolean;
     allowDelete?: boolean;
+    allowCreate?: boolean;
     isMobile?: boolean;
     isTablet?: boolean;
     viewMode?: "compact" | "full";
     onEdit: () => void;
     onDelete: () => void;
+    onAddChild?: () => void;
     onJD?: () => void;
     onSelect?: () => void;
     onMouseEnter?: () => void;
@@ -50,12 +52,12 @@ const ACCENT_COLORS = {
 const getBandStyle = (code: string): { bg: string; border: string; color: string } => {
     if (!code) return { bg: "#f1f5f9", border: "1px solid #cbd5e1", color: "#334155" };
     const cleanCode = code.trim().toUpperCase();
-    
+
     // Core Executives/BOD/CEO/GMS get extremely premium Gold/Amber theme
     if (cleanCode === "CEO" || cleanCode === "BOD" || cleanCode === "GMS" || cleanCode.startsWith("DIR") || cleanCode.startsWith("PRES")) {
         return { bg: "#fffbeb", border: "1px solid #fde047", color: "#a16207" }; // Gold
     }
-    
+
     const prefix = cleanCode.charAt(0);
     const map: Record<string, { bg: string; border: string; color: string }> = {
         M: { bg: "#fdf2f8", border: "1px solid #fbcfe8", color: "#be185d" }, // Management (Rose)
@@ -72,6 +74,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const [jdHover, setJdHover] = useState(false);
     const [editHover, setEditHover] = useState(false);
     const [deleteHover, setDeleteHover] = useState(false);
+    const [addHover, setAddHover] = useState(false);
     const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isMobile = data.isMobile ?? false;
@@ -80,7 +83,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const hasHolder = !!data.holderName;
     const hasLevel = !!data.levelCode;
-    
+
     // If a node does not have a level code, it represents a Department structural node
     const isDepartment = !data.levelCode;
 
@@ -100,7 +103,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const holderIconH = isMobile ? 18 : 22;
     const cardPad = isMobile ? "10px 12px" : isTablet ? "12px 14px" : "14px 16px";
     const cardGap = isMobile ? 4 : 6;
-    
+
     // Always render full structured layout in both views, never simple!
     const isSimple = false;
 
@@ -109,7 +112,8 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const showEdit = data.allowEdit !== false;
     const showDelete = data.allowDelete !== false;
-    const showActions = showEdit || showDelete;
+    const showCreate = data.allowCreate !== false;
+    const showActions = showEdit || showDelete || showCreate;
 
     // Pure white background for ALL cards as requested
     const cardBg = "#ffffff";
@@ -182,6 +186,30 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                             pointerEvents: cardHover ? "auto" : "none",
                         }}
                     >
+                        {showCreate && (
+                            <Tooltip title="Thêm cấp dưới" placement="top">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); data.onAddChild?.(); }}
+                                    onMouseEnter={() => { handleMouseEnter(); setAddHover(true); }}
+                                    onMouseLeave={() => { handleMouseLeave(); setAddHover(false); }}
+                                    style={{
+                                        width: actionBtnW, height: actionBtnH,
+                                        borderRadius: "50%",
+                                        background: addHover ? "#10b981" : "#ffffff",
+                                        border: "1px solid #cbd5e1",
+                                        cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        color: addHover ? "#ffffff" : "#475569",
+                                        padding: 0,
+                                        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                                        transition: "all 0.12s ease",
+                                    }}
+                                >
+                                    <PlusOutlined style={{ fontSize: actionIconS }} />
+                                </button>
+                            </Tooltip>
+                        )}
+
                         {showEdit && (
                             <Tooltip title="Chỉnh sửa" placement="top">
                                 <button

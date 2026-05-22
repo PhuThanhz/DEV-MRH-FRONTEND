@@ -54,7 +54,7 @@ function getFileIcon(ext: string) {
 
 const decodeFileName = (fileName?: string): string => {
     if (!fileName) return "";
-    let name = fileName.replace(/^\d{10,}-/, "");
+    const name = fileName.replace(/^\d{10,}-/, "");
     const dotIdx = name.lastIndexOf(".");
     const ext = dotIdx !== -1 ? name.slice(dotIdx) : "";
     const base = dotIdx !== -1 ? name.slice(0, dotIdx) : name;

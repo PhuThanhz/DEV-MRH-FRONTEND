@@ -82,7 +82,7 @@ const DocumentCategoryPage = () => {
             filters.push(`mappingProcedure=${mappingFilter}`);
         if (filters.length > 0) q.filter = filters.join(" and ");
 
-        let temp = queryString.stringify(q, { encode: false });
+        const temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=createdAt,desc";
         if (sort?.categoryCode)
             sortBy =
