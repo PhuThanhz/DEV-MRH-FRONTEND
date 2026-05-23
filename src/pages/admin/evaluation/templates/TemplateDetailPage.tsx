@@ -407,21 +407,23 @@ const TemplateDetailPage: React.FC = () => {
                             {template?.status === "ACTIVE" ? "Đang áp dụng" : template?.status === "ARCHIVED" ? "Lưu trữ" : "Bản nháp"}
                         </Tag>
                         {template?.status === "DRAFT" && (
-                            <Popconfirm
-                                title="Kích hoạt mẫu đánh giá?"
-                                description="Lưu ý: Mẫu sau khi kích hoạt sẽ không thể chỉnh sửa cấu trúc nữa."
-                                onConfirm={handlePublish}
-                                okText="Đồng ý"
-                                cancelText="Hủy"
-                            >
-                                <Button 
-                                    type="primary" 
-                                    icon={<CheckCircleOutlined />} 
-                                    style={{ borderRadius: 6, background: "#389e0d", borderColor: "#389e0d" }}
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.PUBLISH_TEMPLATE} hideChildren>
+                                <Popconfirm
+                                    title="Kích hoạt mẫu đánh giá?"
+                                    description="Lưu ý: Mẫu sau khi kích hoạt sẽ không thể chỉnh sửa cấu trúc nữa."
+                                    onConfirm={handlePublish}
+                                    okText="Đồng ý"
+                                    cancelText="Hủy"
                                 >
-                                    Kích hoạt mẫu
-                                </Button>
-                            </Popconfirm>
+                                    <Button 
+                                        type="primary" 
+                                        icon={<CheckCircleOutlined />} 
+                                        style={{ borderRadius: 6, background: "#389e0d", borderColor: "#389e0d" }}
+                                    >
+                                        Kích hoạt mẫu
+                                    </Button>
+                                </Popconfirm>
+                            </Access>
                         )}
                     </Space>
                 </div>
@@ -451,19 +453,21 @@ const TemplateDetailPage: React.FC = () => {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                     <span style={{ fontWeight: 600, fontSize: 15 }}>Các phần cấu trúc</span>
                                     {template?.status === "DRAFT" && (
-                                        <Button 
-                                            type="primary" 
-                                            size="small" 
-                                            icon={<PlusOutlined />}
-                                            onClick={handleAddSectionClick}
-                                            style={{ 
-                                                borderRadius: 6, 
-                                                background: PINK, 
-                                                borderColor: PINK 
-                                            }}
-                                        >
-                                            Thêm phần
-                                        </Button>
+                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_SECTION} hideChildren>
+                                            <Button 
+                                                type="primary" 
+                                                size="small" 
+                                                icon={<PlusOutlined />}
+                                                onClick={handleAddSectionClick}
+                                                style={{ 
+                                                    borderRadius: 6, 
+                                                    background: PINK, 
+                                                    borderColor: PINK 
+                                                }}
+                                            >
+                                                Thêm phần
+                                            </Button>
+                                        </Access>
                                     )}
                                 </div>
                             }
@@ -504,25 +508,29 @@ const TemplateDetailPage: React.FC = () => {
                                                 </div>
                                                 {template?.status === "DRAFT" && (
                                                     <Space size={8} onClick={(e) => e.stopPropagation()}>
-                                                        <Button 
-                                                            size="small" 
-                                                            icon={<EditOutlined style={{ fontSize: 13 }} />}
-                                                            onClick={(e) => handleEditSectionClick(sec, e)}
-                                                            style={{ borderRadius: 4 }}
-                                                        />
-                                                        <Popconfirm
-                                                            title="Xác nhận xóa phần này cùng toàn bộ tiêu chí trực thuộc?"
-                                                            okText="Xóa"
-                                                            cancelText="Hủy"
-                                                            onConfirm={(e) => sec.id && handleDeleteSection(sec.id, e as any)}
-                                                        >
+                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_SECTION} hideChildren>
                                                             <Button 
                                                                 size="small" 
-                                                                danger 
-                                                                icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                                                                icon={<EditOutlined style={{ fontSize: 13 }} />}
+                                                                onClick={(e) => handleEditSectionClick(sec, e)}
                                                                 style={{ borderRadius: 4 }}
                                                             />
-                                                        </Popconfirm>
+                                                        </Access>
+                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_SECTION} hideChildren>
+                                                            <Popconfirm
+                                                                title="Xác nhận xóa phần này cùng toàn bộ tiêu chí trực thuộc?"
+                                                                okText="Xóa"
+                                                                cancelText="Hủy"
+                                                                onConfirm={(e) => sec.id && handleDeleteSection(sec.id, e as any)}
+                                                            >
+                                                                <Button 
+                                                                    size="small" 
+                                                                    danger 
+                                                                    icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                                                                    style={{ borderRadius: 4 }}
+                                                                />
+                                                            </Popconfirm>
+                                                        </Access>
                                                     </Space>
                                                 )}
                                             </div>
@@ -559,18 +567,20 @@ const TemplateDetailPage: React.FC = () => {
                                             )}
                                         </div>
                                         {template?.status === "DRAFT" && (
-                                            <Button
-                                                type="primary"
-                                                icon={<PlusOutlined />}
-                                                onClick={handleAddCriteriaClick}
-                                                style={{
-                                                    borderRadius: 6,
-                                                    background: PINK,
-                                                    borderColor: PINK,
-                                                }}
-                                            >
-                                                Thêm tiêu chí
-                                            </Button>
+                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_CRITERIA} hideChildren>
+                                                <Button
+                                                    type="primary"
+                                                    icon={<PlusOutlined />}
+                                                    onClick={handleAddCriteriaClick}
+                                                    style={{
+                                                        borderRadius: 6,
+                                                        background: PINK,
+                                                        borderColor: PINK,
+                                                    }}
+                                                >
+                                                    Thêm tiêu chí
+                                                </Button>
+                                            </Access>
                                         )}
                                     </div>
                                 }
@@ -606,39 +616,45 @@ const TemplateDetailPage: React.FC = () => {
 
                                                     {template?.status === "DRAFT" && (
                                                         <Space size={8}>
-                                                            <Button
-                                                                size="middle"
-                                                                icon={<TrophyOutlined style={{ color: "#64748b" }} />}
-                                                                onClick={() => handleConfigureLevels(crit)}
-                                                                style={{
-                                                                    borderRadius: 8,
-                                                                    borderColor: "#cbd5e1",
-                                                                    background: "#ffffff",
-                                                                    color: "#334155",
-                                                                    fontWeight: 600,
-                                                                    fontSize: 13,
-                                                                }}
-                                                            >
-                                                                Mức điểm (1-5)
-                                                            </Button>
-                                                            <Button
-                                                                size="middle"
-                                                                icon={<EditOutlined style={{ color: "#475569" }} />}
-                                                                onClick={() => handleEditCriteriaClick(crit)}
-                                                                style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff" }}
-                                                            />
-                                                            <Popconfirm
-                                                                title="Bạn chắc chắn muốn xóa tiêu chí này?"
-                                                                okText="Xóa"
-                                                                cancelText="Hủy"
-                                                                onConfirm={() => crit.id && handleDeleteCriteria(crit.id)}
-                                                            >
+                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
                                                                 <Button
                                                                     size="middle"
-                                                                    icon={<DeleteOutlined style={{ color: "#ef4444" }} />}
+                                                                    icon={<TrophyOutlined style={{ color: "#64748b" }} />}
+                                                                    onClick={() => handleConfigureLevels(crit)}
+                                                                    style={{
+                                                                        borderRadius: 8,
+                                                                        borderColor: "#cbd5e1",
+                                                                        background: "#ffffff",
+                                                                        color: "#334155",
+                                                                        fontWeight: 600,
+                                                                        fontSize: 13,
+                                                                    }}
+                                                                >
+                                                                    Mức điểm (1-5)
+                                                                </Button>
+                                                            </Access>
+                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                                <Button
+                                                                    size="middle"
+                                                                    icon={<EditOutlined style={{ color: "#475569" }} />}
+                                                                    onClick={() => handleEditCriteriaClick(crit)}
                                                                     style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff" }}
                                                                 />
-                                                            </Popconfirm>
+                                                            </Access>
+                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
+                                                                <Popconfirm
+                                                                    title="Bạn chắc chắn muốn xóa tiêu chí này?"
+                                                                    okText="Xóa"
+                                                                    cancelText="Hủy"
+                                                                    onConfirm={() => crit.id && handleDeleteCriteria(crit.id)}
+                                                                >
+                                                                    <Button
+                                                                        size="middle"
+                                                                        icon={<DeleteOutlined style={{ color: "#ef4444" }} />}
+                                                                        style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff" }}
+                                                                    />
+                                                                </Popconfirm>
+                                                            </Access>
                                                         </Space>
                                                     )}
                                                 </div>

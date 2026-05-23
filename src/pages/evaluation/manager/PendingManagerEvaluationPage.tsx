@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Button, Tooltip, Badge, Empty, Card, Typography, Space } from "antd";
+import { Table, Tag, Button, Tooltip, Badge, Empty, Card, Typography, Space, Tabs } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { callFetchPendingManagerRecords } from "@/config/api";
+import { callFetchPendingManagerRecords, callFetchManagerRecords } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
 
 const { Title, Text } = Typography;
@@ -42,15 +42,22 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
 };
 
-const PendingManagerEvaluationPage = () => {
+interface IProps {
+    isTab?: boolean;
+}
+
+const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
     const navigate = useNavigate();
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("pending");
 
-    const fetchRecords = async () => {
+    const fetchRecords = async (tab: string) => {
         setLoading(true);
         try {
-            const res = await callFetchPendingManagerRecords();
+            const res = tab === "pending"
+                ? await callFetchPendingManagerRecords()
+                : await callFetchManagerRecords();
             if (res?.data) {
                 setRecords(res.data);
             }
@@ -62,8 +69,8 @@ const PendingManagerEvaluationPage = () => {
     };
 
     useEffect(() => {
-        fetchRecords();
-    }, []);
+        fetchRecords(activeTab);
+    }, [activeTab]);
 
     const columns = [
         {
@@ -318,6 +325,15 @@ const PendingManagerEvaluationPage = () => {
                 overflow: "hidden",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
             }}>
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        { key: "pending", label: "Chờ chấm điểm" },
+                        { key: "history", label: "Đã xử lý (Lịch sử)" }
+                    ]}
+                    style={{ padding: "0 20px" }}
+                />
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{
                         display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
@@ -326,8 +342,12 @@ const PendingManagerEvaluationPage = () => {
                         <FileTextOutlined style={{ fontSize: 16 }} />
                     </div>
                     <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Lịch sử đánh giá nhân viên</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>Tất cả các kỳ đánh giá cần quản lý trực tiếp duyệt</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                            {activeTab === "pending" ? "Danh sách cần chấm điểm" : "Lịch sử đánh giá nhân viên"}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {activeTab === "pending" ? "Các bản đánh giá đang đợi bạn xử lý" : "Tất cả các bản đánh giá bạn đã tham gia xử lý"}
+                        </div>
                     </div>
                 </div>
                 <Table

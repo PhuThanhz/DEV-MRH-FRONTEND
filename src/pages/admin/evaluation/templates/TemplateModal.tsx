@@ -1,7 +1,9 @@
-import { Modal, Form, Input, Select, message } from 'antd';
+import { Modal, Form, Input, Select, message, Button } from 'antd';
 import { useState, useEffect } from 'react';
 import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate, callFetchCompany } from '@/config/api';
 import type { IEvaluationTemplate } from '@/types/backend';
+import Access from '@/components/share/access';
+import { ALL_PERMISSIONS } from '@/config/permissions';
 
 interface IProps {
     openModal: boolean;
@@ -91,7 +93,23 @@ const TemplateModal = (props: IProps) => {
         <Modal
             title={dataInit ? "Cập nhật Mẫu đánh giá" : "Tạo mới Mẫu đánh giá"}
             open={openModal}
-            onOk={() => form.submit()}
+            footer={[
+                <Button key="cancel" onClick={() => {
+                    setOpenModal(false);
+                    if (setDataInit) setDataInit(null);
+                }}>
+                    Hủy
+                </Button>,
+                <Access
+                    key="submit"
+                    permission={dataInit?.id ? ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE : ALL_PERMISSIONS.EVALUATION.CREATE_TEMPLATE}
+                    hideChildren
+                >
+                    <Button type="primary" onClick={() => form.submit()} loading={isSubmit}>
+                        {dataInit?.id ? "Cập nhật" : "Tạo mới"}
+                    </Button>
+                </Access>
+            ]}
             onCancel={() => {
                 setOpenModal(false);
                 if (setDataInit) setDataInit(null);

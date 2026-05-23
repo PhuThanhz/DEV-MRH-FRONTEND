@@ -6,9 +6,7 @@ import NotificationList from "./NotificationList";
 
 const NotificationBell: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const { items, unreadItems, unreadCount, markAllRead, markOneRead } = useNotifications();
-
-    const unreadIds = unreadItems.map((i) => i.jdId);
+    const { items, unreadCount, markAllRead, markOneRead } = useNotifications();
 
     return (
         <Dropdown
@@ -21,10 +19,9 @@ const NotificationBell: React.FC = () => {
             popupRender={() => (
                 <NotificationList
                     items={items}
-                    unreadIds={unreadIds}
                     onMarkAllRead={markAllRead}
-                    onItemClick={(id) => {
-                        markOneRead(id);
+                    onItemClick={(item) => {
+                        markOneRead(item);
                         setOpen(false);
                     }}
                     onClose={() => setOpen(false)}

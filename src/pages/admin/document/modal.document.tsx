@@ -489,8 +489,7 @@ const ModalDocument = ({
                         name="documentCode"
                         rules={[
                             { required: true, message: "Vui lòng nhập mã văn bản" },
-                            { max: 100, message: "Tối đa 100 ký tự" },
-                            { pattern: /^[A-Za-z0-9_.\-/]+$/, message: "Chỉ chấp nhận chữ, số, dấu chấm, gạch ngang, gạch dưới, dấu /" },
+                            { max: 100, message: "Tối đa 100 ký tự" }
                         ]}
                     >
                         <Input

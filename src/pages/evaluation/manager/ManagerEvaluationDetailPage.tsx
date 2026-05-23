@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
+import { Radar } from "@ant-design/charts";
 import {
     callFetchEvaluationRecordById,
     callManagerSaveScore,
@@ -234,7 +235,64 @@ const ManagerEvaluationDetailPage = () => {
         background: "#fffbfc"
     };
 
-;
+    // ── Prepare Radar Chart Data ──
+    const radarData: any[] = [];
+    if (record.template?.sections && (record.status !== "NOT_STARTED" && record.status !== "EMPLOYEE_DRAFTING")) {
+        record.template.sections.forEach((section: any) => {
+            let empTotal = 0, mgrTotal = 0;
+            section.criteria?.forEach((c: any) => {
+                const hasSub = c.subCriteria?.length > 0;
+                const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                if (!hasSub) {
+                    if (empScore != null) empTotal += empScore * c.weight;
+                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
+                } else {
+                    c.subCriteria?.forEach((sub: any) => {
+                        const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
+                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                        if (subEmp != null) empTotal += subEmp * sub.weight;
+                        if (subMgr != null) mgrTotal += subMgr * sub.weight;
+                    });
+                }
+            });
+            // Convert to 0-5 scale for the radar chart
+            const empAvg = section.weight > 0 ? empTotal / section.weight : 0;
+            const mgrAvg = section.weight > 0 ? mgrTotal / section.weight : 0;
+
+            radarData.push({
+                item: section.name,
+                user: "Nhân viên",
+                score: Number(empAvg.toFixed(2))
+            });
+            radarData.push({
+                item: section.name,
+                user: "Quản lý",
+                score: Number(mgrAvg.toFixed(2))
+            });
+        });
+    }
+
+    const radarConfig = {
+        data: radarData,
+        xField: 'item',
+        yField: 'score',
+        colorField: 'user',
+        shapeField: 'smooth',
+        area: {
+            style: {
+                fillOpacity: 0.2,
+            },
+        },
+        scale: {
+            y: { tickCount: 5, domainMin: 0, domainMax: 5 },
+        },
+        axis: {
+            x: { grid: true },
+            y: { zIndex: 1, title: false },
+        },
+    };
+
     return (
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 16px 100px", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f9fafb", minHeight: "100vh" }}>
 
@@ -283,7 +341,7 @@ const ManagerEvaluationDetailPage = () => {
                         )}
                         {record.employeeTotalScore != null && (
                             <div style={{ background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", border: "1px solid #fecdd3", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(244,63,94,0.15)" }}>
-                                <div style={{ fontSize: 11, color: "#e11d48", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Tự chấm</div>
+                                <div style={{ fontSize: 11, color: "#e11d48", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>NHÂN VIÊN TỰ CHẤM</div>
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#be123c", lineHeight: 1, marginTop: 4 }}>{record.employeeTotalScore.toFixed(2)}</div>
                             </div>
                         )}
@@ -317,7 +375,17 @@ const ManagerEvaluationDetailPage = () => {
             )}
 
             
-            
+            {/* ─── RADAR CHART ─── */}
+            {radarData.length > 0 && (
+                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, textAlign: "center" }}>
+                        Biểu đồ so sánh đánh giá năng lực
+                    </div>
+                    <div style={{ height: 350 }}>
+                        <Radar {...radarConfig} />
+                    </div>
+                </div>
+            )}
 
             {/* ─── NHÂN SỰ ─── */}
             <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>

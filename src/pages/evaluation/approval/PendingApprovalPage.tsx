@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Button, Tooltip, Badge, Empty, Card, Typography, Space } from "antd";
+import { Table, Tag, Button, Tooltip, Badge, Empty, Card, Typography, Space, Tabs } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
@@ -12,7 +12,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { callFetchPendingApprovalRecords } from "@/config/api";
+import { callFetchPendingApprovalRecords, callBatchApproveRecords, callFetchApprovalRecords } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
 
 const { Title, Text } = Typography;
@@ -42,15 +42,24 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
 };
 
-const PendingApprovalPage = () => {
+interface IProps {
+    isTab?: boolean;
+}
+
+const PendingApprovalPage = ({ isTab }: IProps) => {
     const navigate = useNavigate();
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("pending");
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [batchApproving, setBatchApproving] = useState(false);
 
-    const fetchRecords = async () => {
+    const fetchRecords = async (tab: string) => {
         setLoading(true);
         try {
-            const res = await callFetchPendingApprovalRecords();
+            const res = tab === "pending"
+                ? await callFetchPendingApprovalRecords()
+                : await callFetchApprovalRecords();
             if (res?.data) {
                 setRecords(res.data);
             }
@@ -62,8 +71,23 @@ const PendingApprovalPage = () => {
     };
 
     useEffect(() => {
-        fetchRecords();
-    }, []);
+        fetchRecords(activeTab);
+    }, [activeTab]);
+
+    const handleBatchApprove = async () => {
+        if (selectedRowKeys.length === 0) return;
+        setBatchApproving(true);
+        try {
+            await callBatchApproveRecords(selectedRowKeys as number[]);
+            notify.success(`Đã phê duyệt thành công ${selectedRowKeys.length} bản đánh giá`);
+            setSelectedRowKeys([]);
+            fetchRecords(activeTab);
+        } catch (error) {
+            notify.error("Có lỗi xảy ra khi phê duyệt hàng loạt");
+        } finally {
+            setBatchApproving(false);
+        }
+    };
 
     const columns = [
         {
@@ -316,19 +340,51 @@ const PendingApprovalPage = () => {
                 overflow: "hidden",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
             }}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                        display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
-                        padding: "6px", borderRadius: 8
-                    }}>
-                        <FileTextOutlined style={{ fontSize: 16 }} />
-                    </div>
-                    <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Lịch sử đánh giá nhân viên</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>Tất cả các kỳ đánh giá cần quản lý gián tiếp phê duyệt</div>
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        { key: "pending", label: "Chờ phê duyệt" },
+                        { key: "history", label: "Đã xử lý (Lịch sử)" }
+                    ]}
+                    style={{ padding: "0 20px" }}
+                />
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                            display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
+                            padding: "6px", borderRadius: 8
+                        }}>
+                            <FileTextOutlined style={{ fontSize: 16 }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                                {activeTab === "pending" ? "Danh sách cần phê duyệt" : "Lịch sử phê duyệt"}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                                {activeTab === "pending" ? "Các bản đánh giá đang đợi bạn duyệt" : "Tất cả các bản đánh giá bạn đã xử lý"}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <Table
+                
+                {activeTab === "pending" && selectedRowKeys.length > 0 && (
+                    <div style={{ padding: "12px 20px", background: "#f8faff", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 13, color: "#475569" }}>
+                            Đã chọn <strong style={{ color: "#1677ff" }}>{selectedRowKeys.length}</strong> bản đánh giá
+                        </span>
+                        <Button type="primary" loading={batchApproving} onClick={handleBatchApprove}>
+                            Phê duyệt hàng loạt
+                        </Button>
+                    </div>
+                )}<Table
+                    rowSelection={activeTab === "pending" ? {
+                        selectedRowKeys,
+                        onChange: (keys) => setSelectedRowKeys(keys),
+                        getCheckboxProps: (record: any) => ({
+                            disabled: record.status !== "PENDING_APPROVAL",
+                        }),
+                    } : undefined}
                     className="my-eval-table"
                     columns={columns}
                     dataSource={records}

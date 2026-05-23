@@ -14,6 +14,8 @@ import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
 import { callFetchMyEvaluationRecords } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Title, Text } = Typography;
 
@@ -42,7 +44,11 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
 };
 
-const MyEvaluationPage = () => {
+interface IProps {
+    isTab?: boolean;
+}
+
+const MyEvaluationPage = ({ isTab }: IProps) => {
     const navigate = useNavigate();
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -211,133 +217,135 @@ const MyEvaluationPage = () => {
     ).length;
 
     return (
-        <PageContainer title="Đánh giá của tôi">
-            <style>{`
-                .my-eval-table .ant-table-thead > tr > th {
-                    background: rgba(241, 245, 249, 0.7) !important;
-                    color: #475569 !important;
-                    font-size: 11px !important;
-                    font-weight: 700 !important;
-                    text-transform: uppercase !important;
-                    letter-spacing: 0.5px !important;
-                    border-bottom: 1px solid #e2e8f0 !important;
-                }
-                .my-eval-table .ant-table-tbody > tr > td {
-                    border-bottom: 1px solid #f1f5f9 !important;
-                    padding: 12px 16px !important;
-                }
-                .my-eval-table .ant-table-tbody > tr:hover > td {
-                    background: #f8faff !important;
-                }
-            `}</style>
+        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS}>
+            <PageContainer title="Đánh giá của tôi">
+                <style>{`
+                    .my-eval-table .ant-table-thead > tr > th {
+                        background: rgba(241, 245, 249, 0.7) !important;
+                        color: #475569 !important;
+                        font-size: 11px !important;
+                        font-weight: 700 !important;
+                        text-transform: uppercase !important;
+                        letter-spacing: 0.5px !important;
+                        border-bottom: 1px solid #e2e8f0 !important;
+                    }
+                    .my-eval-table .ant-table-tbody > tr > td {
+                        border-bottom: 1px solid #f1f5f9 !important;
+                        padding: 12px 16px !important;
+                    }
+                    .my-eval-table .ant-table-tbody > tr:hover > td {
+                        background: #f8faff !important;
+                    }
+                `}</style>
 
-            {/* Summary Cards */}
-            <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-                {[
-                    {
-                        label: "Cần tự chấm",
-                        value: pending,
-                        color: "#1677ff",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
-                        icon: (
-                            <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
-                                <SyncOutlined style={{ fontSize: 20, color: "#1677ff" }} />
-                            </div>
-                        ),
-                    },
-                    {
-                        label: "Đang xử lý",
-                        value: inProgress,
-                        color: "#722ed1",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
-                        icon: (
-                            <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
-                                <ClockCircleOutlined style={{ fontSize: 20, color: "#722ed1" }} />
-                            </div>
-                        ),
-                    },
-                    {
-                        label: "Hoàn tất",
-                        value: completed,
-                        color: "#389e0d",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
-                        icon: (
-                            <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "10px", display: "flex" }}>
-                                <TrophyOutlined style={{ fontSize: 20, color: "#389e0d" }} />
-                            </div>
-                        ),
-                    },
-                ].map(item => (
-                    <Card
-                        key={item.label}
-                        style={{
-                            flex: 1, minWidth: 180,
-                            background: item.bg,
-                            border: `1px solid ${item.border}`,
-                            borderRadius: 12,
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
-                        }}
-                        styles={{ body: { padding: "16px 20px" } }}
-                    >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                    {item.label}
+                {/* Summary Cards */}
+                <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+                    {[
+                        {
+                            label: "Cần tự chấm",
+                            value: pending,
+                            color: "#1677ff",
+                            bg: "#ffffff",
+                            border: "#e2e8f0",
+                            icon: (
+                                <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                                    <SyncOutlined style={{ fontSize: 20, color: "#1677ff" }} />
                                 </div>
-                                <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", lineHeight: "1.2", marginTop: 6 }}>
-                                    {item.value}
+                            ),
+                        },
+                        {
+                            label: "Đang xử lý",
+                            value: inProgress,
+                            color: "#722ed1",
+                            bg: "#ffffff",
+                            border: "#e2e8f0",
+                            icon: (
+                                <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                                    <ClockCircleOutlined style={{ fontSize: 20, color: "#722ed1" }} />
                                 </div>
+                            ),
+                        },
+                        {
+                            label: "Hoàn tất",
+                            value: completed,
+                            color: "#389e0d",
+                            bg: "#ffffff",
+                            border: "#e2e8f0",
+                            icon: (
+                                <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                                    <TrophyOutlined style={{ fontSize: 20, color: "#389e0d" }} />
+                                </div>
+                            ),
+                        },
+                    ].map(item => (
+                        <Card
+                            key={item.label}
+                            style={{
+                                flex: 1, minWidth: 180,
+                                background: item.bg,
+                                border: `1px solid ${item.border}`,
+                                borderRadius: 12,
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+                            }}
+                            styles={{ body: { padding: "16px 20px" } }}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                        {item.label}
+                                    </div>
+                                    <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", lineHeight: "1.2", marginTop: 6 }}>
+                                        {item.value}
+                                    </div>
+                                </div>
+                                {item.icon}
                             </div>
-                            {item.icon}
-                        </div>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Table */}
-            <div style={{
-                background: "#fff",
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                overflow: "hidden",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
-            }}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                        display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
-                        padding: "6px", borderRadius: 8
-                    }}>
-                        <FileTextOutlined style={{ fontSize: 16 }} />
-                    </div>
-                    <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Lịch sử bản đánh giá</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>Tất cả các kỳ đánh giá HQCV bạn tham gia</div>
-                    </div>
+                        </Card>
+                    ))}
                 </div>
-                <Table
-                    className="my-eval-table"
-                    columns={columns}
-                    dataSource={records}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10, size: "small" }}
-                    size="middle"
-                    scroll={{ x: "max-content" }}
-                    locale={{
-                        emptyText: (
-                            <Empty
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="Chưa có bản đánh giá nào"
-                                style={{ margin: "40px 0" }}
-                            />
-                        )
-                    }}
-                />
-            </div>
-        </PageContainer>
+
+                {/* Table */}
+                <div style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: "1px solid #e2e8f0",
+                    overflow: "hidden",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                }}>
+                    <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                            display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
+                            padding: "6px", borderRadius: 8
+                        }}>
+                            <FileTextOutlined style={{ fontSize: 16 }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Lịch sử bản đánh giá</div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>Tất cả các kỳ đánh giá HQCV bạn tham gia</div>
+                        </div>
+                    </div>
+                    <Table
+                        className="my-eval-table"
+                        columns={columns}
+                        dataSource={records}
+                        rowKey="id"
+                        loading={loading}
+                        pagination={{ pageSize: 10, size: "small" }}
+                        size="middle"
+                        scroll={{ x: "max-content" }}
+                        locale={{
+                            emptyText: (
+                                <Empty
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                    description="Chưa có bản đánh giá nào"
+                                    style={{ margin: "40px 0" }}
+                                />
+                            )
+                        }}
+                    />
+                </div>
+            </PageContainer>
+        </Access>
     );
 };
 

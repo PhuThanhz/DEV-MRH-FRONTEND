@@ -49,6 +49,7 @@ import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
 import DocumentCategoryPage from "@/pages/admin/document-category";
 import DocumentPage from "@/pages/admin/document";
 // ✅ EVALUATION HQCV
+import EvaluationProcessPage from "@/pages/evaluation/process/EvaluationProcessPage";
 import TemplatePage from "@/pages/admin/evaluation/templates/TemplatePage";
 import TemplateDetailPage from "@/pages/admin/evaluation/templates/TemplateDetailPage";
 import PeriodPage from "@/pages/admin/evaluation/periods/PeriodPage";
@@ -58,6 +59,7 @@ import PendingManagerEvaluationPage from "@/pages/evaluation/manager/PendingMana
 import ManagerEvaluationDetailPage from "@/pages/evaluation/manager/ManagerEvaluationDetailPage";
 import PendingApprovalPage from "@/pages/evaluation/approval/PendingApprovalPage";
 import ApprovalDetailPage from "@/pages/evaluation/approval/ApprovalDetailPage";
+import CompletedEvaluationsPage from "@/pages/evaluation/summary/CompletedEvaluationsPage";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -387,6 +389,15 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+        // ✅ EVALUATION — PROCESS (Gộp 3 tab)
+        {
+          path: "evaluation/process",
+          element: (
+            <ProtectedRoute>
+              <EvaluationProcessPage />
+            </ProtectedRoute>
+          ),
+        },
         // ✅ EVALUATION — NHÂN VIÊN
         {
           path: "evaluation/my-records",
@@ -435,6 +446,15 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <ApprovalDetailPage />
+            </ProtectedRoute>
+          ),
+        },
+        // ✅ EVALUATION — TỔNG HỢP (SUMMARY)
+        {
+          path: "evaluation/summary",
+          element: (
+            <ProtectedRoute>
+              <CompletedEvaluationsPage />
             </ProtectedRoute>
           ),
         },

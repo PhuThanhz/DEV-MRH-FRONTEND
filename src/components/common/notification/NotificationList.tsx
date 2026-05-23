@@ -1,30 +1,32 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
-import type { IJdInbox } from "@/types/backend";
+import { InboxOutlined, BellOutlined } from "@ant-design/icons";
+import type { UnifiedNotification } from "@/hooks/useNotifications";
 
 interface Props {
-    items: IJdInbox[];
-    unreadIds: number[];
+    items: UnifiedNotification[];
     onMarkAllRead: () => void;
-    onItemClick: (id: number) => void;
+    onItemClick: (item: UnifiedNotification) => void;
     onClose: () => void;
 }
 
 const NotificationList: React.FC<Props> = ({
     items,
-    unreadIds,
     onMarkAllRead,
     onItemClick,
     onClose,
 }) => {
     const navigate = useNavigate();
 
-    const handleClickItem = (item: IJdInbox) => {
-        onItemClick(item.jdId);
+    const handleClickItem = (item: UnifiedNotification) => {
+        onItemClick(item);
         onClose();
-        navigate("/admin/job-descriptions?tab=inbox");
+        if (item.type === "jd") {
+            navigate("/admin/job-descriptions?tab=inbox");
+        } else if (item.type === "eval" && item.actionLink) {
+            navigate(item.actionLink);
+        }
     };
 
     if (items.length === 0) {
@@ -57,7 +59,7 @@ const NotificationList: React.FC<Props> = ({
                 <span style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
                     Thông báo
                 </span>
-                {unreadIds.length > 0 && (
+                {items.some(i => !i.isRead) && (
                     <Button
                         type="link"
                         size="small"
@@ -72,10 +74,10 @@ const NotificationList: React.FC<Props> = ({
             {/* List */}
             <div style={{ maxHeight: 360, overflowY: "auto" }}>
                 {items.map((item) => {
-                    const isUnread = unreadIds.includes(item.jdId);
+                    const isUnread = !item.isRead;
                     return (
                         <div
-                            key={item.jdId}
+                            key={item.id}
                             onClick={() => handleClickItem(item)}
                             style={{
                                 display: "flex",
@@ -113,13 +115,10 @@ const NotificationList: React.FC<Props> = ({
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                 }}>
-                                    JD cần duyệt:{" "}
-                                    <span style={{ color: "#E8356D" }}>
-                                        {item.code ?? `#${item.jdId}`}
-                                    </span>
+                                    {item.title}
                                 </div>
                                 <div style={{ fontSize: 12, color: "#6b7280" }}>
-                                    Gửi bởi: {item.fromUser?.name ?? "—"}
+                                    {item.subtitle}
                                 </div>
                             </div>
                         </div>

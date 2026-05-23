@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
+import { Radar } from "@ant-design/charts";
 import {
     callFetchEvaluationRecordById,
     callEmployeeSaveScore,
@@ -17,6 +18,8 @@ import {
     callEmployeeConfirmRecord,
     callFetchRecordHistory,
 } from "@/config/api";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -246,6 +249,64 @@ const MyEvaluationDetailPage = () => {
     };
 
 ;
+    // ── Prepare Radar Chart Data ──
+    const radarData: any[] = [];
+    if (isCompleted && record.template?.sections) {
+        record.template.sections.forEach((section: any) => {
+            let empTotal = 0, mgrTotal = 0;
+            section.criteria?.forEach((c: any) => {
+                const hasSub = c.subCriteria?.length > 0;
+                const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                if (!hasSub) {
+                    if (empScore != null) empTotal += empScore * c.weight;
+                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
+                } else {
+                    c.subCriteria?.forEach((sub: any) => {
+                        const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
+                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                        if (subEmp != null) empTotal += subEmp * sub.weight;
+                        if (subMgr != null) mgrTotal += subMgr * sub.weight;
+                    });
+                }
+            });
+            // Convert to 0-5 scale for the radar chart
+            const empAvg = section.weight > 0 ? empTotal / section.weight : 0;
+            const mgrAvg = section.weight > 0 ? mgrTotal / section.weight : 0;
+
+            radarData.push({
+                item: section.name,
+                user: "Nhân viên",
+                score: Number(empAvg.toFixed(2))
+            });
+            radarData.push({
+                item: section.name,
+                user: "Quản lý",
+                score: Number(mgrAvg.toFixed(2))
+            });
+        });
+    }
+
+    const radarConfig = {
+        data: radarData,
+        xField: 'item',
+        yField: 'score',
+        colorField: 'user',
+        shapeField: 'smooth',
+        area: {
+            style: {
+                fillOpacity: 0.2,
+            },
+        },
+        scale: {
+            y: { tickCount: 5, domainMin: 0, domainMax: 5 },
+        },
+        axis: {
+            x: { grid: true },
+            y: { zIndex: 1, title: false },
+        },
+    };
+
     return (
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 16px 100px", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f9fafb", minHeight: "100vh" }}>
 
@@ -285,7 +346,7 @@ const MyEvaluationDetailPage = () => {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        {gradeCfg && (
+                        {isCompleted && gradeCfg && (
                             <div style={{ background: "#fff", border: `2px solid ${gradeCfg.color}`, borderRadius: 12, padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
                                 <span style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Xếp loại</span>
                                 <span style={{ fontSize: 28, fontWeight: 900, color: gradeCfg.color, lineHeight: 1 }}>{record.finalGrade}</span>
@@ -298,7 +359,7 @@ const MyEvaluationDetailPage = () => {
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#be123c", lineHeight: 1, marginTop: 4 }}>{record.employeeTotalScore.toFixed(2)}</div>
                             </div>
                         )}
-                        {record.managerTotalScore != null && (
+                        {isCompleted && record.managerTotalScore != null && (
                             <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1px solid #bbf7d0", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(34,197,94,0.15)" }}>
                                 <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý</div>
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{record.managerTotalScore.toFixed(2)}</div>
@@ -346,6 +407,18 @@ const MyEvaluationDetailPage = () => {
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
                     <CheckCircleOutlined style={{ color: "#f43f5e" }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Đã xác nhận kết quả vào {dayjs(record.completedAt).format("DD/MM/YYYY HH:mm")}</span>
+                </div>
+            )}
+
+            {/* ─── RADAR CHART ─── */}
+            {radarData.length > 0 && (
+                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, textAlign: "center" }}>
+                        Biểu đồ so sánh đánh giá năng lực
+                    </div>
+                    <div style={{ height: 350 }}>
+                        <Radar {...radarConfig} />
+                    </div>
                 </div>
             )}
 
@@ -476,10 +549,12 @@ const MyEvaluationDetailPage = () => {
                                         </td>
                                         <td style={{ ...tdSc, borderLeft: "none" }}>
                                             {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : isEditable ? (
-                                                <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                    className={empScore == null ? "unfilled-select" : ""}
-                                                    value={empScore ?? undefined} loading={savingScore === c.id}
-                                                    onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                                                <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
+                                                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                                                        className={empScore == null ? "unfilled-select" : ""}
+                                                        value={empScore ?? undefined} loading={savingScore === c.id}
+                                                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                                                </Access>
                                             ) : (
                                                 <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
                                             )}
@@ -523,10 +598,12 @@ const MyEvaluationDetailPage = () => {
                                                 </td>
                                                 <td style={{ ...tdSc, borderLeft: "none" }}>
                                                     {isEditable ? (
-                                                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                            className={subEmp == null ? "unfilled-select" : ""}
-                                                            value={subEmp ?? undefined} loading={savingScore === sub.id}
-                                                            onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
+                                                            <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                                                                className={subEmp == null ? "unfilled-select" : ""}
+                                                                value={subEmp ?? undefined} loading={savingScore === sub.id}
+                                                                onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                                                        </Access>
                                                     ) : (
                                                         <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
                                                     )}
@@ -607,10 +684,12 @@ const MyEvaluationDetailPage = () => {
                             placeholder="Chia sẻ thành tựu, khó khăn hoặc mong muốn của bạn trong kỳ làm việc vừa qua..."
                             style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                            <Button onClick={handleSaveSelfReview} loading={savingComment}
-                                style={{ borderRadius: 8, fontWeight: 600, color: "#111827", borderColor: "#e5e7eb" }}>
-                                Lưu nhận xét
-                            </Button>
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
+                                <Button onClick={handleSaveSelfReview} loading={savingComment}
+                                    style={{ borderRadius: 8, fontWeight: 600, color: "#111827", borderColor: "#e5e7eb" }}>
+                                    Lưu nhận xét
+                                </Button>
+                            </Access>
                         </div>
                     </div>
                 ) : (
@@ -680,24 +759,26 @@ const MyEvaluationDetailPage = () => {
                         </div>
                     </div>
                     <div style={{ width: 1, height: 28, background: "#e5e7eb" }} />
-                    <Popconfirm
-                        title="Xác nhận nộp đánh giá?"
-                        description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
-                        onConfirm={progressPct === 100 ? handleSubmit : undefined}
-                        okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
-                        cancelText="Hủy"
-                        okButtonProps={{ disabled: progressPct < 100 }}
-                    >
-                        <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
-                            style={{
-                                borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
-                                background: progressPct === 100 ? "#f43f5e" : undefined,
-                                border: "none",
-                                boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
-                            }}>
-                            Nộp bản đánh giá
-                        </Button>
-                    </Popconfirm>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SUBMIT} hideChildren>
+                        <Popconfirm
+                            title="Xác nhận nộp đánh giá?"
+                            description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
+                            onConfirm={progressPct === 100 ? handleSubmit : undefined}
+                            okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
+                            cancelText="Hủy"
+                            okButtonProps={{ disabled: progressPct < 100 }}
+                        >
+                            <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
+                                style={{
+                                    borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
+                                    background: progressPct === 100 ? "#f43f5e" : undefined,
+                                    border: "none",
+                                    boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
+                                }}>
+                                Nộp bản đánh giá
+                            </Button>
+                        </Popconfirm>
+                    </Access>
                 </div>
             )}
 

@@ -12,7 +12,7 @@ import {
     FolderOpenOutlined,
     FileOutlined,
     QrcodeOutlined,
-    TrophyOutlined, CheckCircleOutlined,
+    TrophyOutlined, CheckCircleOutlined, SettingOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -56,7 +56,8 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
 
     const hasConfigGroup =
         checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE) ||
-        checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE);
+        checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE);
 
     const hasQuyTrinhSubgroup =
         checkPermission(ALL_PERMISSIONS.PROCEDURES.GET_PAGINATE) ||
@@ -64,13 +65,8 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
 
     // ✅ THÊM MỚI
     const hasVanBanGroup =
-        checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE) ||
         checkPermission(ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE);
 
-    const hasEvaluationGroup =
-        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES) ||
-        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS) ||
-        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS);
 
     const full = [
         // ===================== TỔNG QUAN =====================
@@ -233,44 +229,10 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             ]
             : []),
 
-        // ===================== CẤU HÌNH QUY TRÌNH =====================
-        ...(hasConfigGroup
-            ? [{ type: "group", label: "CẤU HÌNH QUY TRÌNH" }]
-            : []),
-
-        ...(checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE)
-            ? [
-                {
-                    label: <Link to="/admin/process-action">Raci</Link>,
-                    key: "/admin/process-action",
-                    icon: <ClusterOutlined />,
-                },
-            ]
-            : []),
-
-        ...(checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE)
-            ? [
-                {
-                    label: <Link to="/admin/permission-categories">Danh mục phân quyền</Link>,
-                    key: "/admin/permission-categories",
-                    icon: <FileTextOutlined />,
-                },
-            ]
-            : []),
 
         // ===================== QUẢN LÝ VĂN BẢN =====================
         ...(hasVanBanGroup
             ? [{ type: "group", label: "QUẢN LÝ VĂN BẢN" }]
-            : []),
-
-        ...(checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE)
-            ? [
-                {
-                    label: <Link to="/admin/document-categories">Danh mục loại văn bản</Link>,
-                    key: "/admin/document-categories",
-                    icon: <FolderOpenOutlined />,
-                },
-            ]
             : []),
 
         ...(checkPermission(ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE)
@@ -284,50 +246,87 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
             : []),
 
         // ===================== ĐÁNH GIÁ HQCV =====================
-        ...(hasEvaluationGroup
-            ? [{ type: "group", label: "ĐÁNH GIÁ HQCV" }]
-            : []),
+        { type: "group", label: "ĐÁNH GIÁ HQCV" },
 
-        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES)
-            ? [
+        {
+            type: "subgroup",
+            label: "Nghiệp vụ đánh giá",
+            icon: <FileDoneOutlined />,
+            children: [
+                ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES)
+                    ? [
+                        {
+                            label: <Link to="/admin/evaluation/templates">Mẫu đánh giá</Link>,
+                            key: "/admin/evaluation/templates",
+                        },
+                    ]
+                    : []),
+
+                ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS)
+                    ? [
+                        {
+                            label: <Link to="/admin/evaluation/periods">Kỳ đánh giá</Link>,
+                            key: "/admin/evaluation/periods",
+                        },
+                    ]
+                    : []),
+
+                // Quy trình thực hiện đánh giá (Gộp 3 tab)
                 {
-                    label: <Link to="/admin/evaluation/templates">Mẫu đánh giá</Link>,
-                    key: "/admin/evaluation/templates",
-                    icon: <FileTextOutlined />,
+                    label: <Link to="/admin/evaluation/process">Thực hiện đánh giá</Link>,
+                    key: "/admin/evaluation/process",
                 },
-            ]
-            : []),
+                    
+                // "Tổng hợp Kết quả" — Dành cho Giám đốc / HR
+                ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY)
+                    ? [
+                        {
+                            label: <Link to="/admin/evaluation/summary">Báo cáo tổng hợp</Link>,
+                            key: "/admin/evaluation/summary",
+                        },
+                    ]
+                    : []),
+            ],
+        },
 
-        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS)
+        // ===================== CẤU HÌNH & DANH MỤC =====================
+        ...(hasConfigGroup
             ? [
-                {
-                    label: <Link to="/admin/evaluation/periods">Kỳ đánh giá</Link>,
-                    key: "/admin/evaluation/periods",
-                    icon: <OrderedListOutlined />,
-                },
-            ]
-            : []),
+                  {
+                      type: "subgroup",
+                      label: "Cấu hình & Danh mục",
+                      icon: <SettingOutlined />,
+                      children: [
+                          ...(checkPermission(ALL_PERMISSIONS.PROCESS_ACTIONS.GET_PAGINATE)
+                              ? [
+                                    {
+                                        label: <Link to="/admin/process-action">Raci</Link>,
+                                        key: "/admin/process-action",
+                                    },
+                                ]
+                              : []),
 
-        // "Đánh giá của tôi" — hiển thị cho tất cả user đã đăng nhập (không cần quyền đặc biệt)
-        {
-            label: <Link to="/admin/evaluation/my-records">Đánh giá của tôi</Link>,
-            key: "/admin/evaluation/my-records",
-            icon: <TrophyOutlined />,
-        },
-        
-        // "Quản lý chấm điểm" — Quản lý trực tiếp chấm cho nhân viên
-        {
-            label: <Link to="/admin/evaluation/manager/pending">Quản lý chấm điểm</Link>,
-            key: "/admin/evaluation/manager/pending",
-            icon: <TeamOutlined />,
-        },
-        
-        // "Phê duyệt đánh giá" — Quản lý gián tiếp phê duyệt
-        {
-            label: <Link to="/admin/evaluation/approval/pending">Phê duyệt đánh giá</Link>,
-            key: "/admin/evaluation/approval/pending",
-            icon: <CheckCircleOutlined />,
-        },
+                          ...(checkPermission(ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_PAGINATE)
+                              ? [
+                                    {
+                                        label: <Link to="/admin/permission-categories">Danh mục phân quyền</Link>,
+                                        key: "/admin/permission-categories",
+                                    },
+                                ]
+                              : []),
+
+                          ...(checkPermission(ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_PAGINATE)
+                              ? [
+                                    {
+                                        label: <Link to="/admin/document-categories">Danh mục loại văn bản</Link>,
+                                        key: "/admin/document-categories",
+                                    },
+                                ]
+                              : []),
+                      ],
+                  },
+              ]
+            : []),
 
         // ===================== CÔNG CỤ =====================
         { type: "group", label: "CÔNG CỤ" },

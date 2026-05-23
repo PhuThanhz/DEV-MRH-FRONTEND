@@ -1,9 +1,11 @@
-import { Modal, Form, Input, DatePicker, Tooltip } from "antd";
+import { Modal, Form, Input, DatePicker, Tooltip, Button } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
+import Access from '@/components/share/access';
+import { ALL_PERMISSIONS } from '@/config/permissions';
 import {
     CalendarOutlined,
     UserOutlined,
@@ -159,11 +161,22 @@ const PeriodModal = (props: IProps) => {
                 </div>
             }
             open={openModal}
-            onOk={() => form.submit()}
+            footer={[
+                <Button key="cancel" onClick={() => { setOpenModal(false); if (setDataInit) setDataInit(null); }}>
+                    Hủy
+                </Button>,
+                <Access
+                    key="submit"
+                    permission={isEdit ? ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD : ALL_PERMISSIONS.EVALUATION.CREATE_PERIOD}
+                    hideChildren
+                >
+                    <Button type="primary" onClick={() => form.submit()} loading={isSubmit}>
+                        {isEdit ? "Lưu thay đổi" : "Tạo kỳ đánh giá"}
+                    </Button>
+                </Access>
+            ]}
             onCancel={() => { setOpenModal(false); if (setDataInit) setDataInit(null); }}
             confirmLoading={isSubmit}
-            okText={isEdit ? "Lưu thay đổi" : "Tạo kỳ đánh giá"}
-            cancelText="Hủy"
             width={640}
             destroyOnHidden
             maskClosable={false}

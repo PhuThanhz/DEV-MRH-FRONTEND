@@ -20,6 +20,8 @@ import {
     callFetchDepartmentsByCompany,
 } from "@/config/api";
 import type { IEvaluationPeriod, IEvaluationTemplate } from "@/types/backend";
+import Access from '@/components/share/access';
+import { ALL_PERMISSIONS } from '@/config/permissions';
 
 interface IProps {
     open: boolean;
@@ -395,32 +397,34 @@ const PeriodDetailDrawer = (props: IProps) => {
                 const isPeriodClosed = period?.status?.toUpperCase() === "CLOSED";
                 if (!isRecordActive || isPeriodClosed) return null;
                 return (
-                    <Popconfirm
-                        title="Bạn có chắc chắn muốn hủy gán nhân viên này khỏi kỳ đánh giá?"
-                        onConfirm={() => handleCancelEmployee(record.id)}
-                        okText="Đồng ý"
-                        cancelText="Hủy"
-                        placement="topRight"
-                    >
-                        <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined style={{ fontSize: 13 }} />}
-                            title="Hủy gán nhân viên"
-                            style={{ 
-                                borderRadius: "6px", 
-                                display: "inline-flex", 
-                                alignItems: "center", 
-                                justifyContent: "center",
-                                width: "26px",
-                                height: "26px",
-                                background: "rgba(239, 68, 68, 0.04)",
-                                border: "1px solid rgba(239, 68, 68, 0.08)",
-                                transition: "all 0.2s"
-                            }}
-                            className="btn-delete-action"
-                        />
-                    </Popconfirm>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE} hideChildren>
+                        <Popconfirm
+                            title="Bạn có chắc chắn muốn hủy gán nhân viên này khỏi kỳ đánh giá?"
+                            onConfirm={() => handleCancelEmployee(record.id)}
+                            okText="Đồng ý"
+                            cancelText="Hủy"
+                            placement="topRight"
+                        >
+                            <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                                title="Hủy gán nhân viên"
+                                style={{ 
+                                    borderRadius: "6px", 
+                                    display: "inline-flex", 
+                                    alignItems: "center", 
+                                    justifyContent: "center",
+                                    width: "26px",
+                                    height: "26px",
+                                    background: "rgba(239, 68, 68, 0.04)",
+                                    border: "1px solid rgba(239, 68, 68, 0.08)",
+                                    transition: "all 0.2s"
+                                }}
+                                className="btn-delete-action"
+                            />
+                        </Popconfirm>
+                    </Access>
                 );
             },
         },
@@ -563,25 +567,27 @@ const PeriodDetailDrawer = (props: IProps) => {
                                     />
                                 </Form.Item>
 
-                                <Button
-                                    type="primary"
-                                    htmlType="submit"
-                                    loading={submittingTemplate}
-                                    icon={<PlusOutlined />}
-                                    size="small"
-                                    block
-                                    style={{
-                                        borderRadius: "6px",
-                                        fontWeight: 600,
-                                        background: "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                        border: "none",
-                                        boxShadow: "0 2px 6px rgba(22, 119, 255, 0.15)",
-                                        height: "28px",
-                                        fontSize: "11.5px"
-                                    }}
-                                >
-                                    Gán mẫu vào kỳ
-                                </Button>
+                                <Access permission={ALL_PERMISSIONS.EVALUATION.ADD_TEMPLATE_TO_PERIOD} hideChildren>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={submittingTemplate}
+                                        icon={<PlusOutlined />}
+                                        size="small"
+                                        block
+                                        style={{
+                                            borderRadius: "6px",
+                                            fontWeight: 600,
+                                            background: "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
+                                            border: "none",
+                                            boxShadow: "0 2px 6px rgba(22, 119, 255, 0.15)",
+                                            height: "28px",
+                                            fontSize: "11.5px"
+                                        }}
+                                    >
+                                        Gán mẫu vào kỳ
+                                    </Button>
+                                </Access>
                             </Form>
                         ) : (
                             <div style={{
@@ -809,25 +815,27 @@ const PeriodDetailDrawer = (props: IProps) => {
                                         </Row>
 
                                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                                            <Button
-                                                type="primary"
-                                                htmlType="submit"
-                                                loading={submittingEmployee}
-                                                icon={<UserAddOutlined />}
-                                                size="small"
-                                                style={{
-                                                    borderRadius: "6px",
-                                                    fontWeight: 600,
-                                                    background: "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
-                                                    border: "none",
-                                                    boxShadow: "0 2px 6px rgba(22, 119, 255, 0.15)",
-                                                    padding: "0 14px",
-                                                    height: "28px",
-                                                    fontSize: "11.5px"
-                                                }}
-                                            >
-                                                Thêm nhân sự
-                                            </Button>
+                                            <Access permission={ALL_PERMISSIONS.EVALUATION.ADD_EMPLOYEE_TO_PERIOD} hideChildren>
+                                                <Button
+                                                    type="primary"
+                                                    htmlType="submit"
+                                                    loading={submittingEmployee}
+                                                    icon={<UserAddOutlined />}
+                                                    size="small"
+                                                    style={{
+                                                        borderRadius: "6px",
+                                                        fontWeight: 600,
+                                                        background: "linear-gradient(135deg, #1677ff 0%, #0958d9 100%)",
+                                                        border: "none",
+                                                        boxShadow: "0 2px 6px rgba(22, 119, 255, 0.15)",
+                                                        padding: "0 14px",
+                                                        height: "28px",
+                                                        fontSize: "11.5px"
+                                                    }}
+                                                >
+                                                    Thêm nhân sự
+                                                </Button>
+                                            </Access>
                                         </div>
                                     </Form>
                                 </div>

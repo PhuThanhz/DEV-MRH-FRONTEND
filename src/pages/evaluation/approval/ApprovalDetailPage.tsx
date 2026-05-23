@@ -13,6 +13,7 @@ import {
     callFetchEvaluationRecordById,
     callApproveRecord, callRejectRecord,
     callFetchRecordHistory,
+    callApproverSaveScore, callManagerSaveFeedback
 } from "@/config/api";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
@@ -36,7 +37,7 @@ const GRADE_CONFIG: Record<string, { color: string; label: string }> = {
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm`, value: v }));
 
-const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER") =>
+const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" | "APPROVER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
 
 const getComment = (comments: any[], type: string) =>
@@ -70,9 +71,18 @@ const ApprovalDetailPage = () => {
                 const commentSelf = recRes.data.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
                 if (commentSelf) setManagerFeedback(commentSelf.content);
                 const initScores: Record<number, number> = {};
+                let hasApproverScores = false;
                 recRes.data.scores?.forEach((s: any) => {
-                    if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
+                    if (s.scoredBy === "APPROVER") {
+                        initScores[s.criteriaId] = s.score;
+                        hasApproverScores = true;
+                    }
                 });
+                if (!hasApproverScores) {
+                    recRes.data.scores?.forEach((s: any) => {
+                        if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
+                    });
+                }
                 setLocalScores(initScores);
             }
             if (histRes?.data) setHistory(histRes.data);
@@ -87,7 +97,7 @@ const ApprovalDetailPage = () => {
         setSavingScore(criteriaId);
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            await (record.id, criteriaId, score);
+            await callApproverSaveScore(record.id, criteriaId, score);
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
         } finally { setSavingScore(null); }
@@ -97,7 +107,7 @@ const ApprovalDetailPage = () => {
         if (!record?.id) return;
         setSavingComment(true);
         try {
-            await (record.id, managerFeedback);
+            await callManagerSaveFeedback(record.id, managerFeedback);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
@@ -106,24 +116,24 @@ const ApprovalDetailPage = () => {
 
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState("");
+    const [approveModalOpen, setApproveModalOpen] = useState(false);
+
+    const handleApproveClick = () => {
+        setApproveModalOpen(true);
+    };
 
     const handleApprove = async () => {
-        Modal.confirm({
-            title: 'Xác nhận phê duyệt',
-            content: 'Bạn có chắc chắn muốn phê duyệt bản đánh giá này? Kết quả sẽ được gửi cho nhân viên.',
-            onOk: async () => {
-                setSaving(true);
-                try {
-                    await callApproveRecord(Number(id));
-                    notify.success("Đã phê duyệt thành công!");
-                    fetchRecord();
-                } catch {
-                    notify.error("Lỗi khi phê duyệt");
-                } finally {
-                    setSaving(false);
-                }
-            }
-        });
+        setSaving(true);
+        try {
+            await callApproveRecord(Number(id));
+            notify.success("Đã phê duyệt thành công!");
+            setApproveModalOpen(false);
+            fetchRecord();
+        } catch (error: any) {
+            notify.error(error?.response?.data?.message || "Lỗi khi phê duyệt");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleReject = async () => {
@@ -156,8 +166,8 @@ const ApprovalDetailPage = () => {
         </div>
     );
 
-    const isEditable = false;
     const isApprovable = record.status === "PENDING_APPROVAL";
+    const isEditable = isApprovable;
     const isCompleted = record.status === "COMPLETED";
     const hasConfirmed = isCompleted && !!record.completedAt;
     const statusCfg = STATUS_CONFIG[record.status as RecordStatus] ?? STATUS_CONFIG.NOT_STARTED;
@@ -254,9 +264,15 @@ const ApprovalDetailPage = () => {
                             </div>
                         )}
                         {record.managerTotalScore != null && (
+                            <div style={{ background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", border: "1px solid #bfdbfe", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(59,130,246,0.15)" }}>
+                                <div style={{ fontSize: 11, color: "#2563eb", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý</div>
+                                <div style={{ fontSize: 24, fontWeight: 900, color: "#1d4ed8", lineHeight: 1, marginTop: 4 }}>{record.managerTotalScore.toFixed(2)}</div>
+                            </div>
+                        )}
+                        {(record.approverTotalScore != null || record.managerTotalScore != null) && (
                             <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1px solid #bbf7d0", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(34,197,94,0.15)" }}>
-                                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{record.managerTotalScore.toFixed(2)}</div>
+                                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Phê duyệt</div>
+                                <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{(record.approverTotalScore ?? record.managerTotalScore).toFixed(2)}</div>
                             </div>
                         )}
                     </div>
@@ -272,7 +288,8 @@ const ApprovalDetailPage = () => {
                     <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                                Tiến độ đánh giá của Quản lý
+                                Tiến độ phê duyệt
+
                                 <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: "#6b7280" }}>(<span style={{ color: "#f43f5e", fontWeight: 700 }}>{scoredCount}</span> / {allLeafCriteria.length} tiêu chí)</span>
                             </div>
                             <span style={{ fontSize: 22, fontWeight: 900, color: progressPct === 100 ? "#f43f5e" : "#111827" }}>{progressPct}%</span>
@@ -352,7 +369,7 @@ const ApprovalDetailPage = () => {
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
                                 <span style={{ color: "#111827" }}>CBNV tự đánh giá</span>
                             </th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Đánh giá của Quản lý</th>
+                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Phê duyệt chấm</th>
                         </tr>
                         <tr>
                             {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, minWidth: 100, color: "#f43f5e" }}>Mức {n}</th>)}
@@ -391,7 +408,7 @@ const ApprovalDetailPage = () => {
                             section.criteria?.forEach((c: any, cIdx: number) => {
                                 const hasSub = c.subCriteria?.length > 0;
                                 const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "APPROVER") ?? getScore(record.scores, c.id, "MANAGER");
                                 const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                 if (!hasSub) {
@@ -441,7 +458,7 @@ const ApprovalDetailPage = () => {
                                 if (hasSub) {
                                     c.subCriteria?.forEach((sub: any, si: number) => {
                                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
-                                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "APPROVER") ?? getScore(record.scores, sub.id, "MANAGER");
                                         const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
                                         if (subEmp != null) empTotal += subEmp * sub.weight;
                                         if (subMgr != null) mgrTotal += subMgr * sub.weight;
@@ -587,6 +604,68 @@ const ApprovalDetailPage = () => {
                 </div>
             )}
 
+
+            {/* ─── ACTION BAR ─── */}
+            {isApprovable && (
+                <div style={{
+                    position: "fixed", bottom: 0, left: 0, right: 0,
+                    background: "rgba(255, 255, 255, 0.9)",
+                    backdropFilter: "blur(12px)", borderTop: "1px solid #e5e7eb",
+                    padding: "16px 40px", display: "flex", justifyContent: "flex-end", gap: 16,
+                    boxShadow: "0 -4px 20px rgba(0,0,0,0.05)", zIndex: 100
+                }}>
+                    <Button
+                        size="large"
+                        danger
+                        style={{ borderRadius: 10, fontWeight: 700, minWidth: 140 }}
+                        onClick={() => setRejectModalOpen(true)}
+                    >
+                        Trả lại (Yêu cầu làm lại)
+                    </Button>
+                    <Button
+                        type="primary"
+                        size="large"
+                        icon={<CheckCircleOutlined />}
+                        loading={saving}
+                        onClick={handleApproveClick}
+                        style={{ background: "#10b981", borderColor: "#10b981", borderRadius: 10, fontWeight: 700, minWidth: 160 }}
+                    >
+                        Phê duyệt & Hoàn tất
+                    </Button>
+                </div>
+            )}
+
+            <Modal
+                title="Trả lại bản đánh giá"
+                open={rejectModalOpen}
+                onOk={handleReject}
+                onCancel={() => setRejectModalOpen(false)}
+                confirmLoading={saving}
+                okText="Xác nhận trả lại"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+            >
+                <Alert message="Bản đánh giá sẽ được trả lại cho Quản lý trực tiếp để thực hiện lại." type="warning" showIcon style={{ marginBottom: 16 }} />
+                <div style={{ marginBottom: 8, fontWeight: 600 }}>Lý do trả lại <span style={{ color: "red" }}>*</span></div>
+                <Input.TextArea
+                    rows={4}
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Nhập lý do trả lại để Quản lý trực tiếp có thể khắc phục..."
+                />
+            </Modal>
+
+            <Modal
+                title="Xác nhận phê duyệt"
+                open={approveModalOpen}
+                onOk={handleApprove}
+                onCancel={() => setApproveModalOpen(false)}
+                confirmLoading={saving}
+                okText="Phê duyệt"
+                cancelText="Hủy"
+            >
+                <Alert message="Bạn có chắc chắn muốn phê duyệt bản đánh giá này? Kết quả sẽ được gửi cho nhân viên." type="info" showIcon style={{ marginBottom: 16 }} />
+            </Modal>
 
             <style>{`
                 .eval-row:hover td { background-color: #fafafa !important; }

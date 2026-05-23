@@ -2071,11 +2071,18 @@ export const callFetchMyEvaluationRecords = () =>
 export const callFetchManagerRecordsByPeriod = (periodId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);
 
-export const callFetchPendingManagerRecords = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/pending`);
+export const callFetchManagerRecords = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/records`);
+
+export const callFetchPendingManagerRecords = () => {
+    return axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/pending`);
+};
 
 export const callFetchApprovalRecordsByPeriod = (periodId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/periods/${periodId}/records`);
+
+export const callFetchApprovalRecords = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/records`);
 
 export const callFetchPendingApprovalRecords = () =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/pending`);
@@ -2102,11 +2109,30 @@ export const callManagerSaveFeedback = (recordId: number, content: string) =>
 export const callSaveTrainingPlan = (recordId: number, data: any) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/training-plans`, data);
 
+export const callApproverSaveScore = (recordId: number, criteriaId: number, score: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/approver-scores`, { criteriaId, score });
+
 export const callApproveRecord = (recordId: number) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/approve`);
 
 export const callRejectRecord = (recordId: number, reason: string) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/reject`, { reason });
+
+export const callBatchApproveRecords = (ids: number[]) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/batch-approve`, { recordIds: ids });
+
+export const callFetchCompletedSummary = (periodId?: number, departmentId?: number, companyId?: number) => {
+    let url = `/api/v1/evaluation/summary/completed`;
+    const params = new URLSearchParams();
+    if (periodId) params.append("periodId", periodId.toString());
+    if (departmentId) params.append("departmentId", departmentId.toString());
+    if (companyId) params.append("companyId", companyId.toString());
+    
+    if (params.toString()) {
+        url += `?${params.toString()}`;
+    }
+    return axios.get<IBackendRes<any[]>>(url);
+};
 
 export const callEmployeeConfirmRecord = (recordId: number) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-confirm`);
@@ -2116,16 +2142,16 @@ export const callFetchRecordHistory = (recordId: number) =>
 
 // NOTIFICATIONS
 export const callFetchEvaluationNotifications = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/notifications`);
+    axios.get<IBackendRes<any[]>>(`/api/v1/notifications`);
 
 export const callFetchUnreadEvaluationNotifications = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/notifications/unread`);
+    axios.get<IBackendRes<any[]>>(`/api/v1/notifications/unread`);
 
 export const callCountUnreadEvaluationNotifications = () =>
-    axios.get<IBackendRes<any>>(`/api/v1/evaluation/notifications/unread/count`);
+    axios.get<IBackendRes<any>>(`/api/v1/notifications/unread/count`);
 
 export const callReadEvaluationNotification = (id: number) =>
-    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/notifications/${id}/read`);
+    axios.patch<IBackendRes<any>>(`/api/v1/notifications/${id}/read`);
 
 export const callReadAllEvaluationNotifications = () =>
-    axios.patch<IBackendRes<void>>(`/api/v1/evaluation/notifications/read-all`);
+    axios.patch<IBackendRes<void>>(`/api/v1/notifications/read-all`);

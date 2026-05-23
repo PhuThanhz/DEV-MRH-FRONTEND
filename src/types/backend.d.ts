@@ -1818,6 +1818,7 @@ export interface IEvaluationRecord {
     status: "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "REVISION_NEEDED" | "PENDING_APPROVAL" | "COMPLETED";
     employeeTotalScore?: number;
     managerTotalScore?: number;
+    approverTotalScore?: number;
     finalGrade?: string;
     scores?: IResScoreDTO[];
     comments?: IResCommentDTO[];
@@ -1841,7 +1842,7 @@ export interface IResEmployeeInfo {
 export interface IResScoreDTO {
     id: number;
     criteriaId: number;
-    scoredBy: "EMPLOYEE" | "MANAGER";
+    scoredBy: "EMPLOYEE" | "MANAGER" | "APPROVER";
     score: number;
     weightedScore: number;
 }
@@ -1865,7 +1866,8 @@ export interface IResTrainingPlanDTO {
 
 export interface IResNotificationDTO {
     id: number;
-    notificationType: string;
+    module: string;
+    type: string;
     content: string;
     actionLink?: string;
     read: boolean;
