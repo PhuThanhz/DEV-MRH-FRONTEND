@@ -18,6 +18,12 @@ export const useWebSocket = (onMessageReceived: (msg: IWebSocketMessage) => void
     const clientRef = useRef<Client | null>(null);
     const [connected, setConnected] = useState(false);
 
+    // Keep the latest callback reference to prevent stale closures in the STOMP subscription
+    const onMessageReceivedRef = useRef(onMessageReceived);
+    useEffect(() => {
+        onMessageReceivedRef.current = onMessageReceived;
+    }, [onMessageReceived]);
+
     useEffect(() => {
         if (!user || !user.id) return;
 
@@ -47,7 +53,7 @@ export const useWebSocket = (onMessageReceived: (msg: IWebSocketMessage) => void
                     if (message.body) {
                         try {
                             const payload = JSON.parse(message.body) as IWebSocketMessage;
-                            onMessageReceived(payload);
+                            onMessageReceivedRef.current(payload);
                         } catch (e) {
                             console.error("Failed to parse STOMP message", e);
                         }

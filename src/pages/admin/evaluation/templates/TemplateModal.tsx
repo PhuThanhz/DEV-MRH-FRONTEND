@@ -1,9 +1,10 @@
-import { Modal, Form, Input, Select, message, Button } from 'antd';
+import { Modal, Form, Input, Select, Button } from 'antd';
 import { useState, useEffect } from 'react';
-import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate, callFetchCompany } from '@/config/api';
+import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate, callFetchCompany, callFetchCompanyJobTitlesByCompany } from '@/config/api';
 import type { IEvaluationTemplate } from '@/types/backend';
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
+import { notify } from '@/components/common/notification/notify';
 
 interface IProps {
     openModal: boolean;
@@ -18,12 +19,14 @@ const TemplateModal = (props: IProps) => {
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
     const [companies, setCompanies] = useState<{ label: string; value: number }[]>([]);
+    const [jobTitles, setJobTitles] = useState<{ label: string; value: number }[]>([]);
 
     useEffect(() => {
         const loadOptions = async () => {
             try {
                 const compRes = await callFetchCompany("page=1&size=200&sort=name,asc");
                 if (compRes?.data?.result) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     setCompanies(compRes.data.result.map((c: any) => ({ label: c.name, value: c.id })));
                 }
             } catch (error) {
@@ -44,6 +47,7 @@ const TemplateModal = (props: IProps) => {
                     description: dataInit.description,
                     companyId: dataInit.company?.id || null,
                     type: dataInit.type,
+                    targetJobTitles: dataInit.targetJobTitles?.map(jt => jt.id) || [],
                 });
             } else {
                 form.resetFields();
@@ -51,6 +55,40 @@ const TemplateModal = (props: IProps) => {
         }
     }, [openModal, dataInit, form]);
 
+    const watchCompanyId = Form.useWatch('companyId', form);
+
+    useEffect(() => {
+        const loadJobTitles = async () => {
+            if (watchCompanyId) {
+                try {
+                    const res = await callFetchCompanyJobTitlesByCompany(watchCompanyId);
+                    if (res?.data) {
+                        // Trích xuất jobTitle gốc từ danh sách company job titles
+                        const uniqueTitles = Array.from(
+                            new Map(res.data
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                .filter((cjt: any) => cjt.jobTitle)
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                .map((cjt: any) => [cjt.jobTitle.id, { label: cjt.jobTitle.nameVi, value: cjt.jobTitle.id }])
+                            ).values()
+                        );
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        setJobTitles(uniqueTitles as any);
+                    }
+                } catch {
+                    setJobTitles([]);
+                }
+            } else {
+                setJobTitles([]);
+                // Xóa chọn chức danh nếu chưa chọn công ty
+                form.setFieldValue('targetJobTitles', []);
+            }
+        };
+        
+        loadJobTitles();
+    }, [watchCompanyId, form]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onFinish = async (values: any) => {
         setIsSubmit(true);
         try {
@@ -61,17 +99,18 @@ const TemplateModal = (props: IProps) => {
                 description: values.description,
                 status: values.status || "DRAFT",
                 company: { id: Number(values.companyId) },
+                targetJobTitles: values.targetJobTitles?.map((id: number) => ({ id })) || [],
             };
 
             if (dataInit?.id) {
                 res = await callUpdateEvaluationTemplate(dataInit.id, payload);
                 if (res?.data) {
-                    message.success('Cập nhật mẫu đánh giá thành công');
+                    notify.success('Cập nhật mẫu đánh giá thành công');
                 }
             } else {
                 res = await callCreateEvaluationTemplate(payload);
                 if (res?.data) {
-                    message.success('Tạo mẫu đánh giá thành công');
+                    notify.success('Tạo mẫu đánh giá thành công');
                 }
             }
 
@@ -80,10 +119,11 @@ const TemplateModal = (props: IProps) => {
                 if (setDataInit) setDataInit(null);
                 reloadTable();
             } else {
-                message.error('Có lỗi xảy ra');
+                notify.error('Có lỗi xảy ra');
             }
-        } catch (error) {
-            message.error('Lỗi kết nối máy chủ');
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            const msg = error?.message || error?.response?.data?.message || 'Lỗi kết nối máy chủ';
+            notify.error(msg);
         } finally {
             setIsSubmit(false);
         }
@@ -123,9 +163,26 @@ const TemplateModal = (props: IProps) => {
                 <Form.Item
                     label="Tên mẫu đánh giá"
                     name="name"
-                    rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập tên!' },
+                        { max: 200, message: 'Tên mẫu đánh giá không vượt quá 200 ký tự!' }
+                    ]}
                 >
                     <Input placeholder="VD: Đánh giá nhân viên thử việc" />
+                </Form.Item>
+
+                <Form.Item
+                    label="Công ty"
+                    name="companyId"
+                    rules={[{ required: true, message: 'Vui lòng chọn công ty!' }]}
+                >
+                    <Select
+                        placeholder="Chọn công ty áp dụng..."
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        options={companies}
+                    />
                 </Form.Item>
 
                 <Form.Item
@@ -143,16 +200,24 @@ const TemplateModal = (props: IProps) => {
                 </Form.Item>
 
                 <Form.Item
-                    label="Công ty"
-                    name="companyId"
-                    rules={[{ required: true, message: 'Vui lòng chọn công ty!' }]}
+                    label={
+                        <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
+                            <span>Giới hạn Chức danh áp dụng (Tùy chọn)</span>
+                            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'normal' }}>
+                                Vui lòng chọn Công ty trước. Để trống để áp dụng cho TẤT CẢ chức danh trong nhóm đối tượng trên.
+                            </span>
+                        </span>
+                    }
+                    name="targetJobTitles"
                 >
                     <Select
-                        placeholder="Chọn công ty áp dụng..."
+                        mode="multiple"
+                        placeholder={watchCompanyId ? "Chọn chức danh cụ thể..." : "Hãy chọn công ty trước..."}
                         allowClear
                         showSearch
                         optionFilterProp="label"
-                        options={companies}
+                        options={jobTitles}
+                        disabled={!watchCompanyId}
                     />
                 </Form.Item>
 

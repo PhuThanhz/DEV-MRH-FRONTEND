@@ -14,8 +14,13 @@ const Access = (props: IProps) => {
     const [allow, setAllow] = useState<boolean>(true);
 
     const permissions = useAppSelector(state => state.account.user.role.permissions);
+    const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
 
     useEffect(() => {
+        if (roleName === 'SUPER_ADMIN') {
+            setAllow(true);
+            return;
+        }
         if (permissions?.length) {
             const check = permissions.find(item =>
                 item.apiPath === permission.apiPath
@@ -27,7 +32,7 @@ const Access = (props: IProps) => {
             } else
                 setAllow(false);
         }
-    }, [permissions])
+    }, [permissions, roleName])
 
     return (
         <>

@@ -1238,6 +1238,7 @@ export const ALL_PERMISSIONS = {
         APPROVE_RECORD: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/approve", module: "EVALUATION_MANAGER" },
         REJECT_RECORD: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/reject", module: "EVALUATION_MANAGER" },
         BATCH_APPROVE_RECORDS: { method: "POST", apiPath: "/api/v1/evaluation/records/batch-approve", module: "EVALUATION_MANAGER" },
+        EXTEND_RECORD_DEADLINE: { method: "PATCH", apiPath: "/api/v1/evaluation/records/deadline-extension", module: "EVALUATION_PERIOD" },
         GET_COMPLETED_SUMMARY: { method: "GET", apiPath: "/api/v1/evaluation/summary/completed", module: "EVALUATION_PERIOD" },
         
         GET_RECORD_HISTORY: { method: "GET", apiPath: "/api/v1/evaluation/records/{recordId}/history", module: "EVALUATION_MANAGER" },

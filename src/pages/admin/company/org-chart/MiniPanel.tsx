@@ -38,9 +38,10 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
     };
     const totalDescendants = countDescendants(nodeId);
 
-    const { title, levelCode, holderName, isGoal } = node.data as {
-        title: string; levelCode?: string; holderName?: string; isGoal?: boolean;
+    const { title, levelCode, holderName } = node.data as {
+        title: string; levelCode?: string; holderName?: string;
     };
+    const isDepartment = !levelCode && !holderName;
 
     // ── Tính vị trí + hướng arrow ────────────────────────────────────────────
     const computeLayout = () => {
@@ -187,15 +188,15 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                                     {levelCode}
                                 </span>
                             )}
-                            {isGoal && (
+                            {isDepartment && (
                                 <span style={{
-                                    fontSize: fs.badge, fontWeight: 700,
+                                    fontSize: fs.badge, fontWeight: 800,
                                     fontFamily: "'Be Vietnam Pro',sans-serif",
-                                    background: "#f5f0ff", color: "#7c3aed",
-                                    border: "1px solid #ddd6fe",
+                                    background: "#eff6ff", color: "#1d4ed8",
+                                    border: "1px solid #bfdbfe",
                                     borderRadius: 5, padding: "2px 6px",
                                 }}>
-                                    🎯 Mục tiêu
+                                    Phòng ban
                                 </span>
                             )}
                         </div>
@@ -231,65 +232,66 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                     </button>
                 </div>
 
-                {/* ── Người phụ trách ── */}
-                <div style={{
-                    padding: isMobile ? "9px 11px" : "10px 13px",
-                    borderBottom: "1px solid #f1f5f9",
-                    background: "#fff",
-                }}>
+                {!isDepartment && (
                     <div style={{
-                        fontSize: fs.label, color: "#94a3b8",
-                        fontFamily: "'Be Vietnam Pro',sans-serif",
-                        marginBottom: 5, display: "flex", alignItems: "center", gap: 5,
+                        padding: isMobile ? "9px 11px" : "10px 13px",
+                        borderBottom: "1px solid #f1f5f9",
+                        background: "#fff",
                     }}>
-                        <UserOutlined style={{ fontSize: fs.icon - 1 }} />
-                        Người phụ trách
+                        <div style={{
+                            fontSize: fs.label, color: "#94a3b8",
+                            fontFamily: "'Be Vietnam Pro',sans-serif",
+                            marginBottom: 5, display: "flex", alignItems: "center", gap: 5,
+                        }}>
+                            <UserOutlined style={{ fontSize: fs.icon - 1 }} />
+                            Người đảm nhiệm
+                        </div>
+                        {holderName ? (
+                            <div style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                background: "#f8fafc", border: "1px solid #e2e8f0",
+                                borderRadius: 8, padding: "6px 9px",
+                            }}>
+                                <div style={{
+                                    width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
+                                    borderRadius: 7, flexShrink: 0,
+                                    background: "linear-gradient(135deg, #f43f5e, #fb923c)",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                    <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#fff" }} />
+                                </div>
+                                <span style={{
+                                    fontSize: fs.value, fontWeight: 700, color: "#0f172a",
+                                    fontFamily: "'Be Vietnam Pro',sans-serif",
+                                    lineHeight: 1.3, wordBreak: "break-word",
+                                }}>
+                                    {holderName}
+                                </span>
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                background: "#f8fafc", border: "1px dashed #e2e8f0",
+                                borderRadius: 8, padding: "6px 9px",
+                            }}>
+                                <div style={{
+                                    width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
+                                    borderRadius: 7, flexShrink: 0,
+                                    background: "#f1f5f9", border: "1.5px dashed #e2e8f0",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                    <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#cbd5e1" }} />
+                                </div>
+                                <span style={{
+                                    fontSize: fs.subValue, color: "#94a3b8",
+                                    fontStyle: "italic", fontFamily: "'Be Vietnam Pro',sans-serif",
+                                }}>
+                                    Chưa bổ nhiệm
+                                </span>
+                            </div>
+                        )}
                     </div>
-                    {holderName ? (
-                        <div style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            background: "#f8fafc", border: "1px solid #e2e8f0",
-                            borderRadius: 8, padding: "6px 9px",
-                        }}>
-                            <div style={{
-                                width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
-                                borderRadius: 7, flexShrink: 0,
-                                background: "linear-gradient(135deg, #f43f5e, #fb923c)",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>
-                                <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#fff" }} />
-                            </div>
-                            <span style={{
-                                fontSize: fs.value, fontWeight: 700, color: "#0f172a",
-                                fontFamily: "'Be Vietnam Pro',sans-serif",
-                                lineHeight: 1.3, wordBreak: "break-word",
-                            }}>
-                                {holderName}
-                            </span>
-                        </div>
-                    ) : (
-                        <div style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            background: "#f8fafc", border: "1px dashed #e2e8f0",
-                            borderRadius: 8, padding: "6px 9px",
-                        }}>
-                            <div style={{
-                                width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
-                                borderRadius: 7, flexShrink: 0,
-                                background: "#f1f5f9", border: "1.5px dashed #e2e8f0",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>
-                                <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#cbd5e1" }} />
-                            </div>
-                            <span style={{
-                                fontSize: fs.subValue, color: "#94a3b8",
-                                fontStyle: "italic", fontFamily: "'Be Vietnam Pro',sans-serif",
-                            }}>
-                                Chưa có người phụ trách
-                            </span>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* ── Cấp trên trực tiếp ── */}
                 <div style={{
@@ -303,7 +305,7 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                         marginBottom: 5, display: "flex", alignItems: "center", gap: 5,
                     }}>
                         <ArrowUpOutlined style={{ fontSize: fs.icon - 1 }} />
-                        Cấp trên trực tiếp
+                        {isDepartment ? "Thuộc đơn vị" : "Cấp trên trực tiếp"}
                     </div>
                     {parentNode ? (
                         <div style={{
@@ -317,7 +319,7 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                             }}>
                                 {parentTitle}
                             </div>
-                            {parentHolder ? (
+                            {!isDepartment && parentHolder ? (
                                 <div style={{
                                     fontSize: fs.subValue, color: "#64748b",
                                     fontFamily: "'Be Vietnam Pro',sans-serif", fontWeight: 500,
@@ -329,7 +331,7 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                                     fontSize: fs.subValue, color: "#94a3b8",
                                     fontFamily: "'Be Vietnam Pro',sans-serif", fontStyle: "italic",
                                 }}>
-                                    Chưa có người phụ trách
+                                    {isDepartment ? "Phòng ban cấp trên" : "Chưa bổ nhiệm"}
                                 </div>
                             )}
                         </div>
@@ -352,13 +354,13 @@ const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false,
                 <div style={{ padding: isMobile ? "5px 11px 7px" : "5px 13px 8px", background: "#fafafa" }}>
                     <StatRow
                         icon={<ApartmentOutlined style={{ fontSize: fs.icon }} />}
-                        label="Cấp dưới trực tiếp"
-                        value={`${directChildren} vị trí`}
+                        label={isDepartment ? "Mục trực thuộc" : "Cấp dưới trực tiếp"}
+                        value={`${directChildren} ${isDepartment ? "mục" : "vị trí"}`}
                     />
                     <StatRow
                         icon={<TeamOutlined style={{ fontSize: fs.icon }} />}
-                        label="Tổng cấp dưới"
-                        value={`${totalDescendants} vị trí`}
+                        label={isDepartment ? "Tổng mục con" : "Tổng cấp dưới"}
+                        value={`${totalDescendants} ${isDepartment ? "mục" : "vị trí"}`}
                     />
                 </div>
             </div>

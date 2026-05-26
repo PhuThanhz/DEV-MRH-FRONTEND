@@ -5,11 +5,14 @@ import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, B
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
-    FileTextOutlined, TrophyOutlined,
+    FileTextOutlined, TrophyOutlined, FileExcelOutlined,
 } from "@ant-design/icons";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import useAccess from "@/hooks/useAccess";
+import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { Radar } from "@ant-design/charts";
+import { Radar, Column } from "@ant-design/charts";
 import {
     callFetchEvaluationRecordById,
     callManagerSaveScore,
@@ -23,19 +26,19 @@ type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIE
 
 const STATUS_CONFIG: Record<RecordStatus, { text: string; tagColor: string }> = {
     NOT_STARTED: { text: "Chưa bắt đầu", tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "Đang tự chấm", tagColor: "processing" },
+    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", tagColor: "purple" },
     PENDING_APPROVAL: { text: "Chờ phê duyệt", tagColor: "cyan" },
     COMPLETED: { text: "Hoàn tất", tagColor: "success" },
 };
 
-const GRADE_CONFIG: Record<string, { color: string; label: string }> = {
-    A: { color: "#389e0d", label: "Xuất sắc" },
-    B: { color: "#1677ff", label: "Tốt" },
-    C: { color: "#d46b08", label: "Khá" },
-    D: { color: "#cf1322", label: "Trung bình" },
-    E: { color: "#8c8c8c", label: "Yếu" },
+const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
+    A: { color: "#15803d", bg: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", label: "Xuất sắc" },
+    B: { color: "#1d4ed8", bg: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", label: "Tốt" },
+    C: { color: "#b45309", bg: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", label: "Khá" },
+    D: { color: "#b91c1c", bg: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)", label: "Trung bình" },
+    E: { color: "#be123c", bg: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", label: "Yếu" },
 };
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm`, value: v }));
@@ -61,7 +64,7 @@ const ManagerEvaluationDetailPage = () => {
     const [savingScore, setSavingScore] = useState<number | null>(null);
 
     const fetchRecord = useCallback(async () => {
-        if (!id) return;
+        if (!id || isNaN(Number(id))) return;
         setLoading(true);
         try {
             const [recRes, histRes] = await Promise.all([
@@ -118,7 +121,11 @@ const ManagerEvaluationDetailPage = () => {
             notify.error(err?.response?.data?.message || "Lỗi nộp bản đánh giá");
         } finally { setSubmitting(false); }
     };
-
+    const handleExportExcel = () => {
+        if (record) {
+            exportDetailedEvaluation(record);
+        }
+    };
     
     if (loading) return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
@@ -147,35 +154,35 @@ const ManagerEvaluationDetailPage = () => {
     const scoredCount = allLeafCriteria.filter(c => localScores[c.id] != null).length;
     const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0
 
-        const thS: React.CSSProperties = {
-        padding: "13px 12px", fontWeight: 700, fontSize: 12, color: "#111827",
-        background: "#f9fafb", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        textAlign: "center", whiteSpace: "nowrap"
+    const thS: React.CSSProperties = {
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const thG: React.CSSProperties = {
-        padding: "11px 12px", fontWeight: 700, fontSize: 12, color: "#111827",
-        background: "#f9fafb", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb", textAlign: "center"
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0", textAlign: "center", verticalAlign: "middle"
     };
     const thSub: React.CSSProperties = {
-        padding: "9px 8px", fontWeight: 600, fontSize: 11, color: "#4b5563",
-        background: "#ffffff", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        textAlign: "center", whiteSpace: "nowrap"
+        padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
+        background: "#ffffff", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
-        padding: "13px 12px", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        fontSize: 13, verticalAlign: "top", lineHeight: 1.5, color: "#374151"
+        padding: "14px 14px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
+        fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#334155",
+        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "13px 10px", borderBottom: "1px solid #e5e7eb",
-        borderRight: "1px dashed #e5e7eb", fontSize: 12, color: "#6b7280",
-        verticalAlign: "top", lineHeight: 1.5, minWidth: 100
+        padding: "14px 14px", borderBottom: "1px solid #e2e8f0",
+        borderRight: "1px dashed #dbe3ef", fontSize: 12, color: "#4b5563",
+        verticalAlign: "top", lineHeight: 1.55, minWidth: 120,
+        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdSc: React.CSSProperties = {
-        padding: "13px 12px", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
+        padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
         textAlign: "center", verticalAlign: "middle", background: "#ffffff"
     };
-
-
 
     // ── Table style helpers ──
     const thStyle: React.CSSProperties = {
@@ -273,23 +280,15 @@ const ManagerEvaluationDetailPage = () => {
         });
     }
 
-    const radarConfig = {
+    const uniqueItems = new Set(radarData.map(d => d.item)).size;
+
+    const chartConfig = {
         data: radarData,
         xField: 'item',
         yField: 'score',
         colorField: 'user',
-        shapeField: 'smooth',
-        area: {
-            style: {
-                fillOpacity: 0.2,
-            },
-        },
         scale: {
-            y: { tickCount: 5, domainMin: 0, domainMax: 5 },
-        },
-        axis: {
-            x: { grid: true },
-            y: { zIndex: 1, title: false },
+            y: { domain: [0, 5] },
         },
     };
 
@@ -308,7 +307,7 @@ const ManagerEvaluationDetailPage = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <button
-                            onClick={() => navigate("/admin/evaluation/my-records")}
+                            onClick={() => navigate("/admin/evaluation/process")}
                             style={{
                                 width: 40, height: 40, borderRadius: 10,
                                 border: "1px solid #e5e7eb", background: "#fff",
@@ -331,24 +330,47 @@ const ManagerEvaluationDetailPage = () => {
                             </div>
                         </div>
                     </div>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        {gradeCfg && (
-                            <div style={{ background: "#fff", border: `2px solid ${gradeCfg.color}`, borderRadius: 12, padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
-                                <span style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Xếp loại</span>
-                                <span style={{ fontSize: 28, fontWeight: 900, color: gradeCfg.color, lineHeight: 1 }}>{record.finalGrade}</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: gradeCfg.color, background: `${gradeCfg.color}15`, padding: "2px 8px", borderRadius: 6 }}>{gradeCfg.label}</span>
-                            </div>
-                        )}
+                    <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <Button 
+                                icon={<FileExcelOutlined />} 
+                                onClick={handleExportExcel}
+                                style={{ borderRadius: 6, color: "#047857", borderColor: "#34d399", background: "#ecfdf5" }}
+                            >
+                                Xuất Excel
+                            </Button>
+                        </div>
+                        {/* Nhân viên đánh giá */}
                         {record.employeeTotalScore != null && (
-                            <div style={{ background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", border: "1px solid #fecdd3", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(244,63,94,0.15)" }}>
-                                <div style={{ fontSize: 11, color: "#e11d48", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>NHÂN VIÊN TỰ CHẤM</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: "#be123c", lineHeight: 1, marginTop: 4 }}>{record.employeeTotalScore.toFixed(2)}</div>
+                            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>NV đánh giá</div>
+                                <div style={{ fontSize: 20, fontWeight: 900, color: "#475569", marginTop: 2 }}>{record.employeeTotalScore.toFixed(2)}</div>
                             </div>
                         )}
-                        {record.managerTotalScore != null && (
-                            <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1px solid #bbf7d0", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(34,197,94,0.15)" }}>
-                                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{record.managerTotalScore.toFixed(2)}</div>
+
+                        {/* Điểm Quản lý & Xếp loại */}
+                        {isCompleted && gradeCfg && record.managerTotalScore != null && (
+                            <>
+                                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                                    <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý chấm</div>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{record.managerTotalScore.toFixed(2)}</div>
+                                </div>
+                                <div style={{ background: gradeCfg.bg, border: `1px solid ${gradeCfg.color}30`, borderRadius: 12, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
+                                        <div style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", opacity: 0.8 }}>Xếp loại</div>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: gradeCfg.color }}>{gradeCfg.label}</div>
+                                    </div>
+                                    <div style={{ width: 1.5, height: 36, background: `${gradeCfg.color}30`, borderRadius: 2 }}></div>
+                                    <div style={{ fontSize: 36, fontWeight: 900, color: gradeCfg.color, lineHeight: 1 }}>{record.finalGrade}</div>
+                                </div>
+                            </>
+                        )}
+                        
+                        {/* Nếu chưa complete mà quản lý đang chấm thì vẫn hiện thẻ điểm quản lý đơn giản */}
+                        {!isCompleted && record.managerTotalScore != null && (
+                             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 20px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                                <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý chấm</div>
+                                <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{record.managerTotalScore.toFixed(2)}</div>
                             </div>
                         )}
                     </div>
@@ -375,14 +397,29 @@ const ManagerEvaluationDetailPage = () => {
             )}
 
             
-            {/* ─── RADAR CHART ─── */}
+            {/* ─── CHART ─── */}
             {radarData.length > 0 && (
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, textAlign: "center" }}>
                         Biểu đồ so sánh đánh giá năng lực
                     </div>
                     <div style={{ height: 350 }}>
-                        <Radar {...radarConfig} />
+                        {uniqueItems >= 3 ? (
+                            <Radar 
+                                {...chartConfig} 
+                                shapeField="smooth" 
+                                area={{ style: { fillOpacity: 0.2 } }} 
+                                axis={{ x: { grid: true }, y: { zIndex: 1, title: false } }} 
+                            />
+                        ) : (
+                            <Column 
+                                {...chartConfig} 
+                                seriesField="user"
+                                isGroup={true} 
+                                group={true}
+                                maxColumnWidth={60}
+                            />
+                        )}
                     </div>
                 </div>
             )}
@@ -443,21 +480,21 @@ const ManagerEvaluationDetailPage = () => {
 
             {/* ─── BẢNG ĐÁNH GIÁ ─── */}
             <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1400 : 1150 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1680 : 1500 }}>
                     <thead>
                         <tr>
-                            <th rowSpan={2} style={thS}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", minWidth: 190 }}>Nội dung đánh giá</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", minWidth: 130 }}>Phương pháp đo lường</th>
+                            <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 230 }}>Nội dung đánh giá</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
                             <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>
                             <th rowSpan={2} style={thS}>Trọng số</th>
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
-                                <span style={{ color: "#111827" }}>CBNV tự đánh giá</span>
+                                <span style={{ color: "#111827" }}>CBNV đánh giá</span>
                             </th>
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Đánh giá của Quản lý</th>
                         </tr>
                         <tr>
-                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, minWidth: 100, color: "#f43f5e" }}>Mức {n}</th>)}
+                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
                             <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
                             <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
                             <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>
@@ -495,16 +532,35 @@ const ManagerEvaluationDetailPage = () => {
                                 const empScore = getScore(record.scores, c.id, "EMPLOYEE");
                                 const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
                                 const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
+                                
+                                let avgEmp: number | null = null;
+                                let avgMgr: number | null = null;
 
-                                if (!hasSub) {
+                                if (hasSub) {
+                                    let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
+                                    c.subCriteria.forEach((sub: any) => {
+                                        const e = getScore(record.scores, sub.id, "EMPLOYEE");
+                                        const m = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                                        if (e != null) { sumEmp += e; cntEmp++; }
+                                        if (m != null) { sumMgr += m; cntMgr++; }
+                                    });
+                                    if (cntEmp > 0) avgEmp = sumEmp / c.subCriteria.length;
+                                    if (cntMgr > 0) avgMgr = sumMgr / c.subCriteria.length;
+                                    
+                                    if (avgEmp != null) empTotal += avgEmp * c.weight;
+                                    if (avgMgr != null) mgrTotal += avgMgr * c.weight;
+                                } else {
                                     if (empScore != null) empTotal += empScore * c.weight;
                                     if (mgrScore != null) mgrTotal += mgrScore * c.weight;
                                 }
 
                                 rows.push(
                                     <tr key={`c-${c.id}`} className="eval-row">
-                                        <td style={{ ...tdB, textAlign: "center", color: "#d1d5db", fontWeight: 700, fontSize: 12 }}>{cIdx + 1}</td>
-                                        <td style={{ ...tdB, fontWeight: hasSub ? 700 : 500, color: "#111827" }}>{c.name}</td>
+                                        <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
+                                        <td style={{ ...tdB, color: "#111827" }}>
+                                            <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
+                                            {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
+                                        </td>
                                         <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
                                         {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
                                         <td style={{ ...tdB, textAlign: "center" }}>
@@ -513,17 +569,23 @@ const ManagerEvaluationDetailPage = () => {
                                             </span>
                                         </td>
                                         <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
+                                            {hasSub ? (
+                                                <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
+                                            ) : (
                                                 <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
                                             )}
                                         </td>
                                         <td style={tdSc}>
-                                            {!hasSub && empScore != null
-                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span>
-                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                            {hasSub ? (
+                                                avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                            ) : (
+                                                empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                            )}
                                         </td>
                                         <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : isEditable ? (
+                                            {hasSub ? (
+                                                <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
+                                            ) : isEditable ? (
                                                 <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
                                                     className={mgrScore == null ? "unfilled-select" : ""}
                                                     value={mgrScore ?? undefined} loading={savingScore === c.id}
@@ -533,9 +595,11 @@ const ManagerEvaluationDetailPage = () => {
                                             )}
                                         </td>
                                         <td style={tdSc}>
-                                            {!hasSub && mgrScore != null
-                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span>
-                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                            {hasSub ? (
+                                                avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                            ) : (
+                                                mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                            )}
                                         </td>
                                     </tr>
                                 );
@@ -545,25 +609,24 @@ const ManagerEvaluationDetailPage = () => {
                                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
                                         const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
                                         const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
-                                        if (subEmp != null) empTotal += subEmp * sub.weight;
-                                        if (subMgr != null) mgrTotal += subMgr * sub.weight;
-
+                                        
                                         rows.push(
                                             <tr key={`sub-${sub.id}`} className="eval-row">
-                                                <td style={{ ...tdB, textAlign: "center", color: "#d1d5db", fontSize: 11 }}>{cIdx + 1}.{si + 1}</td>
-                                                <td style={{ ...tdB, paddingLeft: 26, color: "#111827", borderLeft: "none" }}>{sub.name}</td>
+                                                <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+                                                <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
+                                                    <div style={{ fontWeight: 500 }}>{sub.name}</div>
+                                                    {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
+                                                </td>
                                                 <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
                                                 {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
                                                 <td style={{ ...tdB, textAlign: "center" }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                        {(sub.weight * 100).toFixed(0)}%
-                                                    </span>
+                                                    <span style={{ color: "#e5e7eb" }}>—</span>
                                                 </td>
                                                 <td style={{ ...tdSc, borderLeft: "none" }}>
                                                     <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
                                                 </td>
                                                 <td style={tdSc}>
-                                                    {subEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(subEmp * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                                    <span style={{ color: "#e5e7eb" }}>—</span>
                                                 </td>
                                                 <td style={{ ...tdSc, borderLeft: "none" }}>
                                                     {isEditable ? (
@@ -576,7 +639,7 @@ const ManagerEvaluationDetailPage = () => {
                                                     )}
                                                 </td>
                                                 <td style={tdSc}>
-                                                    {subMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                                    <span style={{ color: "#e5e7eb" }}>—</span>
                                                 </td>
                                             </tr>
                                         );
@@ -638,7 +701,7 @@ const ManagerEvaluationDetailPage = () => {
 
             {/* ─── NHẬN XÉT TỰ ĐÁNH GIÁ ─── */}
             <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét tự đánh giá</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét của nhân viên</div>
                 {isEditable ? (
                     <div>
                         <Input.TextArea rows={4} value={managerFeedback} onChange={e => setManagerFeedback(e.target.value)}

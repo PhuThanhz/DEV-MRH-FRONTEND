@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Modal, Form, Input, Select, Switch, Tooltip } from "antd";
+import { AutoComplete, Modal, Form, Input, Select, Tooltip, Popover, Segmented } from "antd";
 import {
     UserOutlined,
     TagOutlined,
@@ -9,7 +9,7 @@ import {
     ThunderboltOutlined,
     PlusOutlined,
     DeleteOutlined,
-    StarOutlined,
+    ReadOutlined,
 } from "@ant-design/icons";
 
 // ─────────────────────────────────────────────────────────
@@ -22,6 +22,25 @@ interface InitialValues {
     isGoal?: boolean;
     parentId?: number | null;
     jobDescriptionId?: number | null;
+    nodeKind?: NodeKind;
+}
+
+export type NodeKind = "department" | "position";
+export type AddNodeMode = "single" | "bulk";
+
+export interface SmartJobTitleOption {
+    value: number;
+    title: string;
+    levelCode?: string;
+    source?: string;
+    jdId?: number | null;
+    jdLabel?: string;
+}
+
+export interface SmartJdOption {
+    value: number;
+    label: string;
+    jobTitleName?: string | null;
 }
 
 export interface BulkNodeItem {
@@ -30,15 +49,18 @@ export interface BulkNodeItem {
     holderName?: string;
     parentIndex: number | null;
     existingParentId: number | null;
+    jobDescriptionId?: number | null;
 }
 
 interface BulkRow {
     id: string;
+    jobTitleId: number | null;
     title: string;
     levelCode: string;
     holderName: string;
     parentIndex: number | null;
     existingParentId: number | null;
+    jobDescriptionId: number | null;
 }
 
 interface Props {
@@ -49,7 +71,10 @@ interface Props {
     nodes: any[];
     initialValues?: InitialValues;
     isEditing?: boolean;
-    jdOptions?: { value: number; label: string }[];
+    jdOptions?: SmartJdOption[];
+    jobTitleOptions?: SmartJobTitleOption[];
+    initialMode?: AddNodeMode;
+    initialNodeKind?: NodeKind;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -60,11 +85,13 @@ const uid = () => `r${++_uid}`;
 
 const emptyRow = (overrides: Partial<BulkRow> = {}): BulkRow => ({
     id: uid(),
+    jobTitleId: null,
     title: "",
     levelCode: "",
     holderName: "",
     parentIndex: null,
     existingParentId: null,
+    jobDescriptionId: null,
     ...overrides,
 });
 
@@ -78,6 +105,78 @@ const getDepth = (rows: BulkRow[], idx: number, memo = new Map<number, number>()
     const d = 1 + getDepth(rows, r.parentIndex, memo);
     memo.set(idx, d);
     return d;
+};
+
+const normalize = (value?: string | null) => (value ?? "").trim().toLowerCase();
+
+const inferNodeKind = (value?: Partial<InitialValues | BulkRow> | null): NodeKind => {
+    if (!value) return "position";
+    return value.levelCode?.trim() || value.holderName?.trim() || value.jobDescriptionId
+        ? "position"
+        : "department";
+};
+
+const getBulkParentKey = (row: BulkRow) => {
+    if (row.existingParentId != null) return `existing-${row.existingParentId}`;
+    if (row.parentIndex != null) return `row-${row.parentIndex}`;
+    return "root";
+};
+
+const validateBulkRows = (rows: BulkRow[], existingNodes: any[]) => {
+    const errors = new Map<string, string[]>();
+    const existingIds = new Set(existingNodes.map((node) => Number(node.id)));
+    const addError = (rowId: string, message: string) => {
+        errors.set(rowId, [...(errors.get(rowId) ?? []), message]);
+    };
+
+    rows.forEach((row, index) => {
+        const title = row.title.trim();
+        const hasTypedValue = title || row.levelCode.trim() || row.holderName.trim() || row.jobDescriptionId;
+
+        if (!title && hasTypedValue) addError(row.id, "Thiếu tên phòng ban/chức danh");
+        if (row.existingParentId != null && !existingIds.has(row.existingParentId)) addError(row.id, "Cấp trên không còn tồn tại");
+        if (row.parentIndex != null) {
+            if (row.parentIndex < 0 || row.parentIndex >= rows.length) addError(row.id, "Dòng cấp trên không hợp lệ");
+            else if (row.parentIndex >= index) addError(row.id, "Cấp trên phải là dòng phía trên để tránh vòng lặp");
+            else if (!rows[row.parentIndex]?.title.trim()) addError(row.id, "Dòng cấp trên đang thiếu tên");
+        }
+    });
+
+    const seen = new Map<string, string[]>();
+    rows.forEach((row) => {
+        const title = normalize(row.title);
+        if (!title) return;
+        const key = `${getBulkParentKey(row)}::${title}`;
+        seen.set(key, [...(seen.get(key) ?? []), row.id]);
+    });
+    seen.forEach((ids) => {
+        if (ids.length <= 1) return;
+        ids.forEach((id) => addError(id, "Trùng tên trong cùng cấp"));
+    });
+
+    return errors;
+};
+
+const buildJobTitleOptions = (
+    jobTitleOptions: SmartJobTitleOption[],
+    jdOptions: SmartJdOption[],
+) => {
+    const jdByTitle = new Map<string, SmartJdOption>();
+    jdOptions.forEach((jd) => {
+        if (jd.jobTitleName) jdByTitle.set(normalize(jd.jobTitleName), jd);
+    });
+
+    return jobTitleOptions.map((option) => {
+        const matchedJd = option.jdId
+            ? jdOptions.find((jd) => jd.value === option.jdId)
+            : jdByTitle.get(normalize(option.title));
+
+        return {
+            ...option,
+            jdId: option.jdId ?? matchedJd?.value ?? null,
+            jdLabel: option.jdLabel ?? matchedJd?.label,
+        };
+    });
 };
 
 // ─────────────────────────────────────────────────────────
@@ -134,13 +233,118 @@ const ModeToggle = ({ mode, onChange }: { mode: "single" | "bulk"; onChange: (m:
     </div>
 );
 
+const LevelBadge = ({ code }: { code?: string }) => (
+    <span style={{
+        minWidth: 38,
+        textAlign: "center",
+        fontSize: 11,
+        lineHeight: "20px",
+        height: 20,
+        padding: "0 7px",
+        borderRadius: 6,
+        background: code ? P.pink50 : P.gray100,
+        color: code ? P.pink700 : P.gray400,
+        border: `1px solid ${code ? P.pink100 : P.gray200}`,
+        fontFamily: "monospace",
+        fontWeight: 700,
+        flexShrink: 0,
+    }}>
+        {code || "--"}
+    </span>
+);
+
+const JobTitleOptionView = ({ option }: { option: SmartJobTitleOption }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+        <div style={{
+            width: 24, height: 24, borderRadius: 7,
+            background: P.gray50, border: `1px solid ${P.gray200}`,
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+            <ApartmentOutlined style={{ fontSize: 12, color: P.gray500 }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: P.gray800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {option.title}
+            </div>
+            <div style={{ fontSize: 11, color: P.gray400, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {option.source || "Chức danh"}{option.jdLabel ? ` · ${option.jdLabel}` : ""}
+            </div>
+        </div>
+        <LevelBadge code={option.levelCode} />
+    </div>
+);
+
+const JobTitleCatalog = ({ options }: { options: SmartJobTitleOption[] }) => {
+    const grouped = useMemo(() => {
+        const map = new Map<string, SmartJobTitleOption[]>();
+        options.forEach((option) => {
+            const key = option.levelCode || "Chưa có mã";
+            map.set(key, [...(map.get(key) ?? []), option]);
+        });
+        return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    }, [options]);
+
+    return (
+        <div style={{ width: 320, maxHeight: 360, overflowY: "auto" }}>
+            {grouped.length === 0 ? (
+                <div style={{ color: P.gray400, fontSize: 12, padding: 10 }}>Chưa có danh mục chức danh</div>
+            ) : grouped.map(([levelCode, items]) => (
+                <div key={levelCode} style={{ padding: "8px 0", borderBottom: `1px solid ${P.gray100}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <LevelBadge code={levelCode === "Chưa có mã" ? undefined : levelCode} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: P.gray700 }}>
+                            {items.length} chức danh
+                        </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {items.map((item) => (
+                            <div key={`${item.value}-${item.source}`} style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 4 }}>
+                                <span style={{ width: 4, height: 4, borderRadius: "50%", background: P.pink500, flexShrink: 0 }} />
+                                <span style={{ fontSize: 12, color: P.gray700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {item.title}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const CatalogButton = ({ options }: { options: SmartJobTitleOption[] }) => (
+    <Popover
+        placement="leftTop"
+        trigger="hover"
+        title={<span style={{ fontSize: 13, fontWeight: 700 }}>Bảng cấp bậc & chức danh</span>}
+        content={<JobTitleCatalog options={options} />}
+    >
+        <button
+            type="button"
+            style={{
+                width: 34, height: 34, borderRadius: 8,
+                border: `1px solid ${P.gray200}`,
+                background: P.white,
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: P.gray500,
+            }}
+        >
+            <ReadOutlined style={{ fontSize: 15 }} />
+        </button>
+    </Popover>
+);
+
 // ─────────────────────────────────────────────────────────
 // Single-node form
 // ─────────────────────────────────────────────────────────
-const SingleNodeForm = ({ form, nodes, jdOptions, isEditing }: {
+const SingleNodeForm = ({ form, nodes, jdOptions, jobTitleOptions, isEditing, nodeKind, onNodeKindChange }: {
     form: any; nodes: any[];
-    jdOptions: { value: number; label: string }[];
+    jdOptions: SmartJdOption[];
+    jobTitleOptions: SmartJobTitleOption[];
     isEditing: boolean;
+    nodeKind: NodeKind;
+    onNodeKindChange: (kind: NodeKind) => void;
 }) => {
     const lbl = (text: string) => (
         <span style={{ fontSize: 11, fontWeight: 600, color: P.gray400, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
@@ -148,35 +352,116 @@ const SingleNodeForm = ({ form, nodes, jdOptions, isEditing }: {
         </span>
     );
     const inp: React.CSSProperties = { borderRadius: 8, borderColor: P.gray200, fontSize: 13 };
+    const isDepartment = nodeKind === "department";
+    const hasSmartOptions = jobTitleOptions.length > 0 && !isEditing && !isDepartment;
+
+    const smartOptions = useMemo(
+        () => jobTitleOptions.map((option) => ({
+            value: option.title,
+            label: <JobTitleOptionView option={option} />,
+            option,
+        })),
+        [jobTitleOptions],
+    );
+
+    const handleJobTitleSelect = (_value: string, optionData: any) => {
+        const selected = optionData?.option as SmartJobTitleOption | undefined;
+        if (!selected) return;
+        form.setFieldsValue({
+            title: selected.title,
+            jobTitleId: selected.value,
+            levelCode: selected.levelCode ?? "",
+            jobDescriptionId: selected.jdId ?? undefined,
+        });
+    };
 
     return (
         <Form form={form} layout="vertical" requiredMark={false}>
-            <Form.Item
-                name="title"
-                label={lbl("Tên chức danh")}
-                rules={[{ required: true, message: "Vui lòng nhập tên chức danh" }]}
-                style={{ marginBottom: 14 }}
-            >
-                <Input
-                    prefix={<UserOutlined style={{ color: P.gray300 }} />}
-                    placeholder="VD: Giám đốc điều hành, Trưởng phòng Kinh doanh..."
-                    size="large" style={inp}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: P.gray500, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                    Loại mục
+                </span>
+                <Segmented
+                    size="small"
+                    value={nodeKind}
+                    onChange={(value) => {
+                        const nextKind = value as NodeKind;
+                        onNodeKindChange(nextKind);
+                        if (nextKind === "department") {
+                            form.setFieldsValue({
+                                levelCode: "",
+                                holderName: "",
+                                jobDescriptionId: undefined,
+                                jobTitleId: undefined,
+                            });
+                        }
+                    }}
+                    options={[
+                        { label: "Phòng ban", value: "department" },
+                        { label: "Chức danh", value: "position" },
+                    ]}
+                    style={{ padding: 3, borderRadius: 8, background: P.gray100 }}
                 />
-            </Form.Item>
-
-            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-                <Form.Item name="levelCode" label={lbl("Mã cấp bậc")} style={{ flex: 1, marginBottom: 0 }}>
-                    <Input prefix={<TagOutlined style={{ color: P.gray300 }} />} placeholder="C1, M2, S3..." size="large" style={inp} />
-                </Form.Item>
-                <Form.Item name="holderName" label={lbl("Người phụ trách")} style={{ flex: 1, marginBottom: 0 }}>
-                    <Input prefix={<UserOutlined style={{ color: P.gray300 }} />} placeholder="Nguyễn Văn A..." size="large" style={inp} />
-                </Form.Item>
             </div>
 
-            <Form.Item name="parentId" label={lbl("Cấp trên trực tiếp")} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 14 }}>
+                <Form.Item
+                    name="title"
+                    label={lbl(isDepartment ? "Tên phòng ban" : "Tên chức danh")}
+                    rules={[{ required: true, message: isDepartment ? "Vui lòng nhập tên phòng ban" : "Vui lòng nhập tên chức danh" }]}
+                    style={{ flex: 1, marginBottom: 0 }}
+                >
+                    {hasSmartOptions ? (
+                        <AutoComplete
+                            size="large"
+                            options={smartOptions}
+                            filterOption={(input, opt) => {
+                                const option = opt?.option as SmartJobTitleOption | undefined;
+                                return `${option?.title ?? ""} ${option?.levelCode ?? ""} ${option?.source ?? ""}`
+                                    .toLowerCase()
+                                    .includes(input.toLowerCase());
+                            }}
+                            onSelect={handleJobTitleSelect}
+                            onChange={(value) => {
+                                form.setFieldsValue({
+                                    title: value,
+                                    jobTitleId: undefined,
+                                    jobDescriptionId: undefined,
+                                });
+                            }}
+                            style={{ fontSize: 13 }}
+                        >
+                            <Input
+                                placeholder="Tìm chức danh hoặc nhập tay..."
+                                size="large"
+                                style={inp}
+                            />
+                        </AutoComplete>
+                    ) : (
+                        <Input
+                            placeholder={isDepartment ? "VD: Phòng Kinh doanh, Ban Kiểm soát..." : "VD: Trưởng phòng Kinh doanh..."}
+                            size="large" style={inp}
+                        />
+                    )}
+                </Form.Item>
+                {hasSmartOptions && <CatalogButton options={jobTitleOptions} />}
+            </div>
+
+            {!isDepartment && (
+                <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                    <Form.Item name="levelCode" label={lbl("Mã cấp bậc")} style={{ flex: 1, marginBottom: 0 }}>
+                        <Input prefix={<TagOutlined style={{ color: P.gray300 }} />} placeholder="Tự động theo chức danh..." size="large" style={inp} />
+                    </Form.Item>
+                    <Form.Item name="holderName" label={lbl("Người đảm nhiệm")} style={{ flex: 1, marginBottom: 0 }}>
+                        <Input prefix={<UserOutlined style={{ color: P.gray300 }} />} placeholder="Tên người phụ trách..." size="large" style={inp} />
+                    </Form.Item>
+                </div>
+            )}
+
+            <Form.Item name="parentId" label={lbl("Thuộc đơn vị / cấp trên")} style={{ marginBottom: 14 }}>
                 <Select
                     allowClear showSearch size="large"
-                    placeholder="Chọn vị trí cấp trên..."
+                    placeholder="Chọn đơn vị hoặc vị trí cấp trên..."
                     filterOption={(input, opt) => (opt?.label as string ?? "").toLowerCase().includes(input.toLowerCase())}
                     options={nodes.map((n: any) => ({ value: Number(n.id), label: n.data?.title ?? `Node ${n.id}` }))}
                     optionRender={(opt) => (
@@ -189,39 +474,16 @@ const SingleNodeForm = ({ form, nodes, jdOptions, isEditing }: {
                 />
             </Form.Item>
 
-            <Form.Item name="jobDescriptionId" label={lbl("Mô tả công việc (JD)")} style={{ marginBottom: 14 }}>
-                <Select
-                    allowClear showSearch size="large"
-                    placeholder="Chọn JD đã ban hành..."
-                    suffixIcon={<FileTextOutlined style={{ color: P.gray300 }} />}
-                    options={jdOptions} style={{ fontSize: 13 }}
-                />
-            </Form.Item>
-
-            <Form.Item style={{ marginBottom: 2 }}>
-                <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: P.pink50, border: `1px solid ${P.pink100}`, borderRadius: 10, padding: "12px 16px",
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                            width: 32, height: 32, borderRadius: 8,
-                            background: P.pink100, display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                            <StarOutlined style={{ color: P.pink600, fontSize: 14 }} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: P.gray800 }}>Vị trí mục tiêu</div>
-                            <div style={{ fontSize: 12, color: P.gray500, marginTop: 1 }}>
-                                Đánh dấu đây là vị trí hướng đến trong lộ trình phát triển
-                            </div>
-                        </div>
-                    </div>
-                    <Form.Item name="isGoal" valuePropName="checked" noStyle>
-                        <Switch size="small" style={{ marginLeft: 12 }} />
-                    </Form.Item>
-                </div>
-            </Form.Item>
+            {!isDepartment && (
+                <Form.Item name="jobDescriptionId" label={lbl("Mô tả công việc (JD)")} style={{ marginBottom: 14 }}>
+                    <Select
+                        allowClear showSearch size="large"
+                        placeholder="Chọn JD đã ban hành..."
+                        suffixIcon={<FileTextOutlined style={{ color: P.gray300 }} />}
+                        options={jdOptions} style={{ fontSize: 13 }}
+                    />
+                </Form.Item>
+            )}
         </Form>
     );
 };
@@ -552,10 +814,12 @@ const OptionItem = ({ label, isSelected, badge, onClick }: {
 // ─────────────────────────────────────────────────────────
 // Bulk Table Editor
 // ─────────────────────────────────────────────────────────
-const BulkTableEditor = ({ rows, setRows, existingNodes }: {
+const BulkTableEditor = ({ rows, setRows, existingNodes, jobTitleOptions, errors }: {
     rows: BulkRow[];
     setRows: React.Dispatch<React.SetStateAction<BulkRow[]>>;
     existingNodes: any[];
+    jobTitleOptions: SmartJobTitleOption[];
+    errors: Map<string, string[]>;
 }) => {
     const inputRefs = useRef<Map<string, HTMLInputElement | null>>(new Map());
     const depthMemo = new Map<number, number>();
@@ -567,11 +831,31 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
         [setRows],
     );
 
+    const applyJobTitleToRow = useCallback((rowId: string, value: number) => {
+        const selected = jobTitleOptions.find((option) => option.value === value);
+        if (!selected) return;
+        setRows((prev) => prev.map((row) => row.id === rowId ? {
+            ...row,
+            jobTitleId: selected.value,
+            title: selected.title,
+            levelCode: selected.levelCode ?? "",
+            jobDescriptionId: selected.jdId ?? null,
+        } : row));
+    }, [jobTitleOptions, setRows]);
+
+    const smartOptions = useMemo(
+        () => jobTitleOptions.map((option) => ({
+            value: option.title,
+            label: <JobTitleOptionView option={option} />,
+            option,
+        })),
+        [jobTitleOptions],
+    );
+
     const addRowAfter = useCallback(
         (afterIndex: number) => {
             const above = rows[afterIndex];
             const newRow = emptyRow({
-                levelCode: above?.levelCode ?? "",
                 parentIndex: above?.parentIndex ?? null,
                 existingParentId: above?.existingParentId ?? null,
             });
@@ -631,7 +915,8 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
         [addRowAfter, deleteRow, rows.length],
     );
 
-    const COLS = "30px 1fr 90px 150px 200px 28px";
+    const hasSmartOptions = jobTitleOptions.length > 0;
+    const COLS = "30px minmax(260px,1fr) 74px 128px 190px 28px";
     const cellBase: React.CSSProperties = {
         width: "100%", border: "none", outline: "none",
         background: "transparent", padding: "2px 0",
@@ -647,9 +932,25 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
                 borderRadius: "10px 10px 0 0",
                 border: `1px solid ${P.gray200}`, borderBottom: "none",
             }}>
-                {["#", "Tên chức danh *", "Mã cấp", "Người phụ trách", "Cấp trên trực tiếp", ""].map((h, i) => (
-                    <div key={i} style={{ fontSize: 10, fontWeight: 700, color: P.gray500, letterSpacing: "0.07em", textTransform: "uppercase" }}>
-                        {h}
+                {["#", "Tên phòng ban / chức danh *", "Mã cấp", "Người đảm nhiệm", "Thuộc đơn vị / cấp trên", ""].map((h, i) => (
+                    <div
+                        key={i}
+                        style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: P.gray500,
+                            letterSpacing: "0.07em",
+                            textTransform: "uppercase",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                        }}
+                    >
+                        {i === 1 && hasSmartOptions ? (
+                            <Tooltip title="Gõ để tìm trong danh mục, hoặc nhập tay tên phòng ban/chức danh mới.">
+                                <span>{h}</span>
+                            </Tooltip>
+                        ) : h}
                     </div>
                 ))}
             </div>
@@ -660,34 +961,80 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
                     const depth = depths[i];
                     const dotColor = row.title.trim() ? DEPTH_COLORS[depth % DEPTH_COLORS.length] : P.gray300;
                     const isLast = i === rows.length - 1;
+                    const rowErrors = errors.get(row.id) ?? [];
+                    const hasError = rowErrors.length > 0;
                     return (
                         <div
                             key={row.id}
                             style={{
                                 display: "grid", gridTemplateColumns: COLS, gap: 8,
-                                padding: "7px 14px",
+                                padding: hasError ? "7px 14px 8px" : "7px 14px",
                                 borderBottom: isLast ? "none" : `1px solid ${P.gray100}`,
-                                background: i % 2 === 0 ? P.white : P.gray50,
-                                alignItems: "center",
+                                background: hasError ? "#fff7f7" : i % 2 === 0 ? P.white : P.gray50,
+                                alignItems: "start",
                             }}
                         >
                             {/* # + dot */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, minHeight: 32 }}>
                                 <div style={{ width: 7, height: 7, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
                                 <span style={{ fontSize: 10, color: P.gray500, fontFamily: "monospace", fontWeight: 600 }}>{i + 1}</span>
                             </div>
 
                             {/* Title + indent */}
-                            <div style={{ paddingLeft: depth * 14, display: "flex", alignItems: "center", gap: 3, overflow: "hidden" }}>
-                                {depth > 0 && <span style={{ color: P.gray300, fontSize: 11, flexShrink: 0 }}>└</span>}
-                                <input
-                                    ref={(el) => { inputRefs.current.set(`title-${row.id}`, el); }}
-                                    value={row.title}
-                                    onChange={(e) => updateRow(row.id, "title", e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e, i, "title")}
-                                    placeholder={`Vị trí ${i + 1}...`}
-                                    style={{ ...cellBase, fontWeight: row.title ? 500 : 400, color: row.title ? P.gray900 : P.gray400 }}
-                                />
+                            <div style={{ paddingLeft: depth * 14, display: "flex", flexDirection: "column", gap: 3, overflow: "hidden", minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                                    {depth > 0 && <span style={{ color: P.gray300, fontSize: 11, flexShrink: 0 }}>└</span>}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        {hasSmartOptions ? (
+                                            <AutoComplete
+                                                size="small"
+                                                value={row.title}
+                                                options={smartOptions}
+                                                filterOption={(input, opt) => {
+                                                    const option = opt?.option as SmartJobTitleOption | undefined;
+                                                    return `${option?.title ?? ""} ${option?.levelCode ?? ""} ${option?.source ?? ""}`
+                                                        .toLowerCase()
+                                                        .includes(input.toLowerCase());
+                                                }}
+                                                onSelect={(_value, optionData: any) => {
+                                                    const selected = optionData?.option as SmartJobTitleOption | undefined;
+                                                    if (selected) applyJobTitleToRow(row.id, selected.value);
+                                                }}
+                                                onChange={(value) => {
+                                                    setRows((prev) => prev.map((r) => r.id === row.id ? {
+                                                        ...r,
+                                                        title: value,
+                                                        jobTitleId: null,
+                                                        jobDescriptionId: null,
+                                                    } : r));
+                                                }}
+                                                style={{ width: "100%" }}
+                                                popupMatchSelectWidth={320}
+                                            >
+                                                <input
+                                                    ref={(el) => { inputRefs.current.set(`title-${row.id}`, el); }}
+                                                    onKeyDown={(e) => handleKeyDown(e, i, "title")}
+                                                    placeholder={`Phòng ban hoặc chức danh ${i + 1}...`}
+                                                    style={{ ...cellBase, fontWeight: row.title ? 500 : 400, color: row.title ? P.gray900 : P.gray400 }}
+                                                />
+                                            </AutoComplete>
+                                        ) : (
+                                            <input
+                                                ref={(el) => { inputRefs.current.set(`title-${row.id}`, el); }}
+                                                value={row.title}
+                                                onChange={(e) => updateRow(row.id, "title", e.target.value)}
+                                                onKeyDown={(e) => handleKeyDown(e, i, "title")}
+                                                placeholder={`Phòng ban hoặc chức danh ${i + 1}...`}
+                                                style={{ ...cellBase, fontWeight: row.title ? 500 : 400, color: row.title ? P.gray900 : P.gray400 }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                                {hasError && (
+                                    <div style={{ color: "#dc2626", fontSize: 11, fontWeight: 600, lineHeight: 1.35 }}>
+                                        {rowErrors.join(" · ")}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Level code */}
@@ -706,7 +1053,7 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
                                 value={row.holderName}
                                 onChange={(e) => updateRow(row.id, "holderName", e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, i, "holderName")}
-                                placeholder="Tên người..."
+                                placeholder="Để trống nếu là phòng ban..."
                                 style={{ ...cellBase, fontSize: 12, color: P.gray700 }}
                             />
 
@@ -788,52 +1135,75 @@ const BulkTableEditor = ({ rows, setRows, existingNodes }: {
 // ─────────────────────────────────────────────────────────
 const ModalNode = ({
     open, onClose, onSubmit, onBulkSubmit,
-    nodes, initialValues, isEditing = false, jdOptions = [],
+    nodes, initialValues, isEditing = false, jdOptions = [], jobTitleOptions = [],
+    initialMode = "single", initialNodeKind = "position",
 }: Props) => {
     const [form] = Form.useForm();
     const [mode, setMode] = useState<"single" | "bulk">("single");
+    const [nodeKind, setNodeKind] = useState<NodeKind>("position");
     const [rows, setRows] = useState<BulkRow[]>([emptyRow()]);
+    const smartJobTitleOptions = useMemo(
+        () => buildJobTitleOptions(jobTitleOptions, jdOptions),
+        [jobTitleOptions, jdOptions],
+    );
 
     useEffect(() => {
         if (open) {
             form.resetFields();
+            setMode(initialMode);
+            setNodeKind(initialValues?.nodeKind ?? (initialValues ? inferNodeKind(initialValues) : initialNodeKind));
             if (initialValues) { 
                 form.setFieldsValue(initialValues); 
-                if (isEditing || initialValues.parentId) {
+                if (isEditing || (initialValues.parentId && initialMode !== "bulk")) {
                     setMode("single");
                 }
             }
-            if (!isEditing) setRows([emptyRow()]);
+            if (!isEditing) {
+                setRows([
+                    emptyRow(initialMode === "bulk" && initialValues?.parentId
+                        ? { existingParentId: initialValues.parentId, parentIndex: null }
+                        : undefined),
+                ]);
+            }
         }
-    }, [open, isEditing, initialValues, form]);
+    }, [open, isEditing, initialValues, form, initialMode, initialNodeKind]);
 
     const validCount = rows.filter((r) => r.title.trim()).length;
     const isBulk = mode === "bulk";
+    const bulkErrors = useMemo(() => validateBulkRows(rows, nodes), [rows, nodes]);
+    const hasBulkErrors = isBulk && validCount > 0 && bulkErrors.size > 0;
 
     const handleOk = async () => {
         if (!isBulk) {
             const values = await form.validateFields();
-            onSubmit(values);
+            onSubmit({
+                ...values,
+                levelCode: nodeKind === "department" ? "" : values.levelCode,
+                holderName: nodeKind === "department" ? null : values.holderName,
+                jobDescriptionId: nodeKind === "department" ? null : values.jobDescriptionId,
+                isGoal: false,
+            });
             form.resetFields();
         } else {
-            if (validCount === 0) return;
+            if (validCount === 0 || hasBulkErrors) return;
             onBulkSubmit?.(
                 rows.filter((r) => r.title.trim()).map((r) => ({
                     title: r.title.trim(),
-                    levelCode: r.levelCode,
-                    holderName: r.holderName || undefined,
+                    levelCode: r.levelCode.trim(),
+                    holderName: r.holderName.trim() || undefined,
                     parentIndex: r.parentIndex,
                     existingParentId: r.existingParentId,
+                    jobDescriptionId: r.jobDescriptionId ?? null,
                 })),
             );
         }
     };
 
     const okLabel = isEditing
-        ? "Lưu thay đổi"
-        : isBulk
-            ? `Tạo ${validCount > 0 ? `${validCount} vị trí` : "hàng loạt"}`
-            : "Tạo vị trí";
+            ? "Lưu thay đổi"
+            : isBulk
+            ? `Tạo ${validCount > 0 ? `${validCount} mục` : "hàng loạt"}`
+            : nodeKind === "department" ? "Tạo phòng ban" : "Tạo chức danh";
 
     return (
         <Modal
@@ -845,9 +1215,9 @@ const ModalNode = ({
             cancelText="Hủy"
             destroyOnHidden
             okButtonProps={{
-                disabled: isBulk && validCount === 0,
+                disabled: isBulk && (validCount === 0 || hasBulkErrors),
                 style: {
-                    background: isBulk && validCount === 0
+                    background: isBulk && (validCount === 0 || hasBulkErrors)
                         ? P.gray200
                         : "linear-gradient(135deg, #be185d 0%, #db2777 60%, #ec4899 100%)",
                     borderColor: "transparent",
@@ -857,8 +1227,8 @@ const ModalNode = ({
                     borderRadius: 8,
                     fontSize: 13,
                     minWidth: 120,
-                    boxShadow: isBulk && validCount === 0 ? "none" : "0 2px 8px rgba(219,39,119,0.3)",
-                    opacity: isBulk && validCount === 0 ? 0.6 : 1,
+                    boxShadow: isBulk && (validCount === 0 || hasBulkErrors) ? "none" : "0 2px 8px rgba(219,39,119,0.3)",
+                    opacity: isBulk && (validCount === 0 || hasBulkErrors) ? 0.6 : 1,
                 },
             }}
             cancelButtonProps={{
@@ -896,18 +1266,18 @@ const ModalNode = ({
                     <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: P.gray900, lineHeight: 1.3 }}>
                             {isEditing
-                                ? "Chỉnh sửa vị trí"
+                                ? nodeKind === "department" ? "Chỉnh sửa phòng ban" : "Chỉnh sửa chức danh"
                                 : isBulk
-                                    ? `Tạo hàng loạt${validCount > 0 ? ` · ${validCount} vị trí` : ""}`
-                                    : "Thêm vị trí mới"
+                                    ? `Tạo hàng loạt${validCount > 0 ? ` · ${validCount} mục` : ""}`
+                                    : nodeKind === "department" ? "Thêm phòng ban mới" : "Thêm chức danh mới"
                             }
                         </div>
                         <div style={{ fontSize: 12, color: P.gray400, marginTop: 2 }}>
                             {isEditing
-                                ? "Cập nhật thông tin chức danh"
+                                ? "Cập nhật thông tin trong sơ đồ tổ chức"
                                 : isBulk
-                                    ? "Nhập nhiều vị trí cùng lúc vào sơ đồ"
-                                    : "Tạo một vị trí trong sơ đồ tổ chức"
+                                    ? "Nhập nhiều phòng ban/chức danh cùng lúc vào sơ đồ"
+                                    : "Tạo một mục trong sơ đồ tổ chức"
                             }
                         </div>
                     </div>
@@ -922,8 +1292,8 @@ const ModalNode = ({
             {/* ── BODY ── */}
             <div style={{ padding: isBulk ? "20px 24px 8px" : "20px 24px 4px", background: P.white }}>
                 {mode === "single"
-                    ? <SingleNodeForm form={form} nodes={nodes} jdOptions={jdOptions} isEditing={isEditing} />
-                    : <BulkTableEditor rows={rows} setRows={setRows} existingNodes={nodes} />
+                    ? <SingleNodeForm form={form} nodes={nodes} jdOptions={jdOptions} jobTitleOptions={smartJobTitleOptions} isEditing={isEditing} nodeKind={nodeKind} onNodeKindChange={setNodeKind} />
+                    : <BulkTableEditor rows={rows} setRows={setRows} existingNodes={nodes} jobTitleOptions={smartJobTitleOptions} errors={bulkErrors} />
                 }
             </div>
         </Modal>

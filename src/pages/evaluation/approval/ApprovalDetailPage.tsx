@@ -13,14 +13,14 @@ import {
     callFetchEvaluationRecordById,
     callApproveRecord, callRejectRecord,
     callFetchRecordHistory,
-    callApproverSaveScore, callManagerSaveFeedback
+    callApproverSaveScore
 } from "@/config/api";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
 const STATUS_CONFIG: Record<RecordStatus, { text: string; tagColor: string }> = {
     NOT_STARTED: { text: "Chưa bắt đầu", tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "Đang tự chấm", tagColor: "processing" },
+    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", tagColor: "purple" },
     PENDING_APPROVAL: { text: "Chờ phê duyệt", tagColor: "cyan" },
@@ -53,13 +53,12 @@ const ApprovalDetailPage = () => {
     const [saving, setSaving] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const [savingComment, setSavingComment] = useState(false);
-    const [managerFeedback, setManagerFeedback] = useState("");
+    const [selfReview, setSelfReview] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
 
     const fetchRecord = useCallback(async () => {
-        if (!id) return;
+        if (!id || isNaN(Number(id))) return;
         setLoading(true);
         try {
             const [recRes, histRes] = await Promise.all([
@@ -69,7 +68,7 @@ const ApprovalDetailPage = () => {
             if (recRes?.data) {
                 setRecord(recRes.data);
                 const commentSelf = recRes.data.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
-                if (commentSelf) setManagerFeedback(commentSelf.content);
+                setSelfReview(commentSelf?.content ?? "");
                 const initScores: Record<number, number> = {};
                 let hasApproverScores = false;
                 recRes.data.scores?.forEach((s: any) => {
@@ -101,17 +100,6 @@ const ApprovalDetailPage = () => {
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
         } finally { setSavingScore(null); }
-    };
-
-    const handleSaveFeedback = async () => {
-        if (!record?.id) return;
-        setSavingComment(true);
-        try {
-            await callManagerSaveFeedback(record.id, managerFeedback);
-            notify.success("Đã lưu nhận xét");
-        } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
-        } finally { setSavingComment(false); }
     };
 
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -183,31 +171,33 @@ const ApprovalDetailPage = () => {
     const scoredCount = allLeafCriteria.filter(c => localScores[c.id] != null).length;
     const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0
 
-        const thS: React.CSSProperties = {
-        padding: "13px 12px", fontWeight: 700, fontSize: 12, color: "#111827",
-        background: "#f9fafb", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        textAlign: "center", whiteSpace: "nowrap"
+    const thS: React.CSSProperties = {
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const thG: React.CSSProperties = {
-        padding: "11px 12px", fontWeight: 700, fontSize: 12, color: "#111827",
-        background: "#f9fafb", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb", textAlign: "center"
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0", textAlign: "center", verticalAlign: "middle"
     };
     const thSub: React.CSSProperties = {
-        padding: "9px 8px", fontWeight: 600, fontSize: 11, color: "#4b5563",
-        background: "#ffffff", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        textAlign: "center", whiteSpace: "nowrap"
+        padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
+        background: "#ffffff", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
-        padding: "13px 12px", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
-        fontSize: 13, verticalAlign: "top", lineHeight: 1.5, color: "#374151"
+        padding: "14px 14px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
+        fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#334155",
+        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "13px 10px", borderBottom: "1px solid #e5e7eb",
-        borderRight: "1px dashed #e5e7eb", fontSize: 12, color: "#6b7280",
-        verticalAlign: "top", lineHeight: 1.5, minWidth: 100
+        padding: "14px 14px", borderBottom: "1px solid #e2e8f0",
+        borderRight: "1px dashed #dbe3ef", fontSize: 12, color: "#4b5563",
+        verticalAlign: "top", lineHeight: 1.55, minWidth: 120,
+        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdSc: React.CSSProperties = {
-        padding: "13px 12px", borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
+        padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
         textAlign: "center", verticalAlign: "middle", background: "#ffffff"
     };
 
@@ -226,7 +216,7 @@ const ApprovalDetailPage = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <button
-                            onClick={() => navigate("/admin/evaluation/my-records")}
+                            onClick={() => navigate("/admin/evaluation/process")}
                             style={{
                                 width: 40, height: 40, borderRadius: 10,
                                 border: "1px solid #e5e7eb", background: "#fff",
@@ -259,7 +249,7 @@ const ApprovalDetailPage = () => {
                         )}
                         {record.employeeTotalScore != null && (
                             <div style={{ background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", border: "1px solid #fecdd3", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(244,63,94,0.15)" }}>
-                                <div style={{ fontSize: 11, color: "#e11d48", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Tự chấm</div>
+                                <div style={{ fontSize: 11, color: "#e11d48", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>NV đánh giá</div>
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#be123c", lineHeight: 1, marginTop: 4 }}>{record.employeeTotalScore.toFixed(2)}</div>
                             </div>
                         )}
@@ -269,10 +259,10 @@ const ApprovalDetailPage = () => {
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#1d4ed8", lineHeight: 1, marginTop: 4 }}>{record.managerTotalScore.toFixed(2)}</div>
                             </div>
                         )}
-                        {(record.approverTotalScore != null || record.managerTotalScore != null) && (
+                        {record.approverTotalScore != null && (
                             <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1px solid #bbf7d0", borderRadius: 12, padding: "8px 20px", textAlign: "center", boxShadow: "0 2px 8px rgba(34,197,94,0.15)" }}>
                                 <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Phê duyệt</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{(record.approverTotalScore ?? record.managerTotalScore).toFixed(2)}</div>
+                                <div style={{ fontSize: 24, fontWeight: 900, color: "#15803d", lineHeight: 1, marginTop: 4 }}>{record.approverTotalScore.toFixed(2)}</div>
                             </div>
                         )}
                     </div>
@@ -358,22 +348,25 @@ const ApprovalDetailPage = () => {
 
             {/* ─── BẢNG ĐÁNH GIÁ ─── */}
             <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1400 : 1150 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1880 : 1660 }}>
                     <thead>
                         <tr>
-                            <th rowSpan={2} style={thS}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", minWidth: 190 }}>Nội dung đánh giá</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", minWidth: 130 }}>Phương pháp đo lường</th>
+                            <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 230 }}>Nội dung đánh giá</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
                             <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>
                             <th rowSpan={2} style={thS}>Trọng số</th>
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
-                                <span style={{ color: "#111827" }}>CBNV tự đánh giá</span>
+                                <span style={{ color: "#111827" }}>CBNV đánh giá</span>
                             </th>
+                            <th colSpan={2} style={{ ...thG, borderLeft: "none", color: "#111827" }}>Quản lý chấm</th>
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Phê duyệt chấm</th>
                         </tr>
                         <tr>
-                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, minWidth: 100, color: "#f43f5e" }}>Mức {n}</th>)}
+                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
                             <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
+                            <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
+                            <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm</th>
                             <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
                             <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>
                             <th style={thSub}>Kết quả</th>
@@ -385,12 +378,12 @@ const ApprovalDetailPage = () => {
                             let dynamicMgrTotal = 0;
                             
                             const sectionElements = record.template?.sections?.map((section: any) => {
-                                let empTotal = 0, mgrTotal = 0;
+                                let empTotal = 0, realMgrTotal = 0, mgrTotal = 0;
                                 const rows: React.ReactNode[] = [];
 
                             rows.push(
                                 <tr key={`sec-${section.id}`}>
-                                    <td colSpan={13} style={{
+                                    <td colSpan={15} style={{
                                         padding: "10px 18px",
                                         background: "#f3f4f6",
                                         borderTop: "1px solid #e5e7eb",
@@ -408,17 +401,19 @@ const ApprovalDetailPage = () => {
                             section.criteria?.forEach((c: any, cIdx: number) => {
                                 const hasSub = c.subCriteria?.length > 0;
                                 const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "APPROVER") ?? getScore(record.scores, c.id, "MANAGER");
+                                const realMgrScore = getScore(record.scores, c.id, "MANAGER");
+                                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "APPROVER") ?? realMgrScore;
                                 const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                 if (!hasSub) {
                                     if (empScore != null) empTotal += empScore * c.weight;
+                                    if (realMgrScore != null) realMgrTotal += realMgrScore * c.weight;
                                     if (mgrScore != null) mgrTotal += mgrScore * c.weight;
                                 }
 
                                 rows.push(
                                     <tr key={`c-${c.id}`} className="eval-row">
-                                        <td style={{ ...tdB, textAlign: "center", color: "#d1d5db", fontWeight: 700, fontSize: 12 }}>{cIdx + 1}</td>
+                                        <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
                                         <td style={{ ...tdB, fontWeight: hasSub ? 700 : 500, color: "#111827" }}>{c.name}</td>
                                         <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
                                         {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
@@ -435,6 +430,16 @@ const ApprovalDetailPage = () => {
                                         <td style={tdSc}>
                                             {!hasSub && empScore != null
                                                 ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span>
+                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                        </td>
+                                        <td style={{ ...tdSc, borderLeft: "none" }}>
+                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
+                                                <span style={{ fontSize: 18, fontWeight: 800, color: realMgrScore != null ? "#111827" : "#e5e7eb" }}>{realMgrScore ?? "—"}</span>
+                                            )}
+                                        </td>
+                                        <td style={tdSc}>
+                                            {!hasSub && realMgrScore != null
+                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(realMgrScore * c.weight).toFixed(2)}</span>
                                                 : <span style={{ color: "#e5e7eb" }}>—</span>}
                                         </td>
                                         <td style={{ ...tdSc, borderLeft: "none" }}>
@@ -458,15 +463,17 @@ const ApprovalDetailPage = () => {
                                 if (hasSub) {
                                     c.subCriteria?.forEach((sub: any, si: number) => {
                                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
-                                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "APPROVER") ?? getScore(record.scores, sub.id, "MANAGER");
+                                        const subRealMgr = getScore(record.scores, sub.id, "MANAGER");
+                                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "APPROVER") ?? subRealMgr;
                                         const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
                                         if (subEmp != null) empTotal += subEmp * sub.weight;
+                                        if (subRealMgr != null) realMgrTotal += subRealMgr * sub.weight;
                                         if (subMgr != null) mgrTotal += subMgr * sub.weight;
 
                                         rows.push(
                                             <tr key={`sub-${sub.id}`} className="eval-row">
-                                                <td style={{ ...tdB, textAlign: "center", color: "#d1d5db", fontSize: 11 }}>{cIdx + 1}.{si + 1}</td>
-                                                <td style={{ ...tdB, paddingLeft: 26, color: "#111827", borderLeft: "none" }}>{sub.name}</td>
+                                                <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+                                                <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>{sub.name}</td>
                                                 <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
                                                 {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
                                                 <td style={{ ...tdB, textAlign: "center" }}>
@@ -479,6 +486,12 @@ const ApprovalDetailPage = () => {
                                                 </td>
                                                 <td style={tdSc}>
                                                     {subEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(subEmp * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+                                                </td>
+                                                <td style={{ ...tdSc, borderLeft: "none" }}>
+                                                    <span style={{ fontSize: 18, fontWeight: 800, color: subRealMgr != null ? "#111827" : "#e5e7eb" }}>{subRealMgr ?? "—"}</span>
+                                                </td>
+                                                <td style={tdSc}>
+                                                    {subRealMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subRealMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
                                                 </td>
                                                 <td style={{ ...tdSc, borderLeft: "none" }}>
                                                     {isEditable ? (
@@ -512,13 +525,17 @@ const ApprovalDetailPage = () => {
                                     </td>
                                     <td style={{ padding: "12px", borderLeft: "none" }} />
                                     <td style={{ padding: "12px", textAlign: "center" }}>
+                                        <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{realMgrTotal.toFixed(2)}</span>
+                                    </td>
+                                    <td style={{ padding: "12px", borderLeft: "none" }} />
+                                    <td style={{ padding: "12px", textAlign: "center" }}>
                                         <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
                                     </td>
                                 </tr>
                             );
 
                                 dynamicEmpTotal += empTotal;
-                                dynamicMgrTotal += mgrTotal;
+                                dynamicMgrTotal += mgrTotal; // Note: we can compute realMgrGrandTotal if needed, but the original code just uses dynamicMgrTotal for approver Total
                                 return rows;
                             });
 
@@ -539,6 +556,12 @@ const ApprovalDetailPage = () => {
                                         </td>
                                         <td style={{ padding: "18px 12px", borderLeft: "none" }} />
                                         <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                            <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
+                                                {record.managerTotalScore != null ? record.managerTotalScore.toFixed(2) : "—"}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#f43f5e" }}>
                                                 {dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
                                             </span>
@@ -553,24 +576,10 @@ const ApprovalDetailPage = () => {
 
             {/* ─── NHẬN XÉT TỰ ĐÁNH GIÁ ─── */}
             <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét tự đánh giá</div>
-                {isEditable ? (
-                    <div>
-                        <Input.TextArea rows={4} value={managerFeedback} onChange={e => setManagerFeedback(e.target.value)}
-                            placeholder="Chia sẻ thành tựu, khó khăn hoặc mong muốn của bạn trong kỳ làm việc vừa qua..."
-                            style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                            <Button onClick={handleSaveFeedback} loading={savingComment}
-                                style={{ borderRadius: 8, fontWeight: 600, color: "#111827", borderColor: "#e5e7eb" }}>
-                                Lưu nhận xét
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: managerFeedback ? "#111827" : "#9ca3af", fontStyle: managerFeedback ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {managerFeedback || "Chưa có nhận xét nào."}
-                    </div>
-                )}
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét của nhân viên</div>
+                <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: selfReview ? "#111827" : "#9ca3af", fontStyle: selfReview ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
+                    {selfReview || "Chưa có nhận xét nào."}
+                </div>
             </div>
 
             {/* ─── NHẬN XÉT QUẢN LÝ ─── */}

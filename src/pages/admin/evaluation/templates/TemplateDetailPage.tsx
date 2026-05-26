@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
 import {
     Space,
     Card,
@@ -70,6 +71,7 @@ const TemplateDetailPage: React.FC = () => {
 
     const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
     const [editingCriteria, setEditingCriteria] = useState<ITemplateCriteria | null>(null);
+    const [selectedParentCriteriaId, setSelectedParentCriteriaId] = useState<number | null>(null);
     const [criteriaForm] = Form.useForm();
 
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
@@ -133,13 +135,19 @@ const TemplateDetailPage: React.FC = () => {
                 return;
             }
 
-            // Validate that every criterion has all 5 levels fully configured
+            // If a criterion has sub-criteria, scoring is configured on the children.
             for (const crit of criteriaList) {
-                const configuredLevels = crit.levels || [];
-                const validLevels = configuredLevels.filter((l: any) => l.description && l.description.trim() !== "");
-                if (validLevels.length < 5) {
-                    notify.error(`Tiêu chí "${crit.name}" thuộc phần "${sec.name}" chưa được cấu hình đầy đủ 5 mức điểm!`);
-                    return;
+                const criteriaToValidate = crit.subCriteria?.length ? crit.subCriteria : [crit];
+                for (const criteria of criteriaToValidate) {
+                    const configuredLevels = criteria.levels || [];
+                    const validLevels = configuredLevels.filter((l: any) => l.description && l.description.trim() !== "");
+                    if (validLevels.length < 5) {
+                        const criteriaLabel = crit.subCriteria?.length
+                            ? `Mục con "${criteria.name}" của tiêu chí "${crit.name}"`
+                            : `Tiêu chí "${criteria.name}"`;
+                        notify.error(`${criteriaLabel} thuộc phần "${sec.name}" chưa được cấu hình đầy đủ 5 mức điểm!`);
+                        return;
+                    }
                 }
             }
         }
@@ -152,7 +160,7 @@ const TemplateDetailPage: React.FC = () => {
                 loadData();
             }
         } catch (error: any) {
-            const msg = error?.response?.data?.message || error?.message || "Lỗi kích hoạt mẫu đánh giá";
+            const msg = error?.message || error?.response?.data?.message || "Lỗi kích hoạt mẫu đánh giá";
             notify.error(msg);
         } finally {
             setLoading(false);
@@ -192,7 +200,7 @@ const TemplateDetailPage: React.FC = () => {
             notify.success("Xóa phần thành công");
             loadData();
         } catch (error: any) {
-            const msg = error?.response?.data?.message || error?.message || "Lỗi xóa phần trong template";
+            const msg = error?.message || error?.response?.data?.message || "Lỗi xóa phần trong template";
             notify.error(msg);
         }
     };
@@ -232,7 +240,7 @@ const TemplateDetailPage: React.FC = () => {
             setIsSectionModalOpen(false);
             loadData();
         } catch (error: any) {
-            const msg = error?.response?.data?.message || error?.message || "Lỗi lưu thông tin phần";
+            const msg = error?.message || error?.response?.data?.message || "Lỗi lưu thông tin phần";
             notify.error(msg);
         }
     };
@@ -249,15 +257,26 @@ const TemplateDetailPage: React.FC = () => {
     const handleAddCriteriaClick = () => {
         if (!selectedSectionId) return;
         setEditingCriteria(null);
+        setSelectedParentCriteriaId(null);
         criteriaForm.resetFields();
         criteriaForm.setFieldsValue({ displayOrder: activeCriteriaList.length + 1 });
         setIsCriteriaModalOpen(true);
     };
 
-    const handleEditCriteriaClick = (crit: ITemplateCriteria) => {
+    const handleAddSubCriteriaClick = (parentCrit: ITemplateCriteria) => {
+        setEditingCriteria(null);
+        setSelectedParentCriteriaId(parentCrit.id!);
+        criteriaForm.resetFields();
+        criteriaForm.setFieldsValue({ displayOrder: (parentCrit.subCriteria?.length || 0) + 1 });
+        setIsCriteriaModalOpen(true);
+    };
+
+    const handleEditCriteriaClick = (crit: ITemplateCriteria, parentId: number | null = null) => {
         setEditingCriteria(crit);
+        setSelectedParentCriteriaId(parentId);
         criteriaForm.setFieldsValue({
             name: crit.name,
+            description: crit.description,
             measurementMethod: crit.measurementMethod,
             weight: crit.weight != null ? Math.round(crit.weight * 100) : undefined, // display as percentage integer
             displayOrder: crit.displayOrder,
@@ -271,7 +290,7 @@ const TemplateDetailPage: React.FC = () => {
             notify.success("Xóa tiêu chí thành công");
             loadData();
         } catch (error: any) {
-            const msg = error?.response?.data?.message || error?.message || "Lỗi xóa tiêu chí";
+            const msg = error?.message || error?.response?.data?.message || "Lỗi xóa tiêu chí";
             notify.error(msg);
         }
     };
@@ -294,17 +313,22 @@ const TemplateDetailPage: React.FC = () => {
         });
         total += newWeightDecimal;
 
-        if (total > maxWeight + 0.0001) {
+        if (!selectedParentCriteriaId && total > maxWeight + 0.0001) {
             notify.error(`Tổng trọng số của các tiêu chí không được vượt quá trọng số của phần (${Math.round(maxWeight * 100)}%)!`);
             return;
         }
 
-        const payload = {
+        const payload: any = {
             name: values.name,
-            measurementMethod: values.measurementMethod,
-            weight: newWeightDecimal, // convert percentage back to decimal
+            description: values.description || "",
+            measurementMethod: values.measurementMethod || "",
+            weight: selectedParentCriteriaId ? 0 : newWeightDecimal, // convert percentage back to decimal
             displayOrder: values.displayOrder,
         };
+        
+        if (selectedParentCriteriaId) {
+            payload.parentCriteria = { id: selectedParentCriteriaId };
+        }
 
         try {
             if (editingCriteria?.id) {
@@ -317,7 +341,7 @@ const TemplateDetailPage: React.FC = () => {
             setIsCriteriaModalOpen(false);
             loadData();
         } catch (error: any) {
-            const msg = error?.response?.data?.message || error?.message || "Lỗi lưu tiêu chí";
+            const msg = error?.message || error?.response?.data?.message || "Lỗi lưu tiêu chí";
             notify.error(msg);
         }
     };
@@ -394,9 +418,29 @@ const TemplateDetailPage: React.FC = () => {
                             <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
                                 Thiết lập tiêu chí: {template?.name}
                             </Title>
-                            <Text type="secondary">
-                                {template?.description || "Không có mô tả"}
-                            </Text>
+                            <div style={{ display: "flex", gap: "12px", marginTop: "4px", flexWrap: "wrap", alignItems: "center" }}>
+                                <Text type="secondary" style={{ fontSize: "13px" }}>
+                                    {template?.description || "Không có mô tả"}
+                                </Text>
+                                {(template?.createdBy || template?.createdAt) && (
+                                    <>
+                                        <span style={{ color: "#d9d9d9" }}>|</span>
+                                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                                            Người tạo: <span style={{ fontWeight: 600, color: "#475569" }}>{template.createdBy || "—"}</span> 
+                                            {template.createdAt && ` (${dayjs(template.createdAt).format("DD/MM/YYYY HH:mm")})`}
+                                        </Text>
+                                    </>
+                                )}
+                                {(template?.updatedBy || template?.updatedAt) && (
+                                    <>
+                                        <span style={{ color: "#d9d9d9" }}>|</span>
+                                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                                            Cập nhật cuối: <span style={{ fontWeight: 600, color: "#475569" }}>{template.updatedBy || "—"}</span> 
+                                            {template.updatedAt && ` (${dayjs(template.updatedAt).format("DD/MM/YYYY HH:mm")})`}
+                                        </Text>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <Space>
@@ -592,45 +636,84 @@ const TemplateDetailPage: React.FC = () => {
                                     </div>
                                 ) : (
                                     <Space direction="vertical" style={{ width: "100%" }} size={16}>
-                                        {activeCriteriaList.map((crit: any) => (
-                                            <div
-                                                key={crit.id}
-                                                style={{
-                                                    background: "#ffffff",
-                                                    border: "1px solid #e2e8f0",
-                                                    borderRadius: 12,
-                                                    padding: "20px",
-                                                    boxShadow: "0 1px 3px rgba(0,0,0,0.01), 0 1px 2px rgba(0,0,0,0.02)",
-                                                }}
-                                            >
+                                        {activeCriteriaList.map((crit: any, critIndex: number) => {
+                                            const criteriaNo = critIndex + 1;
+                                            return (
+                                                <div
+                                                    key={crit.id}
+                                                    style={{
+                                                        background: "#ffffff",
+                                                        border: "1px solid #e2e8f0",
+                                                        borderRadius: 12,
+                                                        padding: "14px 16px",
+                                                        boxShadow: "0 1px 3px rgba(0,0,0,0.01), 0 1px 2px rgba(0,0,0,0.02)",
+                                                    }}
+                                                >
                                                 {/* Header Row */}
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 12 }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 8 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+                                                        <span style={{
+                                                            width: 32,
+                                                            height: 32,
+                                                            borderRadius: 8,
+                                                            background: "#e6f4ff",
+                                                            color: "#0958d9",
+                                                            border: "1px solid #91caff",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontWeight: 800,
+                                                            fontSize: 15,
+                                                            flex: "0 0 auto",
+                                                        }}>
+                                                            {criteriaNo}
+                                                        </span>
                                                         <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>
                                                             {crit.name}
                                                         </span>
                                                         <Tag style={{ borderRadius: 6, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#475569", fontWeight: 600, fontSize: 12, padding: "2px 8px" }}>
                                                             Trọng số: {(crit.weight * 100).toFixed(0)}%
                                                         </Tag>
+                                                        {crit.subCriteria?.length > 0 ? (
+                                                            <Tag color="blue" style={{ borderRadius: 6, fontWeight: 600 }}>
+                                                                {crit.subCriteria.length} mục con
+                                                            </Tag>
+                                                        ) : (
+                                                            <Tag color={(crit.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "success" : "warning"} style={{ borderRadius: 6, fontWeight: 600 }}>
+                                                                {(crit.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                            </Tag>
+                                                        )}
                                                     </div>
 
                                                     {template?.status === "DRAFT" && (
                                                         <Space size={8}>
-                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                            {(!crit.subCriteria || crit.subCriteria.length === 0) && (
+                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                                    <Button
+                                                                        size="middle"
+                                                                        icon={<TrophyOutlined style={{ color: "#64748b" }} />}
+                                                                        onClick={() => handleConfigureLevels(crit)}
+                                                                        style={{
+                                                                            borderRadius: 8,
+                                                                            borderColor: "#cbd5e1",
+                                                                            background: "#ffffff",
+                                                                            color: "#334155",
+                                                                            fontWeight: 600,
+                                                                            fontSize: 13,
+                                                                        }}
+                                                                    >
+                                                                        Mức điểm
+                                                                    </Button>
+                                                                </Access>
+                                                            )}
+                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_CRITERIA} hideChildren>
                                                                 <Button
                                                                     size="middle"
-                                                                    icon={<TrophyOutlined style={{ color: "#64748b" }} />}
-                                                                    onClick={() => handleConfigureLevels(crit)}
-                                                                    style={{
-                                                                        borderRadius: 8,
-                                                                        borderColor: "#cbd5e1",
-                                                                        background: "#ffffff",
-                                                                        color: "#334155",
-                                                                        fontWeight: 600,
-                                                                        fontSize: 13,
-                                                                    }}
+                                                                    icon={<PlusOutlined style={{ color: "#64748b" }} />}
+                                                                    onClick={() => handleAddSubCriteriaClick(crit)}
+                                                                    style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff", color: "#334155", fontWeight: 600, fontSize: 13 }}
                                                                 >
-                                                                    Mức điểm (1-5)
+                                                                    Mục con
                                                                 </Button>
                                                             </Access>
                                                             <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
@@ -659,20 +742,26 @@ const TemplateDetailPage: React.FC = () => {
                                                     )}
                                                 </div>
 
-                                                {/* Measurement Method */}
-                                                <div style={{ marginBottom: 16, background: "#f8fafc", padding: "10px 14px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
+                                                {/* Description and Method */}
+                                                {crit.description && (
+                                                    <div style={{ marginBottom: 12, color: "#475569", fontSize: 13, fontStyle: "italic" }}>
+                                                        {crit.description}
+                                                    </div>
+                                                )}
+                                                <div style={{ marginBottom: crit.subCriteria?.length ? 12 : 0, background: "#f8fafc", padding: "8px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
                                                     <span style={{ fontWeight: 600, color: "#475569", fontSize: 13 }}>Phương pháp đo lường: </span>
                                                     <span style={{ color: "#0f172a", fontSize: 13 }}>{crit.measurementMethod || "—"}</span>
                                                 </div>
 
                                                 {/* Levels Definition Panel */}
-                                                <div style={{ background: "#f8fafc", padding: "16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                                                        <TrophyOutlined style={{ color: "#64748b", fontSize: 13 }} />
-                                                        <span style={{ fontWeight: 700, fontSize: 11, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                                                            Định nghĩa mức điểm đánh giá (1-5)
-                                                        </span>
-                                                    </div>
+                                                {false && (!crit.subCriteria || crit.subCriteria.length === 0) && (
+                                                    <div style={{ background: "#f8fafc", padding: "16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                                                            <TrophyOutlined style={{ color: "#64748b", fontSize: 13 }} />
+                                                            <span style={{ fontWeight: 700, fontSize: 11, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                                                Định nghĩa mức điểm đánh giá
+                                                            </span>
+                                                        </div>
 
                                                     {crit.levels && crit.levels.length > 0 ? (
                                                         <div style={{
@@ -746,12 +835,124 @@ const TemplateDetailPage: React.FC = () => {
                                                             fontSize: 13
                                                         }}>
                                                             <TrophyOutlined style={{ color: "#94a3b8", fontSize: 18, marginBottom: 6, display: "block" }} />
-                                                            <span>Chưa thiết lập mô tả mức điểm cho tiêu chí này. Vui lòng bấm nút <Text strong style={{ color: "#334155" }}>"Mức điểm (1-5)"</Text> phía trên để bổ sung.</span>
+                                                            <span>Chưa thiết lập mô tả mức điểm cho tiêu chí này. Vui lòng bấm nút <Text strong style={{ color: "#334155" }}>"Mức điểm"</Text> phía trên để bổ sung.</span>
                                                         </div>
                                                     )}
                                                 </div>
+                                                )}
+                                                
+                                                {/* Sub Criteria Render Loop */}
+                                                {crit.subCriteria && crit.subCriteria.length > 0 && (
+                                                    <div style={{ marginTop: 12, paddingLeft: 16, borderLeft: "2px solid #e2e8f0" }}>
+                                                        <Space direction="vertical" style={{ width: "100%" }} size={8}>
+                                                            {crit.subCriteria.map((sub: any, subIndex: number) => {
+                                                                const subNo = `${criteriaNo}.${subIndex + 1}`;
+                                                                return (
+                                                                <div
+                                                                    key={sub.id}
+                                                                    style={{
+                                                                        background: "#f8fafc",
+                                                                        border: "1px dashed #cbd5e1",
+                                                                        borderRadius: 10,
+                                                                        padding: "10px 12px",
+                                                                    }}
+                                                                >
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: sub.measurementMethod ? 8 : 0 }}>
+                                                                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0, paddingRight: 16 }}>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                                                <span style={{
+                                                                                    minWidth: 42,
+                                                                                    height: 26,
+                                                                                    borderRadius: 7,
+                                                                                    background: "#fff",
+                                                                                    color: "#334155",
+                                                                                    border: "1px solid #cbd5e1",
+                                                                                    display: "inline-flex",
+                                                                                    alignItems: "center",
+                                                                                    justifyContent: "center",
+                                                                                    fontWeight: 800,
+                                                                                    fontSize: 12,
+                                                                                }}>
+                                                                                    {subNo}
+                                                                                </span>
+                                                                                <span style={{ fontWeight: 600, fontSize: 14, color: "#334155" }}>
+                                                                                    {sub.name}
+                                                                                </span>
+                                                                                <Tag color={(sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "success" : "warning"} style={{ borderRadius: 6, marginInlineEnd: 0 }}>
+                                                                                    {(sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                                                </Tag>
+                                                                            </div>
+                                                                        </div>
+                                                                        {template?.status === "DRAFT" && (
+                                                                                <Space size={8}>
+                                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                                                        <Button
+                                                                                            size="small"
+                                                                                            icon={<TrophyOutlined style={{ color: "#64748b" }} />}
+                                                                                            onClick={() => handleConfigureLevels(sub)}
+                                                                                            style={{ borderRadius: 6 }}
+                                                                                        >
+                                                                                            Mức điểm
+                                                                                        </Button>
+                                                                                    </Access>
+                                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                                                    <Button
+                                                                                        size="small"
+                                                                                        icon={<EditOutlined style={{ color: "#475569" }} />}
+                                                                                        onClick={() => handleEditCriteriaClick(sub, crit.id)}
+                                                                                        style={{ borderRadius: 6 }}
+                                                                                    />
+                                                                                </Access>
+                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
+                                                                                    <Popconfirm
+                                                                                        title="Bạn chắc chắn muốn xóa mục con này?"
+                                                                                        okText="Xóa"
+                                                                                        cancelText="Hủy"
+                                                                                        onConfirm={() => sub.id && handleDeleteCriteria(sub.id)}
+                                                                                    >
+                                                                                        <Button
+                                                                                            size="small"
+                                                                                            icon={<DeleteOutlined style={{ color: "#ef4444" }} />}
+                                                                                            style={{ borderRadius: 6 }}
+                                                                                        />
+                                                                                    </Popconfirm>
+                                                                                </Access>
+                                                                            </Space>
+                                                                        )}
+                                                                    </div>
+                                                                    {sub.measurementMethod && (
+                                                                        <div style={{ fontSize: 12, color: "#475569" }}>
+                                                                            Phương pháp đo lường: {sub.measurementMethod}
+                                                                        </div>
+                                                                    )}
+                                                                    
+                                                                    {/* Miniature Levels Preview */}
+                                                                    {false && (
+                                                                        sub.levels && sub.levels.length > 0 ? (
+                                                                            <div style={{ display: "flex", gap: 8 }}>
+                                                                                {[1, 2, 3, 4, 5].map((lvl) => {
+                                                                                    const lData = sub.levels?.find((l: any) => l.level === lvl);
+                                                                                    return (
+                                                                                        <div key={lvl} style={{ flex: 1, padding: "6px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6 }}>
+                                                                                            <div style={{ fontSize: 11, fontWeight: 600, color: lData?.description ? "#1e293b" : "#94a3b8" }}>Mức {lvl}</div>
+                                                                                            <div style={{ fontSize: 10, color: lData?.description ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                                                {lData?.description || "Chưa có"}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div style={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>Chưa thiết lập mức điểm cho mục này.</div>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                            )})}
+                                                        </Space>
+                                                    </div>
+                                                )}
                                             </div>
-                                        ))}
+                                        )})}
                                     </Space>
                                 )}
                             </Card>
@@ -772,7 +973,7 @@ const TemplateDetailPage: React.FC = () => {
                 open={isSectionModalOpen}
                 onCancel={() => setIsSectionModalOpen(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form
                     form={sectionForm}
@@ -784,14 +985,20 @@ const TemplateDetailPage: React.FC = () => {
                     <Form.Item
                         name="code"
                         label="Ký hiệu phần (ví dụ: A, B, C...)"
-                        rules={[{ required: true, message: "Ký hiệu không được để trống" }]}
+                        rules={[
+                            { required: true, message: "Ký hiệu không được để trống" },
+                            { max: 10, message: "Ký hiệu không được vượt quá 10 ký tự!" }
+                        ]}
                     >
                         <Input placeholder="Nhập chữ cái đại diện..." />
                     </Form.Item>
                     <Form.Item
                         name="name"
                         label="Tên phần"
-                        rules={[{ required: true, message: "Tên phần không được để trống" }]}
+                        rules={[
+                            { required: true, message: "Tên phần không được để trống" },
+                            { max: 200, message: "Tên phần không được vượt quá 200 ký tự!" }
+                        ]}
                     >
                         <Input placeholder="Ví dụ: Đánh giá HQCV, Đánh giá Thái độ..." />
                     </Form.Item>
@@ -828,11 +1035,11 @@ const TemplateDetailPage: React.FC = () => {
 
             {/* Modal Criteria Form */}
             <Modal
-                title={editingCriteria ? "Cập nhật tiêu chí" : "Thêm tiêu chí mới"}
+                title={editingCriteria ? (selectedParentCriteriaId ? "Cập nhật tiêu chí con" : "Cập nhật tiêu chí") : (selectedParentCriteriaId ? "Thêm tiêu chí con" : "Thêm tiêu chí mới")}
                 open={isCriteriaModalOpen}
                 onCancel={() => setIsCriteriaModalOpen(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form
                     form={criteriaForm}
@@ -844,30 +1051,47 @@ const TemplateDetailPage: React.FC = () => {
                     <Form.Item
                         name="name"
                         label="Tên tiêu chí"
-                        rules={[{ required: true, message: "Tên tiêu chí không được để trống" }]}
+                        rules={[
+                            { required: true, message: "Tên tiêu chí không được để trống" },
+                            { max: 300, message: "Tên tiêu chí không được vượt quá 300 ký tự!" }
+                        ]}
                     >
                         <Input placeholder="Ví dụ: Năng suất công việc, Kỹ năng giao tiếp..." />
                     </Form.Item>
+                    
                     <Form.Item
-                        name="measurementMethod"
-                        label="Phương pháp đo lường"
-                        rules={[{ required: true, message: "Phương pháp đo lường không được để trống" }]}
+                        name="description"
+                        label="Nội dung / Mô tả chi tiết"
                     >
-                        <Input placeholder="Ví dụ: Dựa trên số lượng task hoàn thành đúng hạn..." />
+                        <Input.TextArea rows={3} placeholder="Mô tả cụ thể về tiêu chí này (không bắt buộc)..." />
                     </Form.Item>
-                    <Form.Item
-                        name="weight"
-                        label="Trọng số tiêu chí (%)"
-                        rules={[
-                            { required: true, message: "Trọng số không được để trống" },
-                            {
-                                pattern: /^(0|[1-9][0-9]?|100)$/,
-                                message: "Trọng số phải là số nguyên từ 0 đến 100%"
-                            }
-                        ]}
-                    >
-                        <Input placeholder="Ví dụ: 25" />
-                    </Form.Item>
+
+                    {!selectedParentCriteriaId && (
+                        <>
+                            <Form.Item
+                                name="measurementMethod"
+                                label="Phương pháp đo lường"
+                                rules={[{ required: true, message: "Phương pháp đo lường không được để trống" }]}
+                            >
+                                <Input placeholder="Ví dụ: Dựa trên số lượng task hoàn thành đúng hạn..." />
+                            </Form.Item>
+                            
+                            <Form.Item
+                                name="weight"
+                                label="Trọng số tiêu chí (%)"
+                                rules={[
+                                    { required: true, message: "Trọng số không được để trống" },
+                                    {
+                                        pattern: /^(0|[1-9][0-9]?|100)$/,
+                                        message: "Trọng số phải là số nguyên từ 0 đến 100%"
+                                    }
+                                ]}
+                            >
+                                <Input placeholder="Ví dụ: 25" />
+                            </Form.Item>
+                        </>
+                    )}
+                    
                     <Form.Item
                         name="displayOrder"
                         label="Thứ tự hiển thị"
@@ -888,12 +1112,12 @@ const TemplateDetailPage: React.FC = () => {
 
             {/* Modal Levels Form */}
             <Modal
-                title={`Cấu hình mô tả mức điểm (1-5): ${activeCriteria?.name}`}
+                title={`Cấu hình mô tả mức điểm: ${activeCriteria?.name}`}
                 open={isLevelsModalOpen}
                 onCancel={() => setIsLevelsModalOpen(false)}
                 footer={null}
                 width={650}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form
                     form={levelsForm}

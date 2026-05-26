@@ -34,8 +34,15 @@ import {
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import { callFetchOrgNodes, callUpdateOrgNode, callFetchJobDescriptions } from "@/config/api";
-import ModalNode, { type BulkNodeItem } from "./modal.node";
+import {
+    callFetchOrgNodes,
+    callUpdateOrgNode,
+    callFetchJobDescriptions,
+    callFetchJobTitle,
+    callFetchCompanyJobTitlesByCompany,
+    callFetchCompanyJobTitlesOfDepartment,
+} from "@/config/api";
+import ModalNode, { type AddNodeMode, type BulkNodeItem, type NodeKind, type SmartJobTitleOption, type SmartJdOption } from "./modal.node";
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
 import SearchBar from "./SearchBar";
 import MiniPanel from "./MiniPanel";
@@ -59,6 +66,34 @@ interface IOrgNode {
     posY?: number | null;
     jobDescriptionId?: number | null;
 }
+
+const getPositionCode = (jobTitle: any) =>
+    jobTitle?.positionCode ||
+    jobTitle?.positionLevel?.code ||
+    (jobTitle?.band && (jobTitle?.level ?? jobTitle?.levelNumber)
+        ? `${jobTitle.band}${jobTitle.level ?? jobTitle.levelNumber}`
+        : "");
+
+const toSmartJobTitleOption = (item: any): SmartJobTitleOption | null => {
+    const jobTitle = item?.jobTitle ?? item;
+    if (!jobTitle?.id || !jobTitle?.nameVi) return null;
+
+    return {
+        value: Number(jobTitle.id),
+        title: jobTitle.nameVi,
+        levelCode: getPositionCode(jobTitle),
+        source: item?.source,
+    };
+};
+
+const extractList = (res: any): any[] => {
+    const data = res?.data ?? res;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.result)) return data.result;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.data?.result)) return data.data.result;
+    return [];
+};
 
 // ── Responsive hook ───────────────────────────────────────────────────────────
 const useWindowSize = () => {
@@ -228,7 +263,8 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
 
     const [jdOpen, setJdOpen] = useState(false);
     const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
-    const [jdOptions, setJdOptions] = useState<{ value: number; label: string }[]>([]);
+    const [jdOptions, setJdOptions] = useState<SmartJdOption[]>([]);
+    const [jobTitleOptions, setJobTitleOptions] = useState<SmartJobTitleOption[]>([]);
 
     // ⭐ View mode state — "compact" = Tổng quan, "full" = Chi tiết
     const [viewMode, setViewMode] = useState<"compact" | "full">("full");
@@ -249,6 +285,8 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const [openModal, setOpenModal] = useState(false);
     const [prefilledParentId, setPrefilledParentId] = useState<number | null>(null);
     const [editingNode, setEditingNode] = useState<Node | null>(null);
+    const [modalInitialMode, setModalInitialMode] = useState<AddNodeMode>("single");
+    const [modalInitialNodeKind, setModalInitialNodeKind] = useState<NodeKind>("position");
     const [pendingSaves, setPendingSaves] = useState<Map<string, { x: number; y: number }>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
     const [isDragLocked, setIsDragLocked] = useState(true);
@@ -359,9 +397,41 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 setJdOptions(list.map((jd: any) => ({
                     value: jd.id,
                     label: `${jd.code}${jd.jobTitleName ? " — " + jd.jobTitleName : ""}`,
+                    jobTitleName: jd.jobTitleName,
                 })));
             }).catch(() => { });
     }, []);
+
+    useEffect(() => {
+        const assignedRequest = ownerType === "COMPANY"
+            ? callFetchCompanyJobTitlesByCompany(ownerId)
+            : callFetchCompanyJobTitlesOfDepartment(ownerId);
+
+        Promise.all([
+            assignedRequest.catch(() => null),
+            callFetchJobTitle("page=1&size=500&filter=active:true").catch(() => null),
+        ])
+            .then(([assignedRes, masterRes]) => {
+                const assignedOptions = extractList(assignedRes)
+                    .map(toSmartJobTitleOption)
+                    .filter((option): option is SmartJobTitleOption => Boolean(option));
+
+                const masterOptions = extractList(masterRes)
+                    .map((jobTitle) => toSmartJobTitleOption({ jobTitle, source: "DANH MỤC" }))
+                    .filter((option): option is SmartJobTitleOption => Boolean(option));
+
+                const byJobTitleId = new Map<number, SmartJobTitleOption>();
+                [...masterOptions, ...assignedOptions].forEach((option) => {
+                    byJobTitleId.set(option.value, option);
+                });
+
+                const options = Array.from(byJobTitleId.values())
+                    .sort((a, b) => (a.levelCode || "").localeCompare(b.levelCode || "") || a.title.localeCompare(b.title));
+
+                setJobTitleOptions(options);
+            })
+            .catch(() => setJobTitleOptions([]));
+    }, [ownerType, ownerId]);
 
     useEffect(() => {
         if (nodes.length === 0) return;
@@ -495,7 +565,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         });
                     },
                     onEdit: () => handleOpenEdit(node),
-                    onAddChild: () => handleOpenAddChild(node.id),
+                    onAddChild: (action) => handleOpenAddChild(node.id, action),
                     onDelete: () => handleDeleteNode(Number(node.id), id),
                     onJD: () => {
                         if (jdId) {
@@ -608,11 +678,26 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         await deleteNode.mutateAsync(nodeId); loadNodes(cId);
     }, [deleteNode, loadNodes, selectedNodeId]);
 
-    const handleOpenEdit = useCallback((node: Node) => { setEditingNode(node); setOpenModal(true); }, []);
+    const handleOpenCreateRoot = useCallback((kind: NodeKind = "position", mode: AddNodeMode = "single") => {
+        setEditingNode(null);
+        setPrefilledParentId(null);
+        setModalInitialMode(mode);
+        setModalInitialNodeKind(kind);
+        setOpenModal(true);
+    }, []);
 
-    const handleOpenAddChild = useCallback((parentId: string) => {
+    const handleOpenEdit = useCallback((node: Node) => {
+        setEditingNode(node);
+        setModalInitialMode("single");
+        setModalInitialNodeKind(!node.data.levelCode ? "department" : "position");
+        setOpenModal(true);
+    }, []);
+
+    const handleOpenAddChild = useCallback((parentId: string, action: "department" | "position" | "bulk" = "position") => {
         setEditingNode(null);
         setPrefilledParentId(Number(parentId));
+        setModalInitialMode(action === "bulk" ? "bulk" : "single");
+        setModalInitialNodeKind(action === "department" ? "department" : "position");
         setOpenModal(true);
     }, []);
 
@@ -660,7 +745,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     level: item.levelCode || undefined,
                     holderName: item.holderName || undefined,
                     isGoal: false,
-                    jobDescriptionId: null,
+                    jobDescriptionId: item.jobDescriptionId ?? null,
                     children: buildChildren(items, i),
                 } as IReqCreateNodeTree));
         };
@@ -674,7 +759,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 level: item.levelCode || undefined,
                 holderName: item.holderName || undefined,
                 isGoal: false,
-                jobDescriptionId: null,
+                jobDescriptionId: item.jobDescriptionId ?? null,
                 children: buildChildren(items, i),
             }));
 
@@ -687,7 +772,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 level: item.levelCode || undefined,
                 holderName: item.holderName || undefined,
                 isGoal: false,
-                jobDescriptionId: null,
+                jobDescriptionId: item.jobDescriptionId ?? null,
                 parentId: item.existingParentId!,
                 children: buildChildren(items, i),
             }));
@@ -703,7 +788,13 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
         }
     }, [chartId, bulkTreeNode, loadNodes]);
 
-    const handleCloseModal = useCallback(() => { setOpenModal(false); setEditingNode(null); setPrefilledParentId(null); }, []);
+    const handleCloseModal = useCallback(() => {
+        setOpenModal(false);
+        setEditingNode(null);
+        setPrefilledParentId(null);
+        setModalInitialMode("single");
+        setModalInitialNodeKind("position");
+    }, []);
 
     const containerHeight = isFullscreen
         ? "100vh"
@@ -868,7 +959,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         <Tooltip title="Thêm vị trí">
                             <Button
                                 icon={<PlusOutlined />}
-                                onClick={() => { setEditingNode(null); setOpenModal(true); }}
+                                onClick={() => handleOpenCreateRoot("position", "single")}
                                 size="small"
                                 style={{
                                     background: "#e8637a", borderColor: "#e8637a",
@@ -880,7 +971,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     ) : (
                         <Button
                             icon={<PlusOutlined />}
-                            onClick={() => { setEditingNode(null); setOpenModal(true); }}
+                            onClick={() => handleOpenCreateRoot("position", "single")}
                             style={{
                                 background: "#e8637a", borderColor: "#e8637a",
                                 color: "#fff", fontWeight: 600,
@@ -953,12 +1044,14 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 onSubmit={handleSubmit}
                 onBulkSubmit={handleBulkSubmit}
                 nodes={nodes} jdOptions={jdOptions}
+                jobTitleOptions={jobTitleOptions}
                 initialValues={editingNode ? {
                     title: editingNode.data.title as string,
                     levelCode: editingNode.data.levelCode as string,
                     holderName: (editingNode.data.holderName as string) ?? "",
                     isGoal: (editingNode.data.isGoal as boolean) ?? false,
                     jobDescriptionId: (editingNode.data.jobDescriptionId as number) ?? null,
+                    nodeKind: !editingNode.data.levelCode ? "department" : "position",
                     parentId: (() => {
                         const pe = edges.find((e) => e.target === editingNode.id);
                         return pe ? Number(pe.source) : null;
@@ -967,8 +1060,11 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     title: "",
                     levelCode: "",
                     parentId: prefilledParentId,
+                    nodeKind: modalInitialNodeKind,
                 } : undefined)}
                 isEditing={!!editingNode}
+                initialMode={modalInitialMode}
+                initialNodeKind={modalInitialNodeKind}
             />
 
             <ViewJobDescription

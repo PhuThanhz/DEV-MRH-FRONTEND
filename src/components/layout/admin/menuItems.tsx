@@ -273,7 +273,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
 
                 // Quy trình thực hiện đánh giá (Gộp 3 tab)
                 {
-                    label: <Link to="/admin/evaluation/process">Thực hiện đánh giá</Link>,
+                    label: <Link to="/admin/evaluation/process">Tiến trình đánh giá</Link>,
                     key: "/admin/evaluation/process",
                 },
                     

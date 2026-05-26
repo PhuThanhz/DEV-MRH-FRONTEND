@@ -1,105 +1,96 @@
-import { Tabs } from "antd";
+import { useState, useMemo, useEffect } from "react";
 import { UserOutlined, TeamOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import MyEvaluationPage from "../my-records/MyEvaluationPage";
 import PendingManagerEvaluationPage from "../manager/PendingManagerEvaluationPage";
 import PendingApprovalPage from "../approval/PendingApprovalPage";
-import { useAppSelector } from "@/redux/hooks";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import useAccess from "@/hooks/useAccess";
+import TabBar from "@/components/common/tabs/TabBar";
+import type { TabItem } from "@/components/common/tabs/TabBar";
+
+type TabType = "MY_EVAL" | "MANAGER_EVAL" | "APPROVER_EVAL";
 
 const EvaluationProcessPage = () => {
-    const permissions = useAppSelector((state) => state.account.user.role.permissions);
+    // ===================== PERMISSION =====================
+    const canViewMyEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS);
+    const canViewManagerEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS);
+    const canViewApproverEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS);
 
-    const checkPermission = (perm: { method: string, apiPath: string, module: string }) =>
-        permissions?.some((p: any) => 
-            p.apiPath === perm.apiPath && 
-            p.method === perm.method && 
-            p.module === perm.module
+    // ===================== BUILD TABS =====================
+    const tabs = useMemo<TabItem<TabType>[]>(() => {
+        return [
+            // Luôn hiển thị tab nhân viên đánh giá (có thể ẩn nếu k có quyền, nhưng mặc định ai cũng có)
+            canViewMyEval && {
+                key: "MY_EVAL" as TabType,
+                label: "Nhân viên đánh giá",
+                icon: <UserOutlined />,
+            },
+            canViewManagerEval && {
+                key: "MANAGER_EVAL" as TabType,
+                label: "QL trực tiếp đánh giá",
+                icon: <TeamOutlined />,
+            },
+            canViewApproverEval && {
+                key: "APPROVER_EVAL" as TabType,
+                label: "QL gián tiếp phê duyệt",
+                icon: <SafetyCertificateOutlined />,
+            },
+        ].filter(Boolean) as TabItem<TabType>[];
+    }, [canViewMyEval, canViewManagerEval, canViewApproverEval]);
+
+    // ===================== ACTIVE TAB =====================
+    const [activeTab, setActiveTab] = useState<TabType>("MY_EVAL");
+
+    useEffect(() => {
+        if (!tabs.length) return;
+        if (!tabs.find(t => t.key === activeTab)) {
+            setActiveTab(tabs[0].key);
+        }
+    }, [tabs, activeTab]);
+
+    if (!tabs.length) {
+        return (
+            <PageContainer title="Tiến trình đánh giá">
+                <div style={{ padding: 24 }}>
+                    Bạn không có quyền truy cập
+                </div>
+            </PageContainer>
         );
-
-    const hasManagerPerm = checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS);
-    const hasApproverPerm = checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS);
-
-    const items = [
-        {
-            key: "my-eval",
-            label: (
-                <span style={{ fontWeight: 600 }}>
-                    <UserOutlined /> Tự đánh giá
-                </span>
-            ),
-            children: <MyEvaluationPage isTab={true} />,
-        },
-    ];
-
-    if (hasManagerPerm) {
-        items.push({
-            key: "manager-eval",
-            label: (
-                <span style={{ fontWeight: 600 }}>
-                    <TeamOutlined /> Quản lý đánh giá
-                </span>
-            ),
-            children: <PendingManagerEvaluationPage isTab={true} />,
-        });
-    }
-
-    if (hasApproverPerm) {
-        items.push({
-            key: "approver-eval",
-            label: (
-                <span style={{ fontWeight: 600 }}>
-                    <SafetyCertificateOutlined /> Phê duyệt đánh giá
-                </span>
-            ),
-            children: <PendingApprovalPage isTab={true} />,
-        });
     }
 
     return (
-        <div className="evaluation-process-container">
+        <PageContainer title="Tiến trình đánh giá">
+            {/* Ẩn các style mặc định của PageContainer padding cho các sub-page */}
             <style>{`
-                .evaluation-process-container .ant-tabs-nav {
-                    margin-bottom: 0px !important;
-                    background: #fff;
-                    padding: 16px 24px 0 24px;
-                    border-radius: 12px 12px 0 0;
-                    border: 1px solid #e2e8f0;
-                    border-bottom: none;
-                }
-                .evaluation-process-container .ant-tabs-content-holder {
-                    background: #fff;
-                    border: 1px solid #e2e8f0;
-                    border-top: none;
-                    border-radius: 0 0 12px 12px;
-                }
-                /* Hide the individual PageContainer padding if it's inside a tab */
                 .evaluation-process-container .page-container {
-                    padding: 16px !important;
+                    padding: 0px !important;
                     border: none !important;
                     box-shadow: none !important;
+                    background: transparent !important;
                 }
                 .evaluation-process-container .page-title {
                     display: none !important;
                 }
             `}</style>
             
-            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center' }}>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#1e293b' }}>
-                    Quy trình đánh giá
-                </h2>
-                <div style={{ marginLeft: 16, background: '#f1f5f9', padding: '4px 12px', borderRadius: 99, fontSize: 13, color: '#64748b', fontWeight: 500 }}>
-                    Quản lý toàn bộ luồng thực hiện
+            <div className="evaluation-process-container">
+                <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center' }}>
+                    <TabBar tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
                 </div>
-            </div>
 
-            <Tabs 
-                defaultActiveKey="my-eval" 
-                items={items} 
-                size="large"
-                tabBarStyle={{ margin: 0 }}
-            />
-        </div>
+                {/* CONTENT */}
+                {activeTab === "MY_EVAL" && canViewMyEval && (
+                    <MyEvaluationPage isTab={true} />
+                )}
+                {activeTab === "MANAGER_EVAL" && canViewManagerEval && (
+                    <PendingManagerEvaluationPage isTab={true} />
+                )}
+                {activeTab === "APPROVER_EVAL" && canViewApproverEval && (
+                    <PendingApprovalPage isTab={true} />
+                )}
+            </div>
+        </PageContainer>
     );
 };
 

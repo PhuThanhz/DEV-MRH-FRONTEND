@@ -1,5 +1,5 @@
-import { Tooltip, Popconfirm } from "antd";
-import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined, PlusOutlined } from "@ant-design/icons";
+import { Tooltip, Popconfirm, Dropdown, type MenuProps } from "antd";
+import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined, PlusOutlined, ApartmentOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Handle, Position } from "reactflow";
 import { useState, useRef } from "react";
 
@@ -25,7 +25,7 @@ export interface OrgNodeData {
     viewMode?: "compact" | "full";
     onEdit: () => void;
     onDelete: () => void;
-    onAddChild?: () => void;
+    onAddChild?: (action?: "department" | "position" | "bulk") => void;
     onJD?: () => void;
     onSelect?: () => void;
     onMouseEnter?: () => void;
@@ -123,13 +123,12 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     let cardShadow: string = accent.shadow;
 
     // Border highlights (1.5px thick, extremely crisp)
-    if (data.isGoal) {
-        cardBorderColor = "#c084fc";
-    }
-
     if (data.isSelected) {
         cardBorderColor = "#1677ff"; // Vibrant blue focus border
         cardShadow = "0 8px 24px rgba(22, 119, 255, 0.15), 0 4px 12px rgba(22, 119, 255, 0.08)";
+    } else if (isDepartment) {
+        cardBorderColor = "#b7c7da";
+        cardShadow = "0 10px 28px -18px rgba(15, 23, 42, 0.28), 0 2px 8px rgba(15, 23, 42, 0.04)";
     } else if (hs === "active") {
         cardBorderColor = "#fbbf24";
     } else if (hs === "ancestor") {
@@ -154,6 +153,44 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
         if ((e.target as HTMLElement).closest("button")) return;
         data.onSelect?.();
     };
+
+    const quickAddMenu: MenuProps = {
+        items: [
+            { key: "department", icon: <ApartmentOutlined />, label: "Thêm phòng ban con" },
+            { key: "position", icon: <UserOutlined />, label: "Thêm chức danh" },
+            { key: "bulk", icon: <ThunderboltOutlined />, label: "Tạo hàng loạt trong phòng ban này" },
+        ],
+        onClick: ({ key, domEvent }) => {
+            domEvent.stopPropagation();
+            data.onAddChild?.(key as "department" | "position" | "bulk");
+        },
+    };
+
+    const addButton = (
+        <button
+            onClick={(e) => {
+                if (isDepartment) return;
+                e.stopPropagation();
+                data.onAddChild?.("position");
+            }}
+            onMouseEnter={() => { handleMouseEnter(); setAddHover(true); }}
+            onMouseLeave={() => { handleMouseLeave(); setAddHover(false); }}
+            style={{
+                width: actionBtnW, height: actionBtnH,
+                borderRadius: "50%",
+                background: addHover ? "#10b981" : "#ffffff",
+                border: "1px solid #cbd5e1",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: addHover ? "#ffffff" : "#475569",
+                padding: 0,
+                boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                transition: "all 0.12s ease",
+            }}
+        >
+            <PlusOutlined style={{ fontSize: actionIconS }} />
+        </button>
+    );
 
     return (
         <>
@@ -187,27 +224,19 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                         }}
                     >
                         {showCreate && (
-                            <Tooltip title="Thêm cấp dưới" placement="top">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); data.onAddChild?.(); }}
-                                    onMouseEnter={() => { handleMouseEnter(); setAddHover(true); }}
-                                    onMouseLeave={() => { handleMouseLeave(); setAddHover(false); }}
-                                    style={{
-                                        width: actionBtnW, height: actionBtnH,
-                                        borderRadius: "50%",
-                                        background: addHover ? "#10b981" : "#ffffff",
-                                        border: "1px solid #cbd5e1",
-                                        cursor: "pointer",
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        color: addHover ? "#ffffff" : "#475569",
-                                        padding: 0,
-                                        boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
-                                        transition: "all 0.12s ease",
-                                    }}
-                                >
-                                    <PlusOutlined style={{ fontSize: actionIconS }} />
-                                </button>
-                            </Tooltip>
+                            isDepartment ? (
+                                <Dropdown menu={quickAddMenu} trigger={["click"]} placement="bottomRight">
+                                    <span onClick={(e) => e.stopPropagation()}>
+                                        <Tooltip title="Thêm trong phòng ban" placement="top">
+                                            {addButton}
+                                        </Tooltip>
+                                    </span>
+                                </Dropdown>
+                            ) : (
+                                <Tooltip title="Thêm cấp dưới" placement="top">
+                                    {addButton}
+                                </Tooltip>
+                            )
                         )}
 
                         {showEdit && (
@@ -315,53 +344,88 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                         /* ── Symmetrical Dashboard Mode (Beautifully Segmented) ── */
                         <>
                             {isDepartment ? (
-                                /* ── 🏢 Premium Department Card Layout (Symmetrical Tall White Card with centered title and bottom pill) ── */
+                                /* ── Department Card Layout ── */
                                 <div style={{
                                     flex: 1,
-                                    padding: cardPad,
+                                    padding: isMobile ? "12px 12px 13px" : isTablet ? "14px 15px 16px" : "16px 18px 18px",
                                     display: "flex",
                                     flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    justifyContent: "space-between",
                                     gap: 12,
+                                    position: "relative",
+                                    background: "linear-gradient(180deg, #ffffff 0%, #fbfdff 100%)",
                                 }}>
-                                    {/* Department Name centered beautifully */}
-                                    <span style={{
-                                        fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
-                                        fontWeight: 800,
-                                        fontSize: titleSize + 1,
-                                        color: "#0f172a", // Beautiful bold slate-dark title
-                                        lineHeight: 1.4,
-                                        textAlign: "center",
-                                        display: "-webkit-box",
-                                        WebkitLineClamp: 3,
-                                        WebkitBoxOrient: "vertical",
-                                        overflow: "hidden",
+                                    <div style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: 10,
                                         width: "100%",
                                     }}>
-                                        {data.title}
-                                    </span>
+                                        <div style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 6,
+                                            background: "#f8fafc",
+                                            border: "1px solid #dbeafe",
+                                            borderRadius: 8,
+                                            padding: isMobile ? "3px 7px" : "4px 8px",
+                                            color: "#2563eb",
+                                            fontSize: isMobile ? 9 : 10.5,
+                                            fontWeight: 800,
+                                            fontFamily: "'Be Vietnam Pro',sans-serif",
+                                            letterSpacing: "0.02em",
+                                        }}>
+                                            <ApartmentOutlined style={{ fontSize: isMobile ? 10 : 12 }} />
+                                            Phòng ban
+                                        </div>
+                                        {(data.childCount ?? 0) > 0 && (
+                                            <span style={{
+                                                fontFamily: "'JetBrains Mono','Be Vietnam Pro',monospace",
+                                                fontSize: isMobile ? 9 : 10.5,
+                                                fontWeight: 700,
+                                                color: "#64748b",
+                                                background: "#f1f5f9",
+                                                border: "1px solid #e2e8f0",
+                                                borderRadius: 7,
+                                                padding: isMobile ? "2px 6px" : "3px 7px",
+                                            }}>
+                                                {data.childCount}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                    {/* Minimalist modern pill displaying the number of sub-positions */}
                                     <div style={{
-                                        display: "inline-flex",
+                                        flex: 1,
+                                        display: "flex",
                                         alignItems: "center",
-                                        gap: 5,
-                                        background: "#f8fafc",
-                                        border: "1px solid #cbd5e1",
-                                        borderRadius: 20,
-                                        padding: isMobile ? "2px 8px" : "3px 12px",
-                                        flexShrink: 0,
+                                        justifyContent: "center",
+                                        width: "100%",
+                                        padding: "2px 0",
                                     }}>
                                         <span style={{
-                                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                                            fontSize: isMobile ? 9.5 : 11,
-                                            fontWeight: 700,
-                                            color: "#64748b",
+                                            fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
+                                            fontWeight: 850,
+                                            fontSize: titleSize + 1,
+                                            color: "#0f172a",
+                                            lineHeight: 1.35,
+                                            textAlign: "center",
+                                            display: "-webkit-box",
+                                            WebkitLineClamp: 3,
+                                            WebkitBoxOrient: "vertical",
+                                            overflow: "hidden",
+                                            width: "100%",
                                         }}>
-                                            {data.childCount || 0} vị trí trực thuộc
+                                            {data.title}
                                         </span>
                                     </div>
+
+                                    <div style={{
+                                        height: 1,
+                                        width: "42%",
+                                        alignSelf: "center",
+                                        background: "linear-gradient(90deg, transparent, #cbd5e1, transparent)",
+                                    }} />
                                 </div>
                             ) : (
                                 /* ── 👤 Premium Position/Job Title Card Layout ── */
@@ -375,31 +439,15 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                         flex: 1,
                                         justifyContent: "space-between",
                                     }}>
-                                        {/* Header row: Goal & Level badges */}
+                                        {/* Header row: Level badge */}
                                         <div style={{
                                             display: "flex",
                                             alignItems: "center",
-                                            justifyContent: "space-between",
+                                            justifyContent: "flex-end",
                                             height: isMobile ? 16 : 20,
                                             flexShrink: 0,
                                             width: "100%",
                                         }}>
-                                            {data.isGoal ? (
-                                                <span style={{
-                                                    fontSize: isMobile ? 8 : 9,
-                                                    fontWeight: 700,
-                                                    fontFamily: "'Be Vietnam Pro',sans-serif",
-                                                    background: "rgba(124, 58, 237, 0.08)",
-                                                    color: "#7c3aed",
-                                                    borderRadius: 5,
-                                                    padding: isMobile ? "1px 5px" : "2px 7px",
-                                                    letterSpacing: "0.03em",
-                                                    border: "1px solid rgba(124, 58, 237, 0.15)",
-                                                }}>
-                                                    🎯 Mục tiêu
-                                                </span>
-                                            ) : <span />}
-
                                             {/* Hide level/grade badge ONLY when in compact mode! */}
                                             {hasLevel && !isCompactMode ? (() => {
                                                 const badgeStyle = getBandStyle(data.levelCode);

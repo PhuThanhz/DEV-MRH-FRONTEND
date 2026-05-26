@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Space, Tag, Popconfirm, message, Typography } from "antd";
+import React, { useState, useRef } from "react";
+import { Space, Tag, Popconfirm, Typography } from "antd";
+import { notify } from "@/components/common/notification/notify";
 import {
     EditOutlined,
     EyeOutlined,
-    DeleteOutlined,
     SettingOutlined,
     CheckCircleOutlined,
     BankOutlined,
@@ -44,80 +44,28 @@ const TemplatePage = () => {
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-    const [templates, setTemplates] = useState<IEvaluationTemplate[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [meta, setMeta] = useState({
-        page: PAGINATION_CONFIG.DEFAULT_PAGE,
-        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        total: 0,
+    const tableRef = useRef<ActionType>(null);
+    const paginationRef = useRef({
+        current: 1,
+        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE || 10,
     });
 
-    const [query, setQuery] = useState(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
-    );
-
-    const tableRef = useRef<ActionType>(null);
-
-    const fetchTemplates = async (q: string) => {
-        setLoading(true);
-        try {
-            const res = await callFetchEvaluationTemplates(q);
-            if (res?.data) {
-                setTemplates(res.data.result);
-                setMeta({
-                    page: res.data.meta.page,
-                    pageSize: res.data.meta.pageSize,
-                    total: res.data.meta.total,
-                });
-            }
-        } catch (error) {
-            message.error("Lỗi tải danh sách mẫu đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handlePublish = async (id: number) => {
-        setLoading(true);
         try {
             const res = await callPublishEvaluationTemplate(id);
             if (res?.data) {
-                message.success("Kích hoạt mẫu đánh giá thành công!");
-                fetchTemplates(query);
+                notify.success("Kích hoạt mẫu đánh giá thành công!");
+                tableRef.current?.reload();
             }
-        } catch (error: any) {
-            const msg = error?.response?.data?.message || "Lỗi kích hoạt mẫu đánh giá";
-            message.error(msg);
-        } finally {
-            setLoading(false);
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            const msg = error?.message || error?.response?.data?.message || "Lỗi kích hoạt mẫu đánh giá";
+            notify.error(msg);
         }
     };
 
-    useEffect(() => {
-        const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
-        };
-        const filters: string[] = [];
-        if (searchValue) {
-            filters.push(`name~'${searchValue}'`);
-        }
-        if (statusFilter !== null) {
-            filters.push(`status='${statusFilter}'`);
-        }
-        if (typeFilter !== null) {
-            filters.push(`type='${typeFilter}'`);
-        }
-        if (filters.length > 0) {
-            q.filter = filters.join(" and ");
-        }
-        const stringified = queryString.stringify(q, { encode: false });
-        setQuery(stringified);
-        fetchTemplates(stringified);
-    }, [searchValue, statusFilter, typeFilter]);
-
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buildQuery = (params: any, sort: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const q: any = {
             page: params.current,
             size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
@@ -151,7 +99,7 @@ const TemplatePage = () => {
             width: 60,
             align: "center",
             render: (_text, _record, index) =>
-                index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10),
+                index + 1 + (paginationRef.current.current - 1) * paginationRef.current.pageSize,
         },
         {
             title: "Tên mẫu đánh giá",
@@ -237,8 +185,21 @@ const TemplatePage = () => {
                         permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
                         hideChildren
                     >
-                        <SettingOutlined
+                        <EyeOutlined
                             style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                            title="Xem chi tiết"
+                            onClick={() => {
+                                navigate(`/admin/evaluation/templates/${entity.id}`);
+                            }}
+                        />
+                    </Access>
+
+                    <Access
+                        permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
+                        hideChildren
+                    >
+                        <SettingOutlined
+                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             title="Cấu hình tiêu chí"
                             onClick={() => {
                                 navigate(`/admin/evaluation/templates/${entity.id}`);
@@ -341,25 +302,27 @@ const TemplatePage = () => {
                 <DataTable<IEvaluationTemplate>
                     actionRef={tableRef}
                     rowKey="id"
-                    loading={loading}
                     columns={columns}
-                    dataSource={templates}
                     scroll={{ x: 1000 }}
+                    params={{ searchValue, statusFilter, typeFilter }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
-                        setQuery(q);
-                        await fetchTemplates(q);
-                        return {
-                            data: templates,
-                            success: true,
-                            total: meta.total,
+                        paginationRef.current = {
+                            current: params.current || 1,
+                            pageSize: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE || 10,
                         };
+                        const res = await callFetchEvaluationTemplates(q);
+                        if (res?.data) {
+                            return {
+                                data: res.data.result ?? [],
+                                success: true,
+                                total: res.data.meta.total ?? 0,
+                            };
+                        }
+                        return { data: [], success: false };
                     }}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-                        current: meta.page,
-                        pageSize: meta.pageSize,
-                        total: meta.total,
                         showQuickJumper: true,
                         showTotal: (total, range) => (
                             <div style={{ fontSize: 13 }}>
@@ -383,7 +346,7 @@ const TemplatePage = () => {
                 setOpenModal={setOpenModal}
                 dataInit={dataInit}
                 setDataInit={setDataInit}
-                reloadTable={() => fetchTemplates(query)}
+                reloadTable={() => tableRef.current?.reload()}
             />
         </PageContainer>
     );

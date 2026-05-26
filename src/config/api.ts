@@ -2040,8 +2040,8 @@ export const callCreateEvaluationPeriod = (data: any) =>
 export const callUpdateEvaluationPeriod = (id: number, data: any) =>
     axios.put<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}`, data);
 
-export const callAddTemplateToPeriod = (periodId: number, templateId: number, applyToRole: string) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/templates`, { templateId, applyToRole });
+export const callAddTemplateToPeriod = (periodId: number, templateId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/templates`, { templateId });
 
 export const callFetchTemplatesInPeriod = (periodId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/periods/${periodId}/templates`);
@@ -2121,12 +2121,22 @@ export const callRejectRecord = (recordId: number, reason: string) =>
 export const callBatchApproveRecords = (ids: number[]) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/batch-approve`, { recordIds: ids });
 
-export const callFetchCompletedSummary = (periodId?: number, departmentId?: number, companyId?: number) => {
+export const callExtendEvaluationRecordDeadline = (data: {
+    recordIds: number[];
+    phase: "EMPLOYEE" | "MANAGER" | "APPROVAL";
+    deadline: string;
+    reason?: string;
+    cascade?: boolean;
+}) =>
+    axios.patch<IBackendRes<any[]>>(`/api/v1/evaluation/records/deadline-extension`, data);
+
+export const callFetchCompletedSummary = (periodId?: number, departmentId?: number, companyId?: number, sectionId?: number) => {
     let url = `/api/v1/evaluation/summary/completed`;
     const params = new URLSearchParams();
     if (periodId) params.append("periodId", periodId.toString());
     if (departmentId) params.append("departmentId", departmentId.toString());
     if (companyId) params.append("companyId", companyId.toString());
+    if (sectionId) params.append("sectionId", sectionId.toString());
     
     if (params.toString()) {
         url += `?${params.toString()}`;

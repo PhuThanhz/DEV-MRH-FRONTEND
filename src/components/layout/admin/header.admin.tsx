@@ -166,20 +166,18 @@ const HeaderAdmin: React.FC<IProps> = ({
                                 transition-all duration-200
                                 select-none
                             ">
-                                {!isMobile && (
-                                    <>
-                                        <div className="flex flex-col items-end gap-0.5 pl-2">
-                                            <span className="text-sm font-semibold text-white leading-tight tracking-wide">
-                                                {user?.name || "Admin"}
-                                            </span>
-                                        </div>
-                                        <div className="w-px h-7 bg-white/20 flex-shrink-0" />
-                                    </>
-                                )}
+                                <div className="hidden md:flex items-center">
+                                    <div className="flex flex-col items-end gap-0.5 pl-2">
+                                        <span className="text-sm font-semibold text-white leading-tight tracking-wide">
+                                            {user?.name || "Admin"}
+                                        </span>
+                                    </div>
+                                    <div className="w-px h-7 bg-white/20 flex-shrink-0 ml-3 mr-1" />
+                                </div>
 
                                 <div className="relative flex-shrink-0">
                                     <Avatar
-                                        size={isMobile ? 32 : 34}
+                                        size={34}
                                         src={avatarSrc}
                                         style={{
                                             backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",

@@ -84,10 +84,10 @@ const getPhaseInfo = (record: IEvaluationPeriod): PhaseInfo => {
     }
 
     if (now.isBefore(start)) {
-        return { activePhase: "none", phaseLabel: "Sắp mở cổng tự chấm", deadline: start.format("DD/MM/YYYY HH:mm"), countdown: `Mở sau ${getDiffString(now, start)}`, badgeType: "upcoming", badgeText: "Sắp mở", isOverdue: false };
+        return { activePhase: "none", phaseLabel: "Sắp mở cổng nhân viên đánh giá", deadline: start.format("DD/MM/YYYY HH:mm"), countdown: `Mở sau ${getDiffString(now, start)}`, badgeType: "upcoming", badgeText: "Sắp mở", isOverdue: false };
     }
     if (now.isBefore(empDeadline)) {
-        return { activePhase: "employee", phaseLabel: "Nhân viên tự chấm", deadline: empDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, empDeadline)}`, badgeType: "active", badgeText: "Đang diễn ra", isOverdue: false };
+        return { activePhase: "employee", phaseLabel: "Nhân viên đánh giá", deadline: empDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, empDeadline)}`, badgeType: "active", badgeText: "Đang diễn ra", isOverdue: false };
     }
     if (now.isBefore(mgrDeadline)) {
         return { activePhase: "manager", phaseLabel: "Quản lý chấm điểm", deadline: mgrDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, mgrDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
@@ -99,7 +99,7 @@ const getPhaseInfo = (record: IEvaluationPeriod): PhaseInfo => {
 };
 
 const PHASE_CONFIG = {
-    employee: { label: "Tự chấm", color: "#52c41a", bg: "#f6ffed", border: "#b7eb8f" },
+    employee: { label: "NV đánh giá", color: "#52c41a", bg: "#f6ffed", border: "#b7eb8f" },
     manager: { label: "Quản lý chấm", color: "#1677ff", bg: "#e6f4ff", border: "#91caff" },
     approval: { label: "Lãnh đạo duyệt", color: "#722ed1", bg: "#f9f0ff", border: "#d3adf7" },
 };
@@ -167,7 +167,7 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
                 Mốc thời gian
             </div>
             {[
-                { label: "Mở cổng tự chấm", date: record.employeeStartDate },
+                { label: "Mở cổng nhân viên đánh giá", date: record.employeeStartDate },
                 { label: "Hạn nhân viên nộp", date: record.employeeDeadline },
                 { label: "Hạn quản lý chấm", date: record.managerDeadline },
                 { label: "Hạn lãnh đạo duyệt", date: record.approvalDeadline },
@@ -186,13 +186,15 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
         <Tooltip
             title={tooltipContent}
             color="white"
-            overlayStyle={{ maxWidth: "none" }}
-            overlayInnerStyle={{
-                padding: "14px 18px",
-                borderRadius: "10px",
-                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-                border: "1px solid #e2e8f0",
-                minWidth: "320px"
+            styles={{
+                root: { maxWidth: "none" },
+                body: {
+                    padding: "14px 18px",
+                    borderRadius: "10px",
+                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                    border: "1px solid #e2e8f0",
+                    minWidth: "320px"
+                }
             }}
         >
             <div style={{ display: "flex", flexDirection: "column", gap: 6, cursor: hasTimeline ? "help" : "default", padding: "4px 0" }}>
@@ -236,13 +238,24 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
     );
 };
 
-const StatusTag = ({ status }: { status: string }) => {
+const StatusTag = ({ record }: { record: IEvaluationPeriod }) => {
+    const info = getPhaseInfo(record);
+    
+    if (info.isOverdue && record.status === "ACTIVE") {
+        return (
+            <Tag color="error" style={{ borderRadius: 20, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
+                <Badge color="#ff4d4f" style={{ marginRight: 4 }} />
+                Quá hạn
+            </Tag>
+        );
+    }
+
     const config: Record<string, { color: string; text: string; dot: string }> = {
         DRAFT: { color: "default", text: "Bản nháp", dot: "#8c8c8c" },
         ACTIVE: { color: "success", text: "Đang diễn ra", dot: "#52c41a" },
         CLOSED: { color: "error", text: "Đã kết thúc", dot: "#ff4d4f" },
     };
-    const cfg = config[status] ?? config.DRAFT;
+    const cfg = config[record.status] ?? config.DRAFT;
     return (
         <Tag color={cfg.color} style={{ borderRadius: 20, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
             <Badge color={cfg.dot} style={{ marginRight: 4 }} />
@@ -260,53 +273,11 @@ const PeriodPage = () => {
     const [searchValue, setSearchValue] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-    const [periods, setPeriods] = useState<IEvaluationPeriod[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [meta, setMeta] = useState({
-        page: PAGINATION_CONFIG.DEFAULT_PAGE,
-        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        total: 0,
-    });
-
-    const [query, setQuery] = useState(
-        `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
-    );
-
     const tableRef = useRef<ActionType>(null);
-
-    const fetchPeriods = async (q: string) => {
-        setLoading(true);
-        try {
-            const res = await callFetchEvaluationPeriods(q);
-            if (res?.data) {
-                setPeriods(res.data.result);
-                setMeta({
-                    page: res.data.meta.page,
-                    pageSize: res.data.meta.pageSize,
-                    total: res.data.meta.total,
-                });
-            }
-        } catch {
-            notify.error("Lỗi tải danh sách kỳ đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
-        };
-        const filters: string[] = [];
-        if (searchValue) filters.push(`name~'${searchValue}'`);
-        if (statusFilter !== null) filters.push(`status='${statusFilter}'`);
-        if (filters.length > 0) q.filter = filters.join(" and ");
-        const stringified = queryString.stringify(q, { encode: false });
-        setQuery(stringified);
-        fetchPeriods(stringified);
-    }, [searchValue, statusFilter]);
+    const paginationRef = useRef({
+        current: 1,
+        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE || 10,
+    });
 
     const buildQuery = (params: any, sort: any) => {
         const q: any = {
@@ -328,7 +299,7 @@ const PeriodPage = () => {
             const res = await callActivateEvaluationPeriod(id);
             if (res?.data) {
                 notify.success("Kích hoạt thành công! Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
-                fetchPeriods(query);
+                tableRef.current?.reload();
             }
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi kích hoạt kỳ đánh giá");
@@ -340,7 +311,7 @@ const PeriodPage = () => {
             const res = await callCloseEvaluationPeriod(id);
             if (res?.data) {
                 notify.success("Đã đóng kỳ đánh giá.");
-                fetchPeriods(query);
+                tableRef.current?.reload();
             }
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi đóng kỳ đánh giá");
@@ -354,7 +325,9 @@ const PeriodPage = () => {
             width: 55,
             align: "center",
             render: (_text, _record, index) =>
-                <span style={{ color: "#8c8c8c", fontSize: 13 }}>{index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 10)}</span>,
+                <span style={{ color: "#8c8c8c", fontSize: 13 }}>
+                    {index + 1 + (paginationRef.current.current - 1) * paginationRef.current.pageSize}
+                </span>,
         },
         {
             title: "Tên kỳ đánh giá",
@@ -379,11 +352,21 @@ const PeriodPage = () => {
             ),
         },
         {
+            title: "Công ty",
+            dataIndex: ["company", "name"],
+            width: 150,
+            render: (text) => (
+                <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+                    {text || "—"}
+                </Typography.Text>
+            ),
+        },
+        {
             title: "Trạng thái",
             dataIndex: "status",
             width: 145,
             align: "center",
-            render: (_, record) => <StatusTag status={record.status} />,
+            render: (_, record) => <StatusTag record={record} />,
         },
         {
             title: "Tiến trình",
@@ -517,21 +500,27 @@ const PeriodPage = () => {
                 <DataTable<IEvaluationPeriod>
                     actionRef={tableRef}
                     rowKey="id"
-                    loading={loading}
                     columns={columns}
-                    dataSource={periods}
                     scroll={{ x: 1000 }}
+                    params={{ searchValue, statusFilter }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
-                        setQuery(q);
-                        await fetchPeriods(q);
-                        return { data: periods, success: true, total: meta.total };
+                        paginationRef.current = {
+                            current: params.current || 1,
+                            pageSize: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE || 10,
+                        };
+                        const res = await callFetchEvaluationPeriods(q);
+                        if (res?.data) {
+                            return {
+                                data: res.data.result ?? [],
+                                success: true,
+                                total: res.data.meta.total ?? 0,
+                            };
+                        }
+                        return { data: [], success: false };
                     }}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-                        current: meta.page,
-                        pageSize: meta.pageSize,
-                        total: meta.total,
                         showQuickJumper: true,
                         showTotal: (total, range) => (
                             <span style={{ fontSize: 13 }}>
@@ -549,12 +538,12 @@ const PeriodPage = () => {
                 setOpenModal={setOpenModal}
                 dataInit={dataInit}
                 setDataInit={setDataInit}
-                reloadTable={() => fetchPeriods(query)}
+                reloadTable={() => tableRef.current?.reload()}
             />
 
             <PeriodDetailDrawer
                 open={openDrawer}
-                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); fetchPeriods(query); }}
+                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); tableRef.current?.reload(); }}
                 period={selectedPeriod}
             />
         </PageContainer>

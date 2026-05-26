@@ -19,13 +19,30 @@ const NotificationList: React.FC<Props> = ({
 }) => {
     const navigate = useNavigate();
 
+    const normalizeActionLink = (link: string): string => {
+        if (!link) return link;
+        let normalized = link;
+        // 1. Prepend /admin if it starts with /evaluation (old format)
+        if (normalized.startsWith("/evaluation")) {
+            normalized = "/admin" + normalized;
+        }
+        // 2. Map obsolete dashboard URLs to valid active process lists
+        if (normalized.includes("/evaluation/manager/dashboard")) {
+            normalized = "/admin/evaluation/process";
+        }
+        if (normalized.includes("/evaluation/approval/dashboard")) {
+            normalized = "/admin/evaluation/process";
+        }
+        return normalized;
+    };
+
     const handleClickItem = (item: UnifiedNotification) => {
         onItemClick(item);
         onClose();
         if (item.type === "jd") {
             navigate("/admin/job-descriptions?tab=inbox");
         } else if (item.type === "eval" && item.actionLink) {
-            navigate(item.actionLink);
+            navigate(normalizeActionLink(item.actionLink));
         }
     };
 

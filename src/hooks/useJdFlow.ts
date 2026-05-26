@@ -63,7 +63,6 @@ export const useJdFlowInboxQuery = () => {
         queryKey: ["jd-flow-inbox"],
         staleTime: 1000 * 30,
         refetchOnWindowFocus: false,
-        refetchInterval: 1000 * 30,  // ← thêm dòng này
         queryFn: async (): Promise<IJdInbox[]> => {
             const res = await callFetchJdFlowInbox();
             if (!res || res.statusCode !== 200) {

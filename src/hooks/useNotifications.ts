@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useJdFlowInboxQuery } from "@/hooks/useJdFlow";
 import type { IJdInbox } from "@/types/backend";
 import { useWebSocket } from "./useWebSocket";
@@ -82,6 +83,7 @@ const playNotificationSound = async () => {
 };
 
 export const useNotifications = () => {
+    const queryClient = useQueryClient();
     const { data: jdItems = [], refetch: refetchJd } = useJdFlowInboxQuery();
     const seenMap = getSeenMap();
 
@@ -108,6 +110,8 @@ export const useNotifications = () => {
         notify.info("Thông báo mới: " + msg.content);
         // Append to unread list
         setAppNotifs((prev) => [msg, ...prev]);
+        // Real-time invalidate JD Inbox query to trigger fetch only when there's an actual update!
+        queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
     });
 
     // Merge logic

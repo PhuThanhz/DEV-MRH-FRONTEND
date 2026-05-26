@@ -1763,11 +1763,21 @@ export interface IEvaluationTemplate {
     type: "STAFF" | "MANAGER";
     description?: string;
     status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-    sections?: ITemplateSection[];
-    company?: ICompany | null;
-    jobTitle?: IJobTitle | null;
     createdAt?: string;
     updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+    company?: {
+        id: number;
+        code: string;
+        name: string;
+    };
+    targetJobTitles?: {
+        id: number;
+        nameVi: string;
+        nameEn?: string;
+    }[];
+    sections?: ITemplateSection[];
 }
 
 export interface ITemplateSection {
@@ -1783,6 +1793,7 @@ export interface ITemplateCriteria {
     id?: number;
     name: string;
     measurementMethod?: string;
+    description?: string;
     weight: number;
     displayOrder: number;
     subCriteria?: ITemplateCriteria[];
@@ -1806,6 +1817,10 @@ export interface IEvaluationPeriod {
     approvalDeadline?: string;
     createdAt?: string;
     updatedAt?: string;
+    company?: {
+        id: number;
+        name: string;
+    };
 }
 
 export interface IEvaluationRecord {
@@ -1828,15 +1843,30 @@ export interface IEvaluationRecord {
     managerSubmittedAt?: string;
     approvedAt?: string;
     completedAt?: string;
+
+    employeeDeadlineOverride?: string;
+    managerDeadlineOverride?: string;
+    approvalDeadlineOverride?: string;
+    effectiveEmployeeDeadline?: string;
+    effectiveManagerDeadline?: string;
+    effectiveApprovalDeadline?: string;
+    period?: IEvaluationPeriod;
 }
 
 export interface IResEmployeeInfo {
     id: string;
     username: string;
+    employeeCode?: string;
     fullName: string;
     email: string;
     jobTitle?: string;
     positionLevel?: string;
+    companyId?: number;
+    companyName?: string;
+    departmentId?: number;
+    departmentName?: string;
+    sectionId?: number;
+    sectionName?: string;
 }
 
 export interface IResScoreDTO {

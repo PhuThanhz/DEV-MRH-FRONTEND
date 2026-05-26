@@ -1,7 +1,7 @@
-import { Modal, Form, Input, DatePicker, Tooltip, Button } from "antd";
+import { Modal, Form, Input, DatePicker, Tooltip, Button, Select } from "antd";
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod } from "@/config/api";
+import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod, callFetchCompany } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 import Access from '@/components/share/access';
@@ -26,12 +26,12 @@ interface IProps {
 const DATE_FIELDS = [
     {
         name: "employeeStartDate",
-        label: "Mở cổng tự chấm",
+        label: "Mở cổng nhân viên đánh giá",
         icon: <UserOutlined />,
         defaultHour: 8,
         defaultMinute: 0,
         placeholder: "Ngày bắt đầu",
-        tip: "Nhân viên bắt đầu tự đánh giá từ thời điểm này",
+        tip: "Nhân viên bắt đầu thực hiện đánh giá từ thời điểm này",
     },
     {
         name: "employeeDeadline",
@@ -66,6 +66,24 @@ const PeriodModal = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, dataInit, setDataInit } = props;
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
+    const [companies, setCompanies] = useState<{ label: string; value: number }[]>([]);
+
+    useEffect(() => {
+        const loadOptions = async () => {
+            try {
+                const compRes = await callFetchCompany("page=1&size=200&sort=name,asc");
+                if (compRes?.data?.result) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    setCompanies(compRes.data.result.map((c: any) => ({ label: c.name, value: c.id })));
+                }
+            } catch (error) {
+                console.error("Lỗi khi tải cấu hình công ty", error);
+            }
+        };
+        if (openModal) {
+            loadOptions();
+        }
+    }, [openModal]);
 
     useEffect(() => {
         if (openModal) {
@@ -82,6 +100,7 @@ const PeriodModal = (props: IProps) => {
                     employeeDeadline: parse(dataInit.employeeDeadline, 23, 59),
                     managerDeadline: parse(dataInit.managerDeadline, 23, 59),
                     approvalDeadline: parse(dataInit.approvalDeadline, 23, 59),
+                    companyId: dataInit.company?.id || null,
                 });
             } else {
                 form.resetFields();
@@ -89,8 +108,15 @@ const PeriodModal = (props: IProps) => {
         }
     }, [openModal, dataInit, form]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onFinish = async (values: any) => {
         const { employeeStartDate, employeeDeadline, managerDeadline, approvalDeadline } = values;
+        
+        if (employeeStartDate?.isBefore(dayjs(), 'minute')) {
+            notify.error("Ngày mở cổng không được nằm trong quá khứ!");
+            return;
+        }
+        
         if (employeeStartDate?.isAfter(employeeDeadline)) {
             notify.error("Ngày mở cổng phải trước hạn nhân viên nộp!");
             return;
@@ -113,6 +139,7 @@ const PeriodModal = (props: IProps) => {
                 employeeDeadline: employeeDeadline?.toISOString() ?? null,
                 managerDeadline: managerDeadline?.toISOString() ?? null,
                 approvalDeadline: approvalDeadline?.toISOString() ?? null,
+                company: { id: Number(values.companyId) },
             };
             let res;
             if (dataInit?.id) {
@@ -129,6 +156,7 @@ const PeriodModal = (props: IProps) => {
             } else {
                 notify.error("Có lỗi xảy ra");
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi kết nối máy chủ");
         } finally {
@@ -184,17 +212,32 @@ const PeriodModal = (props: IProps) => {
         >
             <Form form={form} layout="vertical" onFinish={onFinish}>
 
-                {/* Tên + Mô tả — 2 cột ngang */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+                {/* Tên + Mô tả + Công ty — 2 cột ngang */}
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 16px" }}>
                     <Form.Item
-                        label={<span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Tên kỳ đánh giá <span style={{ color: "#ef4444" }}>*</span></span>}
+                        label={<span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Tên kỳ đánh giá</span>}
                         name="name"
                         rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
-                        style={{ marginBottom: 14, gridColumn: "1 / -1" }}
+                        style={{ marginBottom: 14 }}
                     >
                         <Input
                             placeholder="VD: Đánh giá hiệu suất Năm 2025"
                             style={{ borderRadius: 6 }}
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        label={<span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Công ty áp dụng</span>}
+                        name="companyId"
+                        rules={[{ required: true, message: "Vui lòng chọn công ty!" }]}
+                        style={{ marginBottom: 14 }}
+                    >
+                        <Select
+                            placeholder="Chọn công ty áp dụng..."
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={companies}
+                            style={{ borderRadius: 6, width: "100%" }}
                         />
                     </Form.Item>
                     <Form.Item

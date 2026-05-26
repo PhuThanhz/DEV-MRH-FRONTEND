@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Table, Tag, Button, Tooltip, Badge, Empty, Card, Typography, Space, Tabs } from "antd";
+import { Table, Tag, Button, Tooltip, Empty, Tabs, Input } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
@@ -12,10 +12,11 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
+import { SearchOutlined } from "@ant-design/icons";
 import { callFetchPendingApprovalRecords, callBatchApproveRecords, callFetchApprovalRecords } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
-
-const { Title, Text } = Typography;
+import SearchFilter from "@/components/common/filter/SearchFilter";
+import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
 type RecordStatus =
     | "NOT_STARTED"
@@ -27,7 +28,7 @@ type RecordStatus =
 
 const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: React.ReactNode; tagColor: string }> = {
     NOT_STARTED: { text: "Chưa bắt đầu", color: "#8c8c8c", icon: <StopOutlined />, tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "Đang tự chấm", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
+    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
     PENDING_APPROVAL: { text: "Chờ phê duyệt", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
@@ -47,12 +48,16 @@ interface IProps {
 }
 
 const PendingApprovalPage = ({ isTab }: IProps) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _isTab = isTab;
     const navigate = useNavigate();
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("pending");
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [batchApproving, setBatchApproving] = useState(false);
+    const [searchText, setSearchText] = useState("");
+    const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
 
     const fetchRecords = async (tab: string) => {
         setLoading(true);
@@ -82,7 +87,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             notify.success(`Đã phê duyệt thành công ${selectedRowKeys.length} bản đánh giá`);
             setSelectedRowKeys([]);
             fetchRecords(activeTab);
-        } catch (error) {
+        } catch {
             notify.error("Có lỗi xảy ra khi phê duyệt hàng loạt");
         } finally {
             setBatchApproving(false);
@@ -142,7 +147,55 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             key: "status",
             width: 170,
             align: "center" as const,
-            render: (val: RecordStatus) => {
+            render: (val: RecordStatus, record: any) => {
+                const empDeadline = record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline;
+                const isEmpPending = record.status === "EMPLOYEE_DRAFTING" || record.status === "REVISION_NEEDED";
+                const isEmpOverdue = isEmpPending && empDeadline && dayjs().isAfter(dayjs(empDeadline));
+
+                const mgrDeadline = record.effectiveManagerDeadline ?? record.managerDeadlineOverride ?? record.period?.managerDeadline;
+                const isMgrPending = record.status === "PENDING_MANAGER_REVIEW" || record.status === "MANAGER_REVIEWING";
+                const isMgrOverdue = isMgrPending && mgrDeadline && dayjs().isAfter(dayjs(mgrDeadline));
+
+                const appDeadline = record.effectiveApprovalDeadline ?? record.approvalDeadlineOverride ?? record.period?.approvalDeadline;
+                const isAppPending = record.status === "PENDING_APPROVAL";
+                const isAppOverdue = isAppPending && appDeadline && dayjs().isAfter(dayjs(appDeadline));
+
+                if (isEmpOverdue) {
+                    return (
+                        <Tag
+                            color="error"
+                            icon={<ClockCircleOutlined />}
+                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
+                        >
+                            Trễ hạn tự đánh giá
+                        </Tag>
+                    );
+                }
+
+                if (isMgrOverdue) {
+                    return (
+                        <Tag
+                            color="error"
+                            icon={<ClockCircleOutlined />}
+                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
+                        >
+                            Trễ hạn chấm điểm
+                        </Tag>
+                    );
+                }
+
+                if (isAppOverdue) {
+                    return (
+                        <Tag
+                            color="error"
+                            icon={<ClockCircleOutlined />}
+                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
+                        >
+                            Trễ hạn phê duyệt
+                        </Tag>
+                    );
+                }
+
                 const cfg = STATUS_CONFIG[val] ?? STATUS_CONFIG.NOT_STARTED;
                 return (
                     <Tag
@@ -156,7 +209,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             },
         },
         {
-            title: "Điểm tự chấm",
+            title: "Điểm NV đánh giá",
             dataIndex: "employeeTotalScore",
             key: "employeeTotalScore",
             width: 120,
@@ -203,6 +256,28 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             },
         },
         {
+            title: "Hạn chót",
+            key: "deadline",
+            width: 130,
+            align: "center" as const,
+            render: (_: any, record: any) => {
+                const deadline = record.effectiveApprovalDeadline ?? record.approvalDeadlineOverride ?? record.period?.approvalDeadline;
+                if (!deadline) return <span style={{ color: "#d9d9d9" }}>—</span>;
+                
+                const isPendingAction = record.status === "PENDING_APPROVAL";
+                const isOverdue = isPendingAction && dayjs().isAfter(dayjs(deadline));
+                const color = isOverdue ? "#cf1322" : "#374151";
+                const fontWeight = isOverdue ? 600 : 400;
+                
+                return (
+                    <span style={{ fontSize: 12, color, fontWeight }}>
+                        {dayjs(deadline).format("DD/MM/YYYY")}
+                        {isOverdue && <div style={{ fontSize: 10, marginTop: 2 }}>(Quá hạn)</div>}
+                    </span>
+                );
+            },
+        },
+        {
             title: "Ngày hoàn tất",
             dataIndex: "completedAt",
             key: "completedAt",
@@ -230,7 +305,6 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         background: record.status === "PENDING_APPROVAL" ? "#1677ff" : "#ffffff",
                         color: record.status === "PENDING_APPROVAL" ? "#ffffff" : "#334155",
                         border: record.status === "PENDING_APPROVAL" ? "none" : "1px solid #cbd5e1",
-                        boxShadow: record.status === "PENDING_APPROVAL" ? "0 2px 6px rgba(22,119,255,0.2)" : "0 1px 2px rgba(0,0,0,0.05)",
                         fontSize: 12,
                         height: 28,
                     }}
@@ -245,24 +319,54 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
     const completed = records.filter(r => r.status === "COMPLETED").length;
     const returned = records.filter(r => r.status === "REVISION_NEEDED").length;
 
-    return (
-        <PageContainer title="Danh sách cần phê duyệt (Quản lý gián tiếp)">
+    const baseRecords = records.filter(record => {
+        return (
+            (record.period?.name || record.periodName || "").toLowerCase().includes(searchText.toLowerCase()) ||
+            (record.template?.name || "").toLowerCase().includes(searchText.toLowerCase()) ||
+            (record.employee?.fullName || "").toLowerCase().includes(searchText.toLowerCase())
+        );
+    });
+
+    const filteredRecords = baseRecords.filter(r => {
+        if (activeTab === "history") {
+            if (r.status !== "COMPLETED" && r.status !== "REVISION_NEEDED") return false;
+        }
+
+        if (advancedFilters.status) {
+            if (advancedFilters.status === "EMPLOYEE_DRAFTING" && r.status !== "PENDING_APPROVAL") return false;
+            if (advancedFilters.status === "PROCESSING") return false;
+            if (advancedFilters.status === "COMPLETED" && r.status !== "COMPLETED") return false;
+        }
+
+        if (advancedFilters.periodId) {
+            const rPeriodId = r.period?.id || r.periodId;
+            if (rPeriodId !== advancedFilters.periodId) return false;
+        }
+
+        return true;
+    });
+
+    const content = (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <style>{`
                 .my-eval-table .ant-table-thead > tr > th {
-                    background: rgba(241, 245, 249, 0.7) !important;
+                    background: #f8fafc !important;
                     color: #475569 !important;
-                    font-size: 11px !important;
-                    font-weight: 700 !important;
-                    text-transform: uppercase !important;
-                    letter-spacing: 0.5px !important;
+                    font-size: 12px !important;
+                    font-weight: 600 !important;
                     border-bottom: 1px solid #e2e8f0 !important;
+                    padding: 12px 16px !important;
                 }
                 .my-eval-table .ant-table-tbody > tr > td {
                     border-bottom: 1px solid #f1f5f9 !important;
                     padding: 12px 16px !important;
+                    font-size: 13px !important;
                 }
                 .my-eval-table .ant-table-tbody > tr:hover > td {
-                    background: #f8faff !important;
+                    background: #f8fafc !important;
+                }
+                .my-eval-table .ant-pagination {
+                    margin: 16px 20px !important;
                 }
             `}</style>
 
@@ -273,10 +377,8 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         label: "Chờ duyệt",
                         value: pending,
                         color: "#1677ff",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
                         icon: (
-                            <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                            <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <SyncOutlined style={{ fontSize: 20, color: "#1677ff" }} />
                             </div>
                         ),
@@ -285,10 +387,8 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         label: "Bị trả lại",
                         value: returned,
                         color: "#722ed1",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
                         icon: (
-                            <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                            <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <ClockCircleOutlined style={{ fontSize: 20, color: "#722ed1" }} />
                             </div>
                         ),
@@ -297,48 +397,45 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         label: "Hoàn tất",
                         value: completed,
                         color: "#389e0d",
-                        bg: "#ffffff",
-                        border: "#e2e8f0",
                         icon: (
-                            <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "10px", display: "flex" }}>
+                            <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <TrophyOutlined style={{ fontSize: 20, color: "#389e0d" }} />
                             </div>
                         ),
                     },
                 ].map(item => (
-                    <Card
+                    <div
                         key={item.label}
                         style={{
                             flex: 1, minWidth: 180,
-                            background: item.bg,
-                            border: `1px solid ${item.border}`,
-                            borderRadius: 12,
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 8,
+                            padding: "16px 20px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
                         }}
-                        styles={{ body: { padding: "16px 20px" } }}
                     >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                    {item.label}
-                                </div>
-                                <div style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", lineHeight: "1.2", marginTop: 6 }}>
-                                    {item.value}
-                                </div>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b" }}>
+                                {item.label}
                             </div>
-                            {item.icon}
+                            <div style={{ fontSize: 28, fontWeight: 700, color: "#0f172a", marginTop: 4 }}>
+                                {item.value}
+                            </div>
                         </div>
-                    </Card>
+                        {item.icon}
+                    </div>
                 ))}
             </div>
 
             {/* Table */}
             <div style={{
                 background: "#fff",
-                borderRadius: 12,
+                borderRadius: 8,
                 border: "1px solid #e2e8f0",
                 overflow: "hidden",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
             }}>
                 <Tabs
                     activeKey={activeTab}
@@ -349,21 +446,43 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     ]}
                     style={{ padding: "0 20px" }}
                 />
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
-                            display: "inline-flex", background: "#eff6ff", color: "#1d4ed8",
-                            padding: "6px", borderRadius: 8
+                            display: "inline-flex", background: "#eff6ff", color: "#1677ff",
+                            padding: "6px", borderRadius: 6
                         }}>
                             <FileTextOutlined style={{ fontSize: 16 }} />
                         </div>
                         <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
                                 {activeTab === "pending" ? "Danh sách cần phê duyệt" : "Lịch sử phê duyệt"}
                             </div>
-                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                            <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
                                 {activeTab === "pending" ? "Các bản đánh giá đang đợi bạn duyệt" : "Tất cả các bản đánh giá bạn đã xử lý"}
                             </div>
+                        </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <AdvancedFilterSelect 
+                            fields={[
+                                {
+                                    key: "periodId",
+                                    label: "Kỳ đánh giá",
+                                    options: Array.from(
+                                        new Map(records.filter(r => r.period?.id).map(r => [r.period.id, { label: r.period.name || r.periodName, value: r.period.id }])).values()
+                                    ),
+                                }
+                            ]}
+                            onChange={(filters) => setAdvancedFilters(filters)} 
+                        />
+                        <div style={{ width: 280 }}>
+                            <SearchFilter
+                                searchPlaceholder="Tìm kiếm nhân viên, kỳ đánh giá..."
+                                onSearch={(val) => setSearchText(val)}
+                                showFilterButton={false}
+                                showAddButton={false}
+                            />
                         </div>
                     </div>
                 </div>
@@ -387,7 +506,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     } : undefined}
                     className="my-eval-table"
                     columns={columns}
-                    dataSource={records}
+                    dataSource={filteredRecords}
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10, size: "small" }}
@@ -404,8 +523,10 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     }}
                 />
             </div>
-        </PageContainer>
+        </div>
     );
+
+    return isTab ? content : <PageContainer title="Danh sách cần phê duyệt (Quản lý gián tiếp)">{content}</PageContainer>;
 };
 
 export default PendingApprovalPage;
