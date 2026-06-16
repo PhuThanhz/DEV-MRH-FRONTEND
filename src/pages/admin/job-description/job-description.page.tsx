@@ -79,7 +79,7 @@ const JobDescriptionPage = () => {
     });
 
     return (
-        <PageContainer title="Quản lý Mô Tả Công Việc">
+        <PageContainer title="Quản lý mô tả công việc">
             {/* TAB BAR */}
             <div style={{ marginBottom: 24 }}>
                 <TabBar

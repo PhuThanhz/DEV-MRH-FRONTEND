@@ -463,7 +463,7 @@ const PeriodPage = () => {
 
     return (
         <PageContainer
-            title="Quản lý Kỳ đánh giá"
+            title="Quản lý kỳ đánh giá"
             filter={
                 <div className="flex flex-col gap-3">
                     <SearchFilter

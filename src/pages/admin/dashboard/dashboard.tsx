@@ -351,11 +351,10 @@ const DashboardPage = () => {
 
     /* ── Render ── */
     return (
-        <PageContainer title="Dashboard">
+        <PageContainer title="Tổng quan">
             <style>{S}</style>
 
             {/* KPI ROW */}
-            <div className="db-sec">Tổng quan hệ thống</div>
             <div className="db-grid">
                 {isLoading
                     ? [0, 1, 2, 3].map(i => (

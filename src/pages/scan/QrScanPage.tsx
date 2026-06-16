@@ -234,7 +234,7 @@ const QrScanPage = () => {
         if (scannerRef.current) {
             setTimeout(() => {
                 try {
-                    const capabilities = scanner.getRunningTrackCapabilities() as any;
+                    const capabilities = scanner.getRunningTrackCapabilities();
                     if (capabilities && capabilities.torch) {
                         setHasTorch(true);
                     }
@@ -249,14 +249,14 @@ const QrScanPage = () => {
         const nextState = !torchOn;
         try {
             await scannerRef.current.applyVideoConstraints({
-                advanced: [{ torch: nextState } as any]
+                advanced: [{ torch: nextState }]
             });
             setTorchOn(nextState);
         } catch {
             try {
                 const track = (scannerRef.current as any).getRunningTrack();
                 await track.applyConstraints({
-                    advanced: [{ torch: nextState } as any]
+                    advanced: [{ torch: nextState }]
                 });
                 setTorchOn(nextState);
             } catch {}
@@ -270,7 +270,7 @@ const QrScanPage = () => {
                 if (torchOn) {
                     try {
                         await scannerRef.current.applyVideoConstraints({
-                            advanced: [{ torch: false } as any]
+                            advanced: [{ torch: false }]
                         });
                     } catch {}
                 }

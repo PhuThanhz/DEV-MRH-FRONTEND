@@ -26,9 +26,9 @@ const C = {
     warningBorder: "#fde68a",
 };
 
-const BOX = 200; // Tăng lên 200px giúp vùng quét rộng hơn, cực nhạy
-const ARM = 24;
-const THICK = 4; // Bo góc dày dặn hơn
+const BOX = 240; // Khung vuông chuẩn banking
+const ARM = 32;  // Chiều dài ke góc
+const THICK = 3; // Độ dày ke góc thanh mảnh
 
 interface IProps {
     open: boolean;
@@ -42,61 +42,51 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
     TERMINATED: { label: "Hết hiệu lực", color: "error" },
 };
 
-const Corners = () => (
-    <>
-        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)` }}>
-            <div style={{ position: "absolute", top: 0, left: 0, width: ARM, height: THICK, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-            <div style={{ position: "absolute", top: 0, left: 0, width: THICK, height: ARM, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-        </div>
-        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)` }}>
-            <div style={{ position: "absolute", top: 0, right: 0, width: ARM, height: THICK, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-            <div style={{ position: "absolute", top: 0, right: 0, width: THICK, height: ARM, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-        </div>
-        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)` }}>
-            <div style={{ position: "absolute", bottom: 0, left: 0, width: ARM, height: THICK, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, width: THICK, height: ARM, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-        </div>
-        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)` }}>
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: ARM, height: THICK, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: THICK, height: ARM, background: "#ec4899", borderRadius: 4, boxShadow: "0 0 10px rgba(236, 72, 153, 0.8)" }} />
-        </div>
-    </>
-);
-
 const ScanOverlay = () => (
     <div style={{
         position: "absolute", inset: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         pointerEvents: "none",
     }}>
-        {/* Lớp phủ kính mờ (Frosted Glass) xung quanh tạo hiệu ứng Focus chuyên nghiệp */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
-        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, left: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
-        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, bottom: `calc(50% - ${BOX / 2}px)`, right: 0, width: `calc(50% - ${BOX / 2}px)`, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(6px)" }} />
-
-        {/* Khung quét trung tâm có viền màu thương hiệu Lotus Pink cực kỳ tinh tế */}
+        {/* Lớp Overlay cắt rỗng ở giữa (Sharp edges for banking style) */}
         <div style={{
             position: "absolute",
-            width: BOX,
-            height: BOX,
-            border: "1px solid rgba(236, 72, 153, 0.4)",
-            borderRadius: 16,
-            boxShadow: "0 0 25px rgba(236, 72, 153, 0.12), inset 0 0 15px rgba(236, 72, 153, 0.05)",
-        }} />
-
-        <Corners />
-
-        {/* Laser quét dạng Neon Hồng phát sáng chuyển động cực kỳ sang trọng */}
-        <div style={{
-            position: "absolute",
+            top: `calc(50% - ${BOX / 2}px)`,
             left: `calc(50% - ${BOX / 2}px)`,
             width: BOX,
-            height: 4,
-            background: "linear-gradient(90deg, transparent, #ec4899, #f472b6, #ec4899, transparent)",
-            boxShadow: "0 0 12px #ec4899, 0 0 4px #ec4899",
-            animation: "qr-scanline 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite",
-            borderRadius: "50%",
+            height: BOX,
+            boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.75)", // Nền tối hơn tạo độ tương phản mạnh
+            pointerEvents: "none",
+        }} />
+
+        {/* 4 Góc vuông kiểu Banking (Sắc nét, không bo tròn) */}
+        {/* Top Left */}
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, width: ARM, height: THICK, background: C.primaryLight }} />
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, width: THICK, height: ARM, background: C.primaryLight }} />
+        
+        {/* Top Right */}
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, width: ARM, height: THICK, background: C.primaryLight }} />
+        <div style={{ position: "absolute", top: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, width: THICK, height: ARM, background: C.primaryLight }} />
+
+        {/* Bottom Left */}
+        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, width: ARM, height: THICK, background: C.primaryLight }} />
+        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, left: `calc(50% - ${BOX / 2}px)`, width: THICK, height: ARM, background: C.primaryLight }} />
+
+        {/* Bottom Right */}
+        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, width: ARM, height: THICK, background: C.primaryLight }} />
+        <div style={{ position: "absolute", bottom: `calc(50% - ${BOX / 2}px)`, right: `calc(50% - ${BOX / 2}px)`, width: THICK, height: ARM, background: C.primaryLight }} />
+
+        {/* Tia quét Laser chuyên nghiệp (Chuyển động đều đặn - Linear) */}
+        <div style={{
+            position: "absolute",
+            top: `calc(50% - ${BOX / 2}px)`,
+            left: `calc(50% - ${BOX / 2}px)`,
+            width: BOX,
+            height: 2,
+            background: C.primaryLight,
+            boxShadow: `0 0 6px ${C.primaryLight}`,
+            animation: "qr-scanline 2.5s linear infinite alternate",
+            willChange: "transform",
         }} />
     </div>
 );
@@ -120,7 +110,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 if (torchOn) {
                     try {
                         await scannerRef.current.applyVideoConstraints({
-                            advanced: [{ torch: false } as any]
+                            advanced: [{ torch: false }]
                         });
                     } catch {}
                 }
@@ -139,14 +129,14 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
         const nextState = !torchOn;
         try {
             await scannerRef.current.applyVideoConstraints({
-                advanced: [{ torch: nextState } as any]
+                advanced: [{ torch: nextState }]
             });
             setTorchOn(nextState);
         } catch {
             try {
                 const track = (scannerRef.current as any).getRunningTrack();
                 await track.applyConstraints({
-                    advanced: [{ torch: nextState } as any]
+                    advanced: [{ torch: nextState }]
                 });
                 setTorchOn(nextState);
             } catch {}
@@ -196,13 +186,15 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
         };
 
         try {
-            // Mở camera với cấu hình tương thích cao nhất, tăng FPS lên 25 và thu hẹp vùng quét (qrbox) để tối ưu CPU tối đa
+            // Tối ưu hóa cấu hình camera để đạt độ nhạy quét cực cao
             await scanner.start(
                 { facingMode: "environment" },
                 { 
-                    fps: 25,
+                    fps: 30, // Tăng fps để quét mượt mà hơn
+                    disableFlip: false, // Cho phép quét cả QR bị phản chiếu (qua gương)
                     qrbox: (width, height) => {
-                        const size = Math.min(width, height) * 0.7;
+                        // Mở rộng vùng nhận diện lên 80% màn hình để quét dễ hơn
+                        const size = Math.min(width, height) * 0.8;
                         return { width: size, height: size };
                     }
                 },
@@ -216,9 +208,10 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 await scanner.start(
                     { facingMode: "user" },
                     { 
-                        fps: 25,
+                        fps: 30,
+                        disableFlip: false,
                         qrbox: (width, height) => {
-                            const size = Math.min(width, height) * 0.7;
+                            const size = Math.min(width, height) * 0.8;
                             return { width: size, height: size };
                         }
                     },
@@ -233,14 +226,27 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
 
         // Kiểm tra khả năng bật Đèn pin sau khi mở thành công
         if (scannerRef.current) {
-            setTimeout(() => {
+            // Thử kiểm tra nhiều lần để đảm bảo camera đã khởi động xong
+            let attempts = 0;
+            const checkTorch = setInterval(() => {
+                attempts++;
                 try {
-                    const capabilities = scanner.getRunningTrackCapabilities() as any;
-                    if (capabilities && capabilities.torch) {
-                        setHasTorch(true);
+                    // Lấy track trực tiếp từ stream của Html5Qrcode
+                    const videoElement = document.querySelector("#qr-modal-reader video") as HTMLVideoElement;
+                    const stream = videoElement?.srcObject as MediaStream;
+                    const track = stream?.getVideoTracks()[0];
+                    
+                    if (track && track.getCapabilities) {
+                        const caps = track.getCapabilities();
+                        if (caps.torch) {
+                            setHasTorch(true);
+                            clearInterval(checkTorch);
+                        }
                     }
-                } catch {}
-            }, 800);
+                } catch (e) {}
+                
+                if (attempts > 5 || hasTorch) clearInterval(checkTorch);
+            }, 600);
         }
     };
 
@@ -333,10 +339,8 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
         <>
             <style>{`
                 @keyframes qr-scanline {
-                    0%   { top: calc(50% - ${BOX / 2}px); opacity: 0; }
-                    5%   { opacity: 1; }
-                    95%  { opacity: 1; }
-                    100% { top: calc(50% + ${BOX / 2}px); opacity: 0; }
+                    0%   { transform: translateY(0px); }
+                    100% { transform: translateY(${BOX}px); }
                 }
                 @keyframes qr-pulse-dot {
                     0%, 100% { transform: scale(1); opacity: 1; }
@@ -469,27 +473,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
 
 
 
-                            {scanning && (
-                                <div style={{
-                                    position: "absolute", bottom: 0, left: 0, right: 0,
-                                    padding: "12px 16px 14px",
-                                    background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)",
-                                    textAlign: "center",
-                                }}>
-                                    <Flex align="center" justify="center" gap={7}>
-                                        <span style={{
-                                            width: 7, height: 7, borderRadius: "50%",
-                                            background: "#4ade80",
-                                            display: "inline-block",
-                                            animation: "qr-pulse-dot 1.3s ease-in-out infinite",
-                                            boxShadow: "0 0 6px #4ade80",
-                                        }} />
-                                        <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 500 }}>
-                                            Đang quét… Hướng camera vào mã QR
-                                        </Text>
-                                    </Flex>
-                                </div>
-                            )}
+
                         </div>
 
                         <div style={{ padding: "14px 20px 18px" }}>

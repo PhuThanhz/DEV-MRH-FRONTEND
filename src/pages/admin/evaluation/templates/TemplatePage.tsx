@@ -249,7 +249,7 @@ const TemplatePage = () => {
 
     return (
         <PageContainer
-            title="Quản lý Mẫu đánh giá"
+            title="Quản lý mẫu đánh giá"
             filter={
                 <div className="flex flex-col gap-3">
                     <SearchFilter
