@@ -1,5 +1,6 @@
 import { useAppSelector } from "@/redux/hooks";
 
+
 const WelcomePage = () => {
     const user = useAppSelector((state) => state.account?.user);
     const name = user?.name || user?.email || "bạn";
@@ -39,17 +40,6 @@ const WelcomePage = () => {
             {/* Main content */}
             <div className="wlc-main">
 
-                {/* Logo tròn */}
-                <div
-                    className="wlc-logo-wrap"
-                    style={{ animation: "fadeInScale 0.9s cubic-bezier(0.34,1.56,0.64,1) both" }}
-                >
-                    <img
-                        src="/logo/LOGOFINAL.png"
-                        alt="LOTUS HRM"
-                        style={{ width: "100%", height: "auto", objectFit: "contain", display: "block" }}
-                    />
-                </div>
 
                 {/* Tag line */}
                 <p className="wlc-tag" style={{ animation: "fadeInUp 0.6s ease-out 0.3s both" }}>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import TabBar from "@/components/common/tabs/TabBar";
 
@@ -37,6 +38,9 @@ const JobDescriptionPage = () => {
     const { data } = useJdFlowInboxQuery();
     const inboxCount = data?.length ?? 0;
 
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlTab = searchParams.get("tab") as TabKey;
+
     const [activeTab, setActiveTab] = useState<TabKey>("my");
     const [openModal, setOpenModal] = useState(false);
     const [editRecord, setEditRecord] = useState<IJobDescription | null>(null);
@@ -56,6 +60,20 @@ const JobDescriptionPage = () => {
     };
 
     const visibleTabs = TABS.filter((tab) => accessMap[tab.key]);
+
+    useEffect(() => {
+        if (urlTab && visibleTabs.some(t => t.key === urlTab)) {
+            setActiveTab(urlTab);
+        } else if (visibleTabs.length > 0 && !visibleTabs.some(t => t.key === activeTab)) {
+            setActiveTab(visibleTabs[0].key);
+        }
+    }, [urlTab, visibleTabs, activeTab]);
+
+    const handleTabChange = (key: TabKey) => {
+        setActiveTab(key);
+        searchParams.set("tab", key);
+        setSearchParams(searchParams, { replace: true });
+    };
 
     const tabItems = visibleTabs.map((tab) => {
         const showBadge = tab.key === "inbox" && inboxCount > 0;
@@ -85,7 +103,7 @@ const JobDescriptionPage = () => {
                 <TabBar
                     tabs={tabItems}
                     activeKey={activeTab}
-                    onChange={setActiveTab}
+                    onChange={(k) => handleTabChange(k as TabKey)}
                 />
             </div>
 

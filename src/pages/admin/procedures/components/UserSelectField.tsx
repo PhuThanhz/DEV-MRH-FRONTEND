@@ -18,6 +18,8 @@ interface UserOption {
     name: string;
     email: string;
     department?: string;
+    departmentId?: number;
+    sectionId?: number;
 }
 
 const AVATAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -82,6 +84,8 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                                 name: p.user?.name ?? p.name ?? "",
                                 email: p.user?.email ?? p.email ?? "",
                                 department: p.department?.name,
+                                departmentId: p.department?.id,
+                                sectionId: p.section?.id,
                             });
                         }
                     });

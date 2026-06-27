@@ -958,6 +958,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                     {isMobile ? (
                         <Tooltip title="Thêm vị trí">
                             <Button
+                                data-guide-id="org-chart-add-button"
                                 icon={<PlusOutlined />}
                                 onClick={() => handleOpenCreateRoot("position", "single")}
                                 size="small"
@@ -970,6 +971,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                         </Tooltip>
                     ) : (
                         <Button
+                            data-guide-id="org-chart-add-button"
                             icon={<PlusOutlined />}
                             onClick={() => handleOpenCreateRoot("position", "single")}
                             style={{

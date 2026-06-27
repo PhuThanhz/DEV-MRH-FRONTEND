@@ -23,6 +23,44 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/permissions", module: "PERMISSIONS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/permissions/{id}", module: "PERMISSIONS" },
     },
+    /* ===================== ACCOUNTING DOCUMENTS ===================== */
+    ACCOUNTING_DOCUMENTS: {
+        GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-documents", module: "ACCOUNTING_DOCUMENTS" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/accounting-documents/{id}", module: "ACCOUNTING_DOCUMENTS" },
+        CREATE: { method: "POST", apiPath: "/api/v1/accounting-documents", module: "ACCOUNTING_DOCUMENTS" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/accounting-documents/{id}", module: "ACCOUNTING_DOCUMENTS" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/accounting-documents/{id}", module: "ACCOUNTING_DOCUMENTS" },
+    },
+    /* ===================== ACCOUNTING DOSSIERS ===================== */
+    ACCOUNTING_DOSSIERS: {
+        GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-dossiers", module: "ACCOUNTING_DOSSIERS" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
+        CREATE: { method: "POST", apiPath: "/api/v1/accounting-dossiers", module: "ACCOUNTING_DOSSIERS" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
+        SUBMIT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/submit", module: "ACCOUNTING_DOSSIERS" },
+        REQUEST_RETURN: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/request-return", module: "ACCOUNTING_DOSSIERS" },
+        GET_LOGS: { method: "GET", apiPath: "/api/v1/accounting-dossiers/{id}/logs", module: "ACCOUNTING_DOSSIERS" },
+        GET_CATEGORIES: { method: "GET", apiPath: "/api/v1/accounting-dossiers/categories", module: "ACCOUNTING_DOSSIERS" },
+        GET_ACTIVE_CATEGORIES: { method: "GET", apiPath: "/api/v1/accounting-dossiers/categories/active", module: "ACCOUNTING_DOSSIERS" },
+        CREATE_CATEGORY: { method: "POST", apiPath: "/api/v1/accounting-dossiers/categories", module: "ACCOUNTING_DOSSIERS" },
+        UPDATE_CATEGORY: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/categories/{categoryId}", module: "ACCOUNTING_DOSSIERS" },
+        TOGGLE_CATEGORY_ACTIVE: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/categories/{categoryId}/active", module: "ACCOUNTING_DOSSIERS" },
+        GET_DOCUMENTS: { method: "GET", apiPath: "/api/v1/accounting-dossiers/{id}/documents", module: "ACCOUNTING_DOSSIERS" },
+        CREATE_DOCUMENT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/documents", module: "ACCOUNTING_DOSSIERS" },
+        UPDATE_DOCUMENT: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/{id}/documents/{docId}", module: "ACCOUNTING_DOSSIERS" },
+        DELETE_DOCUMENT: { method: "DELETE", apiPath: "/api/v1/accounting-dossiers/{id}/documents/{docId}", module: "ACCOUNTING_DOSSIERS" },
+    },
+    /* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
+    ACCOUNTING_DOCUMENT_CATEGORIES: {
+        GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        GET_BY_ID:   { method: "GET", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        GET_ACTIVE:  { method: "GET", apiPath: "/api/v1/accounting-document-categories/active", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        CREATE:      { method: "POST", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        UPDATE:      { method: "PUT", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        TOGGLE_ACTIVE: { method: "PUT", apiPath: "/api/v1/accounting-document-categories/{id}/active", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        DELETE:      { method: "DELETE", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+    },
     /* ===================== ROLES ===================== */
     ROLES: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/roles", module: "ROLES" },
@@ -1247,6 +1285,14 @@ export const ALL_PERMISSIONS = {
         GET_GRADE_DISTRIBUTION: { method: "GET", apiPath: "/api/v1/evaluation/periods/{periodId}/grade-distribution", module: "EVALUATION_PERIOD" },
 
     },
+    DOCUMENT_FOLDERS: {
+        GET_PAGINATE: { method: "GET", apiPath: "/api/v1/folders", module: "DOCUMENT_FOLDERS" },
+        CREATE: { method: "POST", apiPath: "/api/v1/folders", module: "DOCUMENT_FOLDERS" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/folders/{id}", module: "DOCUMENT_FOLDERS" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/folders/{id}", module: "DOCUMENT_FOLDERS" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/folders/{id}", module: "DOCUMENT_FOLDERS" },
+        GET_TREE: { method: "GET", apiPath: "/api/v1/folders/tree", module: "DOCUMENT_FOLDERS" },
+    },
 };
 export const ALL_MODULES = {
     DASHBOARD: "DASHBOARD",
@@ -1289,5 +1335,7 @@ export const ALL_MODULES = {
     POSITION_CHART: "POSITION_CHART",
     DOCUMENT_CATEGORIES: "DOCUMENT_CATEGORIES",
     DOCUMENTS: "DOCUMENTS",
+    ACCOUNTING_DOSSIERS: "ACCOUNTING_DOSSIERS",
     EVALUATION: "EVALUATION",
+    DOCUMENT_FOLDERS: "DOCUMENT_FOLDERS",
 };

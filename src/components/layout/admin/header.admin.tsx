@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button, Dropdown, Avatar, message } from "antd";
 import {
     LogoutOutlined,
@@ -13,6 +13,12 @@ import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
 import NotificationBell from "@/components/common/notification/NotificationBell";
+
+const getAccountDropdownWidth = (triggerWidth = 0) => {
+    const viewportWidth = window.innerWidth;
+    const availableWidth = Math.max(272, viewportWidth - 24);
+    return Math.min(availableWidth, Math.max(292, Math.ceil(triggerWidth)));
+};
 
 interface IProps {
     collapsed: boolean;
@@ -34,6 +40,8 @@ const HeaderAdmin: React.FC<IProps> = ({
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [openAccountModal, setOpenAccountModal] = useState(false);
+    const [dropdownWidth, setDropdownWidth] = useState(292);
+    const triggerRef = useRef<HTMLDivElement>(null);
 
     const avatarSrc = user?.avatar
         ? `${backendURL}/uploads/avatar/${user.avatar}`
@@ -56,45 +64,116 @@ const HeaderAdmin: React.FC<IProps> = ({
         }
     };
 
-    const menuItems = [
-        {
-            key: "manage-account",
-            label: (
-                <span
-                    className="flex items-center gap-2 text-gray-700 hover:text-pink-600 transition-colors cursor-pointer"
-                    onClick={() => {
-                        setMenuOpen(false);
-                        setOpenAccountModal(true);
+    const roleName = user?.role?.name || "Admin";
+
+    const customDropdownRender = () => (
+        <div style={{
+            width: dropdownWidth,
+            maxWidth: "calc(100vw - 24px)",
+            background: "#ffffff",
+            borderRadius: 12,
+            overflow: "hidden",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.07), 0 10px 25px -5px rgba(0,0,0,0.08)",
+        }}>
+            {/* ── Identity strip ── */}
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                        <Avatar
+                            size={42}
+                            src={avatarSrc}
+                            style={{
+                                background: "linear-gradient(135deg, #ec4899, #a855f7)",
+                                fontWeight: 700, fontSize: 14, color: "#fff",
+                            }}
+                        >
+                            {!user?.avatar && getInitials(user?.name)}
+                        </Avatar>
+                        <span style={{
+                            position: "absolute", bottom: 0, right: 0,
+                            width: 9, height: 9, borderRadius: "50%",
+                            background: "#22c55e", border: "2px solid #fff",
+                        }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.35,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {user?.name || "Admin"}
+                        </div>
+                        <div style={{
+                            fontSize: 12, color: "#9ca3af", marginTop: 2,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {user?.email || ""}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Menu Items ── */}
+            <div style={{ padding: "6px 8px 3px" }}>
+                {/* Hồ sơ cá nhân */}
+                <div
+                    onClick={() => { setMenuOpen(false); setOpenAccountModal(true); }}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 10px", borderRadius: 8, cursor: "pointer",
+                        transition: "background 0.1s", minHeight: 44,
                     }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#f9fafb"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                 >
-                    <ContactsOutlined /> Quản lý tài khoản
-                </span>
-            ),
-        },
-        {
-            key: "home",
-            label: (
+                    <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <ContactsOutlined style={{ fontSize: 16, color: "#9ca3af" }} />
+                    </div>
+                    <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Hồ sơ cá nhân</span>
+                </div>
+
+                {/* Trang chủ */}
                 <Link
                     to="/"
-                    className="flex items-center gap-2 text-gray-700 hover:text-pink-600 transition-colors"
+                    onClick={() => setMenuOpen(false)}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 10px", borderRadius: 8, textDecoration: "none",
+                        transition: "background 0.1s", minHeight: 44,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
                 >
-                    <HomeOutlined /> Trang chủ
+                    <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <HomeOutlined style={{ fontSize: 16, color: "#9ca3af" }} />
+                    </div>
+                    <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Trang chủ</span>
                 </Link>
-            ),
-        },
-        { type: "divider" as const },
-        {
-            key: "logout",
-            label: (
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ height: 1, background: "#f3f4f6", margin: "4px 8px" }} />
+
+            {/* ── Logout ── */}
+            <div style={{ padding: "3px 8px 10px" }}>
                 <div
                     onClick={handleLogout}
-                    className="flex items-center gap-2 cursor-pointer text-red-500 hover:text-red-600 transition-colors"
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 10px", borderRadius: 8, cursor: "pointer",
+                        transition: "background 0.1s", minHeight: 44,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#fff1f2"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                 >
-                    <LogoutOutlined /> Đăng xuất
+                    <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <LogoutOutlined style={{ fontSize: 16, color: "#f43f5e" }} />
+                    </div>
+                    <span style={{ fontSize: 14, color: "#f43f5e", fontWeight: 500 }}>Đăng xuất</span>
                 </div>
-            ),
-        },
-    ];
+            </div>
+        </div>
+    );
 
     return (
         <>
@@ -147,25 +226,34 @@ const HeaderAdmin: React.FC<IProps> = ({
 
                         {/* ✨ PILL USER */}
                         <Dropdown
-                            menu={{ items: menuItems }}
+                            popupRender={customDropdownRender}
                             trigger={["click"]}
                             open={menuOpen}
-                            onOpenChange={setMenuOpen}
+                            onOpenChange={(open) => {
+                                setMenuOpen(open);
+                                if (open && triggerRef.current) {
+                                    setDropdownWidth(getAccountDropdownWidth(triggerRef.current.getBoundingClientRect().width));
+                                }
+                            }}
                             placement="bottomRight"
                             overlayClassName="animate-dropdown-slide"
                             overlayStyle={{ zIndex: 10000 }}
                             getPopupContainer={() => document.body}
                         >
-                            <div className="
+                            <div
+                                ref={triggerRef}
+                                className="
                                 flex items-center gap-3 cursor-pointer
-                                px-2 py-1.5 rounded-full
+                                px-2.5 py-1.5 rounded-full
                                 border border-white/25
                                 bg-white/10 backdrop-blur-sm
                                 hover:bg-white/20 hover:border-white/40
                                 active:scale-95
                                 transition-all duration-200
                                 select-none
-                            ">
+                            "
+                                style={{ minHeight: 44 }}
+                            >
                                 <div className="hidden md:flex items-center">
                                     <div className="flex flex-col items-end gap-0.5 pl-2">
                                         <span className="text-sm font-semibold text-white leading-tight tracking-wide">
@@ -177,13 +265,13 @@ const HeaderAdmin: React.FC<IProps> = ({
 
                                 <div className="relative flex-shrink-0">
                                     <Avatar
-                                        size={34}
+                                        size={36}
                                         src={avatarSrc}
                                         style={{
                                             backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",
                                             border: "1.5px solid rgba(255,255,255,0.55)",
                                             fontWeight: 700,
-                                            fontSize: 12,
+                                            fontSize: 13,
                                             color: "#fff",
                                         }}
                                     >
@@ -215,10 +303,19 @@ const HeaderAdmin: React.FC<IProps> = ({
                     .animate-gradient-flow {
                         animation: gradient-flow 18s ease infinite;
                         background-size: 200% 200%;
+                        transform: translateZ(0);
+                        will-change: background-position;
                     }
                     @keyframes dropdown-slide {
                         from { opacity: 0; transform: translateY(-10px) scale(0.95); }
                         to { opacity: 1; transform: translateY(0) scale(1); }
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        .animate-gradient-flow,
+                        .animate-dropdown-slide,
+                        header svg animate {
+                            animation: none !important;
+                        }
                     }
                 `}</style>
             </header>

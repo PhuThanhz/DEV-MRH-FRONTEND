@@ -20,10 +20,13 @@ import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-export const buildFileUrl = (fileName?: string) =>
-    fileName
-        ? `https://hrm.vlotustech.vn/uploads/procedures/${encodeURIComponent(fileName)}`
-        : null;
+export const buildFileUrl = (fileName?: string, folder = "procedures") => {
+    if (!fileName) return null;
+    if (/^https?:\/\//i.test(fileName)) return fileName;
+    const normalized = fileName.replace(/^\/+/, "");
+    const path = normalized.includes("/") ? normalized : `${folder}/${normalized}`;
+    return `${import.meta.env.VITE_BACKEND_URL}/uploads/${path.split("/").map(encodeURIComponent).join("/")}`;
+};
 
 export const getExt = (fileName?: string) =>
     fileName?.split(".").pop()?.toLowerCase() ?? "";
@@ -293,14 +296,14 @@ const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
 };
 // ─── FileSection ──────────────────────────────────────────────────────────────
 interface IPreviewState { url: string; ext: string; name: string }
-interface IFileSectionProps { fileNames?: string[] }
+interface IFileSectionProps { fileNames?: string[]; folder?: string }
 
-const FileSection = ({ fileNames = [] }: IFileSectionProps) => {
+const FileSection = ({ fileNames = [], folder = "procedures" }: IFileSectionProps) => {
     const [preview, setPreview] = useState<IPreviewState | null>(null);
     const [iframeLoaded, setIframeLoaded] = useState(false);
     const isMobile = useIsMobile();
 
-    const fileEntries = fileNames.map((name) => ({ name, url: buildFileUrl(name)! })).filter((f) => f.url);
+    const fileEntries = fileNames.map((name) => ({ name, url: buildFileUrl(name, folder)! })).filter((f) => f.url);
     if (fileEntries.length === 0) return null;
 
     const handlePreview = (url: string, fileName: string) => {

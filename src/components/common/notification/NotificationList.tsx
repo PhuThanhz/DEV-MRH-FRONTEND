@@ -49,16 +49,35 @@ const NotificationList: React.FC<Props> = ({
     if (items.length === 0) {
         return (
             <div style={{
-                padding: "32px 16px",
+                padding: "40px 24px",
                 textAlign: "center",
-                color: "#9ca3af",
-                fontSize: 13,
                 background: "#fff",
-                borderRadius: 10,
-                minWidth: 260,
+                borderRadius: 12,
+                minWidth: 280,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center"
             }}>
-                <InboxOutlined style={{ fontSize: 32, display: "block", margin: "0 auto 8px" }} />
-                Không có thông báo mới
+                <div style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    background: "#fff1f2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 12,
+                    boxShadow: "inset 0 2px 4px rgba(225, 29, 72, 0.05)"
+                }}>
+                    <BellOutlined style={{ fontSize: 24, color: "#e11d48" }} />
+                </div>
+                <div style={{ fontWeight: 600, color: "#1f2937", fontSize: 14, marginBottom: 4 }}>
+                    Tuyệt vời!
+                </div>
+                <div style={{ color: "#6b7280", fontSize: 12 }}>
+                    Bạn không có thông báo mới nào.
+                </div>
             </div>
         );
     }

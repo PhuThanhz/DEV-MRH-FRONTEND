@@ -79,6 +79,9 @@ export interface IUser {
 
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
     directManager?: IUser;
@@ -122,6 +125,9 @@ export interface IUserPosition {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 export interface IReqUpdateProfileDTO {
     name: string;
@@ -135,6 +141,9 @@ export interface IPermission {
     module?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -147,6 +156,9 @@ export interface IRole {
     permissions: IPermission[] | string[];
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -167,6 +179,9 @@ export interface ICompany {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 // ===================== DEPARTMENT =====================
 
@@ -189,6 +204,9 @@ export interface IDepartment {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 // ===================== DEPARTMENT REQUEST =====================
 
@@ -217,6 +235,9 @@ export interface ISection {
     status: number;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -239,6 +260,9 @@ export interface IPositionLevel {
 
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -254,6 +278,9 @@ export interface IJobTitle {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 
     positionCode?: string;
     band?: string;
@@ -304,6 +331,9 @@ export interface ICompanyProcedure {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 // src/types/backend/career-path.ts
 export interface ICareerPath {
@@ -332,6 +362,9 @@ export interface ICareerPath {
 
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -474,6 +507,9 @@ export interface IEmployeeCareerPath {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface IEmployeeCareerPathHistory {
@@ -518,6 +554,9 @@ export interface ICareerPathTemplate {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface ICareerPathTemplateStep {
@@ -557,6 +596,9 @@ export interface IDepartmentJobTitle {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 
     jobTitle: {
         id: number;
@@ -603,6 +645,9 @@ export interface ISectionJobTitle {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 
     jobTitle: {
         id: number;
@@ -657,6 +702,9 @@ export interface ICompanySalaryGrade {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface ICreateCompanySalaryGradeReq {
@@ -677,6 +725,9 @@ export interface IDepartmentSalaryGrade {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface ICreateDepartmentSalaryGradeReq {
@@ -854,6 +905,9 @@ export interface IProcessAction {
 
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -877,6 +931,9 @@ export interface IPermissionCategory {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 /* ===================== CREATE UPDATE REQUEST ===================== */
@@ -1233,6 +1290,9 @@ export interface IDepartmentProcedure {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 /* ===================== ORG CHART ===================== */
 
@@ -1456,6 +1516,9 @@ export interface IProcedure {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface IProcedureHistory {
@@ -1474,7 +1537,7 @@ export interface IProcedureHistory {
     note?: string;
     departmentName?: string;
     sectionName?: string;
-    action?: string;      // ← THÊM: "EDIT" hoặc 
+    action?: string;      // ← THÊM: "EDIT" hoặc
     changedAt?: string;
     changedBy?: string;
 }
@@ -1531,6 +1594,9 @@ export interface IEmployee {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 
     role?: {
         id: number;
@@ -1588,7 +1654,7 @@ export interface IUpdateEmployeeReq {
 }
 
 
-// hoàn thiện bộ hồ sơ 
+// hoàn thiện bộ hồ sơ
 export interface IAccessDTO {
     userId: string;
     name?: string;
@@ -1684,6 +1750,9 @@ export interface IDocumentCategory {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 /* ===================== DOCUMENT ===================== */
@@ -1701,6 +1770,13 @@ export interface IDocument {
         symbol?: string;
         mappingProcedure: boolean;
         isCrossCompany?: boolean;
+    };
+
+    accountingCategory?: {
+        id: number;
+        categoryCode: string;
+        categoryName: string;
+        symbol?: string;
     };
 
     department?: {
@@ -1727,6 +1803,7 @@ export interface IDocument {
     procedureType?: DocumentProcedureType;
     procedureId?: number;
     userIds?: string[];
+    targetCompanyIds?: number[];
     accessDetails?: {
         userId: string;
         userName?: string;
@@ -1735,24 +1812,36 @@ export interface IDocument {
         assignedAt: string;
     }[];
 
+    folder?: {
+        id: number;
+        folderName: string;
+    };
+    isShortcut?: boolean;
+
     createdAt?: string;
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
 }
 
 export interface IDocumentRequest {
     documentCode: string;
     documentName: string;
     categoryId: number;
+    accountingCategoryId?: number;
     departmentId?: number;
     sectionId?: number;
     departmentIds?: number[];
     userIds?: string[];
+    targetCompanyIds?: number[];
     status?: string;
     issuedDate?: string;
     fileUrls?: string[];
     note?: string;
+    folderId?: number;
     procedureType?: DocumentProcedureType;
 }
 
@@ -1767,6 +1856,9 @@ export interface IEvaluationTemplate {
     updatedAt?: string;
     createdBy?: string;
     updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
     company?: {
         id: number;
         code: string;
@@ -1914,3 +2006,209 @@ export interface IAddPeriodEmployeeReq {
 
 
 
+
+export interface IDocumentAudit {
+    id: number;
+    documentId: number;
+    actionType: string;
+    changes: string;
+    createdBy: string;
+    createdAt: string;
+}
+
+export interface IDocumentFolder {
+    id?: number;
+    folderName: string;
+    parentId?: number | null;
+    ownerId?: string;
+    documentCount?: number;
+    children?: IDocumentFolder[];
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
+}
+
+/* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
+export interface IAccountingDocumentCategory {
+    id?: number;
+    categoryCode: string;
+    categoryName: string;
+    symbol?: string;
+    description?: string;
+    active: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+    isLocked?: boolean;
+    lockedAt?: string;
+    lockedBy?: string;
+}
+
+export interface IAccountingDocumentCategoryRequest {
+    categoryCode: string;
+    categoryName: string;
+    symbol?: string;
+    description?: string;
+    active?: boolean;
+}
+
+/* ===================== ACCOUNTING DOSSIERS ===================== */
+export type AccountingDossierCategoryMode = "TEMPLATE" | "UNSTRUCTURED";
+
+export type AccountingDossierStatus =
+    | "DRAFT"
+    | "SUBMITTED"
+    | "IN_REVIEW"
+    | "RETURN_REQUESTED"
+    | "RETURNED"
+    | "APPROVED"
+    | "REJECTED"
+    | "TERMINATED"
+    | "ARCHIVED";
+
+export type AccountingDossierStorageStatus = "IN_RETENTION" | "EXPIRED";
+
+export type AccountingDossierDocumentType =
+    | "PDF"
+    | "EXCEL"
+    | "WORD"
+    | "PPT"
+    | "CSV"
+    | "XML"
+    | "VIDEO_LINK"
+    | "NAS_PATH"
+    | "PNG"
+    | "JPG"
+    | "OTHER";
+
+export interface IAccountingDossier {
+    id?: number;
+    dossierCode?: string | null;
+    content: string;
+    categoryMode?: AccountingDossierCategoryMode;
+    customCategoryName?: string | null;
+    dossierCategory?: {
+        id: number;
+        code?: string;
+        name?: string;
+    } | null;
+    dossierCategoryVersion?: number | null;
+    syncCategoryRequested?: boolean;
+    company?: ICompany;
+    department?: IDepartment;
+    section?: ISection | null;
+    creatorId?: string | null;
+    status: AccountingDossierStatus;
+    storageStatus?: AccountingDossierStorageStatus;
+    retentionYears?: number;
+    retentionUntil?: string | null;
+    submittedAt?: string | null;
+    approvedAt?: string | null;
+    terminatedAt?: string | null;
+    active?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IAccountingDossierAuditLog {
+    id?: number;
+    dossierId?: number;
+    actionType: string;
+    note?: string | null;
+    actorUserId?: string | null;
+    ipAddress?: string | null;
+    createdAt?: string;
+    createdBy?: string;
+}
+
+export interface IAccountingDossierRequest {
+    content: string;
+    categoryMode?: AccountingDossierCategoryMode;
+    dossierCategoryId?: number;
+    customCategoryName?: string;
+    syncCategoryRequested?: boolean;
+    companyId: number;
+    departmentId: number;
+    sectionId?: number;
+}
+
+export interface IAccountingDossierCategory {
+    id?: number;
+    categoryCode?: string;
+    categoryName: string;
+    description?: string;
+    companyId?: number | null;
+    scope?: "GLOBAL" | "COMPANY" | string;
+    source?: "MANUAL" | "SYNCED_FROM_UNSTRUCTURED" | string;
+    version?: number;
+    active?: boolean;
+    documentCategories?: {
+        id: number;
+        categoryCode?: string;
+        categoryName?: string;
+        symbol?: string;
+    }[];
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IAccountingDossierCategoryRequest {
+    categoryCode?: string;
+    categoryName: string;
+    description?: string;
+    companyId?: number | null;
+    scope?: "GLOBAL" | "COMPANY" | string;
+    active?: boolean;
+    documentCategoryIds?: number[];
+}
+
+/* ===================== ACCOUNTING DOCUMENT REQUEST ===================== */
+export interface IAccountingDocumentRequest {
+    documentCode?: string;
+    documentName: string;
+    issuedDate?: string;
+    fileUrls?: string[];
+    folderId?: number;
+    accountingCategoryId?: number;
+}
+
+/* ===================== ACCOUNTING DOSSIER DOCUMENT ===================== */
+export interface IAccountingDossierDocument {
+    id?: number;
+    dossierId?: number;
+    accountingCategory?: {
+        id: number;
+        categoryCode?: string;
+        categoryName?: string;
+    };
+    document?: {
+        id: number;
+        documentCode?: string;
+        documentName?: string;
+    } | null;
+    documentName: string;
+    documentType: AccountingDossierDocumentType;
+    checkStatus?: string;
+    checkNote?: string | null;
+    active?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: string;
+    updatedBy?: string;
+}
+
+export interface IAccountingDossierDocumentRequest {
+    accountingCategoryId: number;
+    documentName: string;
+    documentType?: AccountingDossierDocumentType;
+    documentId?: number;
+}

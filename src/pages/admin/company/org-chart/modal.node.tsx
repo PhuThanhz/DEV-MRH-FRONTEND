@@ -1207,6 +1207,7 @@ const ModalNode = ({
 
     return (
         <Modal
+            className="org-node-form-modal"
             title={null}
             open={open}
             onCancel={() => { form.resetFields(); onClose(); }}

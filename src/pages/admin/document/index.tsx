@@ -10,6 +10,10 @@ import {
     DownloadOutlined,
     LockOutlined,
     MoreOutlined,
+    FileTextOutlined,
+    BankOutlined,
+    ApartmentOutlined,
+    FolderAddOutlined,
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -36,6 +40,10 @@ import { useDocumentCategoriesActiveQuery } from "@/hooks/useDocumentCategories"
 import ModalDocument from "./modal.document";
 import ViewDetailDocument from "./view.document";
 import ModalDocumentShareToken from "./ModalDocumentShareToken";
+import ModalAddShortcut from "./ModalAddShortcut";
+import TabBar from "@/components/common/tabs/TabBar";
+
+type TabType = "ALL" | "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
 const STATUS_COLOR: Record<string, string> = {
     NEED_CREATE: "default",
@@ -51,6 +59,28 @@ const STATUS_LABEL: Record<string, string> = {
     TERMINATED: "Đã huỷ",
 };
 
+const PROCEDURE_TYPE_META: Record<string, { label: string; color: string }> = {
+    COMPANY: { label: "Cấp công ty", color: "geekblue" },
+    DEPARTMENT: { label: "Cấp phòng ban", color: "cyan" },
+    CONFIDENTIAL: { label: "Bảo mật", color: "volcano" },
+};
+
+const getDocumentClassifyMeta = (record: IDocument) => {
+    if (record.procedureType) {
+        return PROCEDURE_TYPE_META[record.procedureType] ?? { label: record.procedureType, color: "default" };
+    }
+
+    if (record.category?.isCrossCompany) {
+        return { label: "Liên công ty", color: "purple" };
+    }
+
+    if (record.category?.mappingProcedure) {
+        return { label: "Quy trình", color: "geekblue" };
+    }
+
+    return { label: "Văn bản thường", color: "default" };
+};
+
 const DocumentPage = () => {
     const canShare = useAccess(ALL_PERMISSIONS.DOCUMENTS.CREATE_SHARE_TOKEN);
     const canUpdate = useAccess(ALL_PERMISSIONS.DOCUMENTS.UPDATE);
@@ -62,6 +92,7 @@ const DocumentPage = () => {
 
     const [openQrModal, setOpenQrModal] = useState(false);
     const [openShareModal, setOpenShareModal] = useState(false);
+    const [openAddShortcutModal, setOpenAddShortcutModal] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null);
 
     const [searchValue, setSearchValue] = useState("");
@@ -69,11 +100,41 @@ const DocumentPage = () => {
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [issuedDateFilter, setIssuedDateFilter] = useState<string | null>(null);
 
+    const [activeTab, setActiveTab] = useState<TabType>("ALL");
+
     const [query, setQuery] = useState(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
     );
 
     const tableRef = useRef<ActionType>(null);
+
+    const tabs = [
+        {
+            key: "ALL" as TabType,
+            label: "Tất cả",
+            icon: <FileTextOutlined />,
+        },
+        {
+            key: "COMPANY" as TabType,
+            label: "Cấp công ty",
+            icon: <BankOutlined />,
+        },
+        {
+            key: "DEPARTMENT" as TabType,
+            label: "Cấp phòng ban",
+            icon: <ApartmentOutlined />,
+        },
+        {
+            key: "CONFIDENTIAL" as TabType,
+            label: "Bảo mật",
+            icon: <LockOutlined />,
+        },
+    ];
+
+    const handleTabChange = (key: TabType) => {
+        setActiveTab(key);
+        tableRef.current?.reload(true);
+    };
     const { data, isFetching, refetch } = useDocumentsQuery(query);
     const toggleMutation = useToggleActiveDocumentMutation();
     const deleteMutation = useDeleteDocumentMutation();
@@ -98,9 +159,21 @@ const DocumentPage = () => {
         if (activeFilter !== null) filters.push(`active=${activeFilter}`);
         if (categoryFilter) filters.push(`category.id=${categoryFilter}`);
         if (issuedDateFilter) filters.push(issuedDateFilter);
+
+        // Tab filters
+        if (activeTab === "ALL") {
+            // No specific filter, show all
+        } else if (activeTab === "COMPANY") {
+            filters.push("procedureType='COMPANY'");
+        } else if (activeTab === "DEPARTMENT") {
+            filters.push("procedureType='DEPARTMENT'");
+        } else if (activeTab === "CONFIDENTIAL") {
+            filters.push("procedureType='CONFIDENTIAL'");
+        }
+
         if (filters.length > 0) q.filter = filters.join(" and ");
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, activeFilter, categoryFilter, issuedDateFilter]);
+    }, [searchValue, activeFilter, categoryFilter, issuedDateFilter, activeTab]);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -120,6 +193,18 @@ const DocumentPage = () => {
         if (activeFilter !== null) filters.push(`active=${activeFilter}`);
         if (categoryFilter) filters.push(`category.id=${categoryFilter}`);
         if (issuedDateFilter) filters.push(issuedDateFilter);
+
+        // Tab filters
+        if (activeTab === "ALL") {
+            // No specific filter, show all
+        } else if (activeTab === "COMPANY") {
+            filters.push("procedureType='COMPANY'");
+        } else if (activeTab === "DEPARTMENT") {
+            filters.push("procedureType='DEPARTMENT'");
+        } else if (activeTab === "CONFIDENTIAL") {
+            filters.push("procedureType='CONFIDENTIAL'");
+        }
+
         if (filters.length > 0) q.filter = filters.join(" and ");
 
         const temp = queryString.stringify(q, { encode: false });
@@ -148,33 +233,44 @@ const DocumentPage = () => {
             render: (_, record) => <Tag color="blue">{record.documentCode}</Tag>,
         },
         {
+            title: "Phân loại",
+            width: 145,
+            align: "center",
+            render: (_, record) => {
+                const meta = getDocumentClassifyMeta(record);
+                return <Tag color={meta.color}>{meta.label}</Tag>;
+            },
+        },
+        {
             title: "Mã công ty",
             width: 120,
             align: "center",
-            render: (_, record) => (
-                <Tag color="blue">
-                    {record.department?.companyCode || "--"}
-                </Tag>
+            render: (_, record) => record.department?.companyCode ? (
+                <Tag color="blue">{record.department.companyCode}</Tag>
+            ) : (
+                <Tag color="default" style={{ color: "#bfbfbf", borderStyle: "dashed" }}>N/A</Tag>
             ),
         },
         {
             title: "Công ty",
             width: 220,
             ellipsis: true,
-            render: (_, record) =>
-                record.department?.companyName || "—",
+            render: (_, record) => record.department?.companyName ? (
+                <span>{record.department.companyName}</span>
+            ) : (
+                <span style={{ color: "#8c8c8c", fontStyle: "italic" }}>Lưu trữ cá nhân</span>
+            ),
         },
         {
             title: "Phòng ban",
             width: 180,
-            render: (_, record) =>
-                record.department?.name ? (
-                    <Tag color="cyan">
-                        {record.department.name}
-                    </Tag>
-                ) : (
-                    "—"
-                ),
+            render: (_, record) => record.department?.name ? (
+                <Tag color="cyan">
+                    {record.department.name}
+                </Tag>
+            ) : (
+                <Tag color="default" style={{ color: "#bfbfbf", borderStyle: "dashed", background: "transparent" }}>Không áp dụng</Tag>
+            ),
         },
         {
             title: "Tên văn bản",
@@ -212,6 +308,13 @@ const DocumentPage = () => {
             align: "center",
             render: (_, record) =>
                 record.issuedDate ? dayjs(record.issuedDate).format("DD/MM/YYYY") : "—",
+        },
+        {
+            title: "Người tạo",
+            dataIndex: "createdBy",
+            width: 150,
+            ellipsis: true,
+            render: (_, record) => record.createdBy || "—",
         },
         // {
         //     title: "Kích hoạt",
@@ -292,6 +395,18 @@ const DocumentPage = () => {
                             </Popconfirm>
                         ),
                     }] : []),
+                    {
+                        key: "add_shortcut",
+                        icon: <FolderAddOutlined style={{ color: "#1677ff" }} />,
+                        label: (
+                            <span onClick={() => {
+                                setSelectedDocument(entity);
+                                setOpenAddShortcutModal(true);
+                            }}>
+                                Thêm vào Kho cá nhân
+                            </span>
+                        ),
+                    },
                     // 👇 chỉ hiện khi có quyền share
                     ...(canShare ? [{
                         key: "share",
@@ -334,6 +449,8 @@ const DocumentPage = () => {
                     <SearchFilter
                         searchPlaceholder="Tìm theo mã hoặc tên văn bản..."
                         addLabel="Thêm văn bản"
+                        guideSearchId="document-search-input"
+                        guideAddId="document-add-button"
                         showFilterButton={false}
                         onSearch={(val) => setSearchValue(val)}
                         onReset={() => refetch()}
@@ -369,6 +486,10 @@ const DocumentPage = () => {
                 </div>
             }
         >
+            <div style={{ marginBottom: 24 }}>
+                <TabBar tabs={tabs} activeKey={activeTab} onChange={handleTabChange} />
+            </div>
+
             <Access permission={ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE}>
                 <DataTable<IDocument>
                     actionRef={tableRef}
@@ -544,6 +665,12 @@ const DocumentPage = () => {
             <ModalDocumentShareToken
                 open={openShareModal}
                 onClose={() => setOpenShareModal(false)}
+                document={selectedDocument}
+            />
+
+            <ModalAddShortcut
+                open={openAddShortcutModal}
+                onClose={() => setOpenAddShortcutModal(false)}
                 document={selectedDocument}
             />
         </PageContainer>

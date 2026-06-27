@@ -48,6 +48,10 @@ import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
 // ✅ DOCUMENTS
 import DocumentCategoryPage from "@/pages/admin/document-category";
 import DocumentPage from "@/pages/admin/document";
+import PersonalDrivePage from "@/pages/admin/personal-drive";
+import AccountingDossierPage from "@/pages/admin/accounting-dossiers";
+import AccountingDocumentPage from "@/pages/admin/accounting";
+import AccountingDocumentCategoryPage from "@/pages/admin/accounting-document-category";
 // ✅ EVALUATION HQCV
 import EvaluationProcessPage from "@/pages/evaluation/process/EvaluationProcessPage";
 import TemplatePage from "@/pages/admin/evaluation/templates/TemplatePage";
@@ -60,6 +64,8 @@ import ManagerEvaluationDetailPage from "@/pages/evaluation/manager/ManagerEvalu
 import PendingApprovalPage from "@/pages/evaluation/approval/PendingApprovalPage";
 import ApprovalDetailPage from "@/pages/evaluation/approval/ApprovalDetailPage";
 import CompletedEvaluationsPage from "@/pages/evaluation/summary/CompletedEvaluationsPage";
+// ✅ DEDICATED PORTALS
+import LookupPortalPage from "@/pages/accounting/LookupPortalPage";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -358,6 +364,46 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+        {
+          path: PATHS.ADMIN.PERSONAL_DRIVE,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DOCUMENT_FOLDERS.GET_TREE}>
+                <PersonalDrivePage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.ACCOUNTING_DOSSIERS,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE}>
+                <AccountingDossierPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/admin/accounting-documents",
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE}>
+                <AccountingDocumentPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.ACCOUNTING_DOCUMENT_CATEGORY,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOCUMENT_CATEGORIES.GET_PAGINATE}>
+                <AccountingDocumentCategoryPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
         // ✅ EVALUATION HQCV
         {
           path: PATHS.ADMIN.EVALUATION_TEMPLATES,
@@ -459,6 +505,18 @@ export default function App() {
           ),
         },
       ],
+    },
+    {
+      path: "/admin/accounting-lookup",
+      element: (
+        <LayoutApp>
+          <ProtectedRoute>
+            <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE}>
+              <LookupPortalPage />
+            </Access>
+          </ProtectedRoute>
+        </LayoutApp>
+      ),
     },
     { path: PATHS.LOGIN, element: <LoginPage /> },
     { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword /> },

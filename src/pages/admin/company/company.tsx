@@ -168,6 +168,7 @@ const CompanyPage = () => {
                 if (canViewCompanyOrgChart) {
                     items.push({
                         key: "org-chart",
+                        className: "guide-company-org-chart",
                         icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
                         label: "Sơ đồ tổ chức",
                         onClick: () =>
@@ -205,6 +206,7 @@ const CompanyPage = () => {
                 if (record.status === 1 && canInactive) {
                     items.push({
                         key: "inactive",
+                        className: "guide-company-status-action",
                         icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
                         label: (
                             <Popconfirm
@@ -225,6 +227,7 @@ const CompanyPage = () => {
                 } else if (record.status !== 1 && canActive) {
                     items.push({
                         key: "active",
+                        className: "guide-company-status-action",
                         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
                         label: (
                             <Popconfirm
@@ -249,6 +252,7 @@ const CompanyPage = () => {
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
                             <Button
+                                data-guide-id="company-detail-button"
                                 type="text"
                                 size="small"
                                 icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -262,6 +266,7 @@ const CompanyPage = () => {
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.COMPANIES.UPDATE} hideChildren>
                             <Button
+                                data-guide-id="company-edit-button"
                                 type="text"
                                 size="small"
                                 icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -280,6 +285,7 @@ const CompanyPage = () => {
                                 placement="bottomRight"
                             >
                                 <Button
+                                    data-guide-id="company-more-button"
                                     type="text"
                                     size="small"
                                     icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
@@ -310,6 +316,8 @@ const CompanyPage = () => {
                         setOpenModal(true);
                     }}
                     addPermission={ALL_PERMISSIONS.COMPANIES.CREATE}
+                    guideSearchId="company-search-input"
+                    guideAddId="company-add-button"
                 />
             }
         >

@@ -109,6 +109,7 @@ const ObjectivesSection = ({ objectives, editMode, onChange }: Props) => {
 
                 {editMode && (
                     <Button
+                        data-guide-id="department-objectives-add-obj-btn"
                         type="dashed" icon={<PlusOutlined />}
                         onClick={add} block
                         style={{ marginTop: 4, color: "#aaa", borderColor: "#e0e0e0" }}

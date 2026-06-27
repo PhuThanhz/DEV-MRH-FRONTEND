@@ -18,7 +18,19 @@ import type {
     IResPublicProcedureDTO, IReqCreateNodeTree, IDocumentCategory,
     IDocument,
     IDocumentRequest,
-    ProcedureType
+    IAccountingDossier,
+    IAccountingDossierAuditLog,
+    IAccountingDossierCategory,
+    IAccountingDossierCategoryRequest,
+    IAccountingDossierRequest,
+    IAccountingDossierDocument,
+    IAccountingDossierDocumentRequest,
+    IAccountingDocumentRequest,
+    ProcedureType,
+    IDocumentFolder,
+    IAccountingDocumentCategory,
+    IAccountingDocumentCategoryRequest,
+    IDocumentAudit
 } from '@/types/backend';
 
 import axios from 'config/axios-customize';
@@ -1882,6 +1894,136 @@ export const callToggleActiveDocumentCategory = (id: number) =>
 
 
 
+/* ===================== ACCOUNTING DOCUMENTS ===================== */
+export const callFetchAccountingDossiers = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IAccountingDossier>>>(
+        `/api/v1/accounting-dossiers?${query}`
+    );
+
+export const callFetchAccountingDossierById = (id: number) =>
+    axios.get<IBackendRes<IAccountingDossier>>(
+        `/api/v1/accounting-dossiers/${id}`
+    );
+
+export const callCreateAccountingDossier = (data: IAccountingDossierRequest) =>
+    axios.post<IBackendRes<IAccountingDossier>>(
+        `/api/v1/accounting-dossiers`,
+        data
+    );
+
+export const callUpdateAccountingDossier = (id: number, data: IAccountingDossierRequest) =>
+    axios.put<IBackendRes<IAccountingDossier>>(
+        `/api/v1/accounting-dossiers/${id}`,
+        data
+    );
+
+export const callDeleteAccountingDossier = (id: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/accounting-dossiers/${id}`);
+
+export const callSubmitAccountingDossier = (id: number) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/submit`);
+
+export const callRequestReturnAccountingDossier = (id: number, note?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/request-return`, { note });
+
+export const callFetchAccountingDossierLogs = (id: number) =>
+    axios.get<IBackendRes<IAccountingDossierAuditLog[]>>(`/api/v1/accounting-dossiers/${id}/logs`);
+
+export const callFetchAccountingDossierCategories = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IAccountingDossierCategory>>>(
+        `/api/v1/accounting-dossiers/categories?${query}`
+    );
+
+export const callFetchAccountingDossierCategoryActive = () =>
+    axios.get<IBackendRes<IAccountingDossierCategory[]>>(`/api/v1/accounting-dossiers/categories/active`);
+
+export const callCreateAccountingDossierCategory = (data: IAccountingDossierCategoryRequest) =>
+    axios.post<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories`, data);
+
+export const callUpdateAccountingDossierCategory = (id: number, data: IAccountingDossierCategoryRequest) =>
+    axios.put<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories/${id}`, data);
+
+export const callToggleAccountingDossierCategoryActive = (id: number, active: boolean) =>
+    axios.put<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories/${id}/active`, { active });
+
+export const callFetchDossierDocuments = (dossierId: number) =>
+    axios.get<IBackendRes<IAccountingDossierDocument[]>>(`/api/v1/accounting-dossiers/${dossierId}/documents`);
+
+export const callAddDossierDocument = (dossierId: number, data: IAccountingDossierDocumentRequest) =>
+    axios.post<IBackendRes<IAccountingDossierDocument>>(`/api/v1/accounting-dossiers/${dossierId}/documents`, data);
+
+export const callUpdateDossierDocument = (dossierId: number, docId: number, data: IAccountingDossierDocumentRequest) =>
+    axios.put<IBackendRes<IAccountingDossierDocument>>(`/api/v1/accounting-dossiers/${dossierId}/documents/${docId}`, data);
+
+export const callDeleteDossierDocument = (dossierId: number, docId: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/accounting-dossiers/${dossierId}/documents/${docId}`);
+
+export const callFetchAccountingDocuments = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IDocument>>>(
+        `/api/v1/accounting-documents?${query}`
+    );
+
+export const callFetchAccountingDocumentById = (id: number) =>
+    axios.get<IBackendRes<IDocument>>(
+        `/api/v1/accounting-documents/${id}`
+    );
+
+export const callCreateAccountingDocument = (data: IAccountingDocumentRequest) =>
+    axios.post<IBackendRes<IDocument>>(
+        `/api/v1/accounting-documents`,
+        data
+    );
+
+export const callUpdateAccountingDocument = (id: number, data: IAccountingDocumentRequest) =>
+    axios.put<IBackendRes<IDocument>>(
+        `/api/v1/accounting-documents/${id}`,
+        data
+    );
+
+export const callLockAccountingDocument = (id: number, lockStatus: boolean) =>
+    axios.put<IBackendRes<void>>(
+        `/api/v1/accounting-documents/${id}/lock?lockStatus=${lockStatus}`
+    );
+
+export const callDeleteAccountingDocument = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/accounting-documents/${id}`
+    );
+};
+
+export const callFetchAccountingDocumentAudits = (id: number) => {
+    return axios.get<IBackendRes<IDocumentAudit[]>>(
+        `/api/v1/accounting-documents/${id}/audits`
+    );
+};
+
+export const callExportAccountingDocuments = (query: string) => {
+    return axios.get<IBackendRes<IDocument[]>>(
+        `/api/v1/accounting-documents/export?${query}`
+    );
+};
+export const callFetchAccountingFolderTree = (companyId: number) =>
+    axios.get<IBackendRes<IDocumentFolder[]>>(
+        `/api/v1/folders/accounting/tree?companyId=${companyId}`
+    );
+
+export const callCreateAccountingFolder = (data: any) =>
+    axios.post<IBackendRes<IDocumentFolder>>(
+        `/api/v1/folders`,
+        { ...data, folderType: "ACCOUNTING" }
+    );
+
+export const callUpdateAccountingFolder = (id: number, data: any) =>
+    axios.put<IBackendRes<IDocumentFolder>>(
+        `/api/v1/folders/${id}`,
+        { ...data, folderType: "ACCOUNTING" }
+    );
+
+export const callDeleteAccountingFolder = (id: number) =>
+    axios.delete<IBackendRes<void>>(
+        `/api/v1/folders/${id}`
+    );
+
 /* ===================== DOCUMENTS ===================== */
 
 export const callFetchDocuments = (query: string) =>
@@ -1922,7 +2064,15 @@ export const callDeleteDocument = (id: number) =>
         `/api/v1/documents/${id}`
     );
 
+export const callCreateDocumentShortcut = (documentId: number, folderId: number) =>
+    axios.post<IBackendRes<void>>(
+        `/api/v1/documents/${documentId}/shortcut?folderId=${folderId}`
+    );
 
+export const callDeleteDocumentShortcut = (documentId: number, folderId: number) =>
+    axios.delete<IBackendRes<void>>(
+        `/api/v1/documents/${documentId}/shortcut?folderId=${folderId}`
+    );
 
 export const callFetchDocumentsByCategory = (categoryId: number) =>
     axios.get<IBackendRes<IDocument[]>>(
@@ -1969,6 +2119,46 @@ export const callSendDocumentShareEmail = (tokenId: number, email: string) =>
         `/api/v1/documents/share-tokens/${tokenId}/send-email`,
         { email }
     );
+
+/* ===================== DOCUMENT FOLDERS ===================== */
+
+export const callFetchFolderTree = (ownerId?: string) => {
+    return axios.get<IBackendRes<IDocumentFolder[]>>(
+        `/api/v1/folders/tree${ownerId ? `?ownerId=${ownerId}` : ""}`
+    );
+};
+
+export const callCreateFolder = (data: { folderName: string; parentId?: number | null; ownerId?: string }) => {
+    return axios.post<IBackendRes<IDocumentFolder>>(
+        `/api/v1/folders`,
+        data
+    );
+};
+
+export const callUpdateFolder = (id: number, data: { folderName: string; parentId?: number | null }) => {
+    return axios.put<IBackendRes<IDocumentFolder>>(
+        `/api/v1/folders/${id}`,
+        data
+    );
+};
+
+export const callDeleteFolder = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/folders/${id}`
+    );
+};
+
+export const callFetchSubordinates = () => {
+    return axios.get<IBackendRes<IUser[]>>(
+        `/api/v1/folders/subordinates`
+    );
+};
+
+export const callFetchFolderDocuments = (folderId: number) => {
+    return axios.get<IBackendRes<IDocument[]>>(
+        `/api/v1/folders/${folderId}/documents`
+    );
+};
 
 /* ===================== EVALUATION HQCV ===================== */
 
@@ -2165,3 +2355,49 @@ export const callReadEvaluationNotification = (id: number) =>
 
 export const callReadAllEvaluationNotifications = () =>
     axios.patch<IBackendRes<void>>(`/api/v1/notifications/read-all`);
+
+/* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
+
+export const callFetchAccountingDocumentCategories = (query: string) => {
+    return axios.get<IBackendRes<IModelPaginate<IAccountingDocumentCategory>>>(
+        `/api/v1/accounting-document-categories?${query}`
+    );
+};
+
+export const callFetchAccountingDocumentCategoryActive = () => {
+    return axios.get<IBackendRes<IAccountingDocumentCategory[]>>(
+        `/api/v1/accounting-document-categories/active`
+    );
+};
+
+export const callFetchAccountingDocumentCategoryById = (id: number) => {
+    return axios.get<IBackendRes<IAccountingDocumentCategory>>(
+        `/api/v1/accounting-document-categories/${id}`
+    );
+};
+
+export const callCreateAccountingDocumentCategory = (data: IAccountingDocumentCategoryRequest) => {
+    return axios.post<IBackendRes<IAccountingDocumentCategory>>(
+        `/api/v1/accounting-document-categories`,
+        data
+    );
+};
+
+export const callUpdateAccountingDocumentCategory = (id: number, data: IAccountingDocumentCategoryRequest) => {
+    return axios.put<IBackendRes<IAccountingDocumentCategory>>(
+        `/api/v1/accounting-document-categories/${id}`,
+        data
+    );
+};
+
+export const callToggleActiveAccountingDocumentCategory = (id: number) => {
+    return axios.put<IBackendRes<void>>(
+        `/api/v1/accounting-document-categories/${id}/active`
+    );
+};
+
+export const callDeleteAccountingDocumentCategory = (id: number) => {
+    return axios.delete<IBackendRes<void>>(
+        `/api/v1/accounting-document-categories/${id}`
+    );
+};

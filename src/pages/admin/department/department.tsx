@@ -160,6 +160,7 @@ const DepartmentPage = () => {
         // ── Cấu hình chức danh ── (chuyển vào đây)
         if (canViewJobTitles) items.push({
             key: "job-title",
+            className: "guide-department-job-title",
             icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
             label: <span>Cấu hình chức danh</span>,
             onClick: () => {
@@ -170,6 +171,7 @@ const DepartmentPage = () => {
 
         if (canViewOrgChart) items.push({
             key: "org-chart",
+            className: "guide-department-org-chart",
             icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Sơ đồ tổ chức</span>,
             onClick: () => navigate(
@@ -179,6 +181,7 @@ const DepartmentPage = () => {
 
         if (canViewObjectives) items.push({
             key: "objectives-tasks",
+            className: "guide-department-objectives",
             icon: <AimOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Mục tiêu - Nhiệm vụ</span>,
             onClick: () => navigate(
@@ -189,6 +192,7 @@ const DepartmentPage = () => {
 
         if (canViewProcedures) items.push({
             key: "department-procedures",
+            className: "guide-department-procedures",
             icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Quy trình phòng ban</span>,
             onClick: () => navigate(
@@ -199,6 +203,7 @@ const DepartmentPage = () => {
 
         if (canViewPermissions) items.push({
             key: "permissions",
+            className: "guide-department-permissions",
             icon: <LockOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Phân quyền</span>,
             onClick: () => {
@@ -213,6 +218,7 @@ const DepartmentPage = () => {
 
         if (canViewCareerPaths) items.push({
             key: "career-paths",
+            className: "guide-department-career-paths",
             icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Lộ trình thăng tiến</span>,
             onClick: () => navigate(
@@ -222,6 +228,7 @@ const DepartmentPage = () => {
 
         if (canViewSalary) items.push({
             key: "salary",
+            className: "guide-department-salary",
             icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Khung lương</span>,
             onClick: () => navigate(
@@ -231,6 +238,7 @@ const DepartmentPage = () => {
 
         if (canViewPositionChart) items.push({
             key: "position-chart",
+            className: "guide-department-position-chart",
             icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
             label: <span>Bản đồ chức danh</span>,
             onClick: () => {
@@ -348,6 +356,7 @@ const DepartmentPage = () => {
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.GET_BY_ID} hideChildren>
                             <Button
+                                data-guide-id="department-detail-button"
                                 type="text"
                                 size="small"
                                 icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -361,6 +370,7 @@ const DepartmentPage = () => {
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
                             <Button
+                                data-guide-id="department-edit-button"
                                 type="text"
                                 size="small"
                                 icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -379,6 +389,7 @@ const DepartmentPage = () => {
                                 placement="bottomRight"
                             >
                                 <Button
+                                    data-guide-id="department-more-button"
                                     type="text"
                                     size="small"
                                     icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
@@ -399,6 +410,8 @@ const DepartmentPage = () => {
                     <SearchFilter
                         searchPlaceholder="Tìm theo mã hoặc tên..."
                         addLabel="Thêm phòng ban"
+                        guideSearchId="department-search-input"
+                        guideAddId="department-add-button"
                         showFilterButton={false}
                         onSearch={setSearchValue}
                         onReset={handleReset}

@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Space, Tag, Popconfirm, Button, Dropdown, message } from "antd";
 import {
     EyeOutlined,
@@ -165,6 +166,24 @@ const JobDescriptionTable = ({
 
     const [openRejectReasonModal, setOpenRejectReasonModal] = useState(false);
     const [rejectReasonRecord, setRejectReasonRecord] = useState<any>(null);
+
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        const viewIdStr = searchParams.get("viewId");
+        if (viewIdStr && records && records.length > 0) {
+            const viewId = Number(viewIdStr);
+            if (!isNaN(viewId) && !openView) {
+                const target = records.find(r => (r as any).jdId === viewId || (r as any).id === viewId);
+                if (target) {
+                    setViewRecord(target as TableRecord);
+                    setOpenView(true);
+                    searchParams.delete("viewId");
+                    setSearchParams(searchParams, { replace: true });
+                }
+            }
+        }
+    }, [searchParams, setSearchParams, openView, records]);
 
     const handleIssueConfirm = () => {
         if (!issueRecord) return;

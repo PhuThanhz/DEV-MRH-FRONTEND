@@ -1,5 +1,5 @@
 import {
-    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin, Table, Input, Progress, Tooltip,
+    Modal, Button, Tag, Badge, Typography, Avatar, Image, Spin, Table, Input, Progress, Tooltip, Tabs,
 } from "antd";
 import {
     FileTextOutlined, UserOutlined, ApartmentOutlined,
@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useDocumentByIdQuery, useMarkDocumentReadMutation } from "@/hooks/useDocuments";
+import { useAccountingDocumentByIdQuery, useAccountingDocumentAuditsQuery } from "@/hooks/useAccountingDocuments";
 import FileSection from "../procedures/components/file-section.procedure";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -30,9 +31,17 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const PROCEDURE_TYPE_LABEL: Record<string, string> = {
-    COMPANY: "Công ty",
-    DEPARTMENT: "Phòng ban",
+    COMPANY: "Cấp công ty",
+    DEPARTMENT: "Cấp phòng ban",
     CONFIDENTIAL: "Bảo mật",
+};
+
+const CLASSIFY_META: Record<string, { label: string; color: string }> = {
+    COMPANY: { label: "Cấp công ty", color: "geekblue" },
+    DEPARTMENT: { label: "Cấp phòng ban", color: "cyan" },
+    CONFIDENTIAL: { label: "Bảo mật", color: "volcano" },
+    CROSS_COMPANY: { label: "Liên công ty", color: "purple" },
+    NORMAL: { label: "Văn bản thường", color: "default" },
 };
 
 const SectionHeading = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
@@ -81,9 +90,10 @@ interface Props {
     onClose: (v: boolean) => void;
     dataInit: IDocument | null;
     setDataInit: (v: IDocument | null) => void;
+    isAccounting?: boolean;
 }
 
-const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => {
+const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting }: Props) => {
     const [isMobile, setIsMobile] = useState(false);
     const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
     const [recipientSearch, setRecipientSearch] = useState("");
@@ -95,10 +105,20 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
         return () => window.removeEventListener("resize", check);
     }, []);
 
-    // ← GỌI API LẤY CHI TIẾT MỚI NHẤT QUA ENDPOINT VĂN BẢN GỐC
-    const { data: detail, isLoading: detailLoading } = useDocumentByIdQuery(
-        open && dataInit?.id ? dataInit.id : undefined
+    // ← GỌI API LẤY CHI TIẾT MỚI NHẤT
+    const docQuery = useDocumentByIdQuery(
+        open && dataInit?.id && !isAccounting ? dataInit.id : undefined
     );
+    const accQuery = useAccountingDocumentByIdQuery(
+        open && dataInit?.id && isAccounting ? dataInit.id : undefined
+    );
+
+    const { data: auditLogs = [], isLoading: loadingAudits } = useAccountingDocumentAuditsQuery(
+        open && dataInit?.id && isAccounting ? dataInit.id : undefined
+    );
+
+    const detailLoading = isAccounting ? accQuery.isLoading : docQuery.isLoading;
+    const detail = isAccounting ? accQuery.data : docQuery.data;
 
     const account = useSelector((state: any) => state.account?.user);
     const markReadMutation = useMarkDocumentReadMutation();
@@ -192,7 +212,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
             {(data?.fileUrls ?? []).length > 0 && (
                 <div style={{ marginBottom: 14 }}>
                     <SectionHeading icon={<FileTextOutlined />} label="Tài liệu đính kèm" />
-                    <FileSection fileNames={data?.fileUrls} />
+                    <FileSection fileNames={data?.fileUrls} folder="documents" />
                 </div>
             )}
 
@@ -243,6 +263,16 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     ) : (
                         <Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>--</Text>
                     )}
+                </Field>
+                <Field label="Phân loại">
+                    {(() => {
+                        const meta = data.category?.mappingProcedure
+                            ? (CLASSIFY_META[data.procedureType || ""] ?? { label: data.procedureType || "Quy trình", color: "geekblue" })
+                            : data.category?.isCrossCompany
+                                ? CLASSIFY_META.CROSS_COMPANY
+                                : CLASSIFY_META.NORMAL;
+                        return <Tag color={meta.color} style={TAG_STYLE}>{meta.label}</Tag>;
+                    })()}
                 </Field>
                 <Field label="Ký hiệu">
                     {data.category?.symbol
@@ -431,7 +461,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                         <FileTextOutlined style={{ fontSize: 15, color: "#1677ff" }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <Title level={5} style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Chi tiết văn bản</Title>
+                        <Title level={5} style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{isAccounting ? "Chi tiết chứng từ" : "Chi tiết văn bản"}</Title>
                         <Text type="secondary" ellipsis style={{ fontSize: 12, fontWeight: 400 }}>
                             {data.documentName}
                         </Text>
@@ -449,8 +479,78 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit }: Props) => 
                     display: "flex", flexDirection: "row", alignItems: "flex-start",
                     padding: isMobile ? "14px 16px 16px" : "16px 20px 18px 24px",
                 }}>
-                    {MainContent}
-                    {!isMobile && QrPanel}
+                    {isAccounting ? (
+                        <div style={{ width: "100%", overflow: "hidden" }}>
+                            <Tabs defaultActiveKey="1" items={[
+                                {
+                                    key: '1',
+                                    label: 'Chi tiết',
+                                    children: (
+                                        <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", width: "100%" }}>
+                                            {MainContent}
+                                            {!isMobile && QrPanel}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: '2',
+                                    label: 'Lịch sử thao tác',
+                                    children: (
+                                        <Spin spinning={loadingAudits}>
+                                            <Table
+                                                dataSource={auditLogs}
+                                                rowKey="id"
+                                                pagination={{ pageSize: 10, showSizeChanger: false }}
+                                                size="small"
+                                                columns={[
+                                                    {
+                                                        title: "Thời gian",
+                                                        dataIndex: "createdAt",
+                                                        key: "createdAt",
+                                                        width: 150,
+                                                        render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm:ss")
+                                                    },
+                                                    {
+                                                        title: "Thao tác",
+                                                        dataIndex: "actionType",
+                                                        key: "actionType",
+                                                        width: 120,
+                                                        render: (type: string) => {
+                                                            const colorMap: Record<string, string> = {
+                                                                "CREATE": "green",
+                                                                "UPDATE": "blue",
+                                                                "STATUS_CHANGE": "orange",
+                                                                "DELETE": "red"
+                                                            };
+                                                            return <Tag color={colorMap[type] || "default"}>{type}</Tag>
+                                                        }
+                                                    },
+                                                    {
+                                                        title: "Người thực hiện",
+                                                        dataIndex: "createdBy",
+                                                        key: "createdBy",
+                                                        width: 140,
+                                                        render: (user: string) => <Text style={{ fontWeight: 500, color: "#1677ff" }}>{user || "--"}</Text>
+                                                    },
+                                                    {
+                                                        title: "Chi tiết",
+                                                        dataIndex: "changes",
+                                                        key: "changes",
+                                                        render: (changes: string) => <Text style={{ fontSize: 13, color: "#334155" }}>{changes}</Text>
+                                                    }
+                                                ]}
+                                            />
+                                        </Spin>
+                                    ),
+                                }
+                            ]} />
+                        </div>
+                    ) : (
+                        <>
+                            {MainContent}
+                            {!isMobile && QrPanel}
+                        </>
+                    )}
                 </div>
             </Spin>
 

@@ -234,6 +234,7 @@ const DepartmentObjectivesPage = () => {
 
                         {!editMode && (
                             <Button
+                                data-guide-id="department-objectives-edit-btn"
                                 icon={<EditOutlined />}
                                 onClick={() => setEditMode(true)}
                             >
@@ -252,6 +253,7 @@ const DepartmentObjectivesPage = () => {
                                     Huỷ
                                 </Button>
                                 <Button
+                                    data-guide-id="department-objectives-save-btn"
                                     type="primary"
                                     icon={<SaveOutlined />}
                                     loading={isPending}

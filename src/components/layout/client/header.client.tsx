@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     ContactsOutlined,
     FireOutlined,
@@ -13,6 +13,11 @@ import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
 
+const getAccountDropdownWidth = (triggerWidth = 0) => {
+    const viewportWidth = window.innerWidth;
+    const availableWidth = Math.max(272, viewportWidth - 24);
+    return Math.min(availableWidth, Math.max(292, Math.ceil(triggerWidth)));
+};
 
 const Header = () => {
     const navigate = useNavigate();
@@ -23,6 +28,8 @@ const Header = () => {
 
     const [openMobileMenu, setOpenMobileMenu] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [dropdownWidth, setDropdownWidth] = useState(292);
+    const triggerRef = useRef<HTMLDivElement>(null);
     const [current, setCurrent] = useState("/");
     const location = useLocation();
     const [openAccountModal, setOpenAccountModal] = useState(false);
@@ -47,6 +54,18 @@ const Header = () => {
         ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
         : undefined;
 
+    // Lấy initials từ tên
+    const getInitials = (name?: string) =>
+        name
+            ? name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+            : "US";
+
+    // Lấy role label
+    const getRoleLabel = () => {
+        if (user.role?.permissions?.length) return "Quản trị viên";
+        return "Người dùng";
+    };
+
     const handleLogout = async () => {
         try {
             await callLogout();
@@ -61,40 +80,153 @@ const Header = () => {
 
     const itemsDropdown: MenuProps["items"] = [
         {
+            key: "manage-account",
             label: (
-                <span
-                    className="flex items-center gap-2 text-gray-700 hover:text-pink-600 transition-colors"
+                <div
+                    className="flex items-center gap-3 py-1.5 px-2 text-gray-700 hover:text-pink-600 transition-colors cursor-pointer text-[15px] font-medium min-w-[220px]"
                     onClick={() => setOpenAccountModal(true)}
                 >
-                    <ContactsOutlined /> Quản lý tài khoản
-                </span>
+                    <ContactsOutlined className="text-[18px] text-pink-500" />
+                    <span>Quản lý tài khoản</span>
+                </div>
             ),
-            key: "manage-account",
         },
         ...(user.role?.permissions?.length
             ? [
                 {
                     key: "admin",
                     label: (
-                        <Link to="/admin" className="flex items-center gap-2 text-gray-700 hover:text-pink-600 transition-colors">
-                            <FireOutlined /> Trang Quản Trị
+                        <Link to="/admin" className="flex items-center gap-3 py-1.5 px-2 text-gray-700 hover:text-pink-600 transition-colors text-[15px] font-medium">
+                            <FireOutlined className="text-[18px] text-orange-500" />
+                            <span>Trang Quản Trị</span>
                         </Link>
                     ),
                 },
             ]
             : []),
+        { type: "divider" as const },
         {
             key: "logout",
             label: (
                 <div
                     onClick={handleLogout}
-                    className="flex items-center gap-2 cursor-pointer text-red-500 hover:text-red-600 transition-colors"
+                    className="flex items-center gap-3 py-1.5 px-2 cursor-pointer text-red-500 hover:text-red-600 transition-colors text-[15px] font-medium"
                 >
-                    <LogoutOutlined /> Đăng xuất
+                    <LogoutOutlined className="text-[18px] text-red-500" />
+                    <span>Đăng xuất</span>
                 </div>
             ),
         },
     ];
+
+    const customDropdownRender = () => (
+        <div style={{
+            width: dropdownWidth,
+            maxWidth: "calc(100vw - 24px)",
+            background: "#ffffff",
+            borderRadius: 12,
+            overflow: "hidden",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.07), 0 10px 25px -5px rgba(0,0,0,0.08)",
+        }}>
+            {/* ── Identity strip ── */}
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                        <Avatar
+                            size={40}
+                            src={avatarSrc}
+                            style={{
+                                background: "linear-gradient(135deg, #ec4899, #a855f7)",
+                                fontWeight: 700, fontSize: 14, color: "#fff",
+                            }}
+                        >
+                            {!user?.avatar && getInitials(user?.name)}
+                        </Avatar>
+                        <span style={{
+                            position: "absolute", bottom: 0, right: 0,
+                            width: 9, height: 9, borderRadius: "50%",
+                            background: "#22c55e", border: "2px solid #fff",
+                        }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.35,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {user?.name || "User"}
+                        </div>
+                        <div style={{
+                            fontSize: 12, color: "#9ca3af", marginTop: 2,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>
+                            {user?.email || ""}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Menu Items ── */}
+            <div style={{ padding: "6px 8px 3px" }}>
+                <div
+                    onClick={() => { setMenuOpen(false); setOpenAccountModal(true); }}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 10px", borderRadius: 8, cursor: "pointer",
+                        transition: "background 0.1s", minHeight: 44,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#f9fafb"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                >
+                    <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <ContactsOutlined style={{ fontSize: 16, color: "#9ca3af" }} />
+                    </div>
+                    <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Hồ sơ cá nhân</span>
+                </div>
+
+                {user.role?.permissions?.length ? (
+                    <Link
+                        to="/admin"
+                        onClick={() => setMenuOpen(false)}
+                        style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "10px 10px", borderRadius: 8, textDecoration: "none",
+                            transition: "background 0.1s", minHeight: 44,
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
+                    >
+                        <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <FireOutlined style={{ fontSize: 16, color: "#9ca3af" }} />
+                        </div>
+                        <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Trang Quản Trị</span>
+                    </Link>
+                ) : null}
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ height: 1, background: "#f3f4f6", margin: "4px 8px" }} />
+
+            {/* ── Logout ── */}
+            <div style={{ padding: "3px 8px 10px" }}>
+                <div
+                    onClick={handleLogout}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "10px 10px", borderRadius: 8, cursor: "pointer",
+                        transition: "background 0.1s", minHeight: 44,
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "#fff1f2"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                >
+                    <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <LogoutOutlined style={{ fontSize: 16, color: "#f43f5e" }} />
+                    </div>
+                    <span style={{ fontSize: 14, color: "#f43f5e", fontWeight: 500 }}>Đăng xuất</span>
+                </div>
+            </div>
+        </div>
+    );
 
     const itemsMobile = [...itemsDropdown];
 
@@ -103,17 +235,7 @@ const Header = () => {
         setOpenMobileMenu(false);
     };
 
-    // Lấy initials từ tên
-    const getInitials = (name?: string) =>
-        name
-            ? name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-            : "US";
 
-    // Lấy role label
-    const getRoleLabel = () => {
-        if (user.role?.permissions?.length) return "Quản trị viên";
-        return "Người dùng";
-    };
 
     return (
         <>
@@ -196,10 +318,15 @@ const Header = () => {
                                 </Link>
                             ) : (
                                 <Dropdown
-                                    menu={{ items: itemsDropdown }}
+                                    popupRender={customDropdownRender}
                                     trigger={["click"]}
                                     open={menuOpen}
-                                    onOpenChange={setMenuOpen}
+                                    onOpenChange={(open) => {
+                                        setMenuOpen(open);
+                                        if (open && triggerRef.current) {
+                                            setDropdownWidth(getAccountDropdownWidth(triggerRef.current.getBoundingClientRect().width));
+                                        }
+                                    }}
                                     placement="bottomRight"
                                     overlayClassName="animate-dropdown-slide"
                                     overlayStyle={{ zIndex: 10000 }}
@@ -207,9 +334,10 @@ const Header = () => {
                                 >
                                     {/* ✨ PILL USER - PREMIUM */}
                                     <div
+                                        ref={triggerRef}
                                         className="
                                             flex items-center gap-3 cursor-pointer
-                                            px-2 py-1.5 rounded-full
+                                            px-2.5 py-1.5 rounded-full
                                             border border-white/25
                                             bg-white/10 backdrop-blur-sm
                                             hover:bg-white/20 hover:border-white/40
@@ -217,7 +345,7 @@ const Header = () => {
                                             transition-all duration-200
                                             select-none
                                         "
-                                        style={{ minWidth: 0 }}
+                                        style={{ minWidth: 0, minHeight: 44 }}
                                     >
                                         {/* Separator dọc */}
                                         <div className="flex flex-col items-end gap-0.5 pl-2">
@@ -233,13 +361,13 @@ const Header = () => {
                                         {/* Avatar */}
                                         <div className="relative flex-shrink-0">
                                             <Avatar
-                                                size={34}
+                                                size={36}
                                                 src={avatarSrc}
                                                 style={{
                                                     backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",
                                                     border: "1.5px solid rgba(255,255,255,0.55)",
                                                     fontWeight: 700,
-                                                    fontSize: 12,
+                                                    fontSize: 13,
                                                     color: "#fff",
                                                     flexShrink: 0,
                                                 }}

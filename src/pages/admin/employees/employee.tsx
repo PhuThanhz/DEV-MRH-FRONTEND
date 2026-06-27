@@ -329,6 +329,8 @@ const EmployeePage = () => {
                     <SearchFilter
                         searchPlaceholder="Tìm theo tên, email hoặc mã NV..."
                         addLabel="Thêm nhân viên"
+                        guideSearchId="employee-search-input"
+                        guideAddId="employee-add-button"
                         showFilterButton={false}
                         onSearch={(val) => setSearchValue(val)}
                         onReset={reloadTable}

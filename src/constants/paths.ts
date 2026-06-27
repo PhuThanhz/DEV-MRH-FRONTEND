@@ -38,6 +38,10 @@ export const PATHS = {
         EMPLOYEE: '/admin/employees',
         DOCUMENT_CATEGORY: "/admin/document-categories",   // ← THÊM
         DOCUMENT: "/admin/documents",                       // ← THÊM
+        PERSONAL_DRIVE: "/admin/personal-drive",
+        ACCOUNTING_DOCUMENTS: "/admin/accounting-documents",
+        ACCOUNTING_DOSSIERS: "/admin/accounting-dossiers",
+        ACCOUNTING_DOCUMENT_CATEGORY: "/admin/accounting-document-categories",
         
         // EVALUATION (HQCV)
         EVALUATION_TEMPLATES: "/admin/evaluation/templates",

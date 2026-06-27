@@ -1,15 +1,19 @@
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import LotusChanRadial from "@/components/home/LotusChanRadial";
 
 const HomePage = () => {
-    const navigate = useNavigate();
 
     return (
         <div
             style={{
                 position: "relative",
                 width: "100%",
-                minHeight: "calc(100vh - 64px - 45px)",
-                background: "linear-gradient(135deg, #ffffff 0%, #fff5f7 50%, #ffe4e6 100%)",
+                flex: 1,
+                minHeight: "calc(100vh - 111px)",
+                backgroundImage: "url('/logo/backgroundlotus.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
@@ -85,29 +89,15 @@ const HomePage = () => {
                                 width: "100%",
                                 height: "auto",
                                 objectFit: "contain",
+                                filter: "drop-shadow(0px 4px 8px rgba(236, 72, 153, 0.2))"
                             }}
                         />
                     </div>
-
-                    {/* Orbital ring */}
-                    <div className="orbital-ring" />
-
-                    {/* Pulsing ring */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            inset: "-10px",
-                            borderRadius: "50%",
-                            border: "2px solid rgba(236, 72, 153, 0.2)",
-                            animation: "pulseRing 3s ease-out infinite",
-                            zIndex: 0,
-                        }}
-                    />
                 </div>
 
                 {/* HRM Text Section */}
                 <div className="hrm-text-container">
-                    <h1 className="hrm-text">HRM</h1>
+                    <h1 className="hrm-text">HUMAN RESOURCE MANAGEMENT</h1>
                 </div>
 
                 {/* Elegant divider */}
@@ -168,15 +158,20 @@ const HomePage = () => {
                 />
             ))}
 
+            {/* Lotus-chan Assistant FAB */}
+            <div style={{ position: "fixed", bottom: 15, right: -15, zIndex: 1000 }}>
+                <LotusChanRadial />
+            </div>
+
             {/* Animation styles */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
 
                 :root {
-                    --logo-size: clamp(90px, 10vw, 160px);
+                    --logo-size: clamp(140px, 15vw, 240px);
                     --orbital-size: clamp(130px, 14vw, 220px);
-                    --hrm-font-size: clamp(48px, 8vw, 110px);
-                    --hrm-letter-spacing: clamp(6px, 1vw, 18px);
+                    --hrm-font-size: clamp(52px, 9vw, 120px);
+                    --hrm-letter-spacing: clamp(10px, 2.5vw, 20px);
                     --content-gap: clamp(20px, 2.5vw, 40px);
                 }
 
@@ -200,13 +195,13 @@ const HomePage = () => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: rgba(255, 255, 255, 0.7);
+                    background: rgba(255, 255, 255, 0.85);
                     backdrop-filter: blur(20px);
                     border-radius: 50%;
-                    padding: clamp(14px, 3.5vw, 28px);
-                    border: 2px solid rgba(236, 72, 153, 0.2);
-                    box-shadow: 0 20px 60px rgba(236, 72, 153, 0.15),
-                                inset 0 0 40px rgba(255, 255, 255, 0.8);
+                    padding: clamp(20px, 4vw, 40px);
+                    border: 2px solid rgba(236, 72, 153, 0.15);
+                    box-shadow: 0 15px 40px rgba(236, 72, 153, 0.15),
+                                inset 0 0 30px rgba(255, 255, 255, 0.9);
                     z-index: 1;
                     box-sizing: border-box;
                 }
@@ -239,29 +234,27 @@ const HomePage = () => {
 
                 .hrm-underline {
                     width: 60%;
-                    height: 3px;
-                    background: linear-gradient(90deg, transparent 0%, #ec4899 50%, transparent 100%);
+                    height: 2px;
+                    background: linear-gradient(90deg, transparent 0%, #db2777 50%, transparent 100%);
                     border-radius: 2px;
                     animation: fadeIn 1s ease-out 1s both;
-                    opacity: 0.7;
+                    opacity: 0.5;
                 }
 
                 .hrm-text {
                     position: relative;
                     margin: 0;
-                    font-size: var(--hrm-font-size);
+                    font-size: clamp(12px, 1.5vw, 18px);
                     font-weight: 700;
-                    letter-spacing: var(--hrm-letter-spacing);
+                    letter-spacing: 4px;
                     font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
-                    background: linear-gradient(135deg, #db2777 0%, #ec4899 50%, #f472b6 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                    animation: fadeInUp 1s ease-out 0.3s both, textShine 3s ease-in-out infinite;
+                    color: #9d174d;
+                    text-transform: uppercase;
+                    animation: fadeInUp 1s ease-out 0.3s both;
                     line-height: 1;
-                    filter: drop-shadow(0 10px 30px rgba(236, 72, 153, 0.2));
                     z-index: 1;
                     white-space: nowrap;
+                    text-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
                 }
 
                 @keyframes fadeInScale {
@@ -284,15 +277,14 @@ const HomePage = () => {
                     50%      { opacity: 1;   transform: scale(1.2); }
                 }
 
-                @keyframes pulseRing {
-                    0%   { transform: scale(1);   opacity: 0.5; }
-                    50%  { transform: scale(1.1); opacity: 0.2; }
-                    100% { transform: scale(1.2); opacity: 0; }
+                @keyframes floatLogo {
+                    0%, 100% { transform: translateY(0); }
+                    50%      { transform: translateY(-10px); }
                 }
 
-                @keyframes rotate {
-                    from { transform: translate(-50%, -50%) rotate(0deg); }
-                    to   { transform: translate(-50%, -50%) rotate(360deg); }
+                @keyframes shadowScale {
+                    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+                    50%      { transform: translateX(-50%) scale(0.8); opacity: 0.3; }
                 }
 
                 @keyframes textShine {
@@ -317,7 +309,7 @@ const HomePage = () => {
 
                 @media (max-width: 768px) {
                     :root {
-                        --logo-size: clamp(90px, 22vw, 140px);
+                        --logo-size: clamp(120px, 25vw, 180px);
                         --orbital-size: clamp(125px, 30vw, 195px);
                         --hrm-font-size: clamp(52px, 16vw, 96px);
                         --hrm-letter-spacing: clamp(6px, 2vw, 14px);

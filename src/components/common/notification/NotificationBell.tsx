@@ -2,13 +2,16 @@ import React, { useState } from "react";
 import { Dropdown } from "antd";
 import { BellOutlined } from "@ant-design/icons";
 import { useNotifications } from "@/hooks/useNotifications";
-import NotificationList from "./NotificationList";
+import NotificationGrid from "./NotificationGrid";
+import NotificationDrawer from "./NotificationDrawer";
 
 const NotificationBell: React.FC = () => {
     const [open, setOpen] = useState(false);
-    const { items, unreadCount, markAllRead, markOneRead } = useNotifications();
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const { items, unreadCount, markAllRead, markOneRead, isLoading, soundEnabled, toggleSound } = useNotifications();
 
     return (
+        <>
         <Dropdown
             open={open}
             onOpenChange={setOpen}
@@ -17,18 +20,23 @@ const NotificationBell: React.FC = () => {
             overlayStyle={{ zIndex: 10000, padding: 0, borderRadius: 10, overflow: "hidden" }}
             getPopupContainer={() => document.body}
             popupRender={() => (
-                <NotificationList
-                    items={items}
-                    onMarkAllRead={markAllRead}
-                    onItemClick={(item) => {
-                        markOneRead(item);
+                <NotificationGrid 
+                    items={items} 
+                    onClose={() => setOpen(false)} 
+                    markOneRead={markOneRead} 
+                    markAllRead={markAllRead} 
+                    isLoading={isLoading} 
+                    soundEnabled={soundEnabled} 
+                    toggleSound={toggleSound} 
+                    onOpenFullCenter={() => {
                         setOpen(false);
+                        setDrawerOpen(true);
                     }}
-                    onClose={() => setOpen(false)}
                 />
             )}
         >
             <button
+                data-guide-id="notification-bell"
                 style={{
                     position: "relative",
                     display: "flex",
@@ -96,6 +104,8 @@ const NotificationBell: React.FC = () => {
                 `}</style>
             </button>
         </Dropdown>
+        <NotificationDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+        </>
     );
 };
 

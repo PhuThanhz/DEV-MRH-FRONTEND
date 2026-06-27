@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { Table, Tag, Tooltip, Empty, Card, Select, Button, Row, Col, Input, Dropdown } from "antd";
 import {
     StopOutlined,
@@ -269,8 +269,10 @@ const CompletedEvaluationsPage = () => {
                     setRecords([]);
                 }
             }
-        } catch {
-            notify.error("Lỗi tải danh sách kỳ đánh giá");
+        } catch (error: any) {
+            if (error?.response?.status !== 403) {
+                notify.error("Lỗi tải danh sách kỳ đánh giá");
+            }
         } finally {
             setPeriodLoading(false);
         }
@@ -323,13 +325,27 @@ const CompletedEvaluationsPage = () => {
         }
     };
 
+    const searchRef = useRef(false);
+
     useEffect(() => {
-        fetchPeriods("", undefined, true);
         fetchCompanies();
     }, []);
 
     useEffect(() => {
-        fetchPeriods("", selectedCompany, true);
+        // Prevent running on mount for search, but run for selectedCompany changes
+        if (searchRef.current) {
+            const timer = window.setTimeout(() => {
+                fetchPeriods(periodSearch, selectedCompany, false);
+            }, 300);
+            return () => window.clearTimeout(timer);
+        } else if (periodSearch !== "") {
+            searchRef.current = true;
+        } else {
+             fetchPeriods("", selectedCompany, true);
+        }
+    }, [periodSearch, selectedCompany]);
+
+    useEffect(() => {
         if (selectedCompany) {
             fetchDepartments(selectedCompany);
             setSelectedDepartment(undefined);
@@ -342,13 +358,6 @@ const CompletedEvaluationsPage = () => {
             setSections([]);
         }
     }, [selectedCompany]);
-
-    useEffect(() => {
-        const timer = window.setTimeout(() => {
-            fetchPeriods(periodSearch, selectedCompany, false);
-        }, 300);
-        return () => window.clearTimeout(timer);
-    }, [periodSearch]);
 
     useEffect(() => {
         if (selectedPeriod) {

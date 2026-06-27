@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Layout, Menu, Drawer, Button, Switch } from "antd";
 import { CloseOutlined, QrcodeOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
@@ -23,6 +24,7 @@ const SliderAdmin: React.FC<IProps> = ({
     mobileOpen = false,
     setMobileOpen = () => { },
 }) => {
+    const navigate = useNavigate();
     const permissions = useAppSelector((state) => state.account.user.role.permissions);
     const [menuItems, setMenuItems] = useState<any[]>([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -59,7 +61,9 @@ const SliderAdmin: React.FC<IProps> = ({
                 transition: "all 0.3s ease",
                 position: "relative",
                 overflow: "hidden",
+                cursor: "pointer",
             }}
+            onClick={() => navigate("/admin")}
         >
             {collapsed && !isMobile ? (
                 <img
@@ -301,6 +305,11 @@ const SliderAdmin: React.FC<IProps> = ({
                             borderBottom: "1px solid #f0f0f0",
                             background: "rgba(255, 245, 247, 0.9)",
                             position: "relative",
+                            cursor: "pointer",
+                        }}
+                        onClick={() => {
+                            navigate("/admin");
+                            setMobileOpen(false);
                         }}
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

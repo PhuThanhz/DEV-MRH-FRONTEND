@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJdFlowInboxQuery } from "@/hooks/useJdFlow";
 import type { IJdInbox } from "@/types/backend";
@@ -9,12 +9,36 @@ import { notify } from "@/components/common/notification/notify";
 export interface UnifiedNotification {
     id: string; // e.g. "jd_1" or "eval_2"
     type: "jd" | "eval";
+    module?: string; // Bổ sung để dễ dàng phân loại các loại thông báo khác nhau
     title: string;
     subtitle: string;
     isRead: boolean;
     rawId: number;
     actionLink?: string;
+    createdAt?: string;
 }
+
+interface NotificationContextValue {
+    items: UnifiedNotification[];
+    unreadCount: number;
+    isLoading: boolean;
+    soundEnabled: boolean;
+    toggleSound: () => void;
+    markAllRead: () => Promise<void>;
+    markOneRead: (item: UnifiedNotification) => Promise<void>;
+}
+
+const EMPTY_NOTIFICATION_CONTEXT: NotificationContextValue = {
+    items: [],
+    unreadCount: 0,
+    isLoading: false,
+    soundEnabled: true,
+    toggleSound: () => undefined,
+    markAllRead: async () => undefined,
+    markOneRead: async () => undefined,
+};
+
+const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 const STORAGE_KEY = "notifications_seen_map";
 
@@ -35,6 +59,31 @@ const getItemKey = (item: IJdInbox): string =>
 
 // Reuse a single AudioContext to avoid browser limits
 let _audioCtx: AudioContext | null = null;
+let pendingToastCount = 0;
+let pendingToastTimer: ReturnType<typeof setTimeout> | null = null;
+
+const pushGroupedNotification = (content: string) => {
+    pendingToastCount += 1;
+
+    if (pendingToastTimer) return;
+
+    pendingToastTimer = setTimeout(() => {
+        const count = pendingToastCount;
+        pendingToastCount = 0;
+        pendingToastTimer = null;
+
+        if (count <= 1) {
+            notify.pushNotification("Thông báo mới", content);
+            return;
+        }
+
+        notify.pushNotification(
+            `${count} thông báo mới`,
+            "Mở trung tâm thông báo để xem chi tiết."
+        );
+    }, 900);
+};
+
 const getAudioContext = (): AudioContext | null => {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     if (!AC) return null;
@@ -54,44 +103,68 @@ const playNotificationSound = async () => {
             await ctx.resume();
         }
 
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+        const now = ctx.currentTime;
 
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
+        // Hàm tạo 1 nốt nhạc mượt mà
+        const playTone = (freq: number, startTime: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            // Dùng sóng sine cho âm thanh tròn, êm ái
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
 
-        // "Ding" sound: sine wave at A5
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
+            // Envelope: attack nhanh, decay mượt
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-        // Envelope: quick attack, smooth decay
-        gainNode.gain.setValueAtTime(0, ctx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
 
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.5);
-
-        // Cleanup nodes after done
-        osc.onended = () => {
-            osc.disconnect();
-            gainNode.disconnect();
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+            
+            // Dọn dẹp
+            osc.onended = () => {
+                osc.disconnect();
+                gainNode.disconnect();
+            };
         };
+
+        // Tạo hiệu ứng chuông đôi (Double Chime) cực kỳ thanh lịch
+        // Nốt thứ 1: B5
+        playTone(987.77, now, 0.4);
+        // Nốt thứ 2: E6 (vang lên sau 0.12s)
+        playTone(1318.51, now + 0.12, 0.6);
     } catch (err) {
         console.error("Failed to play notification sound", err);
     }
 };
 
-export const useNotifications = () => {
+const useNotificationsState = (): NotificationContextValue => {
     const queryClient = useQueryClient();
-    const { data: jdItems = [], refetch: refetchJd } = useJdFlowInboxQuery();
-    const seenMap = getSeenMap();
+    const { data: jdItems = [], isFetching: isJdFetching, refetch: refetchJd } = useJdFlowInboxQuery();
+    const [seenVersion, setSeenVersion] = useState(0);
+    const seenMap = useMemo(() => getSeenMap(), [seenVersion]);
+
+    const [isAppFetching, setIsAppFetching] = useState(true);
+    const [soundEnabled, setSoundEnabled] = useState(() => {
+        return localStorage.getItem("notification_sound_disabled") !== "true";
+    });
+
+    const toggleSound = () => {
+        const next = !soundEnabled;
+        setSoundEnabled(next);
+        localStorage.setItem("notification_sound_disabled", (!next).toString());
+    };
 
     // State for Evaluation Notifications
     const [appNotifs, setAppNotifs] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchInitial = async () => {
+            setIsAppFetching(true);
             try {
                 // Đổi thành fetch toàn bộ (cả read và unread) để giữ lịch sử
                 const res = await callFetchEvaluationNotifications();
@@ -99,59 +172,71 @@ export const useNotifications = () => {
                     setAppNotifs(res.data);
                 }
             } catch (e) { }
+            setIsAppFetching(false);
         };
         fetchInitial();
     }, []);
 
     useWebSocket((msg) => {
         // Play "ding" sound
-        playNotificationSound();
-        // Show popup toast
-        notify.info("Thông báo mới: " + msg.content);
+        if (soundEnabled) {
+            playNotificationSound();
+        }
+        // Gom toast realtime để người dùng không bị spam khi nhiều module cập nhật cùng lúc.
+        pushGroupedNotification(msg.content);
         // Append to unread list
         setAppNotifs((prev) => [msg, ...prev]);
         // Real-time invalidate JD Inbox query to trigger fetch only when there's an actual update!
         queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
     });
 
-    // Merge logic
-    const unifiedItems: UnifiedNotification[] = [];
+    const unifiedItems = useMemo<UnifiedNotification[]>(() => {
+        const items: UnifiedNotification[] = [];
 
-    // 1. JD Flow Items
-    jdItems.forEach(item => {
-        const currentKey = getItemKey(item);
-        const isRead = seenMap[item.jdId] === currentKey;
-        unifiedItems.push({
-            id: `jd_${item.jdId}`,
-            type: "jd",
-            title: `JD cần duyệt: #${item.code ?? item.jdId}`,
-            subtitle: `Gửi bởi: ${item.fromUser?.name ?? "—"}`,
-            isRead,
-            rawId: item.jdId,
+        jdItems.forEach(item => {
+            const currentKey = getItemKey(item);
+            const isRead = seenMap[item.jdId] === currentKey;
+            items.push({
+                id: `jd_${item.jdId}`,
+                type: "jd",
+                module: "JD_FLOW",
+                title: `JD cần duyệt: #${item.code ?? item.jdId}`,
+                subtitle: `Gửi bởi: ${item.fromUser?.name ?? "—"}`,
+                isRead,
+                rawId: item.jdId,
+                actionLink: `/admin/job-descriptions?tab=inbox&viewId=${item.jdId}`,
+                createdAt: item.updatedAt
+            });
         });
-    });
 
-    // 2. Generic App Items
-    appNotifs.forEach(item => {
-        let title = "Thông báo hệ thống";
-        if (item.module === "EVALUATION") {
-            title = item.type === 'REMINDER_DEADLINE' ? 'Nhắc nhở Đánh giá' : 'Thông báo Đánh giá';
-        } else if (item.module === "JD_FLOW") {
-            title = "Thông báo Mô tả công việc";
-        }
+        appNotifs.forEach(item => {
+            let title = "Thông báo hệ thống";
+            if (item.module === "EVALUATION") {
+                title = item.type === 'REMINDER_DEADLINE' ? 'Nhắc nhở Đánh giá' : 'Thông báo Đánh giá';
+            } else if (item.module === "JD_FLOW") {
+                title = "Thông báo Mô tả công việc";
+            }
 
-        unifiedItems.push({
-            id: `app_${item.id}`,
-            type: "eval", // Giữ nguyên "eval" để dùng chung logic click cũ
-            title: title,
-            subtitle: item.content,
-            isRead: item.read,
-            rawId: item.id,
-            actionLink: item.actionLink
+            items.push({
+                id: `app_${item.id}`,
+                type: "eval", // Vẫn giữ "eval" tạm thời để không lỗi logic click cũ
+                module: item.module,
+                title: title,
+                subtitle: item.content,
+                isRead: item.read,
+                rawId: item.id,
+                actionLink: item.actionLink,
+                createdAt: item.createdAt
+            });
         });
-    });
 
-    const unreadCount = unifiedItems.filter(i => !i.isRead).length;
+        return items;
+    }, [appNotifs, jdItems, seenMap]);
+
+    const unreadCount = useMemo(
+        () => unifiedItems.filter(i => !i.isRead).length,
+        [unifiedItems]
+    );
 
     const markAllRead = async () => {
         // JD
@@ -160,6 +245,7 @@ export const useNotifications = () => {
             newMap[item.jdId] = getItemKey(item);
         });
         saveSeenMap(newMap);
+        setSeenVersion(v => v + 1);
         
         // App
         try {
@@ -174,6 +260,7 @@ export const useNotifications = () => {
             if (raw) {
                 const newMap = { ...seenMap, [raw.jdId]: getItemKey(raw) };
                 saveSeenMap(newMap);
+                setSeenVersion(v => v + 1);
             }
         } else if (item.type === "eval") {
             try {
@@ -186,7 +273,19 @@ export const useNotifications = () => {
     return {
         items: unifiedItems,
         unreadCount,
+        isLoading: isJdFetching || isAppFetching,
+        soundEnabled,
+        toggleSound,
         markAllRead,
         markOneRead,
     };
+};
+
+export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+    const value = useNotificationsState();
+    return createElement(NotificationContext.Provider, { value }, children);
+};
+
+export const useNotifications = () => {
+    return useContext(NotificationContext) ?? EMPTY_NOTIFICATION_CONTEXT;
 };

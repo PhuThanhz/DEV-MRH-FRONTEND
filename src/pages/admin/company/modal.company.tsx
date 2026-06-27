@@ -149,7 +149,7 @@ const ModalCompany = ({
                     },
                 }}
             >
-                <Row gutter={[16, 4]}>
+                <Row gutter={[16, 4]} data-guide-id="company-form">
                     <Col span={24}>
                         <ProFormText
                             label="Mã công ty"

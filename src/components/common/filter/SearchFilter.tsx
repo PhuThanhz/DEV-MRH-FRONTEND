@@ -30,6 +30,8 @@ interface SearchFilterProps {
     activeFilterCount?: number;
     /** Debounce delay khi gõ tìm kiếm (ms). Mặc định 400ms */
     debounceMs?: number;
+    guideSearchId?: string;
+    guideAddId?: string;
 }
 
 const BTN_H = 40;
@@ -49,6 +51,8 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     addPermission,
     activeFilterCount = 0,
     debounceMs = 400,
+    guideSearchId,
+    guideAddId,
 }) => {
     const [open, setOpen] = useState(false);
     const [form] = Form.useForm();
@@ -109,6 +113,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     // ── Add button ────────────────────────────────────────────────────────
     const AddBtn = React.isValidElement(addLabel) ? addLabel : (
         <Button
+            data-guide-id={guideAddId}
             icon={<PlusOutlined />}
             onClick={onAddClick}
             style={{
@@ -150,25 +155,32 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 
                 {/* Search input — auto-search debounce */}
-                <Input
-                    placeholder={searchPlaceholder}
-                    prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
-                    value={searchValue}
-                    onChange={handleSearchChange}
-                    onPressEnter={() => {
-                        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-                        onSearch?.(searchValue);
-                    }}
-                    onClear={handleSearchClear}
+                <div
+                    data-guide-id={guideSearchId}
                     style={{
-                        height: BTN_H,
-                        borderRadius: BTN_RADIUS,
                         flex: 1,
                         minWidth: 0,
-                        fontSize: 14,
                     }}
-                    allowClear
-                />
+                >
+                    <Input
+                        placeholder={searchPlaceholder}
+                        prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
+                        value={searchValue}
+                        onChange={handleSearchChange}
+                        onPressEnter={() => {
+                            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                            onSearch?.(searchValue);
+                        }}
+                        onClear={handleSearchClear}
+                        style={{
+                            height: BTN_H,
+                            borderRadius: BTN_RADIUS,
+                            width: "100%",
+                            fontSize: 14,
+                        }}
+                        allowClear
+                    />
+                </div>
 
                 {/* Bộ lọc với badge đếm filter đang active */}
                 {showFilterButton && (

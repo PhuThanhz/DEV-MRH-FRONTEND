@@ -6,13 +6,15 @@ import {
 import {
     SearchOutlined, CloseOutlined, CheckOutlined,
 } from "@ant-design/icons";
-import { callFetchUsersByCompany, callFetchUsersCrossCompany, callFetchCompany } from "@/config/api";
+import { callFetchUsersByCompany, callFetchUsersCrossCompany, callFetchCompany, callFetchDepartmentsByCompany, callFetchSectionsByDepartment } from "@/config/api";
 
 interface UserOption {
     value: string;
     name: string;
     email: string;
     department?: string;
+    departmentId?: number;
+    sectionId?: number;
     avatar?: string;
 }
 
@@ -58,6 +60,13 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
 
     const [companies, setCompanies] = useState<any[]>([]); // Danh sách công ty cho dropdown
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null); // Công ty đang chọn để lọc
+    
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
+    
+    const [sections, setSections] = useState<any[]>([]);
+    const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+
     const [total, setTotal] = useState(0); // Tổng số kết quả từ backend
     const [totalPages, setTotalPages] = useState(0); // Tổng số trang từ backend
 
@@ -68,6 +77,8 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         setSearch("");
         setPage(1);
         setSelectedCompanyId(null);
+        setSelectedDepartmentId(null);
+        setSelectedSectionId(null);
     }, [open]);
 
     // Load companies when cross-company is true and modal is open
@@ -84,6 +95,40 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         fetchCompanies();
     }, [open, isCrossCompany]);
 
+    const effectiveCompanyId = isCrossCompany ? selectedCompanyId : companyId;
+
+    // Load departments when company changes
+    useEffect(() => {
+        if (!open || !effectiveCompanyId) {
+            setDepartments([]);
+            setSelectedDepartmentId(null);
+            return;
+        }
+        const fetchDepts = async () => {
+            try {
+                const res = await callFetchDepartmentsByCompany(effectiveCompanyId);
+                setDepartments(res?.data ?? []);
+            } catch {}
+        };
+        fetchDepts();
+    }, [open, effectiveCompanyId]);
+
+    // Load sections when department changes
+    useEffect(() => {
+        if (!open || !selectedDepartmentId) {
+            setSections([]);
+            setSelectedSectionId(null);
+            return;
+        }
+        const fetchSections = async () => {
+            try {
+                const res = await callFetchSectionsByDepartment(selectedDepartmentId);
+                setSections(res?.data ?? []);
+            } catch {}
+        };
+        fetchSections();
+    }, [open, selectedDepartmentId]);
+
     const loadUsers = async () => {
         setLoading(true);
         try {
@@ -95,6 +140,12 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                 }
                 if (selectedCompanyId) {
                     query += `&companyId=${selectedCompanyId}`;
+                }
+                if (selectedDepartmentId) {
+                    query += `&departmentId=${selectedDepartmentId}`;
+                }
+                if (selectedSectionId) {
+                    query += `&sectionId=${selectedSectionId}`;
                 }
 
                 // Gọi API mới
@@ -132,6 +183,8 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         name: p.user?.name ?? p.name ?? "",
                         email: p.user?.email ?? p.email ?? "",
                         department: p.department?.name,
+                        departmentId: p.department?.id,
+                        sectionId: p.section?.id,
                     }));
                 setAllUsers(users);
                 setTotal(users.length);
@@ -148,7 +201,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         if (!isCrossCompany && !companyId) return;
 
         // If not cross-company and cachedUsers is available, use it (avoid duplicate API call)
-        if (!isCrossCompany && cachedUsers && cachedUsers.size > 0) {
+        if (!isCrossCompany && cachedUsers && cachedUsers.size > 0 && allUsers.length === 0) {
             const users = Array.from(cachedUsers.values());
             setAllUsers(users);
             setTotal(users.length);
@@ -157,21 +210,32 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         }
 
         loadUsers();
-    }, [open, page, search, selectedCompanyId, companyId, isCrossCompany]);
+    }, [open, page, search, selectedCompanyId, companyId, isCrossCompany, selectedDepartmentId, selectedSectionId]);
 
     const filtered = useMemo(() => {
-        if (isCrossCompany) {
-            return allUsers;
+        let list = allUsers;
+        if (!isCrossCompany) {
+            if (selectedDepartmentId) {
+                list = list.filter((u) => u.departmentId === selectedDepartmentId);
+            }
+            if (selectedSectionId) {
+                list = list.filter((u) => u.sectionId === selectedSectionId);
+            }
         }
+        
+        if (isCrossCompany) {
+            return list;
+        }
+        
         const q = search.toLowerCase().trim();
-        if (!q) return allUsers;
-        return allUsers.filter(
+        if (!q) return list;
+        return list.filter(
             (u) =>
                 u.name.toLowerCase().includes(q) ||
                 u.email.toLowerCase().includes(q) ||
                 u.department?.toLowerCase().includes(q)
         );
-    }, [allUsers, search, isCrossCompany]);
+    }, [allUsers, search, isCrossCompany, selectedDepartmentId, selectedSectionId]);
 
     const paginated = useMemo(() => {
         if (isCrossCompany) {
@@ -283,9 +347,40 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                 value={selectedCompanyId}
                                 onChange={(val) => {
                                     setSelectedCompanyId(val);
+                                    setSelectedDepartmentId(null);
+                                    setSelectedSectionId(null);
                                     setPage(1); // Reset về trang 1 khi đổi bộ lọc
                                 }}
                                 options={companies.map(c => ({ label: c.name, value: c.id }))}
+                            />
+                        </div>
+                    )}
+                    
+                    {(isCrossCompany ? selectedCompanyId : companyId) && (
+                        <div style={{ padding: "8px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", gap: 8 }}>
+                            <Select
+                                placeholder="Lọc theo phòng ban"
+                                allowClear
+                                style={{ flex: 1 }}
+                                value={selectedDepartmentId}
+                                onChange={(val) => {
+                                    setSelectedDepartmentId(val);
+                                    setSelectedSectionId(null);
+                                    setPage(1);
+                                }}
+                                options={departments.map(d => ({ label: d.name, value: d.id }))}
+                            />
+                            <Select
+                                placeholder="Lọc theo bộ phận"
+                                allowClear
+                                style={{ flex: 1 }}
+                                value={selectedSectionId}
+                                onChange={(val) => {
+                                    setSelectedSectionId(val);
+                                    setPage(1);
+                                }}
+                                options={sections.map(s => ({ label: s.name, value: s.id }))}
+                                disabled={!selectedDepartmentId}
                             />
                         </div>
                     )}

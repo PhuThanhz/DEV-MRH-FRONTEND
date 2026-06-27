@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
+import { useSearchParams } from "react-router-dom";
 
 import {
     useCompanyProceduresWithFilterQuery,
@@ -37,6 +38,22 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
     // ── Print mode & selection ──
     const [printMode, setPrintMode] = useState(false);
     const [selectedRows, setSelectedRows] = useState<IProcedure[]>([]);
+
+    // ── Handle Auto-Open View Modal from URL ──
+    const [searchParams, setSearchParams] = useSearchParams();
+    useEffect(() => {
+        const viewIdStr = searchParams.get("viewId");
+        if (viewIdStr) {
+            const viewId = Number(viewIdStr);
+            if (!isNaN(viewId) && !openView) {
+                setDataInit({ id: viewId } as IProcedure);
+                setOpenView(true);
+                // Xóa param khỏi URL sau khi mở
+                searchParams.delete("viewId");
+                setSearchParams(searchParams, { replace: true });
+            }
+        }
+    }, [searchParams, setSearchParams, openView]);
 
     // ── Filter states ──
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
