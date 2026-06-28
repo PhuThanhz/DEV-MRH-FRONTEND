@@ -193,12 +193,12 @@ const AccountingDossierModal = ({
 
     return (
         <Modal
+            className="accounting-dossier-form-modal"
             open={open}
             title={initialValues?.id ? "Cập nhật bộ chứng từ" : "Tạo bộ chứng từ"}
             width={900}
             centered
             destroyOnClose
-            className="accounting-dossier-form-modal"
             onCancel={handleCancel}
             footer={[
                 <Button key="cancel" onClick={handleCancel}>
