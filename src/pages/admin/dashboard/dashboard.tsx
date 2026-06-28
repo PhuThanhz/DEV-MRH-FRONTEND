@@ -355,7 +355,7 @@ const DashboardPage = () => {
             <style>{S}</style>
 
             {/* KPI ROW */}
-            <div className="db-grid">
+            <div className="db-grid" data-guide-id="dashboard-kpi-row">
                 {isLoading
                     ? [0, 1, 2, 3].map(i => (
                         <div key={i} className="db-skeleton-kpi">
@@ -401,7 +401,7 @@ const DashboardPage = () => {
 
             {/* BOTTOM ROW */}
             <div className="db-sec">Tình trạng hồ sơ phòng ban</div>
-            <div className="db-bottom">
+            <div className="db-bottom" data-guide-id="dashboard-bottom-row">
 
                 {/* Pie card */}
                 <div className="db-card">

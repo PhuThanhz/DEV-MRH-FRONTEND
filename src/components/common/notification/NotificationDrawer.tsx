@@ -61,6 +61,8 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
             closable={false}
             bodyStyle={{ padding: 0, backgroundColor: "#f6f8fa", display: "flex", flexDirection: "column" }}
             headerStyle={{ display: "none" }}
+            drawerStyle={{ borderRadius: "24px 0 0 24px", overflow: "hidden" }}
+            maskStyle={{ backdropFilter: "blur(2px)" }}
         >
             {/* Custom Header matching Bitrix */}
             <div className="flex items-center px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-20">

@@ -185,7 +185,7 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
             <ModalForm
                 title={isEdit ? "Cập nhật bộ phận" : "Tạo mới bộ phận"}
                 open={openModal}
-                modalProps={{
+                modalProps={{ className: "section-form-modal", 
                     onCancel: handleReset,
                     destroyOnClose: true,
                     maskClosable: false,
@@ -194,7 +194,6 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
                     confirmLoading: isCreating || isUpdating,
                     width: modalWidth,
                     centered: true,
-                    className: "section-form-modal",
                     styles: {
                         mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.2)" },
                     },

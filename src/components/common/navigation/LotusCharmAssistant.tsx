@@ -185,8 +185,8 @@ const LotusCharmAssistant = () => {
         <div
             style={{
                 position: "fixed",
-                bottom: 0,
-                right: -10,
+                bottom: -5,
+                right: 15,
                 zIndex: 9999,
                 display: "flex",
                 flexDirection: "column",

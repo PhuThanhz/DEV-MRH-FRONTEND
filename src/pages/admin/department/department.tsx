@@ -322,7 +322,7 @@ const DepartmentPage = () => {
                                 data-guide-id="department-detail-button"
                                 type="text"
                                 size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                icon={<EyeOutlined data-guide-id="department-detail-button" style={{ color: "#1677ff", fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenView(true);

@@ -31,7 +31,7 @@ const SliderAdmin: React.FC<IProps> = ({
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [showScannerButton, setShowScannerButton] = useState<boolean>(() => {
         const saved = localStorage.getItem("qr-scan-enabled");
-        return saved !== null ? saved === "true" : true;
+        return saved !== null ? saved === "true" : false;
     });
 
     useEffect(() => {
@@ -140,7 +140,11 @@ const SliderAdmin: React.FC<IProps> = ({
                                 setShowScannerButton(checked);
                                 localStorage.setItem("qr-scan-enabled", String(checked));
                             }}
-                            onClick={(_, e) => e.stopPropagation()}
+                            onClick={(e: any) => {
+                                if (e && e.stopPropagation) {
+                                    e.stopPropagation();
+                                }
+                            }}
                             style={{
                                 backgroundColor: showScannerButton ? "#ec4899" : undefined,
                                 minWidth: 32,

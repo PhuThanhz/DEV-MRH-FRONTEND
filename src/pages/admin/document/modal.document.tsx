@@ -160,6 +160,7 @@ const ModalDocument = ({
     const selectedCategoryId = Form.useWatch("categoryId", form);
     const selectedIssuedDate = Form.useWatch("issuedDate", form);
     const issuedYear = selectedIssuedDate ? dayjs(selectedIssuedDate).year() : null;
+    const [isDocumentCodeTouched, setIsDocumentCodeTouched] = useState(false);
 
     const createMutation = useCreateDocumentMutation();
     const updateMutation = useUpdateDocumentMutation();
@@ -171,10 +172,10 @@ const ModalDocument = ({
     );
 
     useEffect(() => {
-        if (!isEdit && nextDocumentCode) {
+        if (!isEdit && nextDocumentCode && !isDocumentCodeTouched) {
             form.setFieldValue("documentCode", nextDocumentCode);
         }
-    }, [nextDocumentCode, isEdit, form]);
+    }, [nextDocumentCode, isEdit, form, isDocumentCodeTouched]);
 
     const { data: categoriesActive } = useDocumentCategoriesActiveQuery();
     const { data: companies } = useCompaniesQuery("page=1&size=100&sort=name,asc");
@@ -236,6 +237,7 @@ const ModalDocument = ({
         setUserCount(0);
         setExcludedUserCount(0);
         setActiveTab("info");
+        setIsDocumentCodeTouched(false);
     };
 
     useEffect(() => {
@@ -474,9 +476,6 @@ const ModalDocument = ({
                     message.error("Vui lòng chọn ít nhất 1 công ty được xem");
                     return;
                 }
-            } else if (!values.companyId) {
-                message.error("Vui lòng chọn công ty được xem");
-                return;
             }
         }
 
@@ -484,45 +483,60 @@ const ModalDocument = ({
             payload.procedureType = procedureType;
 
             if (procedureType === "COMPANY" || procedureType === "CONFIDENTIAL" || (procedureType === "DEPARTMENT" && !selectedCategory?.mappingProcedure)) {
-                const deptId = values.departmentId;
-                payload.departmentId = deptId || undefined;
+                if (!values.departmentId) {
+                    message.error("Vui lòng chọn phòng ban phụ trách / ban hành");
+                    return;
+                }
+                payload.departmentId = values.departmentId;
                 payload.sectionId = values.sectionId || undefined;
 
                 if (procedureType === "COMPANY" && isCrossCompany) {
+                    if (!resolvedTargetCompanyIds || resolvedTargetCompanyIds.length === 0) {
+                        message.error("Vui lòng chọn ít nhất 1 công ty được xem");
+                        return;
+                    }
                     payload.targetCompanyIds = resolvedTargetCompanyIds;
                 }
             }
 
             if (procedureType === "DEPARTMENT" && selectedCategory?.mappingProcedure) {
+                if (!values.departmentId) {
+                    message.error("Vui lòng chọn phòng ban ban hành");
+                    return;
+                }
                 payload.departmentIds = values.departmentIds || undefined;
-                payload.departmentId = values.departmentIds?.[0] || undefined;
+                payload.departmentId = values.departmentId;
                 payload.sectionId = values.sectionId || undefined;
             }
 
             if (procedureType === "CONFIDENTIAL") {
-                payload.userIds = resolvedUserIds?.length ? resolvedUserIds : undefined;
+                if (!resolvedUserIds || resolvedUserIds.length === 0) {
+                    message.error("Vui lòng chọn người được xem cho văn bản bảo mật");
+                    return;
+                }
+                payload.userIds = resolvedUserIds;
             } else if (resolvedUserIds?.length) {
                 payload.userIds = resolvedUserIds;
             }
         } else {
-            payload.departmentId = values.departmentId || undefined;
+            if (!values.departmentId) {
+                message.error("Vui lòng chọn phòng ban ban hành");
+                return;
+            }
+            payload.departmentId = values.departmentId;
             payload.sectionId = values.sectionId || undefined;
+            
             if (audienceScope === "COMPANY") {
                 if (isCrossCompany) {
                     payload.targetCompanyIds = resolvedTargetCompanyIds;
                     payload.procedureType = "COMPANY";
                 } else {
-                    if (!payload.departmentId) {
-                        message.error("Vui lòng chọn phòng ban ban hành để gắn văn bản cấp công ty");
-                        return;
-                    }
                     payload.procedureType = "COMPANY";
                 }
             }
             if (audienceScope === "DEPARTMENT") {
                 payload.procedureType = "DEPARTMENT";
                 payload.departmentIds = values.departmentIds || undefined;
-                payload.departmentId = values.departmentIds?.[0] || undefined;
             }
             if (audienceScope === "SELECTED_USERS") {
                 payload.procedureType = "CONFIDENTIAL";
@@ -548,9 +562,6 @@ const ModalDocument = ({
 
     const renderProcedureLocationFields = () => {
         if (!showProcedureFields || !procedureType) return null;
-
-        const singleDepartmentLabel =
-            procedureType === "COMPANY" ? "Phòng ban phụ trách" : "Phòng ban áp dụng";
 
         return (
             <>
@@ -591,41 +602,40 @@ const ModalDocument = ({
                         </Col>
                     )}
 
-                    {(procedureType === "COMPANY" || procedureType === "CONFIDENTIAL" || (procedureType === "DEPARTMENT" && !selectedCategory?.mappingProcedure)) && (
-                        <Col span={12}>
-                            <Form.Item
-                                label={procedureType === "DEPARTMENT" ? "Phòng ban áp dụng" : singleDepartmentLabel}
-                                name="departmentId"
-                                rules={[{ required: procedureType !== "COMPANY", message: "Vui lòng chọn phòng ban" }]}
-                            // extra removed per user request
-                            >
-                                <Select
-                                    placeholder="Chọn phòng ban"
-                                    options={departmentOptions}
-                                    onChange={handleDepartmentChange}
-                                    disabled={!selectedCompanyId}
-                                    showSearch
-                                    optionFilterProp="label"
-                                    allowClear
-                                />
-                            </Form.Item>
-                        </Col>
-                    )}
+                    <Col span={12}>
+                        <Form.Item
+                            label="Phòng ban ban hành"
+                            name="departmentId"
+                            rules={[{ required: true, message: "Vui lòng chọn phòng ban ban hành" }]}
+                        >
+                            <Select
+                                placeholder="Chọn phòng ban ban hành"
+                                options={departmentOptions}
+                                onChange={handleDepartmentChange}
+                                disabled={!selectedCompanyId}
+                                showSearch
+                                optionFilterProp="label"
+                                allowClear
+                            />
+                        </Form.Item>
+                    </Col>
 
                     {procedureType === "DEPARTMENT" && selectedCategory?.mappingProcedure && (
                         <Col span={12}>
                             <Form.Item
-                                label="Phòng ban"
+                                label="Phòng ban áp dụng"
                                 name="departmentIds"
-                                rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 phòng ban" }]}
+                                rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 phòng ban áp dụng" }]}
                             >
                                 <Select
-                                    placeholder="Chọn phòng ban"
+                                    placeholder="Chọn phòng ban được xem"
                                     options={departmentOptions}
                                     mode="multiple"
+                                    maxTagCount="responsive"
                                     disabled={!selectedCompanyId}
                                     showSearch
                                     optionFilterProp="label"
+                                    allowClear
                                 />
                             </Form.Item>
                         </Col>
@@ -664,10 +674,7 @@ const ModalDocument = ({
     const renderAudienceFields = () => {
         if (showProcedureFields) return null;
 
-        const needsDepartment = audienceScope === "DEPARTMENT";
         const needsUsers = audienceScope === "SELECTED_USERS";
-        const companyLabel = audienceScope === "COMPANY" ? "Công ty được xem" : "Công ty";
-        const departmentLabel = audienceScope === "DEPARTMENT" ? "Phòng ban được xem" : "Phòng ban ban hành";
 
         return (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -707,88 +714,60 @@ const ModalDocument = ({
                     </div>
                 </div>
 
-                {/* Fields theo scope */}
-                {audienceScope !== "PRIVATE" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {/* Công ty */}
-                        {!isCrossCompany && (
-                            <Form.Item label={companyLabel} name="companyId"
-                                rules={[{ required: audienceScope === "COMPANY", message: "Vui lòng chọn công ty" }]}
-                                style={{ marginBottom: 0 }}
-                            >
-                                <Select placeholder="Chọn công ty" options={companyOptions}
-                                    onChange={handleCompanyChange} allowClear showSearch optionFilterProp="label" />
-                            </Form.Item>
-                        )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+                    <Form.Item label="Công ty ban hành" name="companyId"
+                        rules={[{ required: true, message: "Vui lòng chọn công ty" }]}
+                        style={{ marginBottom: 0 }}
+                    >
+                        <Select placeholder="Chọn công ty" options={companyOptions}
+                            onChange={handleCompanyChange} allowClear showSearch optionFilterProp="label" />
+                    </Form.Item>
 
-                        {/* Công ty áp dụng — liên công ty */}
-                        {isCrossCompany && audienceScope === "COMPANY" && (
-                            <Form.Item label="Công ty được xem" name="targetCompanyIds"
-                                rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 công ty" }]}
-                                style={{ marginBottom: 0 }}
-                            >
-                                <Select mode="multiple" maxTagCount="responsive" placeholder="Chọn các công ty..."
-                                    options={companyOptions} allowClear showSearch optionFilterProp="label" />
-                            </Form.Item>
-                        )}
+                    {isCrossCompany && audienceScope === "COMPANY" && (
+                        <Form.Item label="Công ty được xem" name="targetCompanyIds"
+                            rules={[{ required: true, message: "Vui lòng chọn ít nhất 1 công ty" }]}
+                            style={{ marginBottom: 0 }}
+                        >
+                            <Select mode="multiple" maxTagCount="responsive" placeholder="Chọn các công ty..."
+                                options={companyOptions} allowClear showSearch optionFilterProp="label" />
+                        </Form.Item>
+                    )}
 
-                        {/* Phòng ban */}
-                        {(!isCrossCompany || audienceScope !== "COMPANY") && (
-                            <Form.Item
-                                label={departmentLabel}
-                                name={needsDepartment ? "departmentIds" : "departmentId"}
-                                rules={[{ required: needsDepartment, message: "Vui lòng chọn phòng ban" }]}
-                                extra={audienceScope === "COMPANY" ? "Phòng ban ban hành văn bản cấp công ty." : undefined}
-                                style={{ marginBottom: 0 }}
-                            >
-                                <Select
-                                    placeholder={needsDepartment ? "Chọn phòng ban được xem" : "Chọn phòng ban (tuỳ chọn)"}
-                                    options={departmentOptions}
-                                    mode={needsDepartment ? "multiple" : undefined}
-                                    maxTagCount="responsive"
-                                    onChange={(value) => {
-                                        if (Array.isArray(value)) {
-                                            setSelectedDepartmentId(value[0] ?? null);
-                                            form.setFieldValue("sectionId", undefined);
-                                        } else {
-                                            handleDepartmentChange(value);
-                                        }
-                                    }}
-                                    disabled={!selectedCompanyId}
-                                    allowClear showSearch optionFilterProp="label"
-                                />
-                            </Form.Item>
-                        )}
+                    <Form.Item label="Phòng ban ban hành" name="departmentId"
+                        rules={[{ required: true, message: "Vui lòng chọn phòng ban ban hành" }]}
+                        style={{ marginBottom: 0 }}
+                    >
+                        <Select placeholder="Chọn phòng ban ban hành" options={departmentOptions}
+                            onChange={handleDepartmentChange} disabled={!selectedCompanyId}
+                            allowClear showSearch optionFilterProp="label" />
+                    </Form.Item>
 
-                        {/* Bộ phận — chỉ khi cần */}
-                        {(audienceScope === "DEPARTMENT" || (audienceScope === "COMPANY" && !isCrossCompany)) && (
-                            <Form.Item label="Bộ phận" name="sectionId" style={{ marginBottom: 0 }}>
-                                <Select placeholder="Chọn bộ phận (tuỳ chọn)"
-                                    options={sectionOptions} disabled={!selectedDepartmentId}
-                                    allowClear showSearch optionFilterProp="label" />
-                            </Form.Item>
-                        )}
+                    <Form.Item label="Bộ phận" name="sectionId" style={{ marginBottom: 0 }}>
+                        <Select placeholder="Chọn bộ phận (tuỳ chọn)"
+                            options={sectionOptions} disabled={!selectedDepartmentId}
+                            allowClear showSearch optionFilterProp="label" />
+                    </Form.Item>
 
-                        {/* Người dùng được xem */}
-                        {needsUsers && (
-                            <>
-                                {!isCrossCompany && (
-                                    <Form.Item label="Phòng ban gợi ý" name="departmentId" style={{ marginBottom: 0 }}>
-                                        <Select placeholder="Lọc người dùng theo phòng ban (tuỳ chọn)"
-                                            options={departmentOptions} onChange={handleDepartmentChange}
-                                            disabled={!selectedCompanyId} allowClear showSearch optionFilterProp="label" />
-                                    </Form.Item>
-                                )}
-                                <UserSelectField
-                                    companyId={selectedCompanyId}
-                                    selectedUserCount={userCount}
-                                    onCountChange={setUserCount}
-                                    isCrossCompany={isCrossCompany}
-                                />
-                            </>
-                        )}
-                    </div>
-                )}
+                    {audienceScope === "DEPARTMENT" && (
+                        <Form.Item label="Phòng ban được xem" name="departmentIds"
+                            rules={[{ required: true, message: "Vui lòng chọn phòng ban được xem" }]}
+                            style={{ marginBottom: 0 }}
+                        >
+                            <Select mode="multiple" maxTagCount="responsive" placeholder="Chọn phòng ban được xem"
+                                options={departmentOptions} disabled={!selectedCompanyId}
+                                allowClear showSearch optionFilterProp="label" />
+                        </Form.Item>
+                    )}
+
+                    {needsUsers && (
+                        <UserSelectField
+                            companyId={selectedCompanyId}
+                            selectedUserCount={userCount}
+                            onCountChange={setUserCount}
+                            isCrossCompany={isCrossCompany}
+                        />
+                    )}
+                </div>
             </div>
         );
     };
@@ -994,7 +973,8 @@ const ModalDocument = ({
                                                     placeholder="VD: 01/2026/BC-MLV"
                                                     disabled={isEdit}
                                                     style={{ textTransform: "uppercase" }}
-                                                    suffix={!isEdit && <Tooltip title="Mã tự động sinh"><SyncOutlined style={{ color: '#1677ff' }} /></Tooltip>}
+                                                    onChange={() => setIsDocumentCodeTouched(true)}
+                                                    suffix={!isEdit && !isDocumentCodeTouched && <Tooltip title="Mã tự động sinh"><SyncOutlined style={{ color: '#1677ff' }} /></Tooltip>}
                                                 />
                                             </Form.Item>
                                         </Col>

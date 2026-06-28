@@ -13,9 +13,9 @@ File nay dung de quan ly cac huong dan tuong tac cho Lotus-chan. Guide content h
 
 ## Trang Tong Quan
 
-- [ ] Xem dashboard tong quan
-- [ ] Doc cac chi so cong ty/phong ban/bo phan
-- [ ] Xem tinh trang ho so phong ban
+- [x] Xem dashboard tong quan
+- [x] Doc cac chi so cong ty/phong ban/bo phan
+- [x] Xem tinh trang ho so phong ban
 - [x] Xu ly thong bao tu chuong notification
 
 ## Cong Ty
@@ -37,9 +37,9 @@ Guide nen tach rieng:
 ## Phong Ban
 
 - [x] Tao phong ban moi
-- [ ] Xem danh sach phong ban
+- [x] Xem danh sach phong ban
 - [ ] Tim kiem/loc phong ban
-- [ ] Xem chi tiet phong ban
+- [x] Xem chi tiet phong ban
 - [ ] Cap nhat phong ban
 - [ ] Gan chuc danh vao phong ban
 - [ ] Xem so do to chuc phong ban
@@ -50,17 +50,17 @@ Guide nen tach rieng:
 
 ## Bo Phan
 
-- [ ] Xem danh sach bo phan
-- [ ] Tao bo phan moi
+- [x] Xem danh sach bo phan
+- [x] Tao bo phan moi
 - [ ] Cap nhat bo phan
 - [ ] Gan chuc danh vao bo phan
 
 ## Nhan Vien
 
 - [x] Them nhan vien moi
-- [ ] Xem danh sach nhan vien
+- [x] Xem danh sach nhan vien
 - [ ] Tim kiem/loc nhan vien
-- [ ] Xem chi tiet nhan vien
+- [x] Xem chi tiet nhan vien
 - [ ] Cap nhat nhan vien
 - [ ] Gan tai khoan/vi tri cho nhan vien
 - [ ] Xem lo trinh nghe nghiep cua nhan vien
@@ -78,9 +78,9 @@ Guide nen tach rieng:
 ## Van Ban Va Tai Lieu
 
 - [x] Them van ban
-- [ ] Xem danh sach van ban
+- [x] Xem danh sach van ban
 - [ ] Tim kiem/loc van ban
-- [ ] Xem chi tiet van ban
+- [x] Xem chi tiet van ban
 - [ ] Tai xuong van ban
 - [ ] Chia se cong khai van ban
 - [ ] Them van ban vao kho ca nhan
@@ -89,10 +89,10 @@ Guide nen tach rieng:
 
 ## Quy Trinh
 
-- [ ] Xem danh sach quy trinh
-- [ ] Tao quy trinh moi
+- [x] Xem danh sach quy trinh
+- [x] Tao quy trinh moi
 - [ ] Cap nhat quy trinh
-- [ ] Xem chi tiet quy trinh
+- [x] Xem chi tiet quy trinh
 - [ ] Tai file quy trinh
 - [ ] Chia se quy trinh bang link/QR
 - [ ] Quet quy trinh bang QR
@@ -100,8 +100,8 @@ Guide nen tach rieng:
 
 ## Mo Ta Cong Viec / JD
 
-- [ ] Xem danh sach JD
-- [ ] Tao JD moi
+- [x] Xem danh sach JD
+- [x] Tao JD moi
 - [ ] Cap nhat JD
 - [ ] Gui JD duyet
 - [ ] Duyet JD trong inbox
@@ -110,8 +110,8 @@ Guide nen tach rieng:
 
 ## Chuc Danh Va Danh Muc
 
-- [ ] Xem danh sach chuc danh
-- [ ] Tao chuc danh moi
+- [x] Xem danh sach chuc danh
+- [x] Tao chuc danh moi
 - [ ] Cap nhat chuc danh
 - [ ] Tao bac chuc danh
 - [ ] Quan ly noi dung nang luc/KPI theo chuc danh
@@ -130,10 +130,10 @@ Guide nen tach rieng:
 
 ## Ke Toan Va Tai Chinh
 
-- [ ] Xem danh sach chung tu ke toan
-- [ ] Tao chung tu ke toan
+- [x] Xem danh sach chung tu ke toan
+- [x] Tao chung tu ke toan
 - [ ] Cap nhat chung tu ke toan
-- [ ] Tao bo chung tu ke toan
+- [x] Tao bo chung tu ke toan
 - [ ] Gan tai lieu vao bo chung tu
 - [ ] Tra cuu cong khai chung tu
 - [ ] Quan ly loai chung tu
@@ -142,8 +142,8 @@ Guide nen tach rieng:
 
 - [ ] Bat/tat nut quet quy trinh
 - [ ] Quet QR quy trinh
-- [ ] Mo command palette bang Cmd/Ctrl + K
-- [ ] Ghim nhanh va xem gan day
+- [x] Mo command palette bang Cmd/Ctrl + K
+- [x] Ghim nhanh va xem gan day
 - [ ] Mo trung tam huong dan tu Lotus-chan
 - [ ] Gui gop y qua Lotus-chan
 

@@ -155,7 +155,7 @@ const ModalAccountingDoc = ({
             form={form}
             onFinish={onFinish}
             submitter={dataInit?.isLocked ? false : undefined}
-            modalProps={{
+            modalProps={{ className: "accounting-doc-form-modal", 
                 destroyOnHidden: true,
                 maskClosable: false,
                 okText: isEdit ? "Cập nhật" : "Tạo mới",

@@ -249,13 +249,12 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
                     onOpenChange={setOpenModal}
                     form={form}
                     onFinish={submitEdit}
-                    modalProps={{
+                    modalProps={{ className: "job-title-form-modal", 
                         destroyOnClose: true,
                         maskClosable: false,
                         confirmLoading: isUpdating,
                         width: editWidth,
                         centered: true,
-                        className: "job-title-edit-modal",
                         styles: { mask: MODAL_MASK },
                     }}
                 >
