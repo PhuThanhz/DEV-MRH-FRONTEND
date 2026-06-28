@@ -19,16 +19,10 @@ const HOVER_TEXT = "#1a1a1a";
 const STYLE_PINK = { bg: "#ffffff", border: "#ffd6d9", color: "#e8637a" };
 
 const PALETTE = [
-    { bg: "#f6ffed", border: "#b7eb8f", color: "#389e0d" },
-    { bg: "#e6f4ff", border: "#91caff", color: "#0958d9" },
-    { bg: "#fff7e6", border: "#ffd591", color: "#d46b08" },
-    { bg: "#fff0f6", border: "#ffadd2", color: "#c41d7f" },
-    { bg: "#f9f0ff", border: "#d3adf7", color: "#531dab" },
-    { bg: "#e6fffb", border: "#87e8de", color: "#08979c" },
-    { bg: "#f5f5f5", border: "#d9d9d9", color: "#595959" },
+    { bg: "transparent", border: "#fecdd3", color: "#e8637a" } // Elegant Ghost Style
 ];
 
-const getPalette = (index: number) => PALETTE[index % PALETTE.length];
+const getPalette = () => PALETTE[0];
 
 const baseThStyle: React.CSSProperties = {
     padding: "10px 14px",
@@ -95,8 +89,8 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     const actionMap = useMemo(() => {
         const map: Record<string, { style: (typeof PALETTE)[0]; action: IProcessAction }> = {};
-        processActions.forEach((a, i) => {
-            if (a.code) map[a.code] = { style: getPalette(i), action: a };
+        processActions.forEach((a) => {
+            if (a.code) map[a.code] = { style: PALETTE[0], action: a };
         });
         return map;
     }, [processActions]);
@@ -160,25 +154,27 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     // ── Badge với Tooltip hiện tên + mô tả ────────────────────────────────────
     const renderBadge = (code: string | null) => {
-        if (!code) return <span style={{ color: "#cbd5e1", fontSize: 16 }}>—</span>;
+        if (!code) return <span style={{ color: "#e2e8f0", fontSize: 16 }}>—</span>;
 
         const entry = actionMap[code];
         const action = entry?.action;
+        const style = entry?.style || STYLE_PINK;
 
         const badge = (
             <span style={{
-                display: "inline-block",
-                padding: "2px 8px",
-                borderRadius: 5,
-                background: "#ffffff",
-                border: `1px solid ${STYLE_PINK.border}`,
-                color: STYLE_PINK.color,
-                fontWeight: 700,
-                fontSize: 11.5,
-                fontFamily: "monospace",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "3px 8px",
+                borderRadius: 4,
+                background: style.bg,
+                border: `1px solid ${style.border}`,
+                color: style.color,
+                fontWeight: 600,
+                fontSize: 12,
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                 letterSpacing: 0.5,
                 cursor: action ? "help" : "default",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.01)",
             }}>
                 {code}
             </span>
@@ -210,11 +206,11 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
         if (processActions.length === 0) return null;
         return (
             <div style={{
-                marginBottom: 20,
+                marginBottom: 24,
                 borderRadius: 8,
+                background: "#ffffff",
                 border: "1px solid #e2e8f0",
-                overflow: "hidden",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
             }}>
                 <button
                     onClick={() => setLegendOpen((v) => !v)}
@@ -222,85 +218,77 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                         width: "100%",
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        justifyContent: "space-between",
                         padding: "12px 18px",
                         background: "#f8fafc",
                         border: "none",
                         borderBottom: legendOpen ? "1px solid #e2e8f0" : "none",
+                        borderRadius: legendOpen ? "8px 8px 0 0" : "8px",
                         cursor: "pointer",
-                        fontWeight: 600,
-                        fontSize: 13,
-                        color: "#475569",
-                        textAlign: "left",
                         outline: "none",
                         transition: "background 0.15s",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "#f8fafc")}
                 >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                            Chú giải phân quyền
+                        </span>
+                        <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 400 }}>
+                            (Click để {legendOpen ? "thu gọn" : "xem chi tiết"})
+                        </span>
+                    </div>
                     <span style={{
-                        display: "inline-block",
-                        transform: legendOpen ? "rotate(90deg)" : "rotate(0deg)",
-                        transition: "transform 0.18s",
+                        transform: legendOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
                         fontSize: 10,
                         color: "#94a3b8",
                     }}>
-                        ▶
+                        ▼
                     </span>
-                    Giải thích các mức quyền (click để xem)
                 </button>
 
                 {legendOpen && (
                     <div style={{
-                        padding: "16px 20px",
+                        padding: "20px 24px",
                         background: "#ffffff",
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                        gap: "12px 20px",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                        gap: "20px 32px",
+                        borderRadius: "0 0 8px 8px",
                     }}>
-                        {processActions.map((a) => {
-                            return (
-                                <div key={a.code} style={{
-                                    display: "flex",
-                                    alignItems: "flex-start",
-                                    gap: 12,
-                                    padding: "12px 14px",
-                                    borderRadius: 8,
-                                    background: "#ffffff",
-                                    border: "1px solid #e2e8f0",
-                                    boxShadow: "0 1px 2px rgba(0,0,0,0.01)",
+                        {processActions.map((a) => (
+                            <div key={a.code} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                                <span style={{
+                                    flexShrink: 0,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: 40,
+                                    padding: "4px 0",
+                                    borderRadius: 6,
+                                    background: actionMap[a.code]?.style.bg || "transparent",
+                                    border: `1px solid ${actionMap[a.code]?.style.border || "#fecdd3"}`,
+                                    color: actionMap[a.code]?.style.color || "#e8637a",
+                                    fontWeight: 700,
+                                    fontSize: 11,
+                                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
                                 }}>
-                                    <span style={{
-                                        flexShrink: 0,
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: 44,
-                                        padding: "3px 6px",
-                                        borderRadius: 4,
-                                        background: "#f8fafc",
-                                        border: "1px solid #cbd5e1",
-                                        color: "#475569",
-                                        fontWeight: 800,
-                                        fontSize: 11,
-                                        fontFamily: "monospace",
-                                        textAlign: "center",
-                                    }}>
-                                        {a.code}
-                                    </span>
-                                    <div>
-                                        <div style={{ fontWeight: 700, fontSize: 13, color: "#334155", lineHeight: 1.3 }}>
-                                            {a.name ?? a.code}
-                                        </div>
-                                        {a.shortDescription && (
-                                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, lineHeight: 1.5 }}>
-                                                {a.shortDescription}
-                                            </div>
-                                        )}
+                                    {a.code}
+                                </span>
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a", lineHeight: 1.3 }}>
+                                        {a.name ?? a.code}
                                     </div>
+                                    {a.shortDescription && (
+                                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, lineHeight: 1.5 }}>
+                                            {a.shortDescription}
+                                        </div>
+                                    )}
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
@@ -357,26 +345,12 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                 }}>
                     <thead>
                         <tr>
-                            {!isMobile && (
-                                <th style={{
-                                    ...baseThStyle,
-                                    position: "sticky",
-                                    left: 0,
-                                    zIndex: 4,
-                                    minWidth: COL1_W,
-                                    maxWidth: COL1_W,
-                                    width: COL1_W,
-                                    borderRight: "1px solid #f0f0f0",
-                                    background: "#ffffff",
-                                }}>
-                                    Danh mục
-                                </th>
-                            )}
+                            {/* Đã gỡ bỏ cột Danh mục vì nó trùng lặp với Tab Category đã chọn phía trên */}
 
                             <th style={{
                                 ...baseThStyle,
                                 position: "sticky",
-                                left: COL1_W,
+                                left: 0,
                                 zIndex: 4,
                                 minWidth: COL2_W,
                                 maxWidth: COL2_W,
@@ -425,31 +399,12 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
                             return (
                                 <tr key={row.contentId}>
-                                    {!isMobile && (
-                                        <td style={{
-                                            ...baseTdStyle,
-                                            position: "sticky",
-                                            left: 0,
-                                            zIndex: 1,
-                                            background: rowBg,
-                                            fontWeight: 500,
-                                            whiteSpace: "nowrap",
-                                            borderRight: "1px solid #f0f0f0",
-                                            color: "#333",
-                                            minWidth: COL1_W,
-                                            maxWidth: COL1_W,
-                                            width: COL1_W,
-                                            overflow: "hidden",
-                                            textOverflow: "ellipsis",
-                                        }}>
-                                            {matrix.categoryName}
-                                        </td>
-                                    )}
+                                    {/* Đã gỡ bỏ cột Danh mục */}
 
                                     <td style={{
                                         ...baseTdStyle,
                                         position: "sticky",
-                                        left: COL1_W,
+                                        left: 0,
                                         zIndex: 1,
                                         background: rowBg,
                                         borderRight: "2px solid #e8e8e8",
@@ -493,31 +448,6 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     return (
         <div>
-            {/* ── HEADER ── */}
-            <div style={{
-                marginBottom: 20,
-                padding: "14px 18px",
-                borderRadius: 10,
-                border: "1px solid #ffd6d9",
-                background: "#fff5f7",
-                minWidth: 0,
-                overflow: "hidden",
-            }}>
-                <div style={{ fontSize: 12, color: ACCENT, fontWeight: 500 }}>
-                    Phân quyền phòng ban
-                </div>
-                <div style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: "#1a1a1a",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                }}>
-                    {departmentName}
-                </div>
-            </div>
-
             {/* ── LEGEND ── */}
             {renderLegend()}
 
@@ -549,18 +479,20 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
                                             setSearchText("");
                                         }}
                                         style={{
-                                            padding: "7px 16px",
+                                            padding: "8px 16px",
                                             borderRadius: 6,
-                                            border: active ? `2px solid ${ACCENT}` : "1px solid #d9d9d9",
-                                            background: active ? "#fff0f2" : "#fff",
-                                            color: active ? ACCENT : "#555",
-                                            fontWeight: active ? 700 : 400,
+                                            border: active ? `1px solid ${ACCENT}` : "1px solid transparent",
+                                            background: active ? "#fff1f4" : "transparent",
+                                            color: active ? ACCENT : "#4b5563",
+                                            fontWeight: active ? 600 : 500,
                                             cursor: "pointer",
                                             fontSize: 13,
                                             transition: "all 0.15s",
                                             whiteSpace: "nowrap",
                                             flexShrink: 0,
                                         }}
+                                        onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "#f3f4f6"; }}
+                                        onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
                                     >
                                         {cat.name}
                                     </button>

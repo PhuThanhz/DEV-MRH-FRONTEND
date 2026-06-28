@@ -8,15 +8,10 @@ import {
     StopOutlined,
     PlusOutlined,
     AimOutlined,
-    ClusterOutlined,
-    SettingOutlined,
-    ApartmentOutlined,
-    LockOutlined,
-    RiseOutlined,
-    DollarOutlined,
 } from "@ant-design/icons";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import type React from "react";
+import { CRUD_ACTION_GUIDES } from "./crudActionGuides";
 
 export type LotusGuideStep = {
     id: string;
@@ -36,7 +31,12 @@ export type LotusGuide = {
     routePrefix: string; // Used for force navigation
     exactRoute?: boolean;
     routePattern?: RegExp; // Used to match current page strictly
-    requiredPermission?: any;
+    allowedRoutes?: RegExp[]; // Guide stays alive when navigating to these routes mid-flow
+    requiredPermission?: {
+        apiPath: string;
+        method: string;
+        module?: string;
+    };
     icon: React.ReactNode;
     steps: LotusGuideStep[];
 };
@@ -67,6 +67,13 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 placement: "left",
                 actionType: "click",
             },
+            {
+                id: "department-add-form",
+                targetId: ".department-form-modal .ant-modal-content",
+                title: "Bước 3: Điền thông tin",
+                description: "Nhập các thông tin cần thiết vào form này, sau đó nhấn nút Lưu lại để hoàn tất.",
+                placement: "right",
+            },
         ],
     },
     {
@@ -93,6 +100,13 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 placement: "left",
                 actionType: "click",
             },
+            {
+                id: "employee-add-form",
+                targetId: ".employee-modal .ant-modal-content",
+                title: "Bước 3: Điền thông tin",
+                description: "Nhập thông tin nhân viên vào form này, sau đó nhấn nút lưu để hoàn tất.",
+                placement: "right",
+            },
         ],
     },
     {
@@ -118,6 +132,13 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 description: "Nhấn VÀO NÚT NÀY để tạo văn bản mới.",
                 placement: "left",
                 actionType: "click",
+            },
+            {
+                id: "document-add-form",
+                targetId: ".document-form-modal .ant-modal-content",
+                title: "Bước 3: Điền thông tin",
+                description: "Nhập thông tin văn bản và tải file đính kèm nếu cần, sau đó lưu lại để hoàn tất.",
+                placement: "right",
             },
         ],
     },
@@ -225,7 +246,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Xem sơ đồ tổ chức",
                 description: "Chọn mục Sơ đồ tổ chức để xem cấu trúc các phòng ban và nhân sự.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -285,19 +305,20 @@ export const LOTUS_GUIDES: LotusGuide[] = [
     },
     {
         id: "company-org-chart-edit-view",
-        title: "Thêm vị trí sơ đồ",
-        description: "Hướng dẫn cách truy cập sơ đồ và thêm mới một phòng ban/vị trí.",
+        title: "Thêm vị trí sơ đồ công ty",
+        description: "Hướng dẫn từng bước vào sơ đồ tổ chức và thêm mới một vị trí.",
         module: "Công ty",
         subModule: "Sơ đồ & Tổ chức",
         routePrefix: "/admin/company",
         exactRoute: true,
+        allowedRoutes: [/^\/admin\/companies\/[^/]+\/org-chart/],
         icon: <PlusOutlined />,
         steps: [
             {
                 id: "company-org-chart-edit-step-1",
                 targetId: "company-more-button",
                 title: "Bước 1: Mở menu tùy chọn",
-                description: "Trước tiên, nhấn vào biểu tượng 3 chấm của một công ty để xem các tùy chọn.",
+                description: "Nhấn vào biểu tượng 3 chấm của một công ty để xem các tùy chọn.",
                 placement: "left",
                 actionType: "click",
             },
@@ -305,7 +326,7 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 id: "company-org-chart-edit-step-2",
                 targetId: ".guide-company-org-chart",
                 title: "Bước 2: Vào sơ đồ tổ chức",
-                description: "Chọn mục 'Sơ đồ tổ chức' để truy cập vào màn hình sơ đồ của công ty này.",
+                description: "Chọn 'Sơ đồ tổ chức' để vào trang quản lý sơ đồ của công ty.",
                 placement: "left",
                 actionType: "click",
             },
@@ -313,15 +334,43 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 id: "company-org-chart-edit-step-3",
                 targetId: "org-chart-add-button",
                 title: "Bước 3: Nhấn Thêm vị trí",
-                description: "Tại màn hình sơ đồ, nhấn vào nút 'Thêm vị trí' trên thanh công cụ.",
+                description: "Nhấn nút 'Thêm vị trí' trên thanh công cụ để mở form tạo mới.",
                 placement: "bottom",
                 actionType: "click",
             },
             {
                 id: "company-org-chart-edit-step-4",
                 targetId: ".org-node-form-modal .ant-modal-content",
-                title: "Bước 4: Điền thông tin",
-                description: "Nhập thông tin cho phòng ban/vị trí mới và nhấn Tạo để hoàn tất.",
+                title: "Bước 4: Điền thông tin vị trí",
+                description: "Nhập tên phòng ban hoặc vị trí mới và nhấn Tạo để hoàn tất.",
+                placement: "left",
+            },
+        ],
+    },
+    {
+        id: "company-org-chart-add-node",
+        title: "Thêm vị trí vào sơ đồ",
+        description: "Hướng dẫn thêm mới một phòng ban hoặc vị trí trong sơ đồ tổ chức công ty.",
+        module: "Công ty",
+        subModule: "Sơ đồ & Tổ chức",
+        routePrefix: "/admin/companies",
+        exactRoute: false,
+        routePattern: /^\/admin\/companies\/[^/]+\/org-chart/,
+        icon: <PlusOutlined />,
+        steps: [
+            {
+                id: "company-org-chart-add-node-step-1",
+                targetId: "org-chart-add-button",
+                title: "Bước 1: Nhấn Thêm vị trí",
+                description: "Nhấn nút 'Thêm vị trí' trên thanh công cụ để mở form tạo mới.",
+                placement: "bottom",
+                actionType: "click",
+            },
+            {
+                id: "company-org-chart-add-node-step-2",
+                targetId: ".org-node-form-modal .ant-modal-content",
+                title: "Bước 2: Điền thông tin vị trí",
+                description: "Nhập tên phòng ban hoặc vị trí mới và nhấn Tạo để hoàn tất.",
                 placement: "left",
             },
         ],
@@ -420,19 +469,20 @@ export const LOTUS_GUIDES: LotusGuide[] = [
     {
         id: "department-org-chart-edit-view",
         title: "Thêm vị trí sơ đồ phòng ban",
-        description: "Hướng dẫn cách truy cập sơ đồ và thêm mới một vị trí trong phòng ban.",
+        description: "Hướng dẫn từng bước vào sơ đồ tổ chức và thêm mới một vị trí trong phòng ban.",
         module: "Phòng ban",
         subModule: "Sơ đồ & Tổ chức",
         routePrefix: "/admin/departments",
         exactRoute: true,
         routePattern: /^\/admin\/departments$/,
+        allowedRoutes: [/^\/admin\/departments\/[^/]+\/org-chart/],
         icon: <PlusOutlined />,
         steps: [
             {
                 id: "department-org-chart-edit-step-1",
                 targetId: "department-more-button",
                 title: "Bước 1: Mở menu tùy chọn",
-                description: "Nhấn vào biểu tượng 3 chấm của một phòng ban để xem các tùy chọn. (Lưu ý: Cần có ít nhất 1 phòng ban trong danh sách)",
+                description: "Nhấn vào biểu tượng 3 chấm của một phòng ban để xem các tùy chọn. (Cần có ít nhất 1 phòng ban trong danh sách)",
                 placement: "left",
                 actionType: "click",
             },
@@ -440,7 +490,7 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 id: "department-org-chart-edit-step-2",
                 targetId: ".guide-department-org-chart",
                 title: "Bước 2: Vào sơ đồ tổ chức",
-                description: "Chọn mục 'Sơ đồ tổ chức' để truy cập vào màn hình sơ đồ của phòng ban này.",
+                description: "Chọn 'Sơ đồ tổ chức' để vào trang quản lý sơ đồ của phòng ban.",
                 placement: "left",
                 actionType: "click",
             },
@@ -448,15 +498,43 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 id: "department-org-chart-edit-step-3",
                 targetId: "org-chart-add-button",
                 title: "Bước 3: Nhấn Thêm vị trí",
-                description: "Tại màn hình sơ đồ, nhấn vào nút 'Thêm vị trí' trên thanh công cụ.",
+                description: "Nhấn nút 'Thêm vị trí' trên thanh công cụ để mở form tạo mới.",
                 placement: "bottom",
                 actionType: "click",
             },
             {
                 id: "department-org-chart-edit-step-4",
                 targetId: ".org-node-form-modal .ant-modal-content",
-                title: "Bước 4: Điền thông tin",
-                description: "Nhập thông tin cho vị trí mới và nhấn Tạo để hoàn tất.",
+                title: "Bước 4: Điền thông tin vị trí",
+                description: "Nhập tên vị trí mới và nhấn Tạo để hoàn tất.",
+                placement: "left",
+            },
+        ],
+    },
+    {
+        id: "department-org-chart-add-node",
+        title: "Thêm vị trí vào sơ đồ phòng ban",
+        description: "Hướng dẫn thêm mới một vị trí trong sơ đồ tổ chức phòng ban.",
+        module: "Phòng ban",
+        subModule: "Sơ đồ & Tổ chức",
+        routePrefix: "/admin/departments",
+        exactRoute: false,
+        routePattern: /^\/admin\/departments\/[^/]+\/org-chart/,
+        icon: <PlusOutlined />,
+        steps: [
+            {
+                id: "department-org-chart-add-node-step-1",
+                targetId: "org-chart-add-button",
+                title: "Bước 1: Nhấn Thêm vị trí",
+                description: "Nhấn nút 'Thêm vị trí' trên thanh công cụ để mở form tạo mới.",
+                placement: "bottom",
+                actionType: "click",
+            },
+            {
+                id: "department-org-chart-add-node-step-2",
+                targetId: ".org-node-form-modal .ant-modal-content",
+                title: "Bước 2: Điền thông tin vị trí",
+                description: "Nhập tên vị trí mới và nhấn Tạo để hoàn tất.",
                 placement: "left",
             },
         ],
@@ -487,7 +565,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Mục tiêu",
                 description: "Chọn mục 'Mục tiêu - Nhiệm vụ' để truy cập vào phân hệ OKRs của phòng ban.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -553,7 +630,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Cấu hình chức danh",
                 description: "Nhấn vào đây để quản lý danh sách chức danh của phòng ban.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -582,7 +658,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Quy trình",
                 description: "Nhấn vào đây để xem các quy trình làm việc của phòng ban.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -611,7 +686,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Phân quyền",
                 description: "Nhấn vào đây để mở modal phân quyền và thiết lập quyền hạn.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -640,7 +714,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Lộ trình thăng tiến",
                 description: "Nhấn vào đây để xem các nấc thang phát triển sự nghiệp.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -669,7 +742,6 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Khung lương",
                 description: "Nhấn vào đây để vào giao diện quản lý ngạch/bậc lương.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
@@ -698,10 +770,10 @@ export const LOTUS_GUIDES: LotusGuide[] = [
                 title: "Bước 2: Chọn Bản đồ chức danh",
                 description: "Nhấn vào đây để xem bản đồ lưới nhân sự/chức danh.",
                 placement: "left",
-                actionType: "click",
             },
         ],
     },
+    ...CRUD_ACTION_GUIDES,
 ];
 
 export const getGuidesForPath = (path: string) => {
@@ -715,6 +787,11 @@ export const getGuidesForPath = (path: string) => {
         return path === guide.routePrefix || path.startsWith(`${guide.routePrefix}/`);
     });
 };
+
+export const getFilteredGuidesForPath = (
+    path: string,
+    canStartGuide: (guide: LotusGuide) => boolean
+) => getGuidesForPath(path).filter(canStartGuide);
 
 export const findGuideById = (id: string) =>
     LOTUS_GUIDES.find((guide) => guide.id === id);

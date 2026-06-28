@@ -14,6 +14,7 @@ import {
     callSendDocumentShareEmail,
     callFetchDocumentShareTokenAccessLogs,
     callMarkDocumentRead,
+    callGetNextDocumentCode,
 } from "@/config/api";
 import type {
     IDocument,
@@ -93,6 +94,19 @@ export const useDocumentsByDepartmentQuery = (departmentId?: number) => {
             const res = await callFetchDocumentsByDepartment(departmentId);
             if (!res?.data) throw new Error("Không thể lấy danh sách văn bản theo phòng ban");
             return res.data as IDocument[];
+        },
+    });
+};
+
+/* ===================== FETCH NEXT CODE ===================== */
+export const useGetNextDocumentCodeQuery = (companyId: number | null, categoryId: number | undefined, year: number | null) => {
+    return useQuery({
+        queryKey: ["next-document-code", companyId, categoryId, year],
+        enabled: !!companyId && !!categoryId && !!year,
+        queryFn: async () => {
+            if (!companyId || !categoryId || !year) throw new Error("Thiếu tham số");
+            const res = await callGetNextDocumentCode(companyId, categoryId, year);
+            return res?.data?.code || null;
         },
     });
 };

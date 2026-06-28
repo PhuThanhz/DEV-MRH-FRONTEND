@@ -28,7 +28,7 @@ const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
     const [loading, setLoading] = useState(false);
     const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    
+
     const [folderDocs, setFolderDocs] = useState<any[]>([]);
     const [loadingDocs, setLoadingDocs] = useState(false);
 

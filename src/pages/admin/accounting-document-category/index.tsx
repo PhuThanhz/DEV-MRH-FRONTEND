@@ -207,6 +207,7 @@ const AccountingDocumentCategoryPage = () => {
                         hideChildren
                     >
                         <EditOutlined
+                            data-guide-id="accounting-document-category-edit-button"
                             style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -233,6 +234,7 @@ const AccountingDocumentCategoryPage = () => {
                             }
                         >
                             <PoweroffOutlined
+                                data-guide-id="accounting-document-category-status-button"
                                 style={{
                                     fontSize: 18,
                                     color: entity.active ? "#52c41a" : "#d9d9d9",
@@ -258,6 +260,7 @@ const AccountingDocumentCategoryPage = () => {
                             }
                         >
                             <DeleteOutlined
+                                data-guide-id="accounting-document-category-delete-button"
                                 style={{
                                     fontSize: 18,
                                     color: "#ff4d4f",
@@ -286,6 +289,9 @@ const AccountingDocumentCategoryPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.ACCOUNTING_DOCUMENT_CATEGORIES.CREATE}
+                        guideSearchId="accounting-document-category-search-input"
+                        guideAddId="accounting-document-category-add-button"
                     />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect

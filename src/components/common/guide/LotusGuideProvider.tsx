@@ -1,14 +1,37 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "antd";
 import { CloseOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { findGuideById, type LotusGuide } from "./guideRegistry";
+import useGuidePermission from "@/hooks/useGuidePermission";
+
+// Inject keyframes once at module load — không re-insert mỗi render
+const STYLE_ID = "lotus-guide-keyframes";
+if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+        @keyframes lotusGuideStepIn {
+            from { opacity: 0; transform: translate3d(0, 8px, 0); filter: blur(1px); }
+            to   { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+const GUIDE_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+const GUIDE_MOVE = `transform 0.64s ${GUIDE_EASE}`;
+const GUIDE_SIZE = `width 0.64s ${GUIDE_EASE}, height 0.64s ${GUIDE_EASE}, border-radius 0.64s ${GUIDE_EASE}`;
+const GUIDE_MODAL_SETTLE_MS = 300;
+const GUIDE_TARGET_SETTLE_MS = 80;
+const GUIDE_NEXT_TARGET_TIMEOUT_MS = 2400;
 
 type Rect = {
     top: number;
     left: number;
     width: number;
     height: number;
+    borderRadius?: string;
 };
 
 type LotusGuideContextValue = {
@@ -16,12 +39,13 @@ type LotusGuideContextValue = {
     activeStepIndex: number;
     startGuide: (guideId: string) => void;
     stopGuide: () => void;
+    canStartGuide: (guide: LotusGuide) => boolean;
 };
 
 const LotusGuideContext = createContext<LotusGuideContextValue | null>(null);
 
 const getTargetRect = (targetId: string): Rect | null => {
-    let elements = document.querySelectorAll(`[data-guide-id="${targetId}"]`);
+    const elements = document.querySelectorAll(`[data-guide-id="${targetId}"]`);
     let element: HTMLElement | null = null;
     for (let i = 0; i < elements.length; i++) {
         const r = elements[i].getBoundingClientRect();
@@ -31,7 +55,7 @@ const getTargetRect = (targetId: string): Rect | null => {
         }
     }
     if (!element && (targetId.startsWith(".") || targetId.startsWith("#"))) {
-        let fallbackElements = document.querySelectorAll(targetId);
+        const fallbackElements = document.querySelectorAll(targetId);
         for (let i = 0; i < fallbackElements.length; i++) {
             const r = fallbackElements[i].getBoundingClientRect();
             if (r.width > 0 && r.height > 0) {
@@ -42,12 +66,30 @@ const getTargetRect = (targetId: string): Rect | null => {
     }
     if (!element) return null;
     const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
     return {
         top: rect.top + window.scrollY,
         left: rect.left + window.scrollX,
         width: rect.width,
         height: rect.height,
+        borderRadius: style.borderRadius,
     };
+};
+
+const getTargetElement = (targetId: string): HTMLElement | null => {
+    const guideElements = document.querySelectorAll(`[data-guide-id="${targetId}"]`);
+    for (let i = 0; i < guideElements.length; i++) {
+        const rect = guideElements[i].getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) return guideElements[i] as HTMLElement;
+    }
+    if (targetId.startsWith(".") || targetId.startsWith("#")) {
+        const fallbackElements = document.querySelectorAll(targetId);
+        for (let i = 0; i < fallbackElements.length; i++) {
+            const rect = fallbackElements[i].getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) return fallbackElements[i] as HTMLElement;
+        }
+    }
+    return null;
 };
 
 const LotusGuidePlayer: React.FC<{
@@ -58,15 +100,35 @@ const LotusGuidePlayer: React.FC<{
 }> = ({ guide, stepIndex, setStepIndex, onClose }) => {
     const [targetRect, setTargetRect] = useState<Rect | null>(null);
     const [missingTarget, setMissingTarget] = useState(false);
+    const pendingAdvanceRef = useRef<number | null>(null);
+    const pendingAdvanceObserverRef = useRef<MutationObserver | null>(null);
     const step = guide.steps[stepIndex];
     const total = guide.steps.length;
+
+    const clearPendingAdvance = useCallback(() => {
+        if (pendingAdvanceRef.current !== null) {
+            window.clearTimeout(pendingAdvanceRef.current);
+            pendingAdvanceRef.current = null;
+        }
+        pendingAdvanceObserverRef.current?.disconnect();
+        pendingAdvanceObserverRef.current = null;
+    }, []);
+
+    const closeCurrentModalTarget = useCallback(() => {
+        if (!step?.targetId.includes("ant-modal-content")) return false;
+        const element = getTargetElement(step.targetId);
+        const modal = element?.closest(".ant-modal") as HTMLElement | null;
+        const closeButton = modal?.querySelector(".ant-modal-close") as HTMLButtonElement | null;
+        closeButton?.click();
+        return !!closeButton;
+    }, [step]);
 
     const updateTarget = useCallback(() => {
         if (!step) return;
         const rect = getTargetRect(step.targetId);
         setTargetRect((prev) => {
             if (!prev && !rect) return prev;
-            if (prev && rect && prev.top === rect.top && prev.left === rect.left && prev.width === rect.width && prev.height === rect.height) {
+            if (prev && rect && prev.top === rect.top && prev.left === rect.left && prev.width === rect.width && prev.height === rect.height && prev.borderRadius === rect.borderRadius) {
                 return prev;
             }
             return rect;
@@ -76,31 +138,124 @@ const LotusGuidePlayer: React.FC<{
 
     useEffect(() => {
         if (!step) return;
+        setMissingTarget(false);
         let element = document.querySelector(`[data-guide-id="${step.targetId}"]`) as HTMLElement | null;
         if (!element && (step.targetId.startsWith(".") || step.targetId.startsWith("#"))) {
             element = document.querySelector(step.targetId) as HTMLElement | null;
         }
-        element?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+        const targetRect = element?.getBoundingClientRect();
+        const isModalTarget = step.targetId.includes("ant-modal-content");
+        const isTargetVisible = targetRect
+            ? targetRect.top >= 0 && targetRect.left >= 0 && targetRect.bottom <= window.innerHeight && targetRect.right <= window.innerWidth
+            : false;
+        if (element && !isModalTarget && !isTargetVisible) {
+            element.scrollIntoView({ behavior: "instant", block: "center", inline: "center" });
+        }
 
-        let frame: number;
-        const loop = () => {
-            updateTarget();
-            frame = window.requestAnimationFrame(loop);
+        let frame: number | null = null;
+        const scheduleUpdate = () => {
+            if (frame !== null) return;
+            frame = window.requestAnimationFrame(() => {
+                frame = null;
+                updateTarget();
+            });
         };
-        loop();
-        
-        window.addEventListener("resize", updateTarget);
-        window.addEventListener("scroll", updateTarget, true);
+
+        // Modal: dùng MutationObserver thay vì setTimeout cố định
+        let observer: MutationObserver | null = null;
+        let resizeObserver: ResizeObserver | null = null;
+        let settleTimers: number[] = [];
+
+        if (isModalTarget) {
+            let found = false;
+            const observeTargetSize = (el: HTMLElement) => {
+                resizeObserver?.disconnect();
+                resizeObserver = new ResizeObserver(scheduleUpdate);
+                resizeObserver.observe(el);
+            };
+            const settleModalTarget = (el: HTMLElement) => {
+                observeTargetSize(el);
+                const motionElement = (el.closest(".ant-modal") as HTMLElement | null) ?? el;
+                let settled = false;
+                const finish = () => {
+                    if (settled) return;
+                    settled = true;
+                    motionElement.removeEventListener("transitionend", finish);
+                    updateTarget();
+                };
+                motionElement.addEventListener("transitionend", finish, { once: true });
+                settleTimers.push(window.setTimeout(finish, GUIDE_MODAL_SETTLE_MS));
+                settleTimers.push(window.setTimeout(updateTarget, 620));
+            };
+            observer = new MutationObserver(() => {
+                if (found) return;
+                const el = getTargetElement(step.targetId);
+                if (el) {
+                    found = true;
+                    settleModalTarget(el);
+                    observer?.disconnect();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+            const existing = getTargetElement(step.targetId);
+            if (existing) {
+                found = true;
+                settleModalTarget(existing);
+                observer.disconnect();
+            }
+        } else {
+            settleTimers = [window.setTimeout(updateTarget, 80)];
+        }
+
+        if (!isModalTarget) updateTarget();
+
+        window.addEventListener("resize", scheduleUpdate);
+        window.addEventListener("scroll", scheduleUpdate, true);
         return () => {
-            window.cancelAnimationFrame(frame);
-            window.removeEventListener("resize", updateTarget);
-            window.removeEventListener("scroll", updateTarget, true);
+            if (frame !== null) window.cancelAnimationFrame(frame);
+            observer?.disconnect();
+            resizeObserver?.disconnect();
+            settleTimers.forEach((timer) => window.clearTimeout(timer));
+            window.removeEventListener("resize", scheduleUpdate);
+            window.removeEventListener("scroll", scheduleUpdate, true);
         };
     }, [step, updateTarget]);
+
+    useEffect(() => {
+        return () => {
+            clearPendingAdvance();
+        };
+    }, [clearPendingAdvance]);
 
     // Handle auto-advance for "click" actionType
     useEffect(() => {
         if (!step || step.actionType !== "click") return;
+
+        const waitForNextTarget = (nextIndex: number) => {
+            const nextStep = guide.steps[nextIndex];
+            if (!nextStep) return;
+
+            const advance = (settleDelay = GUIDE_TARGET_SETTLE_MS) => {
+                clearPendingAdvance();
+                pendingAdvanceRef.current = window.setTimeout(() => {
+                    setStepIndex(nextIndex);
+                    pendingAdvanceRef.current = null;
+                }, settleDelay);
+            };
+
+            if (getTargetElement(nextStep.targetId)) {
+                advance();
+                return;
+            }
+
+            pendingAdvanceObserverRef.current = new MutationObserver(() => {
+                if (getTargetElement(nextStep.targetId)) {
+                    advance();
+                }
+            });
+            pendingAdvanceObserverRef.current.observe(document.body, { childList: true, subtree: true });
+            pendingAdvanceRef.current = window.setTimeout(() => advance(0), GUIDE_NEXT_TARGET_TIMEOUT_MS);
+        };
 
         const handleClick = (e: MouseEvent) => {
             let element = document.querySelector(`[data-guide-id="${step.targetId}"]`);
@@ -109,7 +264,8 @@ const LotusGuidePlayer: React.FC<{
             }
             if (element && element.contains(e.target as Node)) {
                 if (stepIndex < total - 1) {
-                    setStepIndex((value) => Math.min(total - 1, value + 1));
+                    clearPendingAdvance();
+                    waitForNextTarget(Math.min(total - 1, stepIndex + 1));
                 } else {
                     onClose();
                 }
@@ -118,20 +274,29 @@ const LotusGuidePlayer: React.FC<{
 
         // Use capture phase to ensure we catch the click before react handlers might unmount things
         document.addEventListener("click", handleClick, true);
-        return () => document.removeEventListener("click", handleClick, true);
-    }, [step, setStepIndex, total, onClose, stepIndex]);
+        return () => {
+            document.removeEventListener("click", handleClick, true);
+            clearPendingAdvance();
+        };
+    }, [clearPendingAdvance, guide.steps, step, setStepIndex, total, onClose, stepIndex]);
 
-    const highlight = targetRect
-        ? {
-            top: targetRect.top - window.scrollY - 6,
-            left: targetRect.left - window.scrollX - 6,
-            width: targetRect.width + 12,
-            height: targetRect.height + 12,
-        }
-        : null;
+    const highlight = useMemo(() => {
+        const isModalTarget = step?.targetId.includes("ant-modal-content");
+        const padding = isModalTarget ? 0 : 6;
+        return targetRect
+            ? {
+                top: targetRect.top - window.scrollY - padding,
+                left: targetRect.left - window.scrollX - padding,
+                width: targetRect.width + padding * 2,
+                height: targetRect.height + padding * 2,
+                borderRadius: isModalTarget ? targetRect.borderRadius : undefined,
+            }
+            : null;
+    }, [targetRect, step?.targetId]);
 
     const cardStyle = useMemo<React.CSSProperties>(() => {
         const cardWidth = 300;
+        const cardHeight = 220;
         if (!highlight) {
             return {
                 transform: `translate(calc(50vw - ${cardWidth / 2}px), calc(50vh - 100px))`,
@@ -147,11 +312,11 @@ const LotusGuidePlayer: React.FC<{
         if (preferred === "top") top = highlight.top - 190 - gap;
         if (preferred === "left") {
             left = highlight.left - cardWidth - gap;
-            top = highlight.top;
+            top = highlight.top + highlight.height / 2 - cardHeight / 2;
         }
         if (preferred === "right") {
             left = highlight.left + highlight.width + gap;
-            top = highlight.top;
+            top = highlight.top + highlight.height / 2 - cardHeight / 2;
         }
 
         if (step.targetId === "lotus-assistant-entry") {
@@ -162,36 +327,99 @@ const LotusGuidePlayer: React.FC<{
         left = Math.max(14, Math.min(left, window.innerWidth - cardWidth - 14));
         top = Math.max(14, Math.min(top, window.innerHeight - 250));
 
-        return { transform: `translate(${left}px, ${top}px)`, width: cardWidth };
-    }, [highlight, step.placement]);
+        if (step.targetId.includes("ant-modal-content") && (preferred === "left" || preferred === "right")) {
+            const targetRight = highlight.left + highlight.width;
+            const targetBottom = highlight.top + highlight.height;
+            const hasRoomOnRight = targetRight + gap + cardWidth <= window.innerWidth - 14;
+            const hasRoomOnLeft = highlight.left - gap - cardWidth >= 14;
+            const belowTop = targetBottom + gap;
+            const belowLeft = highlight.left + highlight.width / 2 - cardWidth / 2;
+            const hasRoomBelow = belowTop + cardHeight <= window.innerHeight - 14;
+            const modalSideTop = highlight.top;
+
+            top = modalSideTop;
+
+            if (preferred === "right" && hasRoomOnRight) {
+                left = targetRight + gap;
+                top = modalSideTop;
+            } else if (preferred === "left" && hasRoomOnLeft) {
+                left = highlight.left - cardWidth - gap;
+                top = modalSideTop;
+            } else if (hasRoomBelow) {
+                left = belowLeft;
+                top = belowTop;
+            } else {
+                left = preferred === "left" ? 14 : window.innerWidth - cardWidth - 14;
+                top = modalSideTop;
+            }
+
+            left = Math.max(14, Math.min(left, window.innerWidth - cardWidth - 14));
+            top = Math.max(14, Math.min(top, window.innerHeight - cardHeight - 14));
+        }
+
+        const targetElement = getTargetElement(step.targetId);
+        const popupElement = targetElement?.closest(".ant-dropdown, .ant-dropdown-menu, .ant-select-dropdown") as HTMLElement | null;
+        if (popupElement && (preferred === "left" || preferred === "right")) {
+            const popupRect = popupElement.getBoundingClientRect();
+            const popupLeft = popupRect.left;
+            const popupTop = popupRect.top;
+            const popupRight = popupRect.right;
+            const hasRoomOnPopupLeft = popupLeft - gap - cardWidth >= 14;
+            const hasRoomOnPopupRight = popupRight + gap + cardWidth <= window.innerWidth - 14;
+
+            if (preferred === "left" && hasRoomOnPopupLeft) {
+                left = popupLeft - cardWidth - gap;
+            } else if (preferred === "right" && hasRoomOnPopupRight) {
+                left = popupRight + gap;
+            } else if (hasRoomOnPopupLeft) {
+                left = popupLeft - cardWidth - gap;
+            } else if (hasRoomOnPopupRight) {
+                left = popupRight + gap;
+            } else {
+                left = Math.max(14, Math.min(highlight.left - cardWidth - gap, window.innerWidth - cardWidth - 14));
+            }
+
+            top = popupTop;
+            top = Math.max(14, Math.min(top, window.innerHeight - cardHeight - 14));
+        }
+
+        return { transform: `translate3d(${left}px, ${top}px, 0)`, width: cardWidth };
+    }, [highlight, step.placement, step.targetId]);
 
     if (!step) return null;
 
     return (
         <div style={{ position: "fixed", inset: 0, zIndex: 12000, pointerEvents: "none" }}>
-            {!highlight && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.42)" }} />
-            )}
+            <div
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "rgba(15, 23, 42, 0.42)",
+                    opacity: highlight ? 0 : 1,
+                    transition: "opacity 0.3s ease",
+                    pointerEvents: "none",
+                }}
+            />
 
             {highlight && (
-                <>
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            transform: `translate(${highlight.left}px, ${highlight.top}px)`,
-                            width: highlight.width,
-                            height: highlight.height,
-                            borderRadius: 16,
-                            border: "2px solid #ff5fa2",
-                            boxShadow: "0 0 0 9999px rgba(15,23,42,0.65), 0 0 0 5px rgba(255,255,255,0.72), 0 14px 36px rgba(255,95,162,0.28)",
-                            background: "rgba(255,255,255,0.04)",
-                            pointerEvents: "none",
-                            transition: "transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), width 0.6s cubic-bezier(0.65, 0, 0.35, 1), height 0.6s cubic-bezier(0.65, 0, 0.35, 1)",
-                        }}
-                    />
-                </>
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        transform: `translate3d(${highlight.left}px, ${highlight.top}px, 0)`,
+                        width: highlight.width,
+                        height: highlight.height,
+                        boxSizing: "border-box",
+                        borderRadius: highlight.borderRadius ?? 16,
+                        border: "2px solid #ff5fa2",
+                        boxShadow: "0 0 0 9999px rgba(15,23,42,0.65), 0 0 0 5px rgba(255,255,255,0.72), 0 14px 36px rgba(255,95,162,0.28)",
+                        background: "rgba(255,255,255,0.04)",
+                        pointerEvents: "none",
+                        transition: `${GUIDE_MOVE}, ${GUIDE_SIZE}, opacity 0.24s ease-out, box-shadow 0.42s ease-out`,
+                        willChange: "transform, width, height, border-radius",
+                    }}
+                />
             )}
 
             <div
@@ -206,7 +434,9 @@ const LotusGuidePlayer: React.FC<{
                     borderRadius: 16,
                     boxShadow: "0 24px 60px rgba(15,23,42,0.24)",
                     overflow: "hidden",
-                    transition: "transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), width 0.6s cubic-bezier(0.65, 0, 0.35, 1)",
+                    minHeight: 236,
+                    transition: `${GUIDE_MOVE}, opacity 0.24s ease-out, box-shadow 0.42s ease-out`,
+                    willChange: "transform",
                 }}
             >
                 <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -229,7 +459,7 @@ const LotusGuidePlayer: React.FC<{
                     </button>
                 </div>
 
-                <div style={{ padding: 14 }}>
+                <div key={step.id} style={{ padding: 14, minHeight: 114, animation: `lotusGuideStepIn 0.32s ${GUIDE_EASE} both` }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             {guide.steps.map((item, index) => (
@@ -266,7 +496,16 @@ const LotusGuidePlayer: React.FC<{
                     <Button
                         icon={<LeftOutlined />}
                         disabled={stepIndex === 0}
-                        onClick={() => setStepIndex((value) => Math.max(0, value - 1))}
+                        onClick={() => {
+                            const closedModal = closeCurrentModalTarget();
+                            if (closedModal) {
+                                window.setTimeout(() => {
+                                    setStepIndex((value) => Math.max(0, value - 1));
+                                }, 360);
+                                return;
+                            }
+                            setStepIndex((value) => Math.max(0, value - 1));
+                        }}
                         style={{ borderRadius: 10 }}
                     >
                         Quay lại
@@ -300,9 +539,12 @@ export const LotusGuideProvider = ({ children }: { children: React.ReactNode }) 
     const [activeStepIndex, setActiveStepIndex] = useState(0);
     const [pendingGuideId, setPendingGuideId] = useState<string | null>(null);
 
+    const { canStartGuide } = useGuidePermission();
+
     const startGuide = useCallback((guideId: string) => {
         const guide = findGuideById(guideId);
         if (!guide) return;
+        if (!canStartGuide(guide)) return;
 
         const isOnGuideRoute = guide.routePattern
             ? guide.routePattern.test(location.pathname)
@@ -318,7 +560,7 @@ export const LotusGuideProvider = ({ children }: { children: React.ReactNode }) 
 
         setActiveGuide(guide);
         setActiveStepIndex(0);
-    }, [location.pathname, navigate]);
+    }, [location.pathname, navigate, canStartGuide]);
 
     useEffect(() => {
         if (!pendingGuideId) return;
@@ -350,20 +592,24 @@ export const LotusGuideProvider = ({ children }: { children: React.ReactNode }) 
         setPendingGuideId(null);
     }, []);
 
-    // Tự động dừng guide nếu người dùng chuyển trang
+    // Tự động dừng guide nếu người dùng chuyển sang trang không nằm trong flow
     useEffect(() => {
         if (!activeGuide) return;
-        // Cho phép guide tiếp tục chạy nếu vẫn đang ở trong routePrefix của nó
-        const isOnGuideRoute = location.pathname === activeGuide.routePrefix || location.pathname.startsWith(`${activeGuide.routePrefix}/`);
-            
-        if (!isOnGuideRoute) {
+
+        const onStartRoute = activeGuide.routePattern
+            ? activeGuide.routePattern.test(location.pathname)
+            : location.pathname === activeGuide.routePrefix || location.pathname.startsWith(`${activeGuide.routePrefix}/`);
+
+        const onAllowedRoute = (activeGuide.allowedRoutes ?? []).some(p => p.test(location.pathname));
+
+        if (!onStartRoute && !onAllowedRoute) {
             stopGuide();
         }
     }, [location.pathname, activeGuide, stopGuide]);
 
     const value = useMemo(
-        () => ({ activeGuide, activeStepIndex, startGuide, stopGuide }),
-        [activeGuide, activeStepIndex, startGuide, stopGuide]
+        () => ({ activeGuide, activeStepIndex, startGuide, stopGuide, canStartGuide }),
+        [activeGuide, activeStepIndex, startGuide, stopGuide, canStartGuide]
     );
 
     return (
@@ -389,6 +635,7 @@ export const useLotusGuide = () => {
             activeStepIndex: 0,
             startGuide: () => undefined,
             stopGuide: () => undefined,
+            canStartGuide: () => false,
         };
     }
     return context;

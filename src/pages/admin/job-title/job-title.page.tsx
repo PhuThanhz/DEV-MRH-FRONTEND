@@ -149,6 +149,7 @@ const JobTitlePage = () => {
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.GET_BY_ID} hideChildren>
                         <Button
+                            data-guide-id="job-title-detail-button"
                             type="text"
                             size="small"
                             icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -161,6 +162,7 @@ const JobTitlePage = () => {
 
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="job-title-edit-button"
                             type="text"
                             size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -191,6 +193,8 @@ const JobTitlePage = () => {
                             setOpenModal(true);
                         }}
                         addPermission={ALL_PERMISSIONS.JOB_TITLES.CREATE}
+                        guideSearchId="job-title-search-input"
+                        guideAddId="job-title-add-button"
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

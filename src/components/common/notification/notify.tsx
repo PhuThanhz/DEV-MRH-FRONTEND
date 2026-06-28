@@ -128,7 +128,7 @@ export const notify = {
                             <p className="mt-1.5 text-[13.5px] text-gray-600 m-0 leading-relaxed font-medium">
                                 {msg}
                             </p>
-                            
+
                             {/* Footer / Metadata */}
                             <div className="mt-3 flex items-center gap-2">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold tracking-wider uppercase bg-pink-50 text-pink-600 border border-pink-100">

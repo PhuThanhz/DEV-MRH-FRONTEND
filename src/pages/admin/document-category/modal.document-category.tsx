@@ -145,6 +145,7 @@ const ModalDocumentCategory = ({ openModal, setOpenModal, dataInit, setDataInit 
                 onCancel: handleClose,
                 destroyOnHidden: true,
                 maskClosable: false,
+                className: "document-category-form-modal",
                 styles: {
                     body: { padding: "16px 24px" },
                     header: { paddingBottom: 12, borderBottom: "1px solid #f3f4f6" },

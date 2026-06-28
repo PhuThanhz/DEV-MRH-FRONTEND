@@ -242,6 +242,7 @@ export const buildProcedureColumns = ({
             width: type === "CONFIDENTIAL" ? 120 : 100,
             fixed: "right",
             render: (_, record) => {
+                const guideKey = `${type.toLowerCase()}-procedure`;
                 const menuItems = [];
 
                 if (canUpdate) {
@@ -250,7 +251,7 @@ export const buildProcedureColumns = ({
                         icon: <EditOutlined style={{ color: "#fa8c16" }} />,
                         label: (
                             <Tooltip title="Chỉnh sửa">
-                                <span onClick={() => onEdit(record)}>Chỉnh sửa</span>
+                                <span data-guide-id={`${type.toLowerCase()}-procedure-edit-menu-item`} onClick={() => onEdit(record)}>Chỉnh sửa</span>
                             </Tooltip>
                         ),
                     });
@@ -266,7 +267,7 @@ export const buildProcedureColumns = ({
                         ),
                         label: (
                             <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
-                                <span onClick={() => onRevise(record)}>
+                                <span data-guide-id={`${type.toLowerCase()}-procedure-revise-menu-item`} onClick={() => onRevise(record)}>
                                     Tạo version v{(record.version ?? 1) + 1}
                                 </span>
                             </Tooltip>
@@ -279,7 +280,7 @@ export const buildProcedureColumns = ({
                         key: "share",
                         icon: <ShareAltOutlined style={{ color: "#f0226e" }} />,
                         label: (
-                            <span onClick={() => onShare(record)}>Chia sẻ công khai</span>
+                            <span data-guide-id={`${type.toLowerCase()}-procedure-share-menu-item`} onClick={() => onShare(record)}>Chia sẻ công khai</span>
                         ),
                     });
                 }
@@ -297,7 +298,7 @@ export const buildProcedureColumns = ({
                                 placement="topRight"
                             >
                                 <Tooltip title="Xóa">
-                                    <span style={{ color: "red" }}>Xóa</span>
+                                    <span data-guide-id={`${type.toLowerCase()}-procedure-delete-menu-item`} style={{ color: "red" }}>Xóa</span>
                                 </Tooltip>
                             </Popconfirm>
                         ),
@@ -309,6 +310,7 @@ export const buildProcedureColumns = ({
                         {canView && (
                             <Tooltip title="Xem chi tiết">
                                 <EyeOutlined
+                                    data-guide-id={`${guideKey}-detail-button`}
                                     style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                                     onClick={() => onView(record)}
                                 />
@@ -316,7 +318,7 @@ export const buildProcedureColumns = ({
                         )}
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                                <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+                                <MoreOutlined data-guide-id={`${guideKey}-more-button`} style={{ fontSize: 20, cursor: "pointer" }} />
                             </Dropdown>
                         )}
                     </Space>

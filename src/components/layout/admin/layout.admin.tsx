@@ -77,45 +77,45 @@ const LayoutAdmin = () => {
     return (
         <NotificationProvider>
             <LotusGuideProvider>
-            <Layout style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-                <SliderAdmin
-                    collapsed={collapsed}
-                    setCollapsed={setCollapsed}
-                    activeMenu={activeMenu}
-                    setActiveMenu={setActiveMenu}
-                    mobileOpen={mobileOpen}
-                    setMobileOpen={setMobileOpen}
-                />
-
-                <Layout style={{ background: "#f8f9fa", transition: "all 0.3s" }}>
-                    <HeaderAdmin
+                <Layout style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+                    <SliderAdmin
                         collapsed={collapsed}
                         setCollapsed={setCollapsed}
+                        activeMenu={activeMenu}
+                        setActiveMenu={setActiveMenu}
                         mobileOpen={mobileOpen}
                         setMobileOpen={setMobileOpen}
                     />
-                    <Content
-                        style={{
-                            margin: 0,
-                            padding: "clamp(10px, 2vw, 16px)",
-                            paddingBottom: "120px",
-                            background: "transparent",
-                            minHeight: "calc(100vh - 64px)",
-                        }}
-                    >
-                        <Outlet />
-                    </Content>
+
+                    <Layout style={{ background: "#f8f9fa" }}>
+                        <HeaderAdmin
+                            collapsed={collapsed}
+                            setCollapsed={setCollapsed}
+                            mobileOpen={mobileOpen}
+                            setMobileOpen={setMobileOpen}
+                        />
+                        <Content
+                            style={{
+                                margin: 0,
+                                padding: "clamp(10px, 2vw, 16px)",
+                                paddingBottom: "120px",
+                                background: "transparent",
+                                minHeight: "calc(100vh - 64px)",
+                            }}
+                        >
+                            <Outlet />
+                        </Content>
+                    </Layout>
+
+                    <QrScannerModal
+                        open={openScanner}
+                        onClose={() => setOpenScanner(false)}
+                    />
+
+                    {/* Global Assistant Mascot */}
+                    <LotusCharmAssistant />
+                    <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
                 </Layout>
-
-                <QrScannerModal
-                    open={openScanner}
-                    onClose={() => setOpenScanner(false)}
-                />
-
-                {/* Global Assistant Mascot */}
-                <LotusCharmAssistant />
-                <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
-            </Layout>
             </LotusGuideProvider>
         </NotificationProvider>
     );

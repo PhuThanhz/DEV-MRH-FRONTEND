@@ -28,9 +28,9 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             width: 250,
             render: (_, record) => (
                 <Space>
-                    <Avatar 
-                        src={record.avatar ? `${import.meta.env.VITE_BACKEND_URL}/uploads/avatar/${record.avatar}` : undefined} 
-                        icon={<UserOutlined />} 
+                    <Avatar
+                        src={record.avatar ? `${import.meta.env.VITE_BACKEND_URL}/uploads/avatar/${record.avatar}` : undefined}
+                        icon={<UserOutlined />}
                     />
                     <div>
                         <div style={{ fontWeight: 500, color: '#1f2937' }}>{record.name}</div>
@@ -77,7 +77,7 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             render: (_, record) => {
                 const isSelected = record.id === currentSelectedId;
                 return (
-                    <Button 
+                    <Button
                         type={isSelected ? "primary" : "default"}
                         icon={isSelected ? <CheckCircleOutlined /> : undefined}
                         onClick={() => {
@@ -98,8 +98,8 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             const res = await callFetchSubordinates();
             let data = res.data || [];
             if (searchValue) {
-                data = data.filter((item: any) => 
-                    item.name?.toLowerCase().includes(searchValue.toLowerCase()) || 
+                data = data.filter((item: any) =>
+                    item.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
                     item.email?.toLowerCase().includes(searchValue.toLowerCase())
                 );
             }
@@ -127,7 +127,7 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
 
         const query = queryString.stringify(q, { encode: false });
         const res = await callFetchUsersCrossCompany(query);
-        
+
         return {
             data: res.data?.result || [],
             success: true,
@@ -150,14 +150,14 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
                     searchPlaceholder="Tìm theo tên, email hoặc mã NV..."
                     showFilterButton={false}
                     showAddButton={false}
-                    onSearch={(val) => { 
-                        setSearchValue(val); 
-                        actionRef.current?.reload(); 
+                    onSearch={(val) => {
+                        setSearchValue(val);
+                        actionRef.current?.reload();
                     }}
-                    onReset={() => { 
-                        setSearchValue(""); 
-                        setAdvancedFilters({}); 
-                        actionRef.current?.reload(); 
+                    onReset={() => {
+                        setSearchValue("");
+                        setAdvancedFilters({});
+                        actionRef.current?.reload();
                     }}
                 />
                 {isAdmin && (
@@ -191,7 +191,7 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
                     </div>
                 )}
             </div>
-            
+
             <ProTable
                 rowKey="id"
                 actionRef={actionRef}

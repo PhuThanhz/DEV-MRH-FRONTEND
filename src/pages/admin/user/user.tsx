@@ -257,6 +257,7 @@ const UserPage = () => {
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.USERS.GET_BY_ID} hideChildren>
                         <Button
+                            data-guide-id="user-detail-button"
                             type="text" size="small"
                             icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
                             onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
@@ -264,6 +265,7 @@ const UserPage = () => {
                     </Access>
                     <Access permission={ALL_PERMISSIONS.USERS.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="user-edit-button"
                             type="text" size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
                             onClick={() => { setDataInit(entity); setOpenModal(true); }}
@@ -287,6 +289,8 @@ const UserPage = () => {
                         onReset={reloadTable}
                         onAddClick={() => { setDataInit(null); setOpenModal(true); }}
                         addPermission={ALL_PERMISSIONS.USERS.CREATE}
+                        guideSearchId="user-search-input"
+                        guideAddId="user-add-button"
                     />
                     {/* ← bỏ div wrapper thừa, chỉ còn AdvancedFilterSelect */}
                     <AdvancedFilterSelect

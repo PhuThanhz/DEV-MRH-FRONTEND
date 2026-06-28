@@ -33,7 +33,7 @@ const AccountingSpotlightSearch: React.FC<AccountingSpotlightSearchProps> = ({ o
                     setResults(res.data.result);
                 } else if (Array.isArray(res?.data)) {
                     // Filter in memory if the API returns all
-                    const filtered = res.data.filter((d: any) => 
+                    const filtered = res.data.filter((d: any) =>
                         (d.documentCode && d.documentCode.toLowerCase().includes(query.toLowerCase())) ||
                         (d.documentName && d.documentName.toLowerCase().includes(query.toLowerCase()))
                     ).slice(0, 10);
@@ -89,7 +89,7 @@ const AccountingSpotlightSearch: React.FC<AccountingSpotlightSearchProps> = ({ o
                     autoFocus
                 />
             </div>
-            
+
             <div style={{ background: "#fafafa", minHeight: 150, maxHeight: 400, overflowY: "auto", padding: 12 }}>
                 {loading ? (
                     <div style={{ display: "flex", justifyContent: "center", padding: 40 }}>

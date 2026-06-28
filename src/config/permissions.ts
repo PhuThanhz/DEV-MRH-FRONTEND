@@ -54,12 +54,12 @@ export const ALL_PERMISSIONS = {
     /* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
     ACCOUNTING_DOCUMENT_CATEGORIES: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
-        GET_BY_ID:   { method: "GET", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
-        GET_ACTIVE:  { method: "GET", apiPath: "/api/v1/accounting-document-categories/active", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
-        CREATE:      { method: "POST", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
-        UPDATE:      { method: "PUT", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        GET_BY_ID: { method: "GET", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        GET_ACTIVE: { method: "GET", apiPath: "/api/v1/accounting-document-categories/active", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        CREATE: { method: "POST", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        UPDATE: { method: "PUT", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
         TOGGLE_ACTIVE: { method: "PUT", apiPath: "/api/v1/accounting-document-categories/{id}/active", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
-        DELETE:      { method: "DELETE", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
+        DELETE: { method: "DELETE", apiPath: "/api/v1/accounting-document-categories/{id}", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
     },
     /* ===================== ROLES ===================== */
     ROLES: {
@@ -1225,18 +1225,18 @@ export const ALL_PERMISSIONS = {
         GET_TEMPLATE_BY_ID: { method: "GET", apiPath: "/api/v1/evaluation/templates/{id}", module: "EVALUATION_TEMPLATE" },
         GET_TEMPLATES: { method: "GET", apiPath: "/api/v1/evaluation/templates", module: "EVALUATION_TEMPLATE" },
         GET_ACTIVE_TEMPLATES: { method: "GET", apiPath: "/api/v1/evaluation/templates/active", module: "EVALUATION_TEMPLATE" },
-        
+
         // SECTIONS
         CREATE_SECTION: { method: "POST", apiPath: "/api/v1/evaluation/templates/{templateId}/sections", module: "EVALUATION_TEMPLATE" },
         UPDATE_SECTION: { method: "PUT", apiPath: "/api/v1/evaluation/sections/{sectionId}", module: "EVALUATION_TEMPLATE" },
         DELETE_SECTION: { method: "DELETE", apiPath: "/api/v1/evaluation/sections/{sectionId}", module: "EVALUATION_TEMPLATE" },
         GET_SECTIONS: { method: "GET", apiPath: "/api/v1/evaluation/templates/{templateId}/sections", module: "EVALUATION_TEMPLATE" },
-        
+
         // CRITERIA
         CREATE_CRITERIA: { method: "POST", apiPath: "/api/v1/evaluation/sections/{sectionId}/criteria", module: "EVALUATION_TEMPLATE" },
         UPDATE_CRITERIA: { method: "PUT", apiPath: "/api/v1/evaluation/criteria/{criteriaId}", module: "EVALUATION_TEMPLATE" },
         DELETE_CRITERIA: { method: "DELETE", apiPath: "/api/v1/evaluation/criteria/{criteriaId}", module: "EVALUATION_TEMPLATE" },
-        
+
         // LEVELS
         CREATE_LEVEL: { method: "POST", apiPath: "/api/v1/evaluation/criteria/{criteriaId}/levels", module: "EVALUATION_TEMPLATE" },
         UPDATE_LEVEL: { method: "PUT", apiPath: "/api/v1/evaluation/levels/{levelId}", module: "EVALUATION_TEMPLATE" },
@@ -1262,23 +1262,23 @@ export const ALL_PERMISSIONS = {
         GET_PENDING_MANAGER_RECORDS: { method: "GET", apiPath: "/api/v1/evaluation/manager/pending", module: "EVALUATION_MANAGER" },
         GET_APPROVAL_RECORDS: { method: "GET", apiPath: "/api/v1/evaluation/approval/periods/{periodId}/records", module: "EVALUATION_MANAGER" },
         GET_PENDING_APPROVAL_RECORDS: { method: "GET", apiPath: "/api/v1/evaluation/approval/pending", module: "EVALUATION_MANAGER" },
-        
+
         EMPLOYEE_SCORE: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/employee-scores", module: "EVALUATION_EMPLOYEE" },
         EMPLOYEE_SUBMIT: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/employee-submit", module: "EVALUATION_EMPLOYEE" },
         EMPLOYEE_SELF_REVIEW: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/self-review", module: "EVALUATION_EMPLOYEE" },
         EMPLOYEE_CONFIRM: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/employee-confirm", module: "EVALUATION_EMPLOYEE" },
-        
+
         MANAGER_SCORE: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/manager-scores", module: "EVALUATION_MANAGER" },
         MANAGER_SUBMIT: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/manager-submit", module: "EVALUATION_MANAGER" },
         MANAGER_FEEDBACK: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/manager-feedback", module: "EVALUATION_MANAGER" },
         SAVE_TRAINING_PLAN: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/training-plans", module: "EVALUATION_MANAGER" },
-        
+
         APPROVE_RECORD: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/approve", module: "EVALUATION_MANAGER" },
         REJECT_RECORD: { method: "POST", apiPath: "/api/v1/evaluation/records/{recordId}/reject", module: "EVALUATION_MANAGER" },
         BATCH_APPROVE_RECORDS: { method: "POST", apiPath: "/api/v1/evaluation/records/batch-approve", module: "EVALUATION_MANAGER" },
         EXTEND_RECORD_DEADLINE: { method: "PATCH", apiPath: "/api/v1/evaluation/records/deadline-extension", module: "EVALUATION_PERIOD" },
         GET_COMPLETED_SUMMARY: { method: "GET", apiPath: "/api/v1/evaluation/summary/completed", module: "EVALUATION_PERIOD" },
-        
+
         GET_RECORD_HISTORY: { method: "GET", apiPath: "/api/v1/evaluation/records/{recordId}/history", module: "EVALUATION_MANAGER" },
         GET_REJECTION_COUNT: { method: "GET", apiPath: "/api/v1/evaluation/records/{recordId}/rejection-count", module: "EVALUATION_MANAGER" },
         GET_STATUS_DISTRIBUTION: { method: "GET", apiPath: "/api/v1/evaluation/periods/{periodId}/status-distribution", module: "EVALUATION_PERIOD" },

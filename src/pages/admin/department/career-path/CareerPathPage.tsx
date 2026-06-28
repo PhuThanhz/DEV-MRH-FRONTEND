@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ApartmentOutlined, FileTextOutlined, UserOutlined } from "@ant-design/icons";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
@@ -15,8 +16,10 @@ import TabBar, { type TabItem } from "@/components/common/tabs/TabBar";
 type TabKey = "careerpath" | "template" | "employee";
 
 const CareerPathPage = () => {
+    const { departmentId } = useParams();
+    const { data: department } = useDepartmentByIdQuery(Number(departmentId));
     const [searchParams] = useSearchParams();
-    const departmentName = searchParams.get("departmentName") || "—";
+    const departmentName = searchParams.get("departmentName") || department?.name || "";
     const [activeKey, setActiveKey] = useState<TabKey>("careerpath");
 
     const canViewDepartment = useAccess(ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.GET_BY_DEPARTMENT);
@@ -47,7 +50,7 @@ const CareerPathPage = () => {
     ];
 
     return (
-        <PageContainer title={`Lộ trình thăng tiến — ${departmentName}`}>
+        <PageContainer title={`Lộ trình thăng tiến${departmentName && departmentName !== "—" ? ` — ${departmentName}` : ""}`}>
 
             <div style={{ marginBottom: 16 }}>
                 <TabBar tabs={tabs} activeKey={activeKey} onChange={setActiveKey} />

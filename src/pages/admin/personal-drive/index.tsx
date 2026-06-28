@@ -128,8 +128,8 @@ const PersonalDrivePage: React.FC = () => {
     const [searchText, setSearchText] = useState("");
     const [dragActive, setDragActive] = useState(false);
 
-    const filteredDocuments = documents.filter(doc => 
-        doc.documentName.toLowerCase().includes(searchText.toLowerCase()) || 
+    const filteredDocuments = documents.filter(doc =>
+        doc.documentName.toLowerCase().includes(searchText.toLowerCase()) ||
         doc.documentCode.toLowerCase().includes(searchText.toLowerCase())
     );
 
@@ -195,7 +195,7 @@ const PersonalDrivePage: React.FC = () => {
                 if (res?.data) {
                     const accountingSystemCategory = res.data.find((c: any) => c.categoryCode === ACCOUNTING_DOC_CATEGORY_CODE);
                     setAccountingSystemCategoryId(accountingSystemCategory?.id);
-                    const normalCats = res.data.filter((c: any) => 
+                    const normalCats = res.data.filter((c: any) =>
                         !c.mappingProcedure &&
                         !c.isCrossCompany &&
                         c.categoryCode !== ACCOUNTING_DOC_CATEGORY_CODE
@@ -438,8 +438,8 @@ const PersonalDrivePage: React.FC = () => {
     };
 
     const findFolderPath = (
-        folders: IDocumentFolder[], 
-        targetId: number, 
+        folders: IDocumentFolder[],
+        targetId: number,
         currentPath: { id: number, folderName: string }[] = []
     ): { id: number, folderName: string }[] | null => {
         for (const f of folders) {
@@ -581,7 +581,7 @@ const PersonalDrivePage: React.FC = () => {
                     url: `/api/v1/files?fileName=${encodeURIComponent(fileName)}&folder=documents`,
                     response: fileName
                 }]);
-                
+
                 const cleanName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                 docForm.setFieldsValue({
                     documentKind: DEFAULT_DOCUMENT_KIND,
@@ -720,18 +720,18 @@ const PersonalDrivePage: React.FC = () => {
                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                         {record.fileUrls?.[0] ? getFileIcon(record.fileUrls[0]) : <FileOutlined />}
                         {record.isShortcut && (
-                            <LinkOutlined 
-                                style={{ 
-                                    position: "absolute", 
-                                    bottom: -4, 
-                                    right: -6, 
-                                    fontSize: 10, 
+                            <LinkOutlined
+                                style={{
+                                    position: "absolute",
+                                    bottom: -4,
+                                    right: -6,
+                                    fontSize: 10,
                                     color: "#1677ff",
                                     background: "#fff",
                                     borderRadius: "50%",
                                     padding: 1,
                                     border: "1px solid #1677ff"
-                                }} 
+                                }}
                             />
                         )}
                     </div>
@@ -1029,16 +1029,16 @@ const PersonalDrivePage: React.FC = () => {
                                     }}
                                 >
                                     <Space>
-                                        <Avatar 
-                                            size="small" 
-                                            icon={<UserOutlined />} 
-                                            style={{ 
+                                        <Avatar
+                                            size="small"
+                                            icon={<UserOutlined />}
+                                            style={{
                                                 background: selectedSubordinateId ? '#3b82f6' : '#db2777',
                                                 color: '#fff'
                                             }}
                                         />
-                                        <span style={{ 
-                                            fontWeight: 600, 
+                                        <span style={{
+                                            fontWeight: 600,
                                             color: selectedSubordinateId ? '#1e3a8a' : '#1e293b',
                                             fontSize: 14
                                         }}>
@@ -1047,10 +1047,10 @@ const PersonalDrivePage: React.FC = () => {
                                     </Space>
                                     <SwapOutlined style={{ color: '#94a3b8' }} />
                                 </Button>
-                                
+
                                 {selectedSubordinateId && (
                                     <div style={{ marginTop: 12 }}>
-                                        <Button 
+                                        <Button
                                             block
                                             danger
                                             type="dashed"
@@ -1062,7 +1062,7 @@ const PersonalDrivePage: React.FC = () => {
                                                 setSelectedFolderId(null);
                                                 setActiveFolderPath([]);
                                             }}
-                                            style={{ 
+                                            style={{
                                                 height: 38,
                                                 borderRadius: 8,
                                                 fontWeight: 500
@@ -1148,7 +1148,7 @@ const PersonalDrivePage: React.FC = () => {
                         ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
                     </div>
                 </Sider>
-                <Content 
+                <Content
                     className="drive-content"
                     style={{ position: "relative" }}
                     onDragEnter={(e) => {
@@ -1217,7 +1217,7 @@ const PersonalDrivePage: React.FC = () => {
                     )}
                     {selectedFolderId ? (
                         <div>
-                            <Breadcrumb 
+                            <Breadcrumb
                                 className="drive-breadcrumb"
                                 separator={<span style={{ color: "#cbd5e1" }}>/</span>}
                             >
@@ -1234,11 +1234,11 @@ const PersonalDrivePage: React.FC = () => {
                                             {isLast ? (
                                                 <span style={{ color: "#0f172a", fontWeight: 600 }}>{folder.folderName}</span>
                                             ) : (
-                                                <span 
+                                                <span
                                                     className="breadcrumb-link"
-                                                    style={{ 
-                                                        color: "#475569", 
-                                                        cursor: "pointer", 
+                                                    style={{
+                                                        color: "#475569",
+                                                        cursor: "pointer",
                                                         fontWeight: 500,
                                                         transition: "color 0.2s"
                                                     }}
@@ -1358,31 +1358,31 @@ const PersonalDrivePage: React.FC = () => {
                                                             e.dataTransfer.effectAllowed = "move";
                                                         }}
                                                         onClick={() => {
-                                                             const firstFile = doc.fileUrls?.[0] || "";
-                                                             setPreviewUrl(firstFile ? `/api/v1/files?fileName=${encodeURIComponent(firstFile)}&folder=documents` : "");
-                                                             setPreviewTitle(doc.documentName);
-                                                             setPreviewOpen(true);
-                                                         }}
-                                                         cover={
-                                                             <div style={{ height: 120, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #f1f5f9" }}>
-                                                                 {doc.fileUrls?.[0]?.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
-                                                                     <img alt="preview" src={`/api/v1/files?fileName=${encodeURIComponent(doc.fileUrls[0])}&folder=documents`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                                                 ) : doc.fileUrls?.[0]?.match(/\.(pdf)$/i) ? (
-                                                                     <FilePdfOutlined style={{ fontSize: 48, color: "#ff4d4f" }} />
-                                                                 ) : doc.fileUrls?.[0]?.match(/\.(xlsx|xls|csv)$/i) ? (
-                                                                     <FileExcelOutlined style={{ fontSize: 48, color: "#52c41a" }} />
-                                                                 ) : doc.fileUrls?.[0]?.match(/\.(zip|rar|7z)$/i) ? (
-                                                                     <FileZipOutlined style={{ fontSize: 48, color: "#faad14" }} />
-                                                                 ) : (
-                                                                     <FileTextOutlined style={{ fontSize: 48, color: "#ec4899" }} />
-                                                                 )}
-                                                             </div>
-                                                         }
+                                                            const firstFile = doc.fileUrls?.[0] || "";
+                                                            setPreviewUrl(firstFile ? `/api/v1/files?fileName=${encodeURIComponent(firstFile)}&folder=documents` : "");
+                                                            setPreviewTitle(doc.documentName);
+                                                            setPreviewOpen(true);
+                                                        }}
+                                                        cover={
+                                                            <div style={{ height: 120, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #f1f5f9" }}>
+                                                                {doc.fileUrls?.[0]?.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
+                                                                    <img alt="preview" src={`/api/v1/files?fileName=${encodeURIComponent(doc.fileUrls[0])}&folder=documents`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                                ) : doc.fileUrls?.[0]?.match(/\.(pdf)$/i) ? (
+                                                                    <FilePdfOutlined style={{ fontSize: 48, color: "#ff4d4f" }} />
+                                                                ) : doc.fileUrls?.[0]?.match(/\.(xlsx|xls|csv)$/i) ? (
+                                                                    <FileExcelOutlined style={{ fontSize: 48, color: "#52c41a" }} />
+                                                                ) : doc.fileUrls?.[0]?.match(/\.(zip|rar|7z)$/i) ? (
+                                                                    <FileZipOutlined style={{ fontSize: 48, color: "#faad14" }} />
+                                                                ) : (
+                                                                    <FileTextOutlined style={{ fontSize: 48, color: "#ec4899" }} />
+                                                                )}
+                                                            </div>
+                                                        }
                                                     >
-                                                        <Card.Meta 
-                                                             title={<span style={{ fontSize: 13 }} title={doc.documentName}>{doc.documentName}</span>} 
-                                                             description={<span style={{ fontSize: 11, color: "#94a3b8" }}>{dayjs(doc.createdAt).format("DD/MM/YYYY")}</span>} 
-                                                         />
+                                                        <Card.Meta
+                                                            title={<span style={{ fontSize: 13 }} title={doc.documentName}>{doc.documentName}</span>}
+                                                            description={<span style={{ fontSize: 11, color: "#94a3b8" }}>{dayjs(doc.createdAt).format("DD/MM/YYYY")}</span>}
+                                                        />
                                                     </Card>
                                                 </Col>
                                             ))}
@@ -1392,12 +1392,12 @@ const PersonalDrivePage: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <div style={{ 
-                            display: "flex", 
-                            flexDirection: "column", 
-                            justifyContent: "center", 
-                            alignItems: "center", 
-                            height: "100%", 
+                        <div style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            height: "100%",
                             minHeight: 450,
                             background: "#f8fafc",
                             borderRadius: 16,

@@ -129,13 +129,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
                                         key={item.id}
                                         onMouseEnter={() => setActiveIndex(index)}
                                         onClick={() => goTo(item)}
-                                        className={`group flex items-center gap-3 px-3 py-3 rounded-[12px] cursor-pointer transition-all ${
-                                            active ? "bg-pink-50/80" : "hover:bg-gray-50"
-                                        }`}
+                                        className={`group flex items-center gap-3 px-3 py-3 rounded-[12px] cursor-pointer transition-all ${active ? "bg-pink-50/80" : "hover:bg-gray-50"
+                                            }`}
                                     >
-                                        <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${
-                                            active ? "bg-white text-pink-600 shadow-sm" : "bg-gray-50 text-gray-500"
-                                        }`}>
+                                        <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${active ? "bg-white text-pink-600 shadow-sm" : "bg-gray-50 text-gray-500"
+                                            }`}>
                                             {item.icon}
                                         </div>
                                         <div className="flex-1 min-w-0">

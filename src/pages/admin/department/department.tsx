@@ -35,9 +35,6 @@ import {
 
 import ModalDepartment from "./modal.department";
 import ViewDepartment from "./view.department";
-import PermissionViewModal from "./permissions/components/PermissionViewModal";
-import PositionChartModal from "@/pages/admin/department/position-chart/PositionChartModal";
-
 import { PATHS } from "@/constants/paths";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
@@ -50,15 +47,7 @@ const DepartmentPage = () => {
     const [openView, setOpenView] = useState(false);
     const [dataInit, setDataInit] = useState<IDepartment | null>(null);
 
-    const [openPermissionModal, setOpenPermissionModal] = useState(false);
-    const [openPositionChartModal, setOpenPositionChartModal] = useState(false);
     const [openJobTitle, setOpenJobTitle] = useState(false);
-
-    const [selectedDepartment, setSelectedDepartment] = useState<{
-        id: number;
-        name: string;
-        companyName: string;
-    } | null>(null);
 
     const [searchValue, setSearchValue] = useState("");
     const [companyIdFilter, setCompanyIdFilter] = useState<number | null>(null);
@@ -153,101 +142,75 @@ const DepartmentPage = () => {
         } catch { }
     };
 
+    const getDepartmentPageUrl = (record: IDepartment, path: string) =>
+        `${path}?departmentName=${encodeURIComponent(record.name)}`;
+
     // ===================== BUILD DROPDOWN ITEMS =====================
     const buildDropdownItems = (record: IDepartment) => {
         const items: any[] = [];
 
-        // ── Cấu hình chức danh ── (chuyển vào đây)
-        if (canViewJobTitles) items.push({
-            key: "job-title",
-            className: "guide-department-job-title",
-            icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
-            label: <span>Cấu hình chức danh</span>,
-            onClick: () => {
-                setDataInit(record);
-                setOpenJobTitle(true);
-            },
-        });
-
         if (canViewOrgChart) items.push({
             key: "org-chart",
-            className: "guide-department-org-chart",
             icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Sơ đồ tổ chức</span>,
-            onClick: () => navigate(
-                `/admin/departments/${record.id}/org-chart?departmentName=${encodeURIComponent(record.name)}`
-            ),
+            label: <span className="guide-department-org-chart">Sơ đồ tổ chức</span>,
+            onClick: () => navigate(getDepartmentPageUrl(record, `/admin/departments/${record.id}/org-chart`)),
         });
 
         if (canViewObjectives) items.push({
             key: "objectives-tasks",
-            className: "guide-department-objectives",
             icon: <AimOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Mục tiêu - Nhiệm vụ</span>,
+            label: <span className="guide-department-objectives">Mục tiêu - Nhiệm vụ</span>,
             onClick: () => navigate(
-                PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(":departmentId", String(record.id))
-                + `?departmentName=${encodeURIComponent(record.name)}`
+                getDepartmentPageUrl(record, PATHS.ADMIN.DEPARTMENT_OBJECTIVES.replace(":departmentId", String(record.id)))
             ),
         });
 
         if (canViewProcedures) items.push({
             key: "department-procedures",
-            className: "guide-department-procedures",
             icon: <FileTextOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Quy trình phòng ban</span>,
+            label: <span className="guide-department-procedures">Quy trình phòng ban</span>,
             onClick: () => navigate(
-                PATHS.ADMIN.DEPARTMENT_PROCEDURES.replace(":departmentId", String(record.id))
-                + `?departmentName=${encodeURIComponent(record.name)}`
+                getDepartmentPageUrl(record, PATHS.ADMIN.DEPARTMENT_PROCEDURES.replace(":departmentId", String(record.id)))
             ),
         });
 
         if (canViewPermissions) items.push({
             key: "permissions",
-            className: "guide-department-permissions",
             icon: <LockOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Phân quyền</span>,
-            onClick: () => {
-                setSelectedDepartment({
-                    id: record.id!,
-                    name: record.name,
-                    companyName: record.company?.name || "",
-                });
-                setOpenPermissionModal(true);
-            },
+            label: <span className="guide-department-permissions">Phân quyền</span>,
+            onClick: () => navigate(
+                getDepartmentPageUrl(record, PATHS.ADMIN.DEPARTMENT_PERMISSION.replace(":departmentId", String(record.id)))
+            ),
         });
 
         if (canViewCareerPaths) items.push({
             key: "career-paths",
-            className: "guide-department-career-paths",
             icon: <RiseOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Lộ trình thăng tiến</span>,
-            onClick: () => navigate(
-                `/admin/departments/${record.id}/career-paths?departmentName=${encodeURIComponent(record.name)}`
-            ),
+            label: <span className="guide-department-career-paths">Lộ trình thăng tiến</span>,
+            onClick: () => navigate(getDepartmentPageUrl(record, `/admin/departments/${record.id}/career-paths`)),
         });
 
         if (canViewSalary) items.push({
             key: "salary",
-            className: "guide-department-salary",
             icon: <DollarOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Khung lương</span>,
-            onClick: () => navigate(
-                `/admin/departments/${record.id}/salary-range?departmentName=${encodeURIComponent(record.name)}`
-            ),
+            label: <span className="guide-department-salary">Khung lương</span>,
+            onClick: () => navigate(getDepartmentPageUrl(record, `/admin/departments/${record.id}/salary-range`)),
         });
 
         if (canViewPositionChart) items.push({
             key: "position-chart",
-            className: "guide-department-position-chart",
             icon: <TeamOutlined style={{ color: "#eb2f96" }} />,
-            label: <span>Bản đồ chức danh</span>,
+            label: <span className="guide-department-position-chart">Bản đồ chức danh</span>,
+            onClick: () => navigate(getDepartmentPageUrl(record, `/admin/departments/${record.id}/position-chart`)),
+        });
+
+        if (canViewJobTitles) items.push({
+            key: "job-title",
+            icon: <SettingOutlined style={{ color: "#13c2c2" }} />,
+            label: <span className="guide-department-job-title">Cấu hình chức danh</span>,
             onClick: () => {
-                setSelectedDepartment({
-                    id: record.id!,
-                    name: record.name,
-                    companyName: record.company?.name || "",
-                });
-                setOpenPositionChartModal(true);
+                setDataInit(record);
+                setOpenJobTitle(true);
             },
         });
 
@@ -506,31 +469,6 @@ const DepartmentPage = () => {
                 </Modal>
             )}
 
-            {selectedDepartment && (
-                <Modal
-                    open={openPermissionModal}
-                    onCancel={() => setOpenPermissionModal(false)}
-                    footer={null}
-                    width="90vw"
-                    destroyOnClose
-                    title={`Phân quyền — ${selectedDepartment.name}`}
-                >
-                    <PermissionViewModal
-                        departmentId={selectedDepartment.id}
-                        departmentName={selectedDepartment.name}
-                    />
-                </Modal>
-            )}
-
-            {selectedDepartment && (
-                <PositionChartModal
-                    open={openPositionChartModal}
-                    onClose={() => setOpenPositionChartModal(false)}
-                    departmentId={selectedDepartment.id}
-                    departmentName={selectedDepartment.name}
-                    companyName={selectedDepartment.companyName}
-                />
-            )}
         </PageContainer>
     );
 };

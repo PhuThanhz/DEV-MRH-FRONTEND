@@ -435,7 +435,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                     width: modalWidth,
                     maskClosable: false,
                     footer: null,
-                    className: "elegant-modal",
+                    className: "elegant-modal user-form-modal",
                     centered: true,
                     style: isMobile
                         ? { margin: 0, padding: 0 }

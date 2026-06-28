@@ -32,6 +32,7 @@ interface SearchFilterProps {
     debounceMs?: number;
     guideSearchId?: string;
     guideAddId?: string;
+    extraButtons?: React.ReactNode;
 }
 
 const BTN_H = 40;
@@ -53,6 +54,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     debounceMs = 400,
     guideSearchId,
     guideAddId,
+    extraButtons,
 }) => {
     const [open, setOpen] = useState(false);
     const [form] = Form.useForm();
@@ -151,8 +153,8 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
 
-            {/* Row duy nhất: Search + Bộ lọc (với badge) + Thêm */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Row duy nhất: Search + Reset + Bộ lọc (với badge) + Thêm */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 
                 {/* Search input — auto-search debounce */}
                 <div
@@ -181,6 +183,26 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                         allowClear
                     />
                 </div>
+
+                {/* Reset — ẩn mặc định */}
+                {showResetButton && (
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={onReset}
+                        style={{
+                            height: BTN_H,
+                            borderRadius: BTN_RADIUS,
+                            fontSize: 13,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            paddingInline: 14,
+                            flexShrink: 0,
+                        }}
+                    >
+                        Đặt lại
+                    </Button>
+                )}
 
                 {/* Bộ lọc với badge đếm filter đang active */}
                 {showFilterButton && (
@@ -215,6 +237,9 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                     </Popover>
                 )}
 
+                {/* Nút bổ sung */}
+                {extraButtons}
+
                 {/* Nút thêm mới */}
                 {showAddButton && (
                     addPermission
@@ -222,27 +247,6 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                         : AddBtn
                 )}
             </div>
-
-            {/* Reset — ẩn mặc định */}
-            {showResetButton && (
-                <div>
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={onReset}
-                        style={{
-                            height: BTN_H,
-                            borderRadius: BTN_RADIUS,
-                            fontSize: 13,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            paddingInline: 14,
-                        }}
-                    >
-                        Đặt lại
-                    </Button>
-                </div>
-            )}
         </div>
     );
 };

@@ -253,6 +253,7 @@ const PermissionCategoryPage = () => {
                     {/* VIEW */}
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_BY_ID} hideChildren>
                         <EyeOutlined
+                            data-guide-id="permission-category-detail-button"
                             style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -275,6 +276,7 @@ const PermissionCategoryPage = () => {
                     {/* EDIT */}
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.UPDATE} hideChildren>
                         <EditOutlined
+                            data-guide-id="permission-category-edit-button"
                             style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -293,6 +295,7 @@ const PermissionCategoryPage = () => {
                             placement="topRight"
                         >
                             <StopOutlined
+                                data-guide-id="permission-category-delete-button"
                                 style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
                             />
                         </Popconfirm>
@@ -318,6 +321,8 @@ const PermissionCategoryPage = () => {
                             setOpenModal(true);
                         }}
                         addPermission={ALL_PERMISSIONS.PERMISSION_CATEGORY.CREATE}
+                        guideSearchId="permission-category-search-input"
+                        guideAddId="permission-category-add-button"
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

@@ -357,6 +357,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 footer={null}
                 destroyOnClose
                 width={580}
+                className="job-description-approval-modal"
                 styles={{ body: { paddingTop: 4, paddingBottom: 4 } }}
             >
                 <Spin spinning={loading}>

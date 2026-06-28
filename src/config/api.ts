@@ -2079,6 +2079,11 @@ export const callFetchDocumentsByCategory = (categoryId: number) =>
         `/api/v1/documents/by-category/${categoryId}`
     );
 
+export const callGetNextDocumentCode = (companyId: number, categoryId: number, year: number) =>
+    axios.get<IBackendRes<{ code: string }>>(
+        `/api/v1/documents/next-code?companyId=${companyId}&categoryId=${categoryId}&year=${year}`
+    );
+
 export const callFetchDocumentsByDepartment = (departmentId: number) =>
     axios.get<IBackendRes<IDocument[]>>(
         `/api/v1/documents/by-department/${departmentId}`
@@ -2327,7 +2332,7 @@ export const callFetchCompletedSummary = (periodId?: number, departmentId?: numb
     if (departmentId) params.append("departmentId", departmentId.toString());
     if (companyId) params.append("companyId", companyId.toString());
     if (sectionId) params.append("sectionId", sectionId.toString());
-    
+
     if (params.toString()) {
         url += `?${params.toString()}`;
     }

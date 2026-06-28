@@ -136,9 +136,9 @@ const StepChip = ({ step, isLast }: { step: any; isLast: boolean }) => (
             {/* Thời gian — chỉ hiện nếu không phải bước cuối */}
             {step.durationMonths && !isLast && (
                 <span style={{
-                    padding: "1px 5px", borderRadius: 4,
-                    background: T.s2, border: `1px solid ${T.ink6}`,
-                    fontSize: 10, fontWeight: 600, color: T.ink4,
+                    padding: "2px 6px", borderRadius: 4,
+                    background: "#f3f4f6", border: `1px solid #e5e7eb`,
+                    fontSize: 10, fontWeight: 600, color: "#6b7280",
                     whiteSpace: "nowrap",
                 }}>
                     {step.durationMonths}th
@@ -146,12 +146,13 @@ const StepChip = ({ step, isLast }: { step: any; isLast: boolean }) => (
             )}
         </div>
         {!isLast && (
-            <Text style={{
-                fontSize: 11, color: T.ink5,
-                userSelect: "none", lineHeight: 1, flexShrink: 0,
+            <div style={{
+                color: "#9ca3af", fontSize: 13,
+                fontWeight: 400, userSelect: "none", lineHeight: 1, flexShrink: 0,
+                margin: "0 2px"
             }}>
                 →
-            </Text>
+            </div>
         )}
     </div>
 );
@@ -207,12 +208,12 @@ const TemplateCard = ({
             onMouseLeave={() => setHov(false)}
             style={{
                 background: T.white,
-                border: `1px solid ${hov ? T.lineMed : T.line}`,
-                borderRadius: 12,
+                border: `1px solid ${hov ? "#e5e7eb" : T.lineMed}`,
+                borderRadius: 14,
                 overflow: "hidden",
                 opacity: isActive ? 1 : 0.55,
-                transition: "border-color 0.15s, box-shadow 0.15s",
-                boxShadow: hov ? "0 2px 12px rgba(0,0,0,0.06)" : "none",
+                transition: "all 0.2s ease",
+                boxShadow: hov ? "0 4px 20px rgba(0,0,0,0.05)" : "0 1px 3px rgba(0,0,0,0.02)",
             }}
         >
             <div style={{ display: "flex", alignItems: "stretch" }}>
@@ -286,15 +287,14 @@ const TemplateCard = ({
                         </Space>
                     </div>
 
-                    {/* Steps — nền s1, wrap gọn */}
                     {steps.length > 0 && (
                         <div style={{
                             display: "flex", alignItems: "center",
-                            flexWrap: "wrap", gap: 5,
-                            padding: "9px 11px",
-                            background: T.s1,
-                            borderRadius: 8,
-                            border: `1px solid ${T.line}`,
+                            flexWrap: "wrap", gap: 6,
+                            padding: "12px",
+                            background: "#f9fafb",
+                            borderRadius: 10,
+                            border: `1px solid #f3f4f6`,
                             marginBottom: 10,
                         }}>
                             {steps.map((step, i) => (

@@ -81,6 +81,7 @@ const ModalPermission = (props: IProps) => {
                 maskClosable: false,
                 okText: dataInit?.id ? "Cập nhật" : "Tạo mới",
                 cancelText: "Hủy",
+                className: "permission-form-modal",
                 confirmLoading:
                     createPermission.isPending || updatePermission.isPending,
             }}

@@ -48,25 +48,25 @@ interface IProps {
 ───────────────────────────────────────── */
 const T = {
     white: "#ffffff",
-    bg: "#f7f8fa",
-    line: "#e8eaed",
-    lineLight: "#f0f2f5",
-    icon: "#9aa3af",
-    sub: "#5f6b7a",
-    text: "#1a1f27",
+    bg: "#f9fafb",
+    line: "#eef0f5",
+    lineLight: "#f3f4f6",
+    icon: "#9ca3af",
+    sub: "#6b7280",
+    text: "#111827",
 
-    blue: "#2563eb",
-    blueFaint: "#f0f4ff",
+    pink: "#e8637a",
+    pinkFaint: "#fff0f3",
 
-    green: "#16a34a",
-    greenFaint: "#f0fdf4",
+    green: "#10b981",
+    greenFaint: "#ecfdf5",
     greenLine: "#d1fae5",
-    amber: "#b45309",
-    amberFaint: "#fefce8",
+    amber: "#f59e0b",
+    amberFaint: "#fffbeb",
     amberLine: "#fef3c7",
 
-    r: "8px",
-    rs: "6px",
+    r: "12px",
+    rs: "8px",
 };
 
 /* ─────────────────────────────────────────
@@ -82,18 +82,25 @@ const Lbl = ({ children }: { children: React.ReactNode }) => (
    Section with horizontal rule title
 ───────────────────────────────────────── */
 const Section = ({
-    icon, title, children, last = false,
+    icon, title, children, tabKey, activeTab
 }: {
     icon: React.ReactNode;
     title: string;
     children: React.ReactNode;
-    last?: boolean;
+    tabKey?: string;
+    activeTab?: string;
 }) => (
-    <div style={{ marginBottom: last ? 0 : 22 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 14 }}>
-            <span style={{ color: T.icon, fontSize: 13, display: "flex" }}>{icon}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: T.text, whiteSpace: "nowrap" }}>{title}</span>
-            <span style={{ flex: 1, height: 1, background: T.line, marginLeft: 2 }} />
+    <div style={{
+        background: T.white,
+        padding: "20px 24px",
+        borderRadius: 12,
+        border: `1px solid ${T.line}`,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        display: (!tabKey || tabKey === activeTab) ? "block" : "none"
+    }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+            <span style={{ color: T.pink, fontSize: 16, display: "flex" }}>{icon}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: T.pink, letterSpacing: "-0.01em" }}>{title}</span>
         </div>
         {children}
     </div>
@@ -160,6 +167,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
 
+    const [activeTab, setActiveTab] = useState("1");
     const [selectedJobTitleIds, setSelectedJobTitleIds] = useState<number[]>([]);
     const [previewData, setPreviewData] = useState<ICareerPathPreviewResponse | null>(null);
     const [activeState, setActiveState] = useState(true);
@@ -180,6 +188,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
             form.resetFields();
             form.setFieldValue("departmentId", Number(departmentId));
             setActiveState(true);
+            setActiveTab("1");
             setSelectedJobTitleIds([]);
             setPreviewData(null);
         }
@@ -187,6 +196,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
 
     const handleReset = () => {
         form.resetFields();
+        setActiveTab("1");
         setSelectedJobTitleIds([]);
         setPreviewData(null);
         setDataInit(null);
@@ -260,8 +270,8 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
 
     const actionBtn: React.CSSProperties = {
         borderRadius: T.rs, fontWeight: 600, fontSize: 13, height: 36,
-        background: T.blue, border: "none",
-        boxShadow: "0 1px 4px rgba(37,99,235,.2)",
+        background: T.pink, border: "none",
+        boxShadow: "0 2px 8px rgba(232,99,122,.35)",
     };
 
     return (
@@ -287,8 +297,8 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 maskClosable: false,
                 styles: {
                     body: {
-                        padding: "24px 24px 16px",
-                        background: T.white,
+                        padding: "20px",
+                        background: "#f5f6fa",
                         maxHeight: "74vh",
                         overflowY: "auto",
                     },
@@ -339,8 +349,47 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 ),
             }}
         >
+            {/* ── CUSTOM TAB BAR ── */}
+            <div style={{
+                display: "flex", gap: 4, marginBottom: 20,
+                background: "#fff", borderRadius: 12, padding: 6,
+                border: "1px solid #eef0f5",
+                boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+                overflowX: "auto", WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none", msOverflowStyle: "none",
+            }}>
+                {[
+                    { key: "1", label: "Thông tin chung" },
+                    { key: "2", label: "Yêu cầu & Tiêu chuẩn" },
+                    { key: "3", label: "Đánh giá & Kết quả" },
+                    { key: "4", label: "Ghi chú & Cài đặt" },
+                ].map((tab) => {
+                    const isActive = activeTab === tab.key;
+                    return (
+                        <button
+                            type="button"
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                border: "none", outline: "none",
+                                background: isActive ? T.pink : "transparent",
+                                color: isActive ? "#fff" : "#6b7280",
+                                padding: "9px 20px", borderRadius: 8,
+                                fontSize: 14, fontWeight: isActive ? 700 : 500,
+                                cursor: "pointer", whiteSpace: "nowrap",
+                                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                                boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
+                                flex: 1,
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+
             {/* ── 1. Thông tin cơ bản ── */}
-            <Section icon={<SolutionOutlined />} title="Thông tin cơ bản">
+            <Section icon={<SolutionOutlined />} title="Thông tin cơ bản" tabKey="1" activeTab={activeTab}>
                 <Row gutter={[16, 0]} align="bottom">
                     {/* Phòng ban – readonly */}
                     <Col xs={24} sm={7}>
@@ -440,10 +489,8 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 </Row>
             </Section>
 
-            <Divider style={{ margin: "4px 0 22px", borderColor: T.lineLight }} />
-
             {/* ── 2. Yêu cầu & Tiêu chuẩn ── */}
-            <Section icon={<AuditOutlined />} title="Yêu cầu & Tiêu chuẩn">
+            <Section icon={<AuditOutlined />} title="Yêu cầu & Tiêu chuẩn" tabKey="2" activeTab={activeTab}>
                 <Row gutter={[16, 0]}>
                     <Col xs={24} sm={12}>
                         <ProFormTextArea
@@ -464,10 +511,8 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 </Row>
             </Section>
 
-            <Divider style={{ margin: "4px 0 22px", borderColor: T.lineLight }} />
-
             {/* ── 3. Đánh giá & Kết quả ── */}
-            <Section icon={<BarChartOutlined />} title="Đánh giá & Kết quả mong đợi">
+            <Section icon={<BarChartOutlined />} title="Đánh giá & Kết quả mong đợi" tabKey="3" activeTab={activeTab}>
                 <Row gutter={[16, 0]}>
                     <Col xs={24} sm={8}>
                         <ProFormTextArea
@@ -496,10 +541,8 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 </Row>
             </Section>
 
-            <Divider style={{ margin: "4px 0 22px", borderColor: T.lineLight }} />
-
             {/* ── 4. Ghi chú & Cài đặt ── */}
-            <Section icon={<DollarOutlined />} title="Ghi chú & Cài đặt" last>
+            <Section icon={<DollarOutlined />} title="Ghi chú & Cài đặt" tabKey="4" activeTab={activeTab}>
                 <Row gutter={[16, 0]} align="middle">
                     <Col xs={24} sm={17}>
                         <ProFormTextArea
@@ -552,16 +595,16 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                 <>
                     <Divider style={{ margin: "20px 0 16px", borderColor: T.line }} />
 
-                    {/* Preview section header */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 12 }}>
-                        <ReadOutlined style={{ color: T.icon, fontSize: 13 }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                        <ReadOutlined style={{ color: T.pink, fontSize: 16 }} />
+                        <span style={{ fontSize: 16, fontWeight: 700, color: T.pink, letterSpacing: "-0.01em" }}>
                             Kết quả xem trước
                         </span>
-                        <span style={{ flex: 1, height: 1, background: T.line, marginLeft: 2 }} />
                         <span style={{
-                            fontSize: 12, color: T.sub, background: T.bg,
-                            border: `1px solid ${T.line}`, borderRadius: 20, padding: "1px 10px",
+                            fontSize: 12, color: T.sub, background: T.white,
+                            border: `1px solid ${T.line}`, borderRadius: 20, padding: "2px 12px",
+                            marginLeft: "auto",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
                         }}>
                             {selectedJobTitleIds.length} chức danh
                         </span>
@@ -606,10 +649,10 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
                         style={{
                             marginTop: 14, height: 42, borderRadius: T.rs,
                             fontWeight: 600, fontSize: 13.5,
-                            background: previewData.willCreate?.length > 0 ? T.blue : undefined,
+                            background: previewData.willCreate?.length > 0 ? T.pink : undefined,
                             border: "none",
                             boxShadow: previewData.willCreate?.length > 0
-                                ? "0 2px 8px rgba(37,99,235,.2)" : undefined,
+                                ? "0 2px 8px rgba(232,99,122,.35)" : undefined,
                         }}
                     >
                         Xác nhận tạo {previewData.willCreate?.length || 0} lộ trình thăng tiến

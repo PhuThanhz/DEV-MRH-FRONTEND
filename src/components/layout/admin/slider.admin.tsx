@@ -58,7 +58,7 @@ const SliderAdmin: React.FC<IProps> = ({
                 justifyContent: "center",
                 borderBottom: "1px solid #f0f0f0",
                 background: "rgba(255, 250, 252, 0.8)",
-                transition: "all 0.3s ease",
+                transition: "background 0.2s ease",
                 position: "relative",
                 overflow: "hidden",
                 cursor: "pointer",
@@ -258,7 +258,7 @@ const SliderAdmin: React.FC<IProps> = ({
 
         .sidebar-menu-pink .ant-menu-item,
         .sidebar-menu-pink .ant-menu-submenu-title {
-            transition: all 0.3s ease !important;
+            transition: background-color 0.18s ease, color 0.18s ease !important;
         }
 
         .sidebar-scroll::-webkit-scrollbar {

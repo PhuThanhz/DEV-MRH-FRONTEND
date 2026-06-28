@@ -152,6 +152,7 @@ const RolePage = () => {
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.ROLES.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="role-edit-button"
                             type="default"
                             size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16" }} />}
@@ -184,6 +185,7 @@ const RolePage = () => {
                             onConfirm={() => handleDeleteRole(entity.id)}
                         >
                             <Button
+                                data-guide-id="role-delete-button"
                                 type="text"
                                 size="small"
                                 icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
@@ -213,6 +215,8 @@ const RolePage = () => {
                         setOpenModal(true);
                     }}
                     showFilterButton={false}
+                    guideSearchId="role-search-input"
+                    guideAddId="role-add-button"
                 />
             }
         >

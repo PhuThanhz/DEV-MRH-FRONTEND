@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Modal, Image, Button, Dropdown } from "antd";
+import { App, Space, Tag, Popconfirm, Modal, Image, Button, Dropdown } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
@@ -18,6 +18,7 @@ import {
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
@@ -35,6 +36,7 @@ import {
     useToggleActiveDocumentMutation,
     useDeleteDocumentMutation,
 } from "@/hooks/useDocuments";
+import { callFetchDocumentById } from "@/config/api";
 import { useDocumentCategoriesActiveQuery } from "@/hooks/useDocumentCategories";
 
 import ModalDocument from "./modal.document";
@@ -66,6 +68,15 @@ const PROCEDURE_TYPE_META: Record<string, { label: string; color: string }> = {
 };
 
 const getDocumentClassifyMeta = (record: IDocument) => {
+    if (record.procedureType === "CONFIDENTIAL") {
+        // Phân biệt: CONFIDENTIAL từ category có mappingProcedure là "Bảo mật" thật sự.
+        // CONFIDENTIAL không có mappingProcedure chỉ là văn bản chọn người xem cụ thể.
+        if (record.category?.mappingProcedure) {
+            return { label: "Bảo mật", color: "volcano" };
+        }
+        return { label: "Chọn người xem", color: "orange" };
+    }
+
     if (record.procedureType) {
         return PROCEDURE_TYPE_META[record.procedureType] ?? { label: record.procedureType, color: "default" };
     }
@@ -82,6 +93,9 @@ const getDocumentClassifyMeta = (record: IDocument) => {
 };
 
 const DocumentPage = () => {
+    const { message } = App.useApp();
+    const location = useLocation();
+    const navigate = useNavigate();
     const canShare = useAccess(ALL_PERMISSIONS.DOCUMENTS.CREATE_SHARE_TOKEN);
     const canUpdate = useAccess(ALL_PERMISSIONS.DOCUMENTS.UPDATE);
     const canToggle = useAccess(ALL_PERMISSIONS.DOCUMENTS.TOGGLE_ACTIVE);
@@ -107,6 +121,48 @@ const DocumentPage = () => {
     );
 
     const tableRef = useRef<ActionType>(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const documentIdParam = params.get("documentId");
+        if (!documentIdParam) return;
+
+        const documentId = Number(documentIdParam);
+        if (!Number.isFinite(documentId)) return;
+
+        let cancelled = false;
+        const openDocumentFromLink = async () => {
+            try {
+                const res = await callFetchDocumentById(documentId);
+                if (cancelled) return;
+                const document = res?.data as IDocument | undefined;
+                if (!document) {
+                    message.warning("Không tìm thấy văn bản hoặc bạn không có quyền xem.");
+                    return;
+                }
+                setDataInit(document);
+                setOpenViewDetail(true);
+                const nextParams = new URLSearchParams(location.search);
+                nextParams.delete("documentId");
+                navigate(
+                    {
+                        pathname: location.pathname,
+                        search: nextParams.toString() ? `?${nextParams.toString()}` : "",
+                    },
+                    { replace: true }
+                );
+            } catch {
+                if (!cancelled) {
+                    message.warning("Không thể mở văn bản từ thông báo.");
+                }
+            }
+        };
+
+        openDocumentFromLink();
+        return () => {
+            cancelled = true;
+        };
+    }, [location.pathname, location.search, message, navigate]);
 
     const tabs = [
         {
@@ -426,13 +482,14 @@ const DocumentPage = () => {
                     <Space size="small">
                         <Access permission={ALL_PERMISSIONS.DOCUMENTS.GET_BY_ID} hideChildren>
                             <EyeOutlined
+                                data-guide-id="document-detail-button"
                                 style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                                 onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
                             />
                         </Access>
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                                <MoreOutlined style={{ fontSize: 20, cursor: "pointer" }} />
+                                <MoreOutlined data-guide-id="document-more-button" style={{ fontSize: 20, cursor: "pointer" }} />
                             </Dropdown>
                         )}
                     </Space>

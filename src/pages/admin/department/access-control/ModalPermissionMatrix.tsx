@@ -98,7 +98,7 @@ const ModalPermissionMatrix = ({
         <Modal
             open={open}
             onCancel={onClose}
-            title={`Phân quyền — ${departmentName}`}
+            title={`Phân quyền${departmentName ? ` — ${departmentName}` : ""}`}
             width={1300}
             footer={null}
             destroyOnClose

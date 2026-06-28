@@ -174,76 +174,76 @@ const ModalAccountingDoc = ({
                 />
             )}
             <fieldset disabled={dataInit?.isLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
-            <Row gutter={16}>
-                <Col span={12}>
-                    <Form.Item
-                        label="Mã lưu hồ sơ (Mã chứng từ)"
-                        name="documentCode"
-                    >
-                        <Input 
-                            disabled 
-                            placeholder={isEdit ? "" : "Hệ thống tự động sinh mã luỹ tiến"} 
-                            style={{ color: isEdit ? "rgba(0, 0, 0, 0.88)" : undefined }}
-                        />
-                    </Form.Item>
-                </Col>
-
-                <Col span={12}>
-                    <Form.Item
-                        label="Ngày chứng từ"
-                        name="issuedDate"
-                        rules={[{ required: true, message: "Vui lòng chọn ngày chứng từ" }]}
-                    >
-                        <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn ngày" />
-                    </Form.Item>
-                </Col>
-
-                <Col span={24}>
-                    <Form.Item
-                        label="Loại chứng từ"
-                        name="accountingCategoryId"
-                        rules={[{ required: true, message: "Vui lòng chọn loại chứng từ" }]}
-                    >
-                        <Select
-                            showSearch
-                            loading={isLoadingCategories}
-                            optionFilterProp="label"
-                            placeholder="Chọn loại chứng từ"
-                            options={accountingCategories.map((item) => ({
-                                label: item.symbol ? `${item.categoryName} (${item.symbol})` : item.categoryName,
-                                value: item.id,
-                            }))}
-                        />
-                    </Form.Item>
-                </Col>
-
-                <Col span={24}>
-                    <Form.Item
-                        label="Nội dung / Diễn giải"
-                        name="documentName"
-                        rules={[{ required: true, message: "Vui lòng nhập nội dung chứng từ" }]}
-                    >
-                        <Input.TextArea rows={3} placeholder="Ví dụ: Đề nghị thanh toán chi phí Marketing tháng 6..." />
-                    </Form.Item>
-                </Col>
-
-                <Col span={24}>
-                    <Form.Item label="Tệp đính kèm (File Scan)">
-                        <Upload
-                            name="file"
-                            multiple
-                            customRequest={handleUpload}
-                            fileList={fileList}
-                            onChange={handleChange}
-                            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                <Row gutter={16}>
+                    <Col span={12}>
+                        <Form.Item
+                            label="Mã lưu hồ sơ (Mã chứng từ)"
+                            name="documentCode"
                         >
-                            <Button icon={<UploadOutlined />} loading={uploading}>
-                                Tải file lên
-                            </Button>
-                        </Upload>
-                    </Form.Item>
-                </Col>
-            </Row>
+                            <Input
+                                disabled
+                                placeholder={isEdit ? "" : "Hệ thống tự động sinh mã luỹ tiến"}
+                                style={{ color: isEdit ? "rgba(0, 0, 0, 0.88)" : undefined }}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                        <Form.Item
+                            label="Ngày chứng từ"
+                            name="issuedDate"
+                            rules={[{ required: true, message: "Vui lòng chọn ngày chứng từ" }]}
+                        >
+                            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn ngày" />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={24}>
+                        <Form.Item
+                            label="Loại chứng từ"
+                            name="accountingCategoryId"
+                            rules={[{ required: true, message: "Vui lòng chọn loại chứng từ" }]}
+                        >
+                            <Select
+                                showSearch
+                                loading={isLoadingCategories}
+                                optionFilterProp="label"
+                                placeholder="Chọn loại chứng từ"
+                                options={accountingCategories.map((item) => ({
+                                    label: item.symbol ? `${item.categoryName} (${item.symbol})` : item.categoryName,
+                                    value: item.id,
+                                }))}
+                            />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={24}>
+                        <Form.Item
+                            label="Nội dung / Diễn giải"
+                            name="documentName"
+                            rules={[{ required: true, message: "Vui lòng nhập nội dung chứng từ" }]}
+                        >
+                            <Input.TextArea rows={3} placeholder="Ví dụ: Đề nghị thanh toán chi phí Marketing tháng 6..." />
+                        </Form.Item>
+                    </Col>
+
+                    <Col span={24}>
+                        <Form.Item label="Tệp đính kèm (File Scan)">
+                            <Upload
+                                name="file"
+                                multiple
+                                customRequest={handleUpload}
+                                fileList={fileList}
+                                onChange={handleChange}
+                                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                            >
+                                <Button icon={<UploadOutlined />} loading={uploading}>
+                                    Tải file lên
+                                </Button>
+                            </Upload>
+                        </Form.Item>
+                    </Col>
+                </Row>
             </fieldset>
         </ModalForm>
     );

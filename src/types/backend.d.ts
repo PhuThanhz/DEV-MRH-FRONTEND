@@ -1803,6 +1803,9 @@ export interface IDocument {
     procedureType?: DocumentProcedureType;
     procedureId?: number;
     userIds?: string[];
+    departmentIds?: number[];
+    excludedDepartmentIds?: number[];
+    excludedUserIds?: string[];
     targetCompanyIds?: number[];
     accessDetails?: {
         userId: string;
@@ -1836,6 +1839,8 @@ export interface IDocumentRequest {
     sectionId?: number;
     departmentIds?: number[];
     userIds?: string[];
+    excludedDepartmentIds?: number[];
+    excludedUserIds?: string[];
     targetCompanyIds?: number[];
     status?: string;
     issuedDate?: string;

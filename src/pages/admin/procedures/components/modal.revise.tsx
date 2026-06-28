@@ -203,6 +203,7 @@ const ModalRevise: React.FC<IProps> = ({
                 destroyOnHidden: true,
                 maskClosable: false,
                 confirmLoading: isLoading,
+                className: "procedure-revise-modal",
                 okText: `Tạo phiên bản v${nextVersion}`,
                 okButtonProps: {
                     title: "",   // ✅ dùng string rỗng

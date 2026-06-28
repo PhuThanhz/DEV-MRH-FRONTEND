@@ -86,7 +86,7 @@ const ModalRole = (props: IProps) => {
                     width: 1200, // Dynamic responsive width is handled gracefully by our CSS media queries!
                     keyboard: false,
                     maskClosable: false,
-                    className: 'apple-modal',
+                    className: 'apple-modal role-form-modal',
                     footer: null,
                     closable: false,
                     style: { top: 24 },

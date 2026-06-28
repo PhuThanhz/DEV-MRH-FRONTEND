@@ -11,6 +11,15 @@ import type { UnifiedNotification } from "@/hooks/useNotifications";
 
 import { ALL_PERMISSIONS } from "./permissions";
 
+export const DOCUMENT_NOTIFICATION_MODULES = ["DOCUMENT", "DOCUMENTS", "ACCOUNTING_DOCUMENTS"];
+export const KNOWN_NOTIFICATION_MODULES = [
+    "JD_FLOW",
+    "EVALUATION",
+    "COMPANY_PROCEDURES",
+    "CAREER_PATHS",
+    ...DOCUMENT_NOTIFICATION_MODULES,
+];
+
 export interface NotificationModuleConfig {
     id: string;
     label: string;
@@ -73,17 +82,17 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
         link: "/admin/documents",
         requiredPermission: ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE,
         moduleKey: "DOCUMENTS",
-        filterUnread: (items) => items.filter(i => !i.isRead && i.module === "DOCUMENTS").length
+        filterUnread: (items) => items.filter(i => !i.isRead && DOCUMENT_NOTIFICATION_MODULES.includes(i.module || "")).length
     },
     {
         id: "system_alerts",
         label: "Thông báo khác",
         icon: <NotificationOutlined />,
         color: "rose",
-        link: "#", 
-        requiredPermission: null, 
+        link: "#",
+        requiredPermission: null,
         moduleKey: "SYSTEM_ALERTS",
         // Lấy các thông báo hệ thống còn lại chưa đọc
-        filterUnread: (items) => items.filter(i => !i.isRead && !["JD_FLOW", "EVALUATION", "COMPANY_PROCEDURES", "CAREER_PATHS", "DOCUMENTS"].includes(i.module || "")).length
+        filterUnread: (items) => items.filter(i => !i.isRead && !KNOWN_NOTIFICATION_MODULES.includes(i.module || "")).length
     }
 ];

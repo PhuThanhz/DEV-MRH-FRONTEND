@@ -21,8 +21,8 @@ const ModalCompany = ({
     dataInit,
     setDataInit,
 }: IProps) => {
-    const isEdit    = Boolean(dataInit?.id);
-    const isMobile  = useIsMobile();
+    const isEdit = Boolean(dataInit?.id);
+    const isMobile = useIsMobile();
     const modalWidth = useModalWidth(520);
 
     const createMutation = useCreateCompanyMutation();

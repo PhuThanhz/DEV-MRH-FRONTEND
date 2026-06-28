@@ -193,6 +193,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                 top: isMobile ? 16 : 20,   // cách top 16px thay vì 0
                 maxWidth: "calc(100vw - 24px)",
             }}
+            className="job-description-view-modal"
             styles={{
                 body: {
                     padding: 0,

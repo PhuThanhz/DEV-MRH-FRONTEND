@@ -5,7 +5,6 @@
 * {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
-    transition: scrollbar-color 0.3s ease;
 }
 
 *:hover {
@@ -13,12 +12,15 @@
 }
 
 ::-webkit-scrollbar {
-    width: 6px;  /* Chiều rộng scrollbar dọc */
-    height: 6px; /* Chiều cao scrollbar ngang */
+    width: 6px;
+    /* Chiều rộng scrollbar dọc */
+    height: 6px;
+    /* Chiều cao scrollbar ngang */
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent; /* Đường ray trong suốt */
+    background: transparent;
+    /* Đường ray trong suốt */
 }
 
 /* Mặc định ẩn hoàn toàn thanh trượt */

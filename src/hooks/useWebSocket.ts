@@ -4,13 +4,15 @@ import SockJS from "sockjs-client";
 import { useAppSelector } from "@/redux/hooks";
 
 interface IWebSocketMessage {
-    id: number;
+    id?: number;
     module: string;
     type: string;
-    content: string;
-    actionLink: string;
-    read: boolean;
+    content?: string;
+    actionLink?: string;
+    read?: boolean;
     createdAt: string;
+    documentId?: number;
+    documentCode?: string;
 }
 
 export const useWebSocket = (onMessageReceived: (msg: IWebSocketMessage) => void) => {
@@ -56,6 +58,16 @@ export const useWebSocket = (onMessageReceived: (msg: IWebSocketMessage) => void
                             onMessageReceivedRef.current(payload);
                         } catch (e) {
                             console.error("Failed to parse STOMP message", e);
+                        }
+                    }
+                });
+                client.subscribe('/topic/documents', (message) => {
+                    if (message.body) {
+                        try {
+                            const payload = JSON.parse(message.body) as IWebSocketMessage;
+                            onMessageReceivedRef.current(payload);
+                        } catch (e) {
+                            console.error("Failed to parse document STOMP message", e);
                         }
                     }
                 });

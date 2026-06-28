@@ -121,6 +121,7 @@ const ModalProcessAction = ({
                 onCancel: handleReset,
                 destroyOnHidden: true,
                 maskClosable: false,
+                className: "process-action-form-modal",
                 styles: {
                     body: { padding: "16px 24px" },
                     header: { paddingBottom: 12, borderBottom: "1px solid #f3f4f6" },

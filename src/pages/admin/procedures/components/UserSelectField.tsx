@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Form, Tag, Avatar, Tooltip, Typography } from "antd";
 import { UserOutlined, InfoCircleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import UserPickerModal from "./UserPickerModal";
-import { callFetchUsersByCompany } from "@/config/api";
+import { callFetchUsersByCompany, callFetchUsersCrossCompany } from "@/config/api";
 
 const { Text } = Typography;
 
@@ -11,6 +11,10 @@ interface UserSelectFieldProps {
     selectedUserCount: number;
     onCountChange: (count: number) => void;
     isCrossCompany?: boolean;
+    name?: string;
+    label?: string;
+    accentColor?: string;
+    emptyText?: string;
 }
 
 interface UserOption {
@@ -19,7 +23,11 @@ interface UserOption {
     email: string;
     department?: string;
     departmentId?: number;
+    section?: string;
     sectionId?: number;
+    jobTitle?: string;
+    positionLevel?: string;
+    company?: string;
 }
 
 const AVATAR_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -33,18 +41,60 @@ const getColor = (id: string) => {
 const getInitials = (name: string) =>
     name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase();
 
+const pickFirst = (...values: any[]) =>
+    values.find((v) => typeof v === "string" && v.trim())?.trim();
+
+const getUserMeta = (user?: UserOption) =>
+    [user?.jobTitle, user?.positionLevel, user?.section, user?.department || user?.company]
+        .filter(Boolean)
+        .join(" · ");
+
+const getJobTitle = (raw: any) =>
+    pickFirst(
+        raw?.jobTitle,
+        raw?.jobTitleName,
+        raw?.jobTitle?.nameVi,
+        raw?.jobTitle?.nameEn,
+        raw?.jobTitle?.name,
+        raw?.companyJobTitle?.jobTitle?.name,
+        raw?.companyJobTitle?.jobTitle?.nameVi,
+        raw?.departmentJobTitle?.jobTitle?.name,
+        raw?.departmentJobTitle?.jobTitle?.nameVi,
+        raw?.sectionJobTitle?.jobTitle?.name,
+        raw?.sectionJobTitle?.jobTitle?.nameVi
+    );
+
+const getPositionLevel = (raw: any) =>
+    pickFirst(
+        raw?.positionLevel,
+        raw?.positionLevelCode,
+        raw?.levelCode,
+        raw?.jobTitle?.positionCode,
+        raw?.positionLevel?.code,
+        raw?.companyJobTitle?.jobTitle?.positionLevel?.code,
+        raw?.departmentJobTitle?.jobTitle?.positionLevel?.code,
+        raw?.sectionJobTitle?.jobTitle?.positionLevel?.code,
+        raw?.jobTitle?.band,
+        raw?.jobTitle?.levelNumber ? `Cấp ${raw.jobTitle.levelNumber}` : undefined,
+        raw?.levelNumber ? `Cấp ${raw.levelNumber}` : undefined
+    );
+
 const UserSelectField: React.FC<UserSelectFieldProps> = ({
     companyId,
     selectedUserCount,
     onCountChange,
     isCrossCompany,
+    name = "userIds",
+    label = "Người được xem",
+    accentColor = "#ef4444",
+    emptyText = "Nhấn để chọn người được xem...",
 }) => {
     const form = Form.useFormInstance();
     const [pickerOpen, setPickerOpen] = useState(false);
     const [userMap, setUserMap] = useState<Map<string, UserOption>>(new Map());
     const [loadingMap, setLoadingMap] = useState(false);
 
-    const selectedIds: string[] = Form.useWatch("userIds", form) ?? [];
+    const selectedIds: string[] = Form.useWatch(name, form) ?? [];
 
     // ✅ FIX CHÍNH: Load userMap ngay khi companyId có giá trị (hoặc isCrossCompany = true)
     // Không chờ user bấm mở picker → fix bug hiển thị UUID khi edit
@@ -57,16 +107,21 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
             setLoadingMap(true);
             try {
                 if (isCrossCompany) {
-                    const { callFetchUser } = await import("@/config/api");
-                    const res = await callFetchUser("page=1&size=9999");
+                    const res = await callFetchUsersCrossCompany("page=1&size=9999");
                     const users = res?.data?.result ?? [];
                     const map = new Map<string, UserOption>();
                     users.forEach((u) => {
+                        const user = u as any;
                         const uid = String(u.id);
                         map.set(uid, {
                             value: uid,
                             name: u.name ?? "",
                             email: u.email ?? "",
+                            department: pickFirst(user.departmentName),
+                            section: pickFirst(user.sectionName),
+                            jobTitle: getJobTitle(user),
+                            positionLevel: getPositionLevel(user),
+                            company: pickFirst(user.companyName),
                         });
                     });
                     setUserMap(map);
@@ -83,9 +138,13 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                                 value: uid,
                                 name: p.user?.name ?? p.name ?? "",
                                 email: p.user?.email ?? p.email ?? "",
-                                department: p.department?.name,
+                                department: pickFirst(p.department?.name, p.departmentName, p.departmentJobTitle?.department?.name, p.sectionJobTitle?.section?.department?.name),
                                 departmentId: p.department?.id,
+                                section: pickFirst(p.section?.name, p.sectionName, p.sectionJobTitle?.section?.name),
                                 sectionId: p.section?.id,
+                                jobTitle: getJobTitle(p),
+                                positionLevel: getPositionLevel(p),
+                                company: pickFirst(p.company?.name, p.companyName, p.companyJobTitle?.company?.name),
                             });
                         }
                     });
@@ -101,13 +160,13 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
     }, [companyId, isCrossCompany]); // re-load khi đổi công ty hoặc cờ crossCompany
 
     const handleChange = (ids: string[]) => {
-        form.setFieldValue("userIds", ids);
+        form.setFieldValue(name, ids);
         onCountChange(ids.length);
     };
 
     const removeUser = (id: string) => {
         const next = selectedIds.filter((x) => x !== id);
-        form.setFieldValue("userIds", next);
+        form.setFieldValue(name, next);
         onCountChange(next.length);
     };
 
@@ -117,16 +176,16 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
 
     return (
         <>
-            <Form.Item name="userIds" hidden />
+            <Form.Item name={name} hidden />
 
             <Form.Item
                 label={
                     <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <UserOutlined style={{ color: "#ef4444", fontSize: 13 }} />
-                        <span style={{ fontWeight: 500, color: "#111827" }}>Người được xem</span>
+                        <UserOutlined style={{ color: accentColor, fontSize: 13 }} />
+                        <span style={{ fontWeight: 500, color: "#111827" }}>{label}</span>
                         {selectedUserCount > 0 && (
                             <Tag
-                                color="red"
+                                color={accentColor}
                                 style={{
                                     fontSize: 11, borderRadius: 999,
                                     padding: "0 8px", lineHeight: "20px", border: "none",
@@ -150,8 +209,9 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 <div
                     onClick={() => (isCrossCompany || companyId) && !loadingMap && handleOpen()}
                     style={{
-                        display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8,
-                        minHeight: 40, padding: "8px 12px",
+                        display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6,
+                        minHeight: 40, maxHeight: 96, overflowY: "auto",
+                        padding: "6px 10px",
                         border: "1px solid #e5e7eb", borderRadius: 8,
                         cursor: (isCrossCompany || companyId) && !loadingMap ? "pointer" : "not-allowed",
                         background: (isCrossCompany || companyId) ? "#fff" : "#f9fafb",
@@ -170,17 +230,16 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                         <span style={{ color: "#9ca3af", fontSize: 13 }}>Đang tải danh sách...</span>
                     ) : selectedIds.length === 0 ? (
                         <span style={{ color: "#9ca3af", fontSize: 13 }}>
-                            {(isCrossCompany || companyId) ? "Nhấn để chọn người được xem..." : "Vui lòng chọn công ty trước"}
+                            {(isCrossCompany || companyId) ? emptyText : "Vui lòng chọn công ty trước"}
                         </span>
                     ) : (
                         <>
-                            {selectedIds.slice(0, 6).map((id) => {
+                            {selectedIds.map((id) => {
                                 const user = userMap.get(id);
-                                // ✅ FIX: nếu chưa có trong map thì hiện "Đang tải..."
-                                // thay vì hiện UUID
                                 const name = user?.name ?? (loadingMap ? "..." : `User #${id.slice(0, 6)}`);
+                                const meta = getUserMeta(user);
                                 return (
-                                    <Tooltip key={id} title={user?.email ?? id}>
+                                    <Tooltip key={id} title={meta || name}>
                                         <Tag
                                             style={{
                                                 display: "inline-flex", alignItems: "center", gap: 5,
@@ -213,14 +272,6 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                                     </Tooltip>
                                 );
                             })}
-                            {selectedIds.length > 6 && (
-                                <Tag style={{
-                                    borderRadius: 999, fontSize: 12,
-                                    background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8",
-                                }}>
-                                    +{selectedIds.length - 6} người
-                                </Tag>
-                            )}
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); handleOpen(); }}

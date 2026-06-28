@@ -360,6 +360,7 @@ const ModalProcedure: React.FC<IProps> = ({
     };
 
     const uploadProps: UploadProps = {
+        multiple: true,
         fileList,
         accept: ".pdf,.doc,.docx,.xls,.xlsx",
         beforeUpload: async (file) => {
@@ -375,7 +376,7 @@ const ModalProcedure: React.FC<IProps> = ({
                 return Upload.LIST_IGNORE;
             }
 
-            const tempUid = Date.now().toString();
+            const tempUid = file.uid || `${Date.now()}-${Math.random()}`;
             setFileList((prev) => [...prev, { uid: tempUid, name: file.name, status: "uploading" }]);
 
             try {
@@ -472,6 +473,7 @@ const ModalProcedure: React.FC<IProps> = ({
                 onCancel: handleReset,
                 destroyOnHidden: true,
                 maskClosable: false,
+                className: "procedure-form-modal",
                 styles: { body: { padding: "20px 24px" } },
             }}
         >
@@ -491,27 +493,24 @@ const ModalProcedure: React.FC<IProps> = ({
 
                 <Divider />
 
-                <Row gutter={16}>
+                {/* Row 1: Công ty + Phòng ban + Bộ phận */}
+                <Row gutter={12}>
                     {!fixedCompanyId && (
-                        <Col xs={24} lg={12}>
+                        <Col xs={24} md={8} lg={8}>
                             {isEdit ? (
                                 <Form.Item label="Công ty" style={{ marginBottom: 0 }}>
                                     <Input value={
                                         dataInit?.departments?.[0]?.companyName
-                                        ?? dataInit?.companyName
-                                        ?? ""
-                                    } disabled
-                                        style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
+                                        ?? dataInit?.companyName ?? ""
+                                    } disabled style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
                                 </Form.Item>
                             ) : (
                                 <ProFormSelect
-                                    name="companyId"
-                                    label="Công ty"
+                                    name="companyId" label="Công ty"
                                     request={loadCompanies}
                                     rules={[{ required: true, message: "Chọn công ty" }]}
                                     fieldProps={{
-                                        showSearch: true,
-                                        optionFilterProp: "label",
+                                        showSearch: true, optionFilterProp: "label",
                                         onChange: (val) => {
                                             setCompanyId(val as number);
                                             setDepartmentId(null);
@@ -525,84 +524,47 @@ const ModalProcedure: React.FC<IProps> = ({
                             )}
                         </Col>
                     )}
-                    <Col xs={24} lg={12}>
+                    <Col xs={24} md={fixedCompanyId ? 12 : 8} lg={fixedCompanyId ? 12 : 8}>
                         {fixedDepartmentId ? (
-                            // Cố định — không cho sửa
                             <Form.Item label="Phòng ban" style={{ marginBottom: 0 }}>
-                                <Input
-                                    value={`Phòng ban #${fixedDepartmentId}`}
-                                    disabled
-                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }}
-                                />
+                                <Input value={`Phòng ban #${fixedDepartmentId}`} disabled
+                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
                             </Form.Item>
                         ) : isEdit && procedureType !== "DEPARTMENT" ? (
-                            // Edit COMPANY hoặc CONFIDENTIAL — disabled
                             <Form.Item label="Phòng ban" style={{ marginBottom: 0 }}>
-                                <Input
-                                    value={dataInit?.departmentName ?? ""}
-                                    disabled
-                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }}
-                                />
+                                <Input value={dataInit?.departmentName ?? ""} disabled
+                                    style={{ background: "#f9fafb", borderColor: "#e5e7eb", borderRadius: 8 }} />
                             </Form.Item>
                         ) : procedureType === "DEPARTMENT" ? (
-                            // ✅ Edit hoặc Create DEPARTMENT — multi-select có thể thêm/bỏ
                             <ProFormSelect
-                                name="departmentIds"
-                                label="Phòng ban"
-                                request={loadDepartments}
-                                params={{ companyId }}
+                                name="departmentIds" label="Phòng ban"
+                                request={loadDepartments} params={{ companyId }}
                                 rules={[{ required: true, message: "Chọn ít nhất 1 phòng ban" }]}
                                 fieldProps={{
-                                    mode: "multiple",
-                                    allowClear: true,
-                                    showSearch: true,
-                                    optionFilterProp: "label",
+                                    mode: "multiple", allowClear: true,
+                                    showSearch: true, optionFilterProp: "label",
                                     tagRender: (props) => {
                                         const { label, onClose } = props;
                                         return (
                                             <span style={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: 4,
-                                                margin: "2px 3px",
-                                                padding: "2px 10px",
-                                                borderRadius: 6,
-                                                background: "#f5f5f5",
-                                                border: "1px solid #e5e7eb",
-                                                color: "#374151",
-                                                fontSize: 12,
-                                                fontWeight: 500,
+                                                display: "inline-flex", alignItems: "center", gap: 4,
+                                                margin: "2px 3px", padding: "2px 10px",
+                                                borderRadius: 6, background: "#f5f5f5",
+                                                border: "1px solid #e5e7eb", color: "#374151",
+                                                fontSize: 12, fontWeight: 500,
                                             }}>
                                                 {label}
-                                                <span
-                                                    onClick={onClose}
-                                                    style={{
-                                                        cursor: "pointer",
-                                                        color: "#9ca3af",
-                                                        fontWeight: 400,
-                                                        fontSize: 14,
-                                                        lineHeight: 1,
-                                                        marginLeft: 2,
-                                                    }}
-                                                >
-                                                    ×
-                                                </span>
+                                                <span onClick={onClose} style={{ cursor: "pointer", color: "#9ca3af", fontSize: 14, lineHeight: 1, marginLeft: 2 }}>×</span>
                                             </span>
                                         );
                                     },
                                 }}
                             />
                         ) : (
-                            // Create COMPANY hoặc CONFIDENTIAL — single select
                             <ProFormSelect
-                                name="departmentId"
-                                label="Phòng ban"
-                                request={loadDepartments}
-                                params={{ companyId }}
-                                rules={[{
-                                    required: procedureType === "CONFIDENTIAL",
-                                    message: "Chọn phòng ban",
-                                }]}
+                                name="departmentId" label="Phòng ban"
+                                request={loadDepartments} params={{ companyId }}
+                                rules={[{ required: procedureType === "CONFIDENTIAL", message: "Chọn phòng ban" }]}
                                 fieldProps={{
                                     allowClear: true,
                                     onChange: (val) => {
@@ -613,125 +575,109 @@ const ModalProcedure: React.FC<IProps> = ({
                             />
                         )}
                     </Col>
-                </Row>
-
-                <Row gutter={16}>
-                    <Col xs={24} lg={12}>
+                    <Col xs={24} md={8} lg={fixedCompanyId ? 12 : 8}>
                         <ProFormSelect
-                            name="sectionId"
-                            label="Bộ phận (không bắt buộc)"
+                            name="sectionId" label="Bộ phận"
                             request={loadSections}
                             params={{ departmentId: departmentId ?? fixedDepartmentId ?? dataInit?.departmentId }}
                             fieldProps={{ allowClear: true }}
                         />
                     </Col>
-                    <Col xs={24} lg={12}>
+                </Row>
+
+                {/* Row 2: Mã + Tên + Trạng thái + Năm + Ngày */}
+                <Row gutter={12}>
+                    <Col xs={24} md={8} lg={5}>
                         <ProFormText
-                            name="procedureCode"
-                            label="Mã quy trình"
-                            rules={[{ required: true, message: "Nhập mã quy trình" }]}
+                            name="procedureCode" label="Mã quy trình"
+                            rules={[{ required: true, message: "Nhập mã" }]}
                             placeholder="VD: QT-001"
                             fieldProps={{ style: { textTransform: "uppercase" } }}
                         />
                     </Col>
-                    <Col xs={24} lg={12}>
+                    <Col xs={24} md={16} lg={6}>
                         <ProFormText
-                            name="procedureName"
-                            label="Tên quy trình"
+                            name="procedureName" label="Tên quy trình"
                             rules={[{ required: true, message: "Nhập tên quy trình" }]}
                             placeholder="Nhập tên quy trình..."
                         />
                     </Col>
-                </Row>
-
-                <Row gutter={16}>
-                    <Col xs={24} lg={6}>
+                    <Col xs={24} md={8} lg={5}>
                         <ProFormSelect
-                            name="status"
-                            label="Trạng thái"
+                            name="status" label="Trạng thái"
                             valueEnum={{
-                                NEED_CREATE: "Cần xây dựng mới",
+                                NEED_CREATE: "Cần xây dựng",
                                 IN_PROGRESS: "Đang hiệu lực",
                                 NEED_UPDATE: "Đang cập nhật",
                                 TERMINATED: "Hết hiệu lực",
                             }}
                         />
                     </Col>
-                    <Col xs={24} lg={6}>
-                        <ProFormText
-                            name="planYear"
-                            label="Kế hoạch năm"
-                            fieldProps={{ type: "number" }}
-                            placeholder="VD: 2026"
-                        />
+                    <Col xs={24} md={8} lg={3}>
+                        <ProFormText name="planYear" label="Năm" fieldProps={{ type: "number" }} placeholder="2026" />
                     </Col>
-                    <Col xs={24} lg={6}>
+                    <Col xs={24} md={8} lg={5}>
                         <Form.Item name="issuedDate" label="Ngày ban hành">
-                            <DatePicker
-                                style={{ width: "100%" }}
-                                format="DD-MM-YYYY"
-                                placeholder="Chọn ngày ban hành"
-                            />
+                            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="Chọn ngày" />
                         </Form.Item>
-                    </Col>
-
-                    <Col xs={24} lg={6} style={{ display: "none" }}>
-                        <ProFormSwitch
-                            name="active"
-                            label="Kích hoạt"
-                            initialValue={true}
-                        />
                     </Col>
                 </Row>
 
-                {procedureType === "CONFIDENTIAL" && (
-                    <>
-                        <Divider />
-                        <UserSelectField
-                            companyId={companyId}
-                            selectedUserCount={selectedUserCount}
-                            onCountChange={setSelectedUserCount}
-                        />
-                    </>
-                )}
+                <Col xs={24} lg={6} style={{ display: "none" }}>
+                    <ProFormSwitch name="active" label="Kích hoạt" initialValue={true} />
+                </Col>
 
                 <Divider />
 
-                <Row gutter={16}>
-                    <Col xs={24} lg={14}>
+                {/* Row 3: File + Ghi chú / UserSelect */}
+                <Row gutter={12} align="top">
+                    <Col xs={24} md={procedureType === "CONFIDENTIAL" ? 10 : 24} lg={procedureType === "CONFIDENTIAL" ? 10 : 14}>
                         <Form.Item label="File quy trình" style={{ marginBottom: 0 }}>
                             <Upload {...uploadProps}>
                                 <div style={{
-                                    height: 32,
-                                    border: "1px dashed #d1d5db",
-                                    borderRadius: 8,
-                                    padding: "0 12px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 6,
-                                    cursor: "pointer",
-                                    background: "#fafafa",
-                                    color: "#6b7280",
-                                    fontSize: 12,
-                                    whiteSpace: "nowrap",
-                                }}>
-                                    <UploadOutlined style={{ fontSize: 12 }} />
-                                    {uploading ? "Đang upload..." : "Thêm file PDF, Word, Excel"}
-                                    <span style={{ color: "#9ca3af" }}>(PDF, Word, Excel)</span>
+                                    border: "1.5px dashed #e5e7eb", borderRadius: 10,
+                                    padding: "10px 14px", display: "flex", alignItems: "center", gap: 10,
+                                    cursor: "pointer", background: uploading ? "#f0fdf4" : "#fafafa",
+                                    transition: "border-color .15s",
+                                }}
+                                    onMouseEnter={e => { if (!uploading) (e.currentTarget as HTMLDivElement).style.borderColor = PINK; }}
+                                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#e5e7eb"; }}
+                                >
+                                    <UploadOutlined style={{ fontSize: 18, color: uploading ? "#16a34a" : PINK, flexShrink: 0 }} />
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 500, color: uploading ? "#16a34a" : "#374151" }}>
+                                            {uploading ? "Đang tải lên..." : "Đính kèm file"}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: "#9ca3af" }}>PDF · Word · Excel</div>
+                                    </div>
                                 </div>
                             </Upload>
                         </Form.Item>
                     </Col>
-                    <Col xs={24} lg={10}>
-                        <Form.Item label="Ghi chú" style={{ marginBottom: 0 }}>
-                            <ProFormText
-                                name="note"
-                                noStyle
-                                placeholder="Thêm ghi chú nếu cần..."
+                    <Col xs={24} md={procedureType === "CONFIDENTIAL" ? 14 : 24} lg={procedureType === "CONFIDENTIAL" ? 14 : 10}>
+                        {procedureType === "CONFIDENTIAL" ? (
+                            <UserSelectField
+                                companyId={companyId}
+                                selectedUserCount={selectedUserCount}
+                                onCountChange={setSelectedUserCount}
                             />
-                        </Form.Item>
+                        ) : (
+                            <Form.Item label="Ghi chú" style={{ marginBottom: 0 }}>
+                                <ProFormText name="note" noStyle placeholder="Ghi chú nếu cần..." />
+                            </Form.Item>
+                        )}
                     </Col>
                 </Row>
+
+                {procedureType === "CONFIDENTIAL" && (
+                    <Row gutter={12}>
+                        <Col xs={24}>
+                            <Form.Item label="Ghi chú" style={{ marginBottom: 0 }}>
+                                <ProFormText name="note" noStyle placeholder="Ghi chú nếu cần..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                )}
 
             </div>
         </ModalForm>

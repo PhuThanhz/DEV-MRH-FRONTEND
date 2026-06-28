@@ -87,7 +87,7 @@ const CompanyPage = () => {
         };
 
         if (searchValue) {
-            q.filter = `name~'${searchValue}'`;
+            q.filter = `(name~'${searchValue}' or code~'${searchValue}')`;
         }
 
         setQuery(queryString.stringify(q, { encode: false }));
@@ -168,9 +168,8 @@ const CompanyPage = () => {
                 if (canViewCompanyOrgChart) {
                     items.push({
                         key: "org-chart",
-                        className: "guide-company-org-chart",
                         icon: <ApartmentOutlined style={{ color: "#eb2f96" }} />,
-                        label: "Sơ đồ tổ chức",
+                        label: <span className="guide-company-org-chart">Sơ đồ tổ chức</span>,
                         onClick: () =>
                             navigate(
                                 `/admin/companies/${record.id}/org-chart?companyName=${encodeURIComponent(
@@ -206,7 +205,6 @@ const CompanyPage = () => {
                 if (record.status === 1 && canInactive) {
                     items.push({
                         key: "inactive",
-                        className: "guide-company-status-action",
                         icon: <StopOutlined style={{ color: "#ff4d4f" }} />,
                         label: (
                             <Popconfirm
@@ -220,14 +218,13 @@ const CompanyPage = () => {
                                     })
                                 }
                             >
-                                <span style={{ color: "#ff4d4f" }}>Vô hiệu hóa</span>
+                                <span className="guide-company-status-action" style={{ color: "#ff4d4f" }}>Vô hiệu hóa</span>
                             </Popconfirm>
                         ),
                     });
                 } else if (record.status !== 1 && canActive) {
                     items.push({
                         key: "active",
-                        className: "guide-company-status-action",
                         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
                         label: (
                             <Popconfirm
@@ -241,7 +238,7 @@ const CompanyPage = () => {
                                     })
                                 }
                             >
-                                <span style={{ color: "#52c41a" }}>Kích hoạt</span>
+                                <span className="guide-company-status-action" style={{ color: "#52c41a" }}>Kích hoạt</span>
                             </Popconfirm>
                         ),
                     });
@@ -303,7 +300,7 @@ const CompanyPage = () => {
             title="Quản lý công ty"
             filter={
                 <SearchFilter
-                    searchPlaceholder="Tìm theo tên công ty..."
+                    searchPlaceholder="Tìm theo mã hoặc tên công ty..."
                     addLabel="Thêm công ty"
                     showFilterButton={false}
                     onSearch={setSearchValue}

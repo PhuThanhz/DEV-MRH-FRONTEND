@@ -109,7 +109,7 @@ const playNotificationSound = async () => {
         const playTone = (freq: number, startTime: number, duration: number) => {
             const osc = ctx.createOscillator();
             const gainNode = ctx.createGain();
-            
+
             // Dùng sóng sine cho âm thanh tròn, êm ái
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, startTime);
@@ -124,7 +124,7 @@ const playNotificationSound = async () => {
 
             osc.start(startTime);
             osc.stop(startTime + duration);
-            
+
             // Dọn dẹp
             osc.onended = () => {
                 osc.disconnect();
@@ -178,12 +178,24 @@ const useNotificationsState = (): NotificationContextValue => {
     }, []);
 
     useWebSocket((msg) => {
+        const isDocumentRealtimeEvent = msg.module === "DOCUMENT" && !!msg.documentId && !msg.id;
+        if (isDocumentRealtimeEvent) {
+            queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["documents-by-category"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["documents-by-department"], exact: false });
+            if (msg.documentId) {
+                queryClient.invalidateQueries({ queryKey: ["document", msg.documentId] });
+                queryClient.invalidateQueries({ queryKey: ["document-share-tokens", msg.documentId] });
+            }
+            return;
+        }
+
         // Play "ding" sound
         if (soundEnabled) {
             playNotificationSound();
         }
         // Gom toast realtime để người dùng không bị spam khi nhiều module cập nhật cùng lúc.
-        pushGroupedNotification(msg.content);
+        pushGroupedNotification(msg.content ?? "Bạn có thông báo mới");
         // Append to unread list
         setAppNotifs((prev) => [msg, ...prev]);
         // Real-time invalidate JD Inbox query to trigger fetch only when there's an actual update!
@@ -215,6 +227,8 @@ const useNotificationsState = (): NotificationContextValue => {
                 title = item.type === 'REMINDER_DEADLINE' ? 'Nhắc nhở Đánh giá' : 'Thông báo Đánh giá';
             } else if (item.module === "JD_FLOW") {
                 title = "Thông báo Mô tả công việc";
+            } else if (item.module === "DOCUMENT") {
+                title = "Thông báo Văn bản";
             }
 
             items.push({
@@ -246,12 +260,12 @@ const useNotificationsState = (): NotificationContextValue => {
         });
         saveSeenMap(newMap);
         setSeenVersion(v => v + 1);
-        
+
         // App
         try {
             await callReadAllEvaluationNotifications();
             setAppNotifs(prev => prev.map(n => ({ ...n, read: true })));
-        } catch(e) {}
+        } catch (e) { }
     };
 
     const markOneRead = async (item: UnifiedNotification) => {
@@ -266,7 +280,7 @@ const useNotificationsState = (): NotificationContextValue => {
             try {
                 await callReadEvaluationNotification(item.rawId);
                 setAppNotifs(prev => prev.map(n => n.id === item.rawId ? { ...n, read: true } : n));
-            } catch(e) {}
+            } catch (e) { }
         }
     };
 

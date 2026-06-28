@@ -22,7 +22,7 @@ import {
     BellFilled
 } from "@ant-design/icons";
 
-import { PENDING_ACTION_MODULES } from "@/config/notificationModules";
+import { DOCUMENT_NOTIFICATION_MODULES, KNOWN_NOTIFICATION_MODULES, PENDING_ACTION_MODULES } from "@/config/notificationModules";
 import type { UnifiedNotification } from "@/hooks/useNotifications";
 
 interface NotificationGridProps {
@@ -75,7 +75,7 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
         if (!notif.isRead) {
             markOneRead(notif);
         }
-        
+
         // 2. Đóng popup
         onClose();
 
@@ -111,25 +111,28 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
     };
 
     const filteredItems = React.useMemo(() => {
-        let baseItems = activeTab === 'list' 
-            ? (filterModule 
+        let baseItems = activeTab === 'list'
+            ? (filterModule
                 ? items.filter(i => {
                     if (filterModule === "SYSTEM_ALERTS") {
-                        return !["JD_FLOW", "EVALUATION", "COMPANY_PROCEDURES", "CAREER_PATHS", "DOCUMENTS"].includes(i.module || "");
+                        return !KNOWN_NOTIFICATION_MODULES.includes(i.module || "");
+                    }
+                    if (filterModule === "DOCUMENTS") {
+                        return DOCUMENT_NOTIFICATION_MODULES.includes(i.module || "");
                     }
                     return i.module === filterModule;
                 })
                 : items)
             : [];
-            
+
         if (showUnreadOnly) {
             baseItems = baseItems.filter(item => !item.isRead);
         }
-            
+
         if (searchTerm.trim()) {
             const term = searchTerm.toLowerCase();
-            baseItems = baseItems.filter(item => 
-                item.title?.toLowerCase().includes(term) || 
+            baseItems = baseItems.filter(item =>
+                item.title?.toLowerCase().includes(term) ||
                 item.subtitle?.toLowerCase().includes(term)
             );
         }
@@ -148,7 +151,7 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
         };
         const now = dayjs();
         const itemsToDisplay = filteredItems.slice(0, visibleCount);
-        
+
         itemsToDisplay.forEach(item => {
             if (!item.createdAt) {
                 groups["Cũ hơn"].push(item);
@@ -187,7 +190,7 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                     <div className="flex items-center gap-1">
                         {unreadCount > 0 && markAllRead && (
                             <Tooltip title="Đánh dấu tất cả đã đọc" placement="bottom">
-                                <button 
+                                <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         markAllRead();
@@ -202,7 +205,7 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                         )}
                         {toggleSound && (
                             <Tooltip title={soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"} placement="bottom">
-                                <button 
+                                <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         toggleSound();
@@ -221,16 +224,16 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                 </div>
 
                 {/* Apple-style Segmented Control Tabs */}
-                <div className="bg-gray-100/80 p-1 rounded-[10px] flex relative z-10 mb-3 mt-1">
-                    <button 
+                <div className="bg-gray-100/80 p-1 rounded-[10px] flex relative z-10 mb-3 mt-2">
+                    <button
                         onClick={() => handleBackToGrid()}
-                        className={`flex-1 py-1.5 px-3 text-[13px] font-bold rounded-[8px] transition-all duration-300 z-10 ${activeTab === 'grid' ? 'text-gray-800 bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
+                        className={`flex-1 py-1.5 px-3 text-[13px] rounded-[8px] transition-all duration-300 z-10 ${activeTab === 'grid' ? 'text-gray-900 bg-white shadow-sm font-bold' : 'text-gray-500 hover:text-gray-700 bg-transparent font-medium'}`}
                     >
                         Tác vụ chờ
                     </button>
-                    <button 
+                    <button
                         onClick={() => setActiveTab('list')}
-                        className={`flex-1 py-1.5 px-3 text-[13px] font-bold rounded-[8px] transition-all duration-300 z-10 ${activeTab === 'list' ? 'text-gray-800 bg-white shadow-sm' : 'text-gray-500 hover:text-gray-700 bg-transparent'}`}
+                        className={`flex-1 py-1.5 px-3 text-[13px] rounded-[8px] transition-all duration-300 z-10 ${activeTab === 'list' ? 'text-gray-900 bg-white shadow-sm font-bold' : 'text-gray-500 hover:text-gray-700 bg-transparent font-medium'}`}
                     >
                         Mới cập nhật
                     </button>
@@ -241,40 +244,35 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
             <div className="bg-white">
                 {activeTab === 'grid' ? (
                     <div className="px-4 py-4 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-3 gap-x-3 gap-y-4">
+                        <div className="grid grid-cols-2 gap-3">
                             {allowedModules.map((action) => {
                                 const count = action.filterUnread(items);
                                 return (
-                                    <div 
+                                    <div
                                         key={action.id}
-                                        className="flex flex-col items-center group cursor-pointer"
+                                        className="flex items-center gap-3 p-3 rounded-[12px] bg-gray-50/50 hover:bg-pink-50/60 border border-transparent hover:border-pink-100 transition-all cursor-pointer group"
                                         onClick={() => handleActionClick(action)}
                                     >
-                                        <div className="relative transition-transform duration-300 group-hover:-translate-y-1">
-                                            <div className="absolute -top-1.5 -right-1.5 z-10 scale-[0.85] origin-center">
-                                                <Badge 
-                                                    count={count} 
+                                        <div className="relative flex-shrink-0">
+                                            <div className="absolute -top-1.5 -right-1.5 z-10 scale-[0.8] origin-center">
+                                                <Badge
+                                                    count={count}
                                                     overflowCount={99}
-                                                    color="#f43f5e" 
-                                                    style={{ 
+                                                    color="#f43f5e"
+                                                    style={{
                                                         boxShadow: "0 0 0 2px white",
                                                         fontWeight: "bold",
                                                     }}
                                                 />
                                             </div>
-                                            <div className={`w-[50px] h-[50px] rounded-[14px] flex items-center justify-center text-[21px] transition-all duration-300 bg-white border border-gray-100 shadow-[0_4px_12px_rgba(15,23,42,0.05)] group-hover:shadow-[0_8px_18px_rgba(236,72,153,0.14)] group-hover:border-pink-200
-                                                ${action.color === 'pink' 
-                                                    ? 'text-pink-500 group-hover:bg-pink-50/60 group-hover:text-pink-600' 
-                                                    : 'text-rose-500 group-hover:bg-rose-50/60 group-hover:text-rose-600'
-                                                }`}
-                                            >
+                                            <div className="w-[42px] h-[42px] rounded-[10px] flex items-center justify-center text-[18px] transition-all duration-300 bg-white border border-gray-200 shadow-sm group-hover:border-pink-200 group-hover:text-pink-600 text-pink-500">
                                                 {action.icon}
                                             </div>
                                         </div>
-                                        <div className="min-h-[32px] flex items-start justify-center mt-2">
-                                            <span className="text-[11.5px] font-bold text-gray-600 text-center leading-[1.22] line-clamp-2 px-1 group-hover:text-pink-600 transition-colors">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[12.5px] font-semibold text-gray-700 leading-[1.3] group-hover:text-pink-600 transition-colors line-clamp-2">
                                                 {action.label}
-                                            </span>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -287,23 +285,23 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                         <div className="px-4 pt-3 pb-3 bg-white border-b border-gray-100 z-10 flex flex-col gap-3">
                             <div className="relative group w-full">
                                 <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-pink-500 transition-colors w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                <input 
-                                    type="text" 
-                                    placeholder="Bạn cần tìm gì hôm nay?" 
+                                <input
+                                    type="text"
+                                    placeholder="Bạn cần tìm gì hôm nay?"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full pl-10 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-[10px] text-[13px] font-medium text-gray-700 outline-none focus:bg-white focus:border-pink-300 focus:ring-[3px] focus:ring-pink-100/60 transition-all placeholder:text-gray-400"
                                 />
                                 {searchTerm && (
-                                    <svg 
-                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-slate-600 w-4 h-4" 
+                                    <svg
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-slate-600 w-4 h-4"
                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                                         onClick={() => setSearchTerm("")}
                                     ><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                 )}
                             </div>
                             <div className="flex items-center justify-end">
-                                <button 
+                                <button
                                     onClick={() => setShowUnreadOnly(!showUnreadOnly)}
                                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all border outline-none cursor-pointer ${showUnreadOnly ? 'bg-pink-50 text-pink-600 border-pink-200 shadow-[0_2px_8px_rgba(236,72,153,0.15)]' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700 shadow-sm'}`}
                                 >
@@ -322,7 +320,7 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                                             {PENDING_ACTION_MODULES.find(m => m.moduleKey === filterModule)?.label || "Đã lọc"}
                                         </span>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={handleBackToGrid}
                                         className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-gray-200 bg-white text-[11px] font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm cursor-pointer outline-none"
                                     >
@@ -333,119 +331,119 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                             )}
 
                             {isLoading ? (
-                            <div className="p-5 flex flex-col gap-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="flex gap-3 animate-pulse">
-                                        <div className="w-2 h-2 rounded-full bg-slate-200 mt-2"></div>
-                                        <div className="flex-1">
-                                            <div className="h-3 bg-slate-200 rounded w-3/4 mb-2"></div>
-                                            <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+                                <div className="p-5 flex flex-col gap-4">
+                                    {[1, 2, 3, 4].map((i) => (
+                                        <div key={i} className="flex gap-3 animate-pulse">
+                                            <div className="w-2 h-2 rounded-full bg-slate-200 mt-2"></div>
+                                            <div className="flex-1">
+                                                <div className="h-3 bg-slate-200 rounded w-3/4 mb-2"></div>
+                                                <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+                                            </div>
                                         </div>
+                                    ))}
+                                </div>
+                            ) : filteredItems.length === 0 ? (
+                                <div
+                                    className="flex flex-col items-center justify-center px-6 py-9 text-center relative bg-white"
+                                    style={{
+                                        backgroundImage: "radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.05) 0%, rgba(255, 255, 255, 0) 65%)"
+                                    }}
+                                >
+                                    <div className="w-10 h-10 rounded-[12px] bg-pink-50 text-pink-500 flex items-center justify-center mb-3 border border-pink-100">
+                                        <BellFilled style={{ fontSize: 16 }} />
                                     </div>
-                                ))}
-                            </div>
-                        ) : filteredItems.length === 0 ? (
-                            <div 
-                                className="flex flex-col items-center justify-center px-6 py-9 text-center relative bg-white"
-                                style={{ 
-                                    backgroundImage: "radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.05) 0%, rgba(255, 255, 255, 0) 65%)" 
-                                }}
-                            >
-                                <div className="w-10 h-10 rounded-[12px] bg-pink-50 text-pink-500 flex items-center justify-center mb-3 border border-pink-100">
-                                    <BellFilled style={{ fontSize: 16 }} />
+                                    <span className="text-slate-700 font-bold text-[14px]">Chưa có thông báo nào.</span>
+                                    <span className="text-slate-400 text-[12px] mt-1 leading-relaxed max-w-[220px]">
+                                        Quay lại tác vụ chờ hoặc mở trung tâm đầy đủ.
+                                    </span>
+                                    <div className="flex items-center gap-2 mt-3">
+                                        <button
+                                            onClick={handleBackToGrid}
+                                            className="px-3 py-1.5 rounded-[10px] bg-pink-50 text-pink-600 text-[12px] font-bold border border-pink-100 hover:bg-pink-100 transition-colors cursor-pointer outline-none"
+                                        >
+                                            Tác vụ chờ
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (onOpenFullCenter) {
+                                                    onOpenFullCenter();
+                                                } else {
+                                                    onClose();
+                                                    navigate("/admin/notifications");
+                                                }
+                                            }}
+                                            className="px-3 py-1.5 rounded-[10px] bg-white text-slate-600 text-[12px] font-bold border border-gray-200 hover:border-pink-200 hover:text-pink-600 transition-colors cursor-pointer outline-none"
+                                        >
+                                            Xem tất cả
+                                        </button>
+                                    </div>
                                 </div>
-                                <span className="text-slate-700 font-bold text-[14px]">Chưa có thông báo nào.</span>
-                                <span className="text-slate-400 text-[12px] mt-1 leading-relaxed max-w-[220px]">
-                                    Quay lại tác vụ chờ hoặc mở trung tâm đầy đủ.
-                                </span>
-                                <div className="flex items-center gap-2 mt-3">
-                                    <button
-                                        onClick={handleBackToGrid}
-                                        className="px-3 py-1.5 rounded-[10px] bg-pink-50 text-pink-600 text-[12px] font-bold border border-pink-100 hover:bg-pink-100 transition-colors cursor-pointer outline-none"
-                                    >
-                                        Tác vụ chờ
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (onOpenFullCenter) {
-                                                onOpenFullCenter();
-                                            } else {
-                                                onClose();
-                                                navigate("/admin/notifications");
-                                            }
-                                        }}
-                                        className="px-3 py-1.5 rounded-[10px] bg-white text-slate-600 text-[12px] font-bold border border-gray-200 hover:border-pink-200 hover:text-pink-600 transition-colors cursor-pointer outline-none"
-                                    >
-                                        Xem tất cả
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            Object.entries(groupedItems).map(([groupName, groupItems]) => {
-                                if (groupItems.length === 0) return null;
-                                return (
-                                    <div key={groupName} className="mb-0">
-                                        <div className="px-4 py-2 text-[11px] font-bold text-gray-500 bg-gray-50 uppercase tracking-widest sticky top-0 z-10 border-b border-gray-100">
-                                            {groupName}
-                                        </div>
-                                        {groupItems.map((notif, idx) => (
-                                            <div 
-                                                key={notif.id} 
-                                                className={`px-4 py-3.5 border-b border-gray-100 hover:bg-pink-50/50 cursor-pointer transition-colors ${!notif.isRead ? 'bg-white' : 'bg-gray-50/70 opacity-75'}`}
-                                                onClick={() => handleHistoryItemClick(notif)}
-                                            >
-                                                <div className="flex gap-3">
-                                                    <div className="mt-1">
-                                                        {!notif.isRead ? (
-                                                            <div className="w-2 h-2 rounded-full bg-pink-500 mt-1 shadow-[0_0_8px_rgba(236,72,153,0.6)]"></div>
-                                                        ) : (
-                                                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-1"></div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={`text-[13.5px] m-0 mb-1 leading-tight ${!notif.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                                                            {notif.subtitle}
-                                                        </p>
-                                                        <div className="flex items-center justify-between mt-1.5">
-                                                            <p className="text-[10px] text-gray-400 font-bold m-0 uppercase tracking-wide">
-                                                                {notif.title}
-                                                            </p>
-                                                            {notif.createdAt && (
-                                                                <span className="text-[10.5px] text-gray-400 font-medium">
-                                                                    {dayjs(notif.createdAt).fromNow()}
-                                                                </span>
+                            ) : (
+                                Object.entries(groupedItems).map(([groupName, groupItems]) => {
+                                    if (groupItems.length === 0) return null;
+                                    return (
+                                        <div key={groupName} className="mb-0">
+                                            <div className="px-4 py-2 text-[11px] font-bold text-gray-500 bg-gray-50 uppercase tracking-widest sticky top-0 z-10 border-b border-gray-100">
+                                                {groupName}
+                                            </div>
+                                            {groupItems.map((notif, idx) => (
+                                                <div
+                                                    key={notif.id}
+                                                    className={`px-4 py-3.5 border-b border-gray-100 hover:bg-pink-50/50 cursor-pointer transition-colors ${!notif.isRead ? 'bg-white' : 'bg-gray-50/70 opacity-75'}`}
+                                                    onClick={() => handleHistoryItemClick(notif)}
+                                                >
+                                                    <div className="flex gap-3">
+                                                        <div className="mt-1">
+                                                            {!notif.isRead ? (
+                                                                <div className="w-2 h-2 rounded-full bg-pink-500 mt-1 shadow-[0_0_8px_rgba(236,72,153,0.6)]"></div>
+                                                            ) : (
+                                                                <div className="w-2 h-2 rounded-full bg-gray-300 mt-1"></div>
                                                             )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={`text-[13.5px] m-0 mb-1 leading-tight ${!notif.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                                                {notif.subtitle}
+                                                            </p>
+                                                            <div className="flex items-center justify-between mt-1.5">
+                                                                <p className="text-[10px] text-gray-400 font-bold m-0 uppercase tracking-wide">
+                                                                    {notif.title}
+                                                                </p>
+                                                                {notif.createdAt && (
+                                                                    <span className="text-[10.5px] text-gray-400 font-medium">
+                                                                        {dayjs(notif.createdAt).fromNow()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                );
-                            })
-                        )}
+                                            ))}
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
-                </div>
                 )}
             </div>
-            
+
             {/* Footer */}
             {!isListEmpty && (
-            <div className="p-3 bg-white border-t border-gray-100">
-                <button 
-                    onClick={() => {
-                        if (onOpenFullCenter) {
-                            onOpenFullCenter();
-                        } else {
-                            onClose();
-                            navigate("/admin/notifications");
-                        }
-                    }}
-                    className="w-full py-2.5 bg-white border border-gray-200 rounded-[10px] text-[13px] font-bold text-gray-700 hover:text-pink-600 hover:border-pink-200 hover:bg-pink-50/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer outline-none"
-                >
-                    Xem tất cả thông báo
-                </button>
-            </div>
+                <div className="p-3 bg-white border-t border-gray-100">
+                    <button
+                        onClick={() => {
+                            if (onOpenFullCenter) {
+                                onOpenFullCenter();
+                            } else {
+                                onClose();
+                                navigate("/admin/notifications");
+                            }
+                        }}
+                        className="w-full py-2.5 bg-white border border-gray-200 rounded-[10px] text-[13px] font-bold text-gray-700 hover:text-pink-600 hover:border-pink-200 hover:bg-pink-50/30 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer outline-none"
+                    >
+                        Xem tất cả thông báo
+                    </button>
+                </div>
             )}
         </div>
     );

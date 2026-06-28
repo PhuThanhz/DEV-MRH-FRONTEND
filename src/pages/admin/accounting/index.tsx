@@ -407,16 +407,16 @@ const AccountingDocumentPage = () => {
                     <span style={{ fontWeight: 500, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={entity.department?.name || "Chưa gán"}>
                         {entity.department?.name || "Chưa gán"}
                     </span>
-                    <span 
-                        style={{ 
-                            color: "#8c8c8c", 
-                            fontSize: 11, 
+                    <span
+                        style={{
+                            color: "#8c8c8c",
+                            fontSize: 11,
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
                             lineHeight: 1.3
-                        }} 
+                        }}
                         title={entity.department?.companyName || ""}
                     >
                         {entity.department?.companyName || ""}
@@ -456,7 +456,7 @@ const AccountingDocumentPage = () => {
             ),
         },
 
-                {
+        {
             title: "Hành động",
             align: "center",
             width: 150,
@@ -511,8 +511,8 @@ const AccountingDocumentPage = () => {
                             <Button
                                 type="text"
                                 size="small"
-                                icon={entity.isLocked 
-                                    ? <LockOutlined style={{ color: "#cf1322", fontSize: 16 }} /> 
+                                icon={entity.isLocked
+                                    ? <LockOutlined style={{ color: "#cf1322", fontSize: 16 }} />
                                     : <UnlockOutlined style={{ color: "#8c8c8c", fontSize: 16 }} />}
                                 title={entity.isLocked ? `Đã khoá bởi ${entity.lockedBy}` : "Chưa khoá"}
                             />
@@ -528,78 +528,78 @@ const AccountingDocumentPage = () => {
         return items
             .filter((item): item is AccountingFolderNode => item.id != null)
             .map((item) => ({
-            key: item.id,
-            title: (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {item.folderName} <span style={{ color: '#8c8c8c', fontSize: '12px' }}>({item.documentCount || 0})</span>
-                    </span>
-                    {canCreate && (
-                        <Dropdown
-                            trigger={['click']}
-                            menu={{
-                                items: [
-                                    {
-                                        key: 'add_sub',
-                                        icon: <FolderAddOutlined />,
-                                        label: 'Thêm thư mục con',
-                                        onClick: (e) => {
-                                            e.domEvent.stopPropagation();
-                                            setFolderParentId(item.id);
-                                            setEditingFolderId(null);
-                                            folderForm.resetFields();
-                                            setIsFolderModalVisible(true);
+                key: item.id,
+                title: (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.folderName} <span style={{ color: '#8c8c8c', fontSize: '12px' }}>({item.documentCount || 0})</span>
+                        </span>
+                        {canCreate && (
+                            <Dropdown
+                                trigger={['click']}
+                                menu={{
+                                    items: [
+                                        {
+                                            key: 'add_sub',
+                                            icon: <FolderAddOutlined />,
+                                            label: 'Thêm thư mục con',
+                                            onClick: (e) => {
+                                                e.domEvent.stopPropagation();
+                                                setFolderParentId(item.id);
+                                                setEditingFolderId(null);
+                                                folderForm.resetFields();
+                                                setIsFolderModalVisible(true);
+                                            }
+                                        },
+                                        {
+                                            key: 'edit',
+                                            icon: <EditOutlined />,
+                                            label: 'Đổi tên',
+                                            onClick: (e) => {
+                                                e.domEvent.stopPropagation();
+                                                setEditingFolderId(item.id);
+                                                folderForm.setFieldsValue({ folderName: item.folderName });
+                                                setIsFolderModalVisible(true);
+                                            }
+                                        },
+                                        {
+                                            key: 'delete',
+                                            icon: <DeleteOutlined />,
+                                            label: 'Xoá',
+                                            danger: true,
+                                            onClick: (e) => {
+                                                e.domEvent.stopPropagation();
+                                                Modal.confirm({
+                                                    title: 'Xác nhận xoá thư mục',
+                                                    content: `Bạn có chắc muốn xoá thư mục "${item.folderName}"? Không thể khôi phục lại.`,
+                                                    okText: 'Xoá',
+                                                    cancelText: 'Huỷ',
+                                                    okButtonProps: { danger: true },
+                                                    onOk: () => deleteFolderMutation.mutate(item.id)
+                                                });
+                                            }
                                         }
-                                    },
-                                    {
-                                        key: 'edit',
-                                        icon: <EditOutlined />,
-                                        label: 'Đổi tên',
-                                        onClick: (e) => {
-                                            e.domEvent.stopPropagation();
-                                            setEditingFolderId(item.id);
-                                            folderForm.setFieldsValue({ folderName: item.folderName });
-                                            setIsFolderModalVisible(true);
-                                        }
-                                    },
-                                    {
-                                        key: 'delete',
-                                        icon: <DeleteOutlined />,
-                                        label: 'Xoá',
-                                        danger: true,
-                                        onClick: (e) => {
-                                            e.domEvent.stopPropagation();
-                                            Modal.confirm({
-                                                title: 'Xác nhận xoá thư mục',
-                                                content: `Bạn có chắc muốn xoá thư mục "${item.folderName}"? Không thể khôi phục lại.`,
-                                                okText: 'Xoá',
-                                                cancelText: 'Huỷ',
-                                                okButtonProps: { danger: true },
-                                                onOk: () => deleteFolderMutation.mutate(item.id)
-                                            });
-                                        }
-                                    }
-                                ]
-                            }}
-                        >
-                            <Button 
-                                type="text" 
-                                size="small" 
-                                icon={<MoreOutlined />} 
-                                onClick={e => e.stopPropagation()} 
-                            />
-                        </Dropdown>
-                    )}
-                </div>
-            ),
-            icon: ({ expanded }) => expanded ? <FolderOpenOutlined style={{ color: '#faad14' }} /> : <FolderOutlined style={{ color: '#faad14' }} />,
-            children: buildTreeData(item.children),
-        }));
+                                    ]
+                                }}
+                            >
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<MoreOutlined />}
+                                    onClick={e => e.stopPropagation()}
+                                />
+                            </Dropdown>
+                        )}
+                    </div>
+                ),
+                icon: ({ expanded }) => expanded ? <FolderOpenOutlined style={{ color: '#faad14' }} /> : <FolderOutlined style={{ color: '#faad14' }} />,
+                children: buildTreeData(item.children),
+            }));
     };
 
     const treeData = useMemo(() => {
         if (!folderTree) return [];
-        
+
         const sortNodes = (nodes: IDocumentFolder[]): IDocumentFolder[] => {
             const sorted = [...nodes].sort((a, b) => {
                 const nameA = a.folderName || "";
@@ -607,7 +607,7 @@ const AccountingDocumentPage = () => {
                 // Sort descending so "Năm 2026" appears before "Năm 2025"
                 return nameB.localeCompare(nameA);
             });
-            
+
             sorted.forEach(node => {
                 if (node.children && node.children.length > 0) {
                     node.children = sortNodes(node.children);
@@ -794,12 +794,12 @@ const AccountingDocumentPage = () => {
                                                 const worksheet = XLSX.utils.json_to_sheet(excelData);
                                                 const workbook = XLSX.utils.book_new();
                                                 XLSX.utils.book_append_sheet(workbook, worksheet, "Chứng từ kế toán");
-                                                
+
                                                 // Make header bold
                                                 const range = XLSX.utils.decode_range(worksheet['!ref'] || "A1:G1");
-                                                for(let C = range.s.c; C <= range.e.c; ++C) {
+                                                for (let C = range.s.c; C <= range.e.c; ++C) {
                                                     const address = XLSX.utils.encode_col(C) + "1";
-                                                    if(!worksheet[address]) continue;
+                                                    if (!worksheet[address]) continue;
                                                     worksheet[address].s = { font: { bold: true } };
                                                 }
 
@@ -1050,9 +1050,9 @@ const AccountingDocumentPage = () => {
                                     style={{ background: 'transparent' }}
                                 />
                             ) : (
-                                <Empty 
-                                    image={Empty.PRESENTED_IMAGE_SIMPLE} 
-                                    description={<span style={{ color: '#9ca3af', fontSize: 13 }}>Chưa có thư mục nào</span>} 
+                                <Empty
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                    description={<span style={{ color: '#9ca3af', fontSize: 13 }}>Chưa có thư mục nào</span>}
                                 />
                             )}
                         </Space>

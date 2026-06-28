@@ -133,6 +133,7 @@ const PermissionPage = () => {
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.PERMISSIONS.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="permission-edit-button"
                             type="text"
                             size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -154,6 +155,7 @@ const PermissionPage = () => {
                             onConfirm={() => handleDelete(entity.id!)}
                         >
                             <Button
+                                data-guide-id="permission-delete-button"
                                 type="text"
                                 size="small"
                                 icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
@@ -183,6 +185,9 @@ const PermissionPage = () => {
                         setDataInit(null);
                         setOpenModal(true);
                     }}
+                    addPermission={ALL_PERMISSIONS.PERMISSIONS.CREATE}
+                    guideSearchId="permission-search-input"
+                    guideAddId="permission-add-button"
                 />
             }
         >

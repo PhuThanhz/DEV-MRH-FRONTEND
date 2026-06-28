@@ -300,6 +300,7 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                 onCancel={onClose}
                 width={isMobile ? "92vw" : 800}
                 centered
+                className="procedure-view-modal"
                 closeIcon={<CloseOutlined style={{ fontSize: 12 }} />}
                 styles={{
                     body: { padding: 0, maxHeight: "calc(100vh - 220px)", overflowY: "auto" },

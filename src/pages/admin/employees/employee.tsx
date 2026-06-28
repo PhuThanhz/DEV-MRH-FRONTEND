@@ -278,6 +278,7 @@ const EmployeePage = () => {
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.GET_BY_ID} hideChildren>
                         <Button
+                            data-guide-id="employee-detail-button"
                             type="text"
                             size="small"
                             icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -290,6 +291,7 @@ const EmployeePage = () => {
 
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="employee-edit-button"
                             type="text"
                             size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -310,6 +312,7 @@ const EmployeePage = () => {
                             placement="topRight"
                             onConfirm={() => handleDelete(entity.id as string)}                        >
                             <Button
+                                data-guide-id="employee-delete-button"
                                 type="text"
                                 size="small"
                                 icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}

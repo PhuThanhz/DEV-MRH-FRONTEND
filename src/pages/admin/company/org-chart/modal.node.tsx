@@ -1152,8 +1152,8 @@ const ModalNode = ({
             form.resetFields();
             setMode(initialMode);
             setNodeKind(initialValues?.nodeKind ?? (initialValues ? inferNodeKind(initialValues) : initialNodeKind));
-            if (initialValues) { 
-                form.setFieldsValue(initialValues); 
+            if (initialValues) {
+                form.setFieldsValue(initialValues);
                 if (isEditing || (initialValues.parentId && initialMode !== "bulk")) {
                     setMode("single");
                 }
@@ -1200,8 +1200,8 @@ const ModalNode = ({
     };
 
     const okLabel = isEditing
-            ? "Lưu thay đổi"
-            : isBulk
+        ? "Lưu thay đổi"
+        : isBulk
             ? `Tạo ${validCount > 0 ? `${validCount} mục` : "hàng loạt"}`
             : nodeKind === "department" ? "Tạo phòng ban" : "Tạo chức danh";
 

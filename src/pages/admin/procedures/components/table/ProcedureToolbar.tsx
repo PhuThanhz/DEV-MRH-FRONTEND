@@ -42,6 +42,7 @@ const ProcedureToolbar = ({
     onExitPrintMode,
     onFilterChange,
 }: ProcedureToolbarProps) => {
+    const guideKey = `${type.toLowerCase()}-procedure`;
     const filterFields: FilterField[] = [
         ...(!companyId && !departmentId ? [{
             key: "companyId",
@@ -131,6 +132,8 @@ const ProcedureToolbar = ({
                         onReset={onReset}
                         onAddClick={onAddClick}
                         addPermission={permission.create}
+                        guideSearchId={`${guideKey}-search-input`}
+                        guideAddId={`${guideKey}-add-button`}
                     />
                 </div>
 

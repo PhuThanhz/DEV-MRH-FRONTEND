@@ -58,10 +58,12 @@ const STATUS_LABEL: Record<string, string> = {
 const ActionBtn = ({
     children,
     onClick,
+    guideId,
     variant = "primary",
 }: {
     children: React.ReactNode;
     onClick: () => void;
+    guideId?: string;
     variant?: "primary" | "approve" | "reject" | "ghost" | "issue";
 }) => {
     const [hovered, setHovered] = useState(false);
@@ -76,6 +78,7 @@ const ActionBtn = ({
 
     return (
         <button
+            data-guide-id={guideId}
             style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -453,6 +456,7 @@ const JobDescriptionTable = ({
                         {/* Xem */}
                         <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_BY_ID} hideChildren>
                             <Button
+                                data-guide-id="job-description-detail-button"
                                 type="text"
                                 size="small"
                                 icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -471,6 +475,7 @@ const JobDescriptionTable = ({
                             ) && (
                                 <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.UPDATE} hideChildren>
                                     <Button
+                                        data-guide-id="job-description-edit-button"
                                         type="text"
                                         size="small"
                                         icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -490,6 +495,7 @@ const JobDescriptionTable = ({
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>
                                 <ActionBtn
                                     variant="approve"
+                                    guideId="job-description-approve-button"
                                     onClick={() => {
                                         setFlowRecord({ id: record.jdId ?? record.id, status: record.status, isApprover: true });
                                         setOpenFlowModal(true);
@@ -506,6 +512,7 @@ const JobDescriptionTable = ({
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
                                 <ActionBtn
                                     variant="reject"
+                                    guideId="job-description-reject-button"
                                     onClick={() => {
                                         setRejectRecord(record);
                                         setIsResubmitReject(false);
@@ -523,6 +530,7 @@ const JobDescriptionTable = ({
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.ISSUE} hideChildren>
                                 <ActionBtn
                                     variant="issue"
+                                    guideId="job-description-issue-button"
                                     onClick={() => {
                                         setIssueRecord(record);
                                         setOpenIssueModal(true);
@@ -537,7 +545,7 @@ const JobDescriptionTable = ({
                         {/* Dropdown */}
                         {dropdownItems.length > 0 && (
                             <Dropdown menu={{ items: dropdownItems }} trigger={["click"]} placement="bottomRight">
-                                <Button type="text" size="small" icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />} />
+                                <Button data-guide-id="job-description-more-button" type="text" size="small" icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />} />
                             </Dropdown>
                         )}
                     </Space>
@@ -557,6 +565,8 @@ const JobDescriptionTable = ({
                     onReset={onReset ?? (() => { })}
                     onAddClick={showAdd ? () => setOpenModal(true) : undefined}
                     addPermission={showAdd ? ALL_PERMISSIONS.JOB_DESCRIPTIONS.CREATE : undefined}
+                    guideSearchId="job-description-search-input"
+                    guideAddId="job-description-add-button"
                 />
 
                 <div className="flex flex-wrap gap-3 items-center">

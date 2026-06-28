@@ -40,6 +40,7 @@ const CLASSIFY_META: Record<string, { label: string; color: string }> = {
     COMPANY: { label: "Cấp công ty", color: "geekblue" },
     DEPARTMENT: { label: "Cấp phòng ban", color: "cyan" },
     CONFIDENTIAL: { label: "Bảo mật", color: "volcano" },
+    CONFIDENTIAL_SELECTED: { label: "Chọn người xem", color: "orange" },
     CROSS_COMPANY: { label: "Liên công ty", color: "purple" },
     NORMAL: { label: "Văn bản thường", color: "default" },
 };
@@ -150,8 +151,8 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting
     const handleDownloadQr = () => {
         if (!data?.qrCode) return;
         const a = document.createElement("a");
-        const qrSrc = data.qrCode.startsWith("data:image") 
-            ? data.qrCode 
+        const qrSrc = data.qrCode.startsWith("data:image")
+            ? data.qrCode
             : `data:image/png;base64,${data.qrCode}`;
         a.href = qrSrc;
         a.download = `qr-${data.documentCode ?? "document"}.png`;
@@ -266,6 +267,14 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting
                 </Field>
                 <Field label="Phân loại">
                     {(() => {
+                        // CONFIDENTIAL từ category có mappingProcedure = bảo mật thật sự
+                        // CONFIDENTIAL không có mappingProcedure = chỉ chọn người xem cụ thể
+                        if (data.procedureType === "CONFIDENTIAL") {
+                            const meta = data.category?.mappingProcedure
+                                ? CLASSIFY_META.CONFIDENTIAL
+                                : CLASSIFY_META.CONFIDENTIAL_SELECTED;
+                            return <Tag color={meta.color} style={TAG_STYLE}>{meta.label}</Tag>;
+                        }
                         const meta = data.category?.mappingProcedure
                             ? (CLASSIFY_META[data.procedureType || ""] ?? { label: data.procedureType || "Quy trình", color: "geekblue" })
                             : data.category?.isCrossCompany

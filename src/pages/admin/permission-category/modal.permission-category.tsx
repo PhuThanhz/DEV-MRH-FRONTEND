@@ -161,6 +161,7 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                 onCancel: handleClose,
                 destroyOnHidden: true,
                 maskClosable: false,
+                className: "permission-category-form-modal",
                 styles: {
                     body: { padding: "16px 24px" },
                     header: { paddingBottom: 12, borderBottom: "1px solid #f3f4f6" },

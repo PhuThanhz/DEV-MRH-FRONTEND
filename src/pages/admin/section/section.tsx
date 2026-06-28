@@ -196,6 +196,7 @@ const SectionPage = () => {
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.GET_BY_ID} hideChildren>
                             <Button
+                                data-guide-id="section-detail-button"
                                 type="text"
                                 size="small"
                                 icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -209,6 +210,7 @@ const SectionPage = () => {
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
                             <Button
+                                data-guide-id="section-edit-button"
                                 type="text"
                                 size="small"
                                 icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -255,6 +257,8 @@ const SectionPage = () => {
                             setOpenModal(true);
                         }}
                         addPermission={ALL_PERMISSIONS.SECTIONS.CREATE}
+                        guideSearchId="section-search-input"
+                        guideAddId="section-add-button"
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

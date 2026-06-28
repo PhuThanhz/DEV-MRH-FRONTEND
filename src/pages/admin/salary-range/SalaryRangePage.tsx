@@ -11,6 +11,7 @@ import EditableRowMonth from "./EditableRowMonth";
 import EditableRowHour from "./EditableRowHour";
 import ReadOnlyRowMonth from "./ReadOnlyRowMonth";
 import ReadOnlyRowHour from "./ReadOnlyRowHour";
+import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
 import { useDeptNavPages } from "@/hooks/useDeptNavPages";
 
 import type { ISalaryMatrix } from "@/types/backend";
@@ -41,7 +42,13 @@ const groupMatrix = (matrix: ISalaryMatrix[]) =>
 const SalaryRangePage = () => {
     const { departmentId } = useParams();
     const [searchParams] = useSearchParams();
-    const departmentName = searchParams.get("departmentName") ?? "";
+    const paramDeptName = searchParams.get("departmentName");
+
+    // Fetch department details to ensure we always have the name
+    const { data: deptData } = useDepartmentByIdQuery(departmentId ? Number(departmentId) : undefined);
+
+    // Use URL param first, then fetched data, then empty string
+    const departmentName = paramDeptName || deptData?.name || "";
 
     // ── Check quyền
     const canViewMatrix = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW);
@@ -90,7 +97,7 @@ const SalaryRangePage = () => {
     const tableHeader = (type: "MONTH" | "HOUR") => (
         <thead>
             <tr>
-                <th className="sticky-col-2 th-meta" rowSpan={2}>Chức danh</th>
+                <th className="sticky-col th-meta" rowSpan={2}>Chức danh</th>
                 <th className="th-meta" rowSpan={2}>Bậc lương chức danh</th>
                 <th colSpan={6} className="group-header income-group">
                     {type === "MONTH" ? "Thu nhập cố định" : "Thu nhập theo giờ"}
@@ -147,7 +154,7 @@ const SalaryRangePage = () => {
                         return (
                             <tr key={`${type}-${jt.jobTitleId}-${row.gradeId}`} className="data-row">
                                 {idx === 0 && (
-                                    <td rowSpan={jt.rows.length} className="sticky-col-2 job-title-col">
+                                    <td rowSpan={jt.rows.length} className="sticky-col job-title-col">
                                         <span className="job-title-text">{jt.jobTitleName}</span>
                                     </td>
                                 )}
@@ -219,11 +226,11 @@ const SalaryRangePage = () => {
     };
 
     return (
-        <PageContainer title={`Cơ cấu thu nhập – ${departmentName}`}>
-            <Card className="salary-range-card" bordered={false}>
+        <PageContainer title={departmentName ? `Cơ cấu thu nhập – ${departmentName}` : "Cơ cấu thu nhập"}>
+            <Card className="salary-range-card" variant="borderless">
 
                 {/* Badge hiển thị khi user chỉ xem khung lương của mình */}
-                {isReadOnly && (
+                {(!canViewMatrix && canViewMy) && (
                     <div style={{ padding: "12px 20px 0" }}>
                         <Tag color="blue" style={{ fontSize: 12 }}>
                             Khung lương của tôi
@@ -275,142 +282,151 @@ const SalaryRangePage = () => {
 
                 <style>{`
                     .salary-range-card {
-                        border-radius: 10px;
+                        border-radius: 12px;
                         background: #ffffff;
-                        box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+                        box-shadow: 0 6px 24px -8px rgba(0,0,0,0.08);
+                        border: 1px solid #f0f0f0;
                         overflow: hidden;
                     }
                     .salary-range-card .ant-card-body { padding: 0; }
                     .loading-wrapper {
                         display: flex; flex-direction: column;
                         align-items: center; justify-content: center;
-                        padding: 100px 0; gap: 12px;
+                        padding: 120px 0; gap: 16px;
                     }
-                    .loading-text { color: #9a9a9e; font-size: 13px; margin: 0; }
+                    .loading-text { color: #8c8c8c; font-size: 15px; margin: 0; font-weight: 500; }
+                    
+                    /* TABS - PREMIUM LOTUS THEME */
                     .salary-tabs > .ant-tabs-nav {
-                        margin: 0; padding: 0 20px;
-                        background: #ffffff;
-                        border-bottom: 2px solid #f0f0f0;
+                        margin: 24px 0 24px 24px; padding: 4px;
+                        background: #f5f5f5;
+                        border-radius: 8px;
+                        display: inline-flex;
+                        width: fit-content;
                     }
                     .salary-tabs > .ant-tabs-nav::before { border: none; }
                     .salary-tabs .ant-tabs-tab {
-                        padding: 14px 4px !important;
-                        margin: 0 20px 0 0 !important;
-                        font-size: 13px; font-weight: 500;
-                        color: #8c8c8c !important;
-                        border: none !important;
-                        background: transparent !important;
-                        transition: color 0.2s;
+                        padding: 8px 24px !important;
+                        margin: 0 !important;
+                        font-size: 14px; font-weight: 500;
+                        color: #595959 !important;
+                        border-radius: 6px;
+                        transition: all 0.3s ease;
                     }
                     .salary-tabs .ant-tabs-tab:hover { color: #262626 !important; }
+                    .salary-tabs .ant-tabs-tab-active {
+                        background: #ffffff !important;
+                        color: #eb2f96 !important;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    }
                     .salary-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-                        color: #262626 !important; font-weight: 600;
+                        color: #eb2f96 !important; font-weight: 600;
                     }
-                    .salary-tabs .ant-tabs-ink-bar {
-                        background: #262626 !important; height: 2px !important;
-                    }
+                    .salary-tabs .ant-tabs-ink-bar { display: none !important; }
                     .salary-tabs .ant-tabs-content-holder {
-                        background: #f5f5f5; padding: 16px 20px 20px;
+                        background: #ffffff; padding: 0 24px 24px;
                     }
-                    .tab-label { display: inline-flex; align-items: center; gap: 7px; }
+                    .tab-label { display: inline-flex; align-items: center; gap: 8px; }
+                    
+                    /* TABLE STYLING - MODERN ANTD EQUIVALENT */
                     .table-container {
-                        border: 1px solid #e8e8e8; border-radius: 6px;
+                        border: 1px solid #f0f0f0;
+                        border-radius: 8px;
                         overflow: hidden; background: white;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
                     }
                     .table-wrapper {
                         overflow-x: auto; overflow-y: auto; max-height: 68vh;
                     }
-                    .table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
-                    .table-wrapper::-webkit-scrollbar-track { background: #f5f5f5; }
-                    .table-wrapper::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 999px; }
+                    .table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+                    .table-wrapper::-webkit-scrollbar-track { background: #fafafa; }
+                    .table-wrapper::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 4px; }
                     .table-wrapper::-webkit-scrollbar-thumb:hover { background: #bfbfbf; }
+                    
                     .salary-table {
-                        width: 100%; border-collapse: collapse;
-                        font-size: 13px; min-width: 1600px; background: white;
+                        width: 100%; border-collapse: separate; border-spacing: 0;
+                        font-size: 14px; min-width: 1600px; background: white;
                     }
                     .salary-table th, .salary-table td {
-                        border: 1px solid #bfbfbf;
-                        padding: 10px 13px; text-align: center; background: white;
+                        border-right: 1px solid #f0f0f0;
+                        border-bottom: 1px solid #f0f0f0;
+                        padding: 16px; text-align: center; background: white;
+                        color: #262626;
+                        font-variant-numeric: tabular-nums;
                     }
-                    .salary-table thead th.th-meta {
-                        background: #fafafa; color: #262626; font-weight: 600;
-                        font-size: 13px; position: sticky; top: 0; z-index: 10;
-                        white-space: nowrap; border-color: #e8e8e8;
-                        border-bottom: 2px solid #e8e8e8;
+                    .salary-table th:last-child, .salary-table td:last-child {
+                        border-right: none;
                     }
-                    .salary-table thead th.group-header {
-                        font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
-                        text-transform: uppercase; padding: 9px 13px;
-                        position: sticky; top: 0; z-index: 10; white-space: nowrap;
+                    
+                    /* HEADERS - CLEAN AND AIRY */
+                    .salary-table thead {
+                        position: sticky; top: 0; z-index: 20;
                     }
-                    .salary-table thead th.group-header.income-group {
-                        background: #fafafa; color: #000000; font-weight: 700;
-                        border-bottom: 1px solid #e8e8e8;
-                    }
-                    .salary-table thead th.group-header.kpi-group {
-                        background: #fafafa; color: #000000; font-weight: 700;
-                        border-bottom: 1px solid #e8e8e8;
+                    .salary-table thead th {
+                        font-weight: 600;
+                        color: #262626;
+                        background: #fafafa;
+                        white-space: nowrap;
+                        /* Fix header border missing in sticky mode */
+                        box-shadow: inset 0 -1px 0 #f0f0f0, inset -1px 0 0 #f0f0f0;
+                        border: none; /* Replace actual borders with box-shadow for sticky rendering */
                     }
                     .salary-table thead th.sub-header {
-                        font-size: 12px; font-weight: 500; position: sticky;
-                        top: 0; z-index: 10; white-space: nowrap;
-                        padding: 8px 13px; border-bottom: 2px solid #e8e8e8;
+                        color: #595959; font-size: 13px;
                     }
-                    .salary-table thead th.sub-header.income-sub {
-                        background: #fafafa; color: #262626; font-weight: 600;
-                    }
-                    .salary-table thead th.sub-header.kpi-sub {
-                        background: #f0f0f0; color: #262626; font-weight: 600;
-                    }
+                    
+                    /* STICKY COLUMNS */
                     .sticky-col {
                         position: sticky; left: 0; z-index: 11 !important;
-                        background: white; border-right: 1px solid #e8e8e8 !important;
-                        box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+                        background: white; 
+                        box-shadow: inset -1px 0 0 #f0f0f0; /* Use box-shadow instead of border */
+                        border: none;
                     }
-                    .sticky-col-2 {
-                        position: sticky; left: 0; z-index: 11 !important;
-                        background: white; border-right: 1px solid #e8e8e8 !important;
-                        box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+                    .salary-table thead .sticky-col {
+                        background: #fafafa; z-index: 21 !important;
+                        box-shadow: inset -1px 0 0 #f0f0f0, inset 0 -1px 0 #f0f0f0;
                     }
-                    .salary-table thead .sticky-col,
-                    .salary-table thead .sticky-col-2 {
-                        background: #fafafa; z-index: 12 !important;
-                    }
-                    .data-row td { transition: none; }
-                    .band-col { min-width: 130px; }
-                    .band-badge {
-                        display: inline-flex; align-items: center; justify-content: center;
-                        padding: 3px 10px; background: #fafafa; color: #434343;
-                        border: 1px solid #d9d9d9; border-radius: 4px;
-                        font-size: 12px; font-weight: 600; letter-spacing: 0.4px; white-space: nowrap;
-                    }
-                    .job-title-col { min-width: 200px; text-align: left; padding-left: 16px; }
-                    .job-title-text { font-weight: 500; color: #262626; font-size: 13px; }
-                    .grade-col { min-width: 90px; }
+                    
+                    .data-row td { transition: background 0.2s; }
+                    .data-row:hover td { background: #fafafa; }
+                    
+                    /* BADGES AND TYPOGRAPHY */
+                    .job-title-col { min-width: 200px; max-width: 250px; text-align: left; padding-left: 24px !important; }
+                    .job-title-text { font-weight: 600; color: #262626; font-size: 14px; }
+                    
+                    .grade-col { min-width: 120px; }
                     .grade-pill {
-                        display: inline-block; padding: 2px 10px; border-radius: 4px;
-                        font-size: 12px; font-weight: 600;
-                        border: 1px solid transparent; white-space: nowrap;
+                        display: inline-block; padding: 4px 14px; border-radius: 6px;
+                        font-size: 12px; font-weight: 600; white-space: nowrap;
+                        border: 1px solid transparent;
                     }
-                    .empty-state {
-                        padding: 0 !important; background: #fafafa !important; border: none !important;
-                    }
+                    
+                    /* EMPTY STATE */
+                    .empty-state { padding: 0 !important; background: #ffffff !important; border: none !important; }
                     .empty-inner {
-                        display: flex; flex-direction: column;
-                        align-items: center; justify-content: center;
-                        gap: 10px; padding: 72px 20px; color: #bfbfbf; font-size: 13px;
+                        display: flex; flex-direction: column; align-items: center; justify-content: center;
+                        gap: 16px; padding: 100px 20px; color: #bfbfbf; font-size: 14px;
                     }
-                    .num-col { min-width: 110px; font-size: 13px; color: #262626; }
-                    .num-col.kpi { background: #fafafa !important; }
+                    
+                    /* INPUT COLUMNS */
+                    .num-col { min-width: 130px; font-size: 14px; color: #262626; }
+                    
                     @media (max-width: 1200px) {
-                        .salary-table { font-size: 12px; }
-                        .salary-table th, .salary-table td { padding: 8px; }
-                        .sticky-col-2 { left: 110px; }
+                        .salary-table { font-size: 13px; }
+                        .salary-table th, .salary-table td { padding: 12px; }
+                    }
+                    @media (max-width: 768px) {
+                        .salary-tabs > .ant-tabs-nav { margin: 16px 12px; }
+                        .salary-tabs .ant-tabs-content-holder { padding: 0 12px 16px; }
+                        
+                        .salary-table th, .salary-table td { padding: 10px; }
+                        .job-title-col { min-width: 120px; max-width: 140px; padding-left: 12px !important; }
+                        .grade-col { min-width: 90px; }
+                        .num-col { min-width: 110px; }
+                        .grade-pill { padding: 2px 8px; font-size: 11px; }
                     }
                     @media print {
                         .table-wrapper { overflow: visible; max-height: none; }
-                        .sticky-col, .sticky-col-2 { position: static; box-shadow: none; }
+                        .sticky-col { position: static; box-shadow: none; border-right: 1px solid #f0f0f0 !important; }
                     }
                 `}</style>
             </Card>

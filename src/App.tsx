@@ -74,8 +74,8 @@ export default function App() {
     if (window.location.pathname === PATHS.LOGIN) return;
     const token = localStorage.getItem("access_token");
     if (!token) {
-        dispatch(setLogoutAction());
-        return;
+      dispatch(setLogoutAction());
+      return;
     }
     dispatch(fetchAccount());
   }, []);

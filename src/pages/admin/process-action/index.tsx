@@ -165,6 +165,7 @@ const ProcessActionPage = () => {
                 <Space>
                     <Access permission={ALL_PERMISSIONS.PROCESS_ACTIONS.GET_BY_ID} hideChildren>
                         <EyeOutlined
+                            data-guide-id="process-action-detail-button"
                             style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -175,6 +176,7 @@ const ProcessActionPage = () => {
 
                     <Access permission={ALL_PERMISSIONS.PROCESS_ACTIONS.UPDATE} hideChildren>
                         <EditOutlined
+                            data-guide-id="process-action-edit-button"
                             style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -203,6 +205,8 @@ const ProcessActionPage = () => {
                             setOpenModal(true);
                         }}
                         addPermission={ALL_PERMISSIONS.PROCESS_ACTIONS.CREATE}
+                        guideSearchId="process-action-search-input"
+                        guideAddId="process-action-add-button"
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

@@ -25,9 +25,18 @@ import {
     ReloadOutlined,
     RollbackOutlined,
     SendOutlined,
+    EyeOutlined,
+    GlobalOutlined,
+    BankOutlined,
+    CalendarOutlined,
+    CodeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import PageContainer from "@/components/common/data-table/PageContainer";
+import {
+    DetailModal, InfoRow, ProfileHeader, SectionTitle, ActiveTag, OutlineTag, InactiveTag
+} from "@/components/common/modal/detail";
+import SearchFilter from "@/components/common/filter/SearchFilter";
 import Access from "@/components/share/access";
 import {
     callAddDossierDocument,
@@ -189,6 +198,7 @@ const AccountingDossierModal = ({
             width={900}
             centered
             destroyOnClose
+            className="accounting-dossier-form-modal"
             onCancel={handleCancel}
             footer={[
                 <Button key="cancel" onClick={handleCancel}>
@@ -682,6 +692,7 @@ const AccountingDossierPage = () => {
     const [editingDossier, setEditingDossier] = useState<IAccountingDossier | null>(null);
     const [logDossier, setLogDossier] = useState<IAccountingDossier | null>(null);
     const [companies, setCompanies] = useState<ICompany[]>([]);
+    const [viewDossier, setViewDossier] = useState<IAccountingDossier | null>(null);
 
     const query = useMemo(
         () => `page=${page}&size=${pageSize}&sort=createdAt,desc`,
@@ -843,9 +854,19 @@ const AccountingDossierPage = () => {
             render: (_, record) => {
                 const canEdit = editableStatuses.includes(record.status);
                 const canRequestReturn = returnRequestableStatuses.includes(record.status);
+                const key = String(record.id);
 
                 return (
-                    <Space size={4}>
+                    <Space size="small">
+                        <Tooltip title="Xem chi tiết">
+                            <Button
+                                data-guide-id="accounting-dossier-detail-button"
+                                type="text"
+                                size="small"
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                onClick={() => setViewDossier(record)}
+                            />
+                        </Tooltip>
                         <Access
                             permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.UPDATE}
                             hideChildren
@@ -859,10 +880,9 @@ const AccountingDossierPage = () => {
                             >
                                 <Tooltip title={canEdit ? "Chuyển chứng từ" : "Đã chuyển"}>
                                     <Button
-                                        type="primary"
-                                        ghost
+                                        type="text"
                                         size="small"
-                                        icon={<SendOutlined />}
+                                        icon={<SendOutlined style={{ color: canEdit ? "#52c41a" : undefined, fontSize: 16 }} />}
                                         disabled={!canEdit}
                                         loading={submitMutation.isPending && submitMutation.variables === record.id}
                                     />
@@ -875,8 +895,10 @@ const AccountingDossierPage = () => {
                         >
                             <Tooltip title="Nhật ký">
                                 <Button
+                                    data-guide-id="accounting-dossier-edit-button"
+                                    type="text"
                                     size="small"
-                                    icon={<HistoryOutlined />}
+                                    icon={<HistoryOutlined style={{ color: "#595959", fontSize: 16 }} />}
                                     onClick={() => setLogDossier(record)}
                                 />
                             </Tooltip>
@@ -887,8 +909,9 @@ const AccountingDossierPage = () => {
                         >
                             <Tooltip title={canRequestReturn ? "Yêu cầu hoàn chứng từ" : "Chỉ yêu cầu hoàn khi đã chuyển"}>
                                 <Button
+                                    type="text"
                                     size="small"
-                                    icon={<RollbackOutlined />}
+                                    icon={<RollbackOutlined style={{ color: canRequestReturn ? "#faad14" : undefined, fontSize: 16 }} />}
                                     disabled={!canRequestReturn}
                                     loading={requestReturnMutation.isPending && requestReturnMutation.variables?.id === record.id}
                                     onClick={() => {
@@ -918,8 +941,9 @@ const AccountingDossierPage = () => {
                         >
                             <Tooltip title={canEdit ? "Sửa" : "Chỉ sửa khi nháp/hoàn"}>
                                 <Button
+                                    type="text"
                                     size="small"
-                                    icon={<EditOutlined />}
+                                    icon={<EditOutlined style={{ color: canEdit ? "#fa8c16" : undefined, fontSize: 16 }} />}
                                     disabled={!canEdit}
                                     onClick={() => handleOpenEdit(record)}
                                 />
@@ -939,9 +963,11 @@ const AccountingDossierPage = () => {
                             >
                                 <Tooltip title={canEdit ? "Xoá cứng" : "Chỉ xoá khi nháp/hoàn"}>
                                     <Button
+                                        data-guide-id="accounting-dossier-delete-button"
+                                        type="text"
                                         danger
                                         size="small"
-                                        icon={<DeleteOutlined />}
+                                        icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                                         disabled={!canEdit}
                                     />
                                 </Tooltip>
@@ -954,29 +980,30 @@ const AccountingDossierPage = () => {
     ];
 
     const filter = (
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <Space wrap>
-                <Input.Search
-                    allowClear
-                    placeholder="Tìm mã, nội dung, đơn vị"
-                    style={{ width: 280, maxWidth: "100%" }}
-                    onSearch={setKeyword}
-                    onChange={(event) => setKeyword(event.target.value)}
-                />
-                <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
-                    Tải lại
-                </Button>
-            </Space>
-            <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE} hideChildren>
-                <Space wrap>
-                    <Button onClick={() => setTemplateDrawerOpen(true)}>
-                        Mẫu bộ chứng từ
-                    </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-                        Tạo bộ chứng từ
-                    </Button>
-                </Space>
-            </Access>
+        <div className="w-full">
+            <SearchFilter
+                searchPlaceholder="Tìm mã, nội dung, đơn vị"
+                showFilterButton={false}
+                showAddButton={true}
+                showResetButton={true}
+                onSearch={setKeyword}
+                onReset={() => refetch()}
+                addLabel="Tạo bộ chứng từ"
+                onAddClick={handleOpenCreate}
+                addPermission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE}
+                guideSearchId="accounting-dossier-search-input"
+                guideAddId="accounting-dossier-add-button"
+                extraButtons={
+                    <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE} hideChildren>
+                        <Button
+                            style={{ height: 40, borderRadius: 10, fontSize: 14 }}
+                            onClick={() => setTemplateDrawerOpen(true)}
+                        >
+                            Mẫu bộ chứng từ
+                        </Button>
+                    </Access>
+                }
+            />
         </div>
     );
 
@@ -988,17 +1015,6 @@ const AccountingDossierPage = () => {
                 dataSource={rows}
                 loading={isFetching || deleteMutation.isPending}
                 scroll={{ x: 1280 }}
-                expandable={{
-                    expandedRowRender: (record) => (
-                        <div className="px-4 py-2 bg-gray-50 rounded">
-                            <DossierDocumentList
-                                dossier={record}
-                                editable={editableStatuses.includes(record.status)}
-                            />
-                        </div>
-                    ),
-                    rowExpandable: () => true,
-                }}
                 pagination={{
                     current: data?.meta?.page || page,
                     pageSize: data?.meta?.pageSize || pageSize,
@@ -1027,6 +1043,69 @@ const AccountingDossierPage = () => {
                 companies={companies}
                 onClose={() => setTemplateDrawerOpen(false)}
             />
+
+            <DetailModal
+                title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết bộ chứng từ</span>}
+                open={!!viewDossier}
+                onCancel={() => setViewDossier(null)}
+                desktopWidth={800}
+            >
+                {viewDossier && (
+                    <>
+                        <ProfileHeader
+                            initials={viewDossier.dossierCode?.substring(0, 2).toUpperCase() || "CT"}
+                            title={viewDossier.content || "Chưa có nội dung"}
+                            subtitle={`Mã BCT: ${viewDossier.dossierCode || "Đang xử lý"}`}
+                            badges={[
+                                viewDossier.status === "APPROVED" || viewDossier.status === "SUBMITTED" ? (
+                                    <ActiveTag key="status" label={statusMeta[viewDossier.status]?.label || "Đã chuyển"} />
+                                ) : viewDossier.status === "RETURNED" ? (
+                                    <InactiveTag key="status" label="Đã hoàn" />
+                                ) : (
+                                    <OutlineTag key="status" label={statusMeta[viewDossier.status]?.label || "Bản nháp"} />
+                                ),
+                            ]}
+                        />
+
+                        <div className="detail-modal-body">
+                            <SectionTitle>Thông tin chung</SectionTitle>
+                            <div className="detail-modal-grid">
+                                <InfoRow
+                                    icon={<GlobalOutlined />}
+                                    label="Công ty"
+                                    value={viewDossier.company?.name || "-"}
+                                />
+                                <InfoRow
+                                    icon={<BankOutlined />}
+                                    label="Phòng ban"
+                                    value={viewDossier.department?.name || "-"}
+                                />
+                                <InfoRow
+                                    icon={<CalendarOutlined />}
+                                    label="Ngày tạo"
+                                    value={formatDateTime(viewDossier.createdAt)}
+                                />
+                                <InfoRow
+                                    icon={<CodeOutlined />}
+                                    label="Loại danh mục"
+                                    value={viewDossier.categoryMode === "TEMPLATE" ? viewDossier.dossierCategory?.name : viewDossier.customCategoryName}
+                                    noBorder
+                                />
+                            </div>
+
+                            <div style={{ marginTop: 24 }}>
+                                <SectionTitle>Tài liệu đính kèm</SectionTitle>
+                            </div>
+                            <div style={{ padding: "0 4px", marginTop: 8 }}>
+                                <DossierDocumentList
+                                    dossier={viewDossier}
+                                    editable={editableStatuses.includes(viewDossier.status)}
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
+            </DetailModal>
 
             <Drawer
                 title={`Nhật ký bộ chứng từ ${logDossier?.dossierCode || "chưa cấp mã"}`}

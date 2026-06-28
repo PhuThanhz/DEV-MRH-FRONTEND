@@ -396,14 +396,14 @@ const Header = () => {
                     </div>
                 ) : (
                     // Mobile header
-                    <div className="relative z-10 flex items-center justify-between h-16 px-4 gap-4">
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-                            <div className="relative w-10 h-10 bg-white rounded-lg p-1 flex items-center justify-center shadow-lg">
-                                <img src="/logo/LOGOFINAL.png" alt="Logo" className="w-full h-full object-contain" />
+                    <div className="relative z-10 flex items-center justify-between h-[72px] px-4 gap-4">
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
+                            <div className="relative w-[54px] h-[54px] bg-white rounded-[14px] flex items-center justify-center shadow-[0_4px_12px_rgba(236,72,153,0.35)] border border-pink-100 overflow-hidden">
+                                <img src="/logo/LOGOFINAL.png" alt="Logo" className="w-[125%] h-[125%] object-contain scale-[1.15]" />
                             </div>
-                            <div className="flex flex-col leading-tight">
-                                <span className="text-sm font-bold text-white drop-shadow-md">Bộ Hồ Sơ</span>
-                                <span className="text-[10px] font-medium text-white/90 drop-shadow-sm">Quản Trị Nhân Sự</span>
+                            <div className="flex flex-col leading-tight mt-0.5">
+                                <span className="text-[18px] font-black text-white drop-shadow-md tracking-wide">Bộ Hồ Sơ</span>
+                                <span className="text-[11.5px] font-bold text-pink-50 drop-shadow-sm uppercase tracking-wider mt-0.5">Quản Trị Nhân Sự</span>
                             </div>
                         </div>
 
@@ -481,18 +481,88 @@ const Header = () => {
             </header>
 
             <Drawer
-                title="Chức năng"
-                placement="right"
+                closable={false}
+                title={null}
+                placement="bottom"
                 onClose={() => setOpenMobileMenu(false)}
                 open={openMobileMenu && isAuthenticated}
-                width={240}
+                height="auto"
+                styles={{
+                    content: { borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: 24 },
+                    body: { padding: 0 }
+                }}
             >
-                <Menu
-                    onClick={onClick}
-                    selectedKeys={[current]}
-                    mode="vertical"
-                    items={itemsMobile}
-                />
+                {/* Drag Handle */}
+                <div className="w-full flex justify-center pt-4 pb-2" onClick={() => setOpenMobileMenu(false)}>
+                    <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+                </div>
+
+                <div className="px-5 pb-2">
+                    {/* Identity Strip */}
+                    <div className="flex items-center gap-4 bg-gradient-to-br from-pink-50/80 to-rose-50/50 p-4 rounded-[20px] border border-pink-100/50 mb-5 shadow-sm">
+                        <div className="relative flex-shrink-0">
+                            <Avatar
+                                size={52}
+                                src={avatarSrc}
+                                className="flex items-center justify-center font-bold text-[18px] border-[3px] border-white shadow-md"
+                                style={{ background: "linear-gradient(135deg, #ec4899, #f43f5e)" }}
+                            >
+                                {!user?.avatar && getInitials(user?.name)}
+                            </Avatar>
+                            <span className="absolute bottom-1 right-0 w-3.5 h-3.5 rounded-full bg-green-500 border-[2.5px] border-white shadow-sm" />
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                            <span className="text-[17px] font-black text-gray-800 leading-tight truncate">{user?.name || "Người Dùng"}</span>
+                            <span className="text-[12.5px] font-medium text-gray-500 mt-0.5 truncate">{user?.email || "Chưa cập nhật email"}</span>
+                            <div className="mt-1.5 inline-flex items-center px-2.5 py-0.5 rounded-full bg-white text-pink-600 text-[10px] font-extrabold border border-pink-100 uppercase tracking-wider shadow-sm self-start">
+                                {getRoleLabel()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5">
+                        <div
+                            onClick={() => { setOpenMobileMenu(false); setOpenAccountModal(true); }}
+                            className="flex items-center gap-4 p-4 rounded-[18px] cursor-pointer transition-all active:scale-[0.98] bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+                        >
+                            <div className="w-12 h-12 rounded-[14px] bg-pink-50 flex items-center justify-center text-pink-500">
+                                <ContactsOutlined className="text-[20px]" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[15px] font-bold text-gray-700 leading-tight">Hồ sơ cá nhân</span>
+                                <span className="text-[12px] text-gray-400 mt-0.5">Quản lý thông tin & bảo mật</span>
+                            </div>
+                        </div>
+
+                        {user.role?.permissions?.length ? (
+                            <Link
+                                to="/admin"
+                                onClick={() => setOpenMobileMenu(false)}
+                                className="flex items-center gap-4 p-4 rounded-[18px] cursor-pointer transition-all active:scale-[0.98] bg-white border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.02)] no-underline"
+                            >
+                                <div className="w-12 h-12 rounded-[14px] bg-orange-50 flex items-center justify-center text-orange-500">
+                                    <FireOutlined className="text-[20px]" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[15px] font-bold text-gray-700 leading-tight">Trang Quản Trị</span>
+                                    <span className="text-[12px] text-gray-400 mt-0.5">Truy cập hệ thống quản lý</span>
+                                </div>
+                            </Link>
+                        ) : null}
+
+                        <div className="h-[1px] bg-gray-100 my-2 mx-4" />
+
+                        <div
+                            onClick={handleLogout}
+                            className="flex items-center gap-4 p-4 rounded-[18px] cursor-pointer transition-all active:scale-[0.98] bg-rose-50/50 border border-rose-100/50"
+                        >
+                            <div className="w-12 h-12 rounded-[14px] bg-white flex items-center justify-center text-rose-500 shadow-sm">
+                                <LogoutOutlined className="text-[20px]" />
+                            </div>
+                            <span className="text-[15px] font-bold text-rose-600">Đăng xuất an toàn</span>
+                        </div>
+                    </div>
+                </div>
             </Drawer>
 
             <ManageAccount

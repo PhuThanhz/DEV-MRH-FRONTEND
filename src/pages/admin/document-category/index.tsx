@@ -227,6 +227,7 @@ const DocumentCategoryPage = () => {
                         hideChildren
                     >
                         <EyeOutlined
+                            data-guide-id="document-category-detail-button"
                             style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -240,6 +241,7 @@ const DocumentCategoryPage = () => {
                         hideChildren
                     >
                         <EditOutlined
+                            data-guide-id="document-category-edit-button"
                             style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
@@ -266,6 +268,7 @@ const DocumentCategoryPage = () => {
                             }
                         >
                             <PoweroffOutlined
+                                data-guide-id="document-category-status-button"
                                 style={{
                                     fontSize: 18,
                                     color: entity.active ? "#52c41a" : "#d9d9d9",
@@ -294,6 +297,9 @@ const DocumentCategoryPage = () => {
                             setDataInit(null);
                             setOpenModal(true);
                         }}
+                        addPermission={ALL_PERMISSIONS.DOCUMENT_CATEGORIES.CREATE}
+                        guideSearchId="document-category-search-input"
+                        guideAddId="document-category-add-button"
                     />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect

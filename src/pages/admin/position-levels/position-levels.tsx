@@ -144,6 +144,7 @@ const PositionLevelPage = () => {
                     {/* Xem chi tiết */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_BY_ID} hideChildren>
                         <Button
+                            data-guide-id="position-level-detail-button"
                             type="text"
                             size="small"
                             icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
@@ -157,6 +158,7 @@ const PositionLevelPage = () => {
                     {/* Chỉnh sửa */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.UPDATE} hideChildren>
                         <Button
+                            data-guide-id="position-level-edit-button"
                             type="text"
                             size="small"
                             icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
@@ -179,6 +181,7 @@ const PositionLevelPage = () => {
                             placement="topRight"
                         >
                             <Button
+                                data-guide-id="position-level-delete-button"
                                 type="text"
                                 size="small"
                                 icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
@@ -206,6 +209,8 @@ const PositionLevelPage = () => {
                             setOpenModal(true);
                         }}
                         addPermission={ALL_PERMISSIONS.POSITION_LEVELS.CREATE}
+                        guideSearchId="position-level-search-input"
+                        guideAddId="position-level-add-button"
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}

@@ -152,6 +152,7 @@ const ModalAccountingDocumentCategory = ({
                 onCancel: handleClose,
                 destroyOnHidden: true,
                 maskClosable: false,
+                className: "accounting-document-category-form-modal",
                 styles: {
                     body: { padding: "16px 24px" },
                     header: { paddingBottom: 12, borderBottom: "1px solid #f3f4f6" },

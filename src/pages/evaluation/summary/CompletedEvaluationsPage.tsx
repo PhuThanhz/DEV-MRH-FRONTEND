@@ -341,7 +341,7 @@ const CompletedEvaluationsPage = () => {
         } else if (periodSearch !== "") {
             searchRef.current = true;
         } else {
-             fetchPeriods("", selectedCompany, true);
+            fetchPeriods("", selectedCompany, true);
         }
     }, [periodSearch, selectedCompany]);
 
