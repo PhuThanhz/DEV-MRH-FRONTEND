@@ -17,7 +17,6 @@ import {
     DownOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import XLSXStyle from "xlsx-js-style";
 import { saveAs } from "file-saver";
 import { notify } from "@/components/common/notification/notify";
 import {
@@ -30,6 +29,15 @@ import {
 import PageContainer from "@/components/common/data-table/PageContainer";
 import dayjs from "dayjs";
 import { Pie, Column } from "@ant-design/charts";
+
+let XLSXStyle: any;
+const ensureXlsxStyle = async () => {
+    if (!XLSXStyle) {
+        const mod = await import("xlsx-js-style") as any;
+        XLSXStyle = mod.default ?? mod;
+    }
+    return XLSXStyle;
+};
 
 const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
     A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
@@ -727,12 +735,13 @@ const CompletedEvaluationsPage = () => {
         };
     }, []);
 
-    const handleExportCurrentScope = useCallback(() => {
+    const handleExportCurrentScope = useCallback(async () => {
         if (!filteredRecords.length) {
             notify.warning("Không có dữ liệu để xuất Excel");
             return;
         }
 
+        await ensureXlsxStyle();
         const workbook = XLSXStyle.utils.book_new();
         const appendSheet = createWorkbookAppender(workbook);
         appendSheet(
@@ -744,12 +753,13 @@ const CompletedEvaluationsPage = () => {
         notify.success("Đã xuất Excel theo dữ liệu đang lọc");
     }, [appendExportFilterSheet, createEvaluationWorksheet, createWorkbookAppender, filteredRecords, saveWorkbook]);
 
-    const handleExportSingleEmployee = useCallback(() => {
+    const handleExportSingleEmployee = useCallback(async () => {
         if (filteredRecords.length !== 1) {
             notify.warning("Vui lòng lọc còn đúng 1 nhân viên để xuất riêng");
             return;
         }
 
+        await ensureXlsxStyle();
         const employeeName = filteredRecords[0]?.employee?.username || filteredRecords[0]?.employee?.fullName || "nhan-vien";
         const workbook = XLSXStyle.utils.book_new();
         const appendSheet = createWorkbookAppender(workbook);
@@ -762,12 +772,13 @@ const CompletedEvaluationsPage = () => {
         notify.success("Đã xuất Excel cho nhân viên");
     }, [appendExportFilterSheet, createEvaluationWorksheet, createWorkbookAppender, filteredRecords, saveWorkbook]);
 
-    const handleExportByDepartment = useCallback(() => {
+    const handleExportByDepartment = useCallback(async () => {
         if (!filteredRecords.length) {
             notify.warning("Không có dữ liệu để xuất Excel");
             return;
         }
 
+        await ensureXlsxStyle();
         const workbook = XLSXStyle.utils.book_new();
         const appendSheet = createWorkbookAppender(workbook);
 

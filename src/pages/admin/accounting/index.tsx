@@ -72,7 +72,6 @@ import {
     callFetchFolderTree,
     callFetchFolderDocuments,
 } from "@/config/api";
-import * as XLSX from "xlsx";
 
 import ModalAccountingDoc from "./ModalAccountingDoc";
 import ViewDetailDocument from "../document/view.document";
@@ -780,6 +779,7 @@ const AccountingDocumentPage = () => {
                                         try {
                                             const res = await callExportAccountingDocuments(queryStr);
                                             if (res && res.data && Array.isArray(res.data)) {
+                                                const XLSX = await import("xlsx");
                                                 // Format data for Excel
                                                 const excelData = res.data.map((doc, index) => ({
                                                     "STT": index + 1,

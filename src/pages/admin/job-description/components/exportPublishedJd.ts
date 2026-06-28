@@ -1,5 +1,3 @@
-// npm install xlsx-js-style
-import XLSXStyle from "xlsx-js-style";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
 import type { IJobDescription, IJDFlowLog } from "@/types/backend";
@@ -77,7 +75,9 @@ function rh(ws: WS, ri: number, hpt: number) {
     ws["!rows"][ri] = { hpt };
 }
 
-export const exportJdToExcel = (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
+export const exportJdToExcel = async (jd: EnrichedJD, _logs: IJDFlowLog[] = []) => {
+    const mod = await import("xlsx-js-style") as any;
+    const XLSXStyle = mod.default ?? mod;
     const ws: WS = {};
     ws["!merges"] = [];
     ws["!rows"] = [];

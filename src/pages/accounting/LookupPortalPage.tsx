@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Input, Typography, Empty, Spin, Tag, Tooltip, Select, Badge } from "antd";
+import React, { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { Input, Typography, Empty, Spin, Tag, Tooltip, Select, Badge, Skeleton } from "antd";
 import {
     SearchOutlined, ArrowLeftOutlined, DownloadOutlined, PrinterOutlined,
     FileTextOutlined, FilterOutlined, CalendarOutlined, CheckCircleFilled,
@@ -11,12 +11,11 @@ import dayjs from "dayjs";
 import { PATHS } from "@/constants/paths";
 import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
 import LotusCharmAssistant from "@/components/common/navigation/LotusCharmAssistant";
-import { Worker, Viewer } from "@react-pdf-viewer/core";
-import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+import { downloadUrlAsBlob, getFileNameFromUrl } from "@/config/download-url";
 
 const { Text } = Typography;
+const loadInlinePdfViewer = () => import("./InlinePdfViewer");
+const InlinePdfViewer = lazy(loadInlinePdfViewer);
 
 // ── Tokens ──────────────────────────────────────────
 const T = {
@@ -107,44 +106,6 @@ const MetaChip = ({ label, value }: { label: string; value: string }) => (
     </div>
 );
 
-const InlinePdfViewer = ({ fileUrl, onOpen, onDownload }: { fileUrl: string; onOpen: () => void; onDownload: () => void }) => {
-    const defaultLayoutPluginInstance = defaultLayoutPlugin({
-        sidebarTabs: () => [],
-    });
-
-    return (
-        <div style={{ width: "100%", height: "100%", minHeight: 560, background: "#f3f4f6" }}>
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-                <Viewer
-                    fileUrl={fileUrl}
-                    plugins={[defaultLayoutPluginInstance]}
-                    renderError={() => (
-                        <div style={{ height: "100%", minHeight: 420, display: "flex", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center" }}>
-                            <div>
-                                <FileTextOutlined style={{ fontSize: 42, color: "#f87171", marginBottom: 12 }} />
-                                <div style={{ fontSize: 14, fontWeight: 650, color: T.text, marginBottom: 6 }}>Không thể tải file PDF</div>
-                                <div style={{ fontSize: 13, color: T.textSub, maxWidth: 360, lineHeight: 1.5, marginBottom: 14 }}>
-                                    File có thể chưa tồn tại trong kho lưu trữ hoặc đường dẫn đính kèm chưa đúng.
-                                </div>
-                                <div style={{ display: "inline-flex", gap: 8 }}>
-                                    <button onClick={onOpen} style={{
-                                        padding: "8px 14px", borderRadius: 7, border: `1px solid ${T.border}`,
-                                        background: T.white, color: T.text, fontWeight: 650, cursor: "pointer",
-                                    }}>Mở file</button>
-                                    <button onClick={onDownload} style={{
-                                        padding: "8px 14px", borderRadius: 7, border: `1px solid ${T.border}`,
-                                        background: T.white, color: T.text, fontWeight: 650, cursor: "pointer",
-                                    }}>Tải xuống</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                />
-            </Worker>
-        </div>
-    );
-};
-
 // ── Main ─────────────────────────────────────────────
 const LookupPortalPage = () => {
     const navigate = useNavigate();
@@ -228,18 +189,25 @@ const LookupPortalPage = () => {
     const fileUrl = selectedDoc?.fileUrls?.[0] ?? null;
     const absoluteFileUrl = buildDocumentFileUrl(fileUrl);
 
+    useEffect(() => {
+        if (fileUrl && isPdf(fileUrl)) void loadInlinePdfViewer();
+    }, [fileUrl]);
+
     const handleOpenFile = () => {
         if (absoluteFileUrl) window.open(absoluteFileUrl, "_blank", "noopener,noreferrer");
     };
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         if (!absoluteFileUrl) return;
-        const link = document.createElement("a");
-        link.href = absoluteFileUrl;
-        link.download = fileUrl?.split("/").pop() || selectedDoc?.documentCode || "chung-tu";
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.click();
+        try {
+            await downloadUrlAsBlob(
+                absoluteFileUrl,
+                fileUrl?.split("/").pop() || getFileNameFromUrl(absoluteFileUrl, selectedDoc?.documentCode || "chung-tu")
+            );
+        } catch (error) {
+            console.error("Download failed", error);
+            handleOpenFile();
+        }
     };
 
     return (
@@ -657,7 +625,13 @@ const LookupPortalPage = () => {
                                             style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
                                         />
                                     ) : isPdf(fileUrl) ? (
-                                        <InlinePdfViewer fileUrl={absoluteFileUrl || ""} onOpen={handleOpenFile} onDownload={handleDownload} />
+                                        <Suspense fallback={
+                                            <div style={{ width: "100%", height: "100%", minHeight: 560, padding: 24, boxSizing: "border-box" }}>
+                                                <Skeleton active paragraph={{ rows: 8 }} />
+                                            </div>
+                                        }>
+                                            <InlinePdfViewer fileUrl={absoluteFileUrl || ""} onOpen={handleOpenFile} onDownload={handleDownload} />
+                                        </Suspense>
                                     ) : (
                                         <div style={{ textAlign: "center", padding: 40 }}>
                                             <FileTextOutlined style={{ fontSize: 40, color: T.textMute, marginBottom: 12 }} />

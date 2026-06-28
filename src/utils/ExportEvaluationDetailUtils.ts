@@ -1,7 +1,7 @@
-import * as XLSXStyle from "xlsx-js-style";
 import dayjs from "dayjs";
 
-export const exportDetailedEvaluation = (record: any) => {
+export const exportDetailedEvaluation = async (record: any) => {
+    const XLSXStyle = await import("xlsx-js-style");
     const data: any[] = [];
     const merges: any[] = [];
     

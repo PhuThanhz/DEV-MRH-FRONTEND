@@ -1,71 +1,66 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { useAppDispatch } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
-import LoginPage from 'pages/auth/login';
-import ForgotPassword from 'pages/auth/ForgotPassword';
 import LayoutAdmin from '@/components/layout/admin/layout.admin';
 import ProtectedRoute from 'components/share/protected-route.ts';
-import HomePage from 'pages/home';
-import DashboardPage from './pages/admin/dashboard/dashboard';
-import PermissionPage from './pages/admin/permission/permission';
-import RolePage from './pages/admin/role/role';
-import UserPage from './pages/admin/user/user';
 import { fetchAccount, setLogoutAction } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
 import LayoutClient from './components/layout/client/layout.client';
 import { PATHS } from '@/constants/paths';
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import CompanyPage from './pages/admin/company/company';
-import DepartmentPage from './pages/admin/department/department';
-import SectionPage from "@/pages/admin/section/section";
-import PositionLevelPage from "@/pages/admin/position-levels/position-levels";
-import JobTitlePage from "@/pages/admin/job-title/job-title.page";
-// import CareerPathTab from "@/pages/admin/department/career-path/CareerPathTab";
-import CareerPathPage from "@/pages/admin/department/career-path/CareerPathPage";
-import DepartmentPermissionPage from "@/pages/admin/department/permissions";
-import DepartmentObjectivesTasksPage from "@/pages/admin/department/objectives-tasks";
-import CompanyOrgChartPage from "@/pages/admin/company/org-chart";
-import SalaryRangePage from "@/pages/admin/salary-range/SalaryRangePage";
-import ProcessActionPage from "@/pages/admin/process-action";
-import PermissionCategoryPage from "@/pages/admin/permission-category";
-import JobDescriptionPage from "@/pages/admin/job-description/job-description.page";
-import OrgChartPage from '@/pages/admin/department/org-chart';
-import ConfirmResetPassword from 'pages/auth/ConfirmResetPassword';
-import EmployeePage from './pages/admin/employees/employee';
-// ✅ PROCEDURES
-import ProcedureAdminPage from "@/pages/admin/procedures";
-import CompanyProceduresPage from "@/pages/admin/company/procedures";
-import DepartmentProceduresPage from "@/pages/admin/department/procedures";
-import WelcomePage from "@/pages/admin/WelcomePage";
-import DashboardOrWelcome from "@/pages/admin/DashboardOrWelcome";
-import PositionChartPage from "@/pages/admin/department/position-chart/index";
-import DepartmentProfilePage from "@/pages/admin/dashboard/department-profile";
-import PublicProcedureView from "@/pages/public/PublicProcedureView";
-import QrScanPage from "@/pages/scan/QrScanPage";
-import QrProcedureDetail from "@/pages/admin/procedures/QrProcedureDetail";
-// ✅ DOCUMENTS
-import DocumentCategoryPage from "@/pages/admin/document-category";
-import DocumentPage from "@/pages/admin/document";
-import PersonalDrivePage from "@/pages/admin/personal-drive";
-import AccountingDossierPage from "@/pages/admin/accounting-dossiers";
-import AccountingDocumentPage from "@/pages/admin/accounting";
-import AccountingDocumentCategoryPage from "@/pages/admin/accounting-document-category";
-// ✅ EVALUATION HQCV
-import EvaluationProcessPage from "@/pages/evaluation/process/EvaluationProcessPage";
-import TemplatePage from "@/pages/admin/evaluation/templates/TemplatePage";
-import TemplateDetailPage from "@/pages/admin/evaluation/templates/TemplateDetailPage";
-import PeriodPage from "@/pages/admin/evaluation/periods/PeriodPage";
-import MyEvaluationPage from "@/pages/evaluation/my-records/MyEvaluationPage";
-import MyEvaluationDetailPage from "@/pages/evaluation/my-records/MyEvaluationDetailPage";
-import PendingManagerEvaluationPage from "@/pages/evaluation/manager/PendingManagerEvaluationPage";
-import ManagerEvaluationDetailPage from "@/pages/evaluation/manager/ManagerEvaluationDetailPage";
-import PendingApprovalPage from "@/pages/evaluation/approval/PendingApprovalPage";
-import ApprovalDetailPage from "@/pages/evaluation/approval/ApprovalDetailPage";
-import CompletedEvaluationsPage from "@/pages/evaluation/summary/CompletedEvaluationsPage";
-// ✅ DEDICATED PORTALS
-import LookupPortalPage from "@/pages/accounting/LookupPortalPage";
+import Loading from "@/components/share/loading";
+
+const LoginPage = lazy(() => import("pages/auth/login"));
+const ForgotPassword = lazy(() => import("pages/auth/ForgotPassword"));
+const HomePage = lazy(() => import("pages/home"));
+const UserPage = lazy(() => import("./pages/admin/user/user"));
+const CompanyPage = lazy(() => import("./pages/admin/company/company"));
+const DepartmentPage = lazy(() => import("./pages/admin/department/department"));
+const SectionPage = lazy(() => import("@/pages/admin/section/section"));
+const PositionLevelPage = lazy(() => import("@/pages/admin/position-levels/position-levels"));
+const PermissionPage = lazy(() => import("./pages/admin/permission/permission"));
+const RolePage = lazy(() => import("./pages/admin/role/role"));
+const JobTitlePage = lazy(() => import("@/pages/admin/job-title/job-title.page"));
+const CareerPathPage = lazy(() => import("@/pages/admin/department/career-path/CareerPathPage"));
+const DepartmentPermissionPage = lazy(() => import("@/pages/admin/department/permissions"));
+const DepartmentObjectivesTasksPage = lazy(() => import("@/pages/admin/department/objectives-tasks"));
+const CompanyOrgChartPage = lazy(() => import("@/pages/admin/company/org-chart"));
+const SalaryRangePage = lazy(() => import("@/pages/admin/salary-range/SalaryRangePage"));
+const ProcessActionPage = lazy(() => import("@/pages/admin/process-action"));
+const PermissionCategoryPage = lazy(() => import("@/pages/admin/permission-category"));
+const JobDescriptionPage = lazy(() => import("@/pages/admin/job-description/job-description.page"));
+const OrgChartPage = lazy(() => import("@/pages/admin/department/org-chart"));
+const ConfirmResetPassword = lazy(() => import("pages/auth/ConfirmResetPassword"));
+const EmployeePage = lazy(() => import("./pages/admin/employees/employee"));
+const ProcedureAdminPage = lazy(() => import("@/pages/admin/procedures"));
+const CompanyProceduresPage = lazy(() => import("@/pages/admin/company/procedures"));
+const DepartmentProceduresPage = lazy(() => import("@/pages/admin/department/procedures"));
+const DashboardOrWelcome = lazy(() => import("@/pages/admin/DashboardOrWelcome"));
+const PositionChartPage = lazy(() => import("@/pages/admin/department/position-chart/index"));
+const DepartmentProfilePage = lazy(() => import("@/pages/admin/dashboard/department-profile"));
+const PublicProcedureView = lazy(() => import("@/pages/public/PublicProcedureView"));
+const QrScanPage = lazy(() => import("@/pages/scan/QrScanPage"));
+const QrProcedureDetail = lazy(() => import("@/pages/admin/procedures/QrProcedureDetail"));
+const DocumentCategoryPage = lazy(() => import("@/pages/admin/document-category"));
+const DocumentPage = lazy(() => import("@/pages/admin/document"));
+const PersonalDrivePage = lazy(() => import("@/pages/admin/personal-drive"));
+const AccountingDossierPage = lazy(() => import("@/pages/admin/accounting-dossiers"));
+const AccountingDocumentPage = lazy(() => import("@/pages/admin/accounting"));
+const AccountingDocumentCategoryPage = lazy(() => import("@/pages/admin/accounting-document-category"));
+const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/EvaluationProcessPage"));
+const TemplatePage = lazy(() => import("@/pages/admin/evaluation/templates/TemplatePage"));
+const TemplateDetailPage = lazy(() => import("@/pages/admin/evaluation/templates/TemplateDetailPage"));
+const PeriodPage = lazy(() => import("@/pages/admin/evaluation/periods/PeriodPage"));
+const MyEvaluationPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationPage"));
+const MyEvaluationDetailPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationDetailPage"));
+const PendingManagerEvaluationPage = lazy(() => import("@/pages/evaluation/manager/PendingManagerEvaluationPage"));
+const ManagerEvaluationDetailPage = lazy(() => import("@/pages/evaluation/manager/ManagerEvaluationDetailPage"));
+const PendingApprovalPage = lazy(() => import("@/pages/evaluation/approval/PendingApprovalPage"));
+const ApprovalDetailPage = lazy(() => import("@/pages/evaluation/approval/ApprovalDetailPage"));
+const CompletedEvaluationsPage = lazy(() => import("@/pages/evaluation/summary/CompletedEvaluationsPage"));
+const LookupPortalPage = lazy(() => import("@/pages/accounting/LookupPortalPage"));
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -524,5 +519,9 @@ export default function App() {
     { path: "/public/view/:token", element: <PublicProcedureView /> },
   ]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <Suspense fallback={<Loading />}>
+      <RouterProvider router={router} />
+    </Suspense>
+  );
 }

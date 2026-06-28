@@ -1,0 +1,49 @@
+import { FileTextOutlined } from "@ant-design/icons";
+import { Worker, Viewer } from "@react-pdf-viewer/core";
+import "@react-pdf-viewer/core/lib/styles/index.css";
+import { PDF_WORKER_URL } from "@/config/pdf-worker";
+
+const InlinePdfViewer = ({ fileUrl, onOpen, onDownload }: { fileUrl: string; onOpen: () => void; onDownload: () => void }) => {
+    return (
+        <div style={{ width: "100%", height: "100%", minHeight: 560, background: "#f3f4f6" }}>
+            <Worker workerUrl={PDF_WORKER_URL}>
+                <Viewer
+                    fileUrl={fileUrl}
+                    transformGetDocumentParams={(params) => ({
+                        ...params,
+                        disableRange: false,
+                        disableStream: false,
+                        rangeChunkSize: 262144,
+                    })}
+                    renderError={() => (
+                        <div style={{ height: "100%", minHeight: 420, display: "flex", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center" }}>
+                            <div>
+                                <FileTextOutlined style={{ fontSize: 42, color: "#f87171", marginBottom: 12 }} />
+                                <div style={{ fontSize: 14, fontWeight: 650, color: "#2f3746", marginBottom: 6 }}>Không thể tải file PDF</div>
+                                <div style={{ fontSize: 13, color: "#667085", maxWidth: 360, lineHeight: 1.5, marginBottom: 14 }}>
+                                    File có thể chưa tồn tại trong kho lưu trữ hoặc đường dẫn đính kèm chưa đúng.
+                                </div>
+                                <div style={{ display: "inline-flex", gap: 8 }}>
+                                    <button onClick={onOpen} style={actionButtonStyle}>Mở file</button>
+                                    <button onClick={onDownload} style={actionButtonStyle}>Tải xuống</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                />
+            </Worker>
+        </div>
+    );
+};
+
+const actionButtonStyle: React.CSSProperties = {
+    padding: "8px 14px",
+    borderRadius: 7,
+    border: "1px solid #ebebeb",
+    background: "#ffffff",
+    color: "#2f3746",
+    fontWeight: 650,
+    cursor: "pointer",
+};
+
+export default InlinePdfViewer;
