@@ -7,6 +7,13 @@ const DashboardOrWelcome = () => {
     const permissions = useAppSelector(
         state => state.account.user?.role?.permissions || []
     );
+    const roleName = useAppSelector(
+        state => state.account.user?.role?.name?.toUpperCase() || ""
+    );
+
+    if (roleName === "SUPER_ADMIN" || import.meta.env.VITE_ACL_ENABLE === "false") {
+        return <DashboardPage />;
+    }
 
     const hasDashboard = permissions.some(
         (item: any) =>

@@ -2,7 +2,6 @@ import { useRef, useState, useMemo } from "react";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import { Tag, Button, Tooltip, Skeleton } from "antd";
 import {
-    ArrowLeftOutlined,
     EyeOutlined,
     CheckCircleFilled,
 } from "@ant-design/icons";
@@ -167,113 +166,108 @@ const PriorityCell = ({ score }: { score: number }) => {
     );
 };
 
+const Ico = ({ d, size = 20 }: { d: string; size?: number }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d={d} />
+    </svg>
+);
+
 /** Stat card nhỏ — responsive: flex-1, minWidth 0, wrap từ parent */
 const StatCard = ({
     label,
     value,
-    color,
+    accentColor,
+    iconPath,
     loading,
+    sub,
+    subCls,
 }: {
     label: string;
     value: number;
-    color?: string;
+    accentColor: string;
+    iconPath: string;
     loading?: boolean;
+    sub?: string;
+    subCls?: "success" | "warn" | "danger";
 }) => (
     <div
         style={{
-            background: "#fafafa",
-            border: "0.5px solid #f0f0f0",
-            borderRadius: 10,
-            padding: "12px 16px",
-            flex: "1 1 100px",   // ← co giãn, min 100px, wrap khi cần
-            minWidth: 0,          // ← cho phép shrink dưới content width
-        }}
-    >
-        <div style={{ fontSize: 11, color: "#8c8c8c", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {label}
-        </div>
-        {loading ? (
-            <Skeleton.Input active size="small" style={{ width: 48, height: 24 }} />
-        ) : (
-            <div style={{ fontSize: 22, fontWeight: 600, color: color ?? "#262626" }}>
-                {value}
-            </div>
-        )}
-    </div>
-);
-
-/** Score filter chip */
-const ScoreChip = ({
-    label,
-    dotColor,
-    count,
-    active,
-    activeStyle,
-    onClick,
-}: {
-    label: string;
-    dotColor?: string;
-    count?: number;
-    active: boolean;
-    activeStyle: React.CSSProperties;
-    onClick: () => void;
-}) => (
-    <button
-        onClick={onClick}
-        style={{
-            display: "inline-flex",
+            background: "#fff",
+            border: "1px solid #f0f0f0",
+            borderRadius: 16,
+            padding: "20px 18px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            display: "flex",
             alignItems: "center",
-            gap: 5,
-            fontSize: 12,
-            fontWeight: 500,
-            border: "0.5px solid",
-            borderRadius: 8,
-            padding: "0 10px",
-            height: 32,
-            cursor: "pointer",
-            transition: "all .15s",
-            whiteSpace: "nowrap",   // ← chip không bị xuống dòng giữa chừng
-            flexShrink: 0,
-            ...(active
-                ? activeStyle
-                : {
-                    background: "#fff",
-                    borderColor: "#d9d9d9",
-                    color: "#595959",
-                }),
+            gap: 14,
+            flex: "1 1 260px",
+            minWidth: 0,
         }}
     >
-        {dotColor && (
-            <span
-                style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: dotColor,
-                    flexShrink: 0,
-                    display: "inline-block",
-                }}
-            />
-        )}
-        {label}
-        {count !== undefined && (
-            <span
-                style={{
-                    background: active ? "rgba(0,0,0,0.15)" : "#f0f0f0",
-                    color: active ? "inherit" : "#595959",
-                    borderRadius: 99,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: "0 5px",
-                    minWidth: 16,
-                    textAlign: "center",
-                    lineHeight: "16px",
-                }}
-            >
-                {count}
-            </span>
-        )}
-    </button>
+        <div
+            style={{
+                width: 48,
+                height: 48,
+                borderRadius: 13,
+                background: "#fff0f4",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#f2547d",
+                flexShrink: 0,
+            }}
+        >
+            <Ico d={iconPath} size={20} />
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: "#8c8c8c", marginBottom: 4, fontWeight: 500, letterSpacing: "0.02em" }}>
+                {label}
+            </div>
+            {loading ? (
+                <Skeleton.Input active size="small" style={{ width: 60, height: 28 }} />
+            ) : (
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                    {value}
+                </div>
+            )}
+            {sub && (
+                <div
+                    style={{
+                        fontSize: 11,
+                        color: subCls === "danger" ? "#cf1322" : subCls === "warn" ? "#d46b08" : "#389e0d",
+                        background: subCls === "danger" ? "#fff1f0" : subCls === "warn" ? "#fff7e6" : "#f6ffed",
+                        borderRadius: 20,
+                        padding: "2px 8px",
+                        marginTop: 5,
+                        display: "inline-block",
+                        fontWeight: 600,
+                    }}
+                >
+                    {sub}
+                </div>
+            )}
+        </div>
+
+        <div
+            style={{
+                width: 3,
+                height: 44,
+                borderRadius: 99,
+                flexShrink: 0,
+                background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}33 100%)`,
+            }}
+        />
+    </div>
 );
 
 /* ─────────────────────────────────────────────────────────────
@@ -426,39 +420,41 @@ const DepartmentProfilePage = () => {
             filter={
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-                    {/* Back button */}
-                    <button
-                        onClick={() => navigate("/admin")}
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            fontSize: 12,
-                            fontWeight: 500,
-                            color: "#595959",
-                            background: "#fafafa",
-                            border: "0.5px solid #e0e0e0",
-                            borderRadius: 8,
-                            padding: "4px 10px",
-                            cursor: "pointer",
-                            width: "fit-content",
-                        }}
-                    >
-                        <ArrowLeftOutlined style={{ fontSize: 11 }} />
-                        Về Dashboard
-                    </button>
-
                     {/* Stat cards — wrap khi màn nhỏ */}
                     <div
                         style={{
                             display: "flex",
-                            gap: 8,
+                            gap: 16,
                             flexWrap: "wrap",   // ← xuống hàng khi không đủ chỗ
                         }}
                     >
-                        <StatCard label="Tổng phòng ban" value={totalDept} loading={isLoading} />
-                        <StatCard label="Hoàn chỉnh (7/7)" value={totalFull} color="#389e0d" loading={isLoading} />
-                        <StatCard label="Còn thiếu hạng mục" value={missingCount} color="#cf1322" loading={isLoading} />
+                        <StatCard
+                            iconPath="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z"
+                            accentColor="#1677ff"
+                            label="Tổng phòng ban"
+                            value={totalDept}
+                            sub="Tất cả hồ sơ"
+                            subCls="success"
+                            loading={isLoading}
+                        />
+                        <StatCard
+                            iconPath="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                            accentColor="#52c41a"
+                            label="Hoàn chỉnh (7/7)"
+                            value={totalFull}
+                            sub={totalFull > 0 ? "Đạt chuẩn 100%" : "Chưa có"}
+                            subCls={totalFull > 0 ? "success" : "warn"}
+                            loading={isLoading}
+                        />
+                        <StatCard
+                            iconPath="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            accentColor="#faad14"
+                            label="Còn thiếu hạng mục"
+                            value={missingCount}
+                            sub={missingCount > 0 ? "Cần bổ sung gấp" : "Tốt, không thiếu"}
+                            subCls={missingCount > 0 ? "danger" : "success"}
+                            loading={isLoading}
+                        />
                     </div>
 
                     {/* Search + reset */}
@@ -468,62 +464,33 @@ const DepartmentProfilePage = () => {
                         showAddButton={false}
                         onSearch={setSearchValue}
                         onReset={handleReset}
-                    />
-
-                    {/* Score filter chips — wrap khi màn nhỏ */}
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",   // ← chip tự xuống hàng
-                            alignItems: "center",
-                        }}
-                    >
-                        <ScoreChip
-                            label="Tất cả"
-                            active={scoreFilter === "all"}
-                            activeStyle={{ background: "#EEEDFE", borderColor: "#AFA9EC", color: "#534AB7" }}
-                            onClick={() => setScoreFilter("all")}
-                        />
-                        <ScoreChip
-                            label="Hoàn chỉnh"
-                            dotColor="#52c41a"
-                            count={countFull}
-                            active={scoreFilter === "full"}
-                            activeStyle={{ background: "#f6ffed", borderColor: "#b7eb8f", color: "#389e0d" }}
-                            onClick={() => setScoreFilter("full")}
-                        />
-                        <ScoreChip
-                            label="Đang bổ sung"
-                            dotColor="#faad14"
-                            count={countPartial}
-                            active={scoreFilter === "partial"}
-                            activeStyle={{ background: "#fffbe6", borderColor: "#ffe58f", color: "#d48806" }}
-                            onClick={() => setScoreFilter("partial")}
-                        />
-                        <ScoreChip
-                            label="Chưa có hồ sơ"
-                            dotColor="#ff4d4f"
-                            count={countEmpty}
-                            active={scoreFilter === "empty"}
-                            activeStyle={{ background: "#fff1f0", borderColor: "#ffccc7", color: "#cf1322" }}
-                            onClick={() => setScoreFilter("empty")}
-                        />
-                    </div>
-
-                    {/* Filter theo công ty */}
-                    <AdvancedFilterSelect
-                        resetSignal={resetSignal}
-                        fields={[
-                            {
-                                key: "company",
-                                label: "Công ty",
-                                options: companyOptions,
-                            },
-                        ]}
-                        onChange={(filters) => {
-                            setCompanyFilter(filters.company || null);
-                        }}
+                        extraButtons={
+                            <AdvancedFilterSelect
+                                resetSignal={resetSignal}
+                                fields={[
+                                    {
+                                        key: "company",
+                                        label: "Công ty",
+                                        options: companyOptions,
+                                    },
+                                    {
+                                        key: "score",
+                                        label: "Tình trạng",
+                                        searchable: false,
+                                        options: [
+                                            { label: "Tất cả", value: "all", color: "blue" },
+                                            { label: `Hoàn chỉnh (${countFull})`, value: "full", color: "green" },
+                                            { label: `Đang bổ sung (${countPartial})`, value: "partial", color: "orange" },
+                                            { label: `Chưa có hồ sơ (${countEmpty})`, value: "empty", color: "red" },
+                                        ],
+                                    },
+                                ]}
+                                onChange={(filters) => {
+                                    setCompanyFilter(filters.company || null);
+                                    setScoreFilter((filters.score as ScoreFilterValue) || "all");
+                                }}
+                            />
+                        }
                     />
                 </div>
             }

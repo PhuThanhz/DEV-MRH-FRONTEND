@@ -23,10 +23,11 @@ interface Permission {
     method: string;
 }
 
-export const generateMenuItems = (permissions: Permission[] | undefined) => {
+export const generateMenuItems = (permissions: Permission[] | undefined, roleName = "") => {
     const ACL_ENABLE = import.meta.env.VITE_ACL_ENABLE;
+    const isAclDisabled = ACL_ENABLE === "false" || roleName.toUpperCase() === "SUPER_ADMIN";
 
-    if (!permissions?.length && ACL_ENABLE !== "false") {
+    if (!permissions?.length && !isAclDisabled) {
         return [];
     }
 
@@ -34,7 +35,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined) => {
         permissions?.find(
             (item) =>
                 item.apiPath === perm.apiPath && item.method === perm.method
-        ) || ACL_ENABLE === "false";
+        ) || isAclDisabled;
 
     // ── pre-check từng nhóm ──
     const hasUserGroup =

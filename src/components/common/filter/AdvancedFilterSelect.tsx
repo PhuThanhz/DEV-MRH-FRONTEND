@@ -276,7 +276,20 @@ const AdvancedFilterSelect: React.FC<Props> = ({
     const FilterBtn = (
         <Button
             icon={<FilterOutlined />}
-            style={activeCount > 0 ? { borderColor: "#1677ff", color: "#1677ff" } : {}}
+            style={{
+                height: 40,
+                borderRadius: 10,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+                paddingInline: 14,
+                flexShrink: 0,
+                ...(activeCount > 0 ? {
+                    borderColor: "#ec4899",
+                    color: "#ec4899",
+                    background: "#fff0f6",
+                } : {}),
+            }}
             onClick={isMobile ? () => setSheetOpen(true) : undefined}
         >
             {buttonLabel}

@@ -26,6 +26,7 @@ const SliderAdmin: React.FC<IProps> = ({
 }) => {
     const navigate = useNavigate();
     const permissions = useAppSelector((state) => state.account.user.role.permissions);
+    const roleName = useAppSelector((state) => state.account.user.role?.name || "");
     const [menuItems, setMenuItems] = useState<any[]>([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [showScannerButton, setShowScannerButton] = useState<boolean>(() => {
@@ -34,8 +35,8 @@ const SliderAdmin: React.FC<IProps> = ({
     });
 
     useEffect(() => {
-        setMenuItems(generateMenuItems(permissions));
-    }, [permissions]);
+        setMenuItems(generateMenuItems(permissions, roleName));
+    }, [permissions, roleName]);
 
     useEffect(() => {
         const handleResize = () => {
