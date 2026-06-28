@@ -11,9 +11,24 @@ export default defineConfig({
     tsconfigPaths(), 
     tailwindcss(),
     nodePolyfills({
-      include: ['stream', 'crypto', 'util', 'buffer'],
+      include: ['stream', 'crypto', 'util', 'buffer', 'vm'],
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          antd: ['antd', '@ant-design/icons', '@ant-design/pro-components'],
+          charts: ['@ant-design/charts', '@xyflow/react', 'reactflow'],
+          pdf: ['@react-pdf-viewer/core', '@react-pdf-viewer/default-layout', 'pdfjs-dist'],
+          excel: ['xlsx', 'xlsx-js-style'],
+          query: ['@tanstack/react-query', '@reduxjs/toolkit', 'react-redux'],
+          utils: ['axios', 'dayjs', 'lodash-es', 'query-string'],
+        },
+      },
+    },
+  },
   server: {
     host: true, // cho phép truy cập từ thiết bị khác trong cùng mạng LAN
     port: 3000,

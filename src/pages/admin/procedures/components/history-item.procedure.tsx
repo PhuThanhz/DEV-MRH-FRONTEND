@@ -13,6 +13,7 @@ import {
 } from "@ant-design/icons";
 import type { IProcedureHistory } from "@/types/backend";
 import dayjs from "dayjs";
+import axios from "@/config/axios-customize";
 
 // ── Status map ────────────────────────────────────────────────────────────────
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -59,7 +60,6 @@ const FilePill = ({ name }: { name: string }) => {
 
     const handleDownload = async () => {
         try {
-            const axios = (await import("@/config/axios-customize")).default;
             const res = await axios.get(fileUrl, { responseType: "blob" }) as any;
             const blob = new Blob([res.data], {
                 type: res.headers?.["content-type"] ?? "application/octet-stream",
