@@ -206,7 +206,7 @@ const P = {
 // Mode Toggle
 // ─────────────────────────────────────────────────────────
 const ModeToggle = ({ mode, onChange }: { mode: "single" | "bulk"; onChange: (m: "single" | "bulk") => void }) => (
-    <div style={{ display: "inline-flex", background: P.gray100, border: `1px solid ${P.gray200}`, borderRadius: 8, padding: 3, gap: 2 }}>
+    <div className="org-node-mode-toggle" style={{ display: "inline-flex", background: P.gray100, border: `1px solid ${P.gray200}`, borderRadius: 8, padding: 3, gap: 2 }}>
         {([
             { key: "single" as const, label: "Một vị trí", icon: <ApartmentOutlined /> },
             { key: "bulk" as const, label: "Hàng loạt", icon: <ThunderboltOutlined /> },
@@ -1250,6 +1250,79 @@ const ModalNode = ({
             }}
             width={isBulk ? 920 : 560}
         >
+            <style>{`
+                .org-node-form-modal .org-node-mode-toggle button {
+                    font-size: 13px !important;
+                    line-height: 20px !important;
+                }
+                .org-node-form-modal .ant-form-item-label > label,
+                .org-node-form-modal .ant-form-item-label label span {
+                    font-size: 12px !important;
+                    line-height: 18px !important;
+                }
+                .org-node-form-modal .ant-form-item-label {
+                    height: 24px !important;
+                    padding: 0 0 6px !important;
+                    display: flex !important;
+                    align-items: center !important;
+                }
+                .org-node-form-modal .ant-form-item-label > label {
+                    height: 18px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    margin: 0 !important;
+                }
+                .org-node-form-modal .ant-input,
+                .org-node-form-modal .ant-input-affix-wrapper input,
+                .org-node-form-modal .ant-select-selection-item,
+                .org-node-form-modal .ant-select-selection-placeholder {
+                    font-size: 14px !important;
+                    line-height: 22px !important;
+                }
+                .org-node-form-modal .ant-input-lg,
+                .org-node-form-modal .ant-input-affix-wrapper-lg,
+                .org-node-form-modal .ant-select-lg .ant-select-selector {
+                    min-height: 40px !important;
+                    height: 40px !important;
+                    border-radius: 10px !important;
+                }
+                .org-node-form-modal .ant-input-affix-wrapper {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                }
+                .org-node-form-modal .ant-input-prefix,
+                .org-node-form-modal .ant-input-suffix,
+                .org-node-form-modal .ant-select-arrow {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                .org-node-form-modal .ant-select-selector {
+                    display: flex !important;
+                    align-items: center !important;
+                }
+                .org-node-form-modal .ant-select-lg .ant-select-selection-search-input {
+                    height: 38px !important;
+                    font-size: 14px !important;
+                }
+                .org-node-form-modal .ant-select-selection-search {
+                    display: flex !important;
+                    align-items: center !important;
+                }
+                .org-node-form-modal .ant-segmented {
+                    font-size: 13px !important;
+                    border-radius: 10px !important;
+                }
+                .org-node-form-modal .ant-segmented-item-label {
+                    min-height: 30px !important;
+                    line-height: 30px !important;
+                    padding: 0 12px !important;
+                    font-size: 13px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+            `}</style>
             {/* ── HEADER ── */}
             <div style={{ padding: "18px 24px 16px", borderBottom: `1px solid ${P.gray100}`, background: P.white }}>
                 {/* Row 1: icon + title */}

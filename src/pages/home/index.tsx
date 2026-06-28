@@ -309,8 +309,8 @@ const HomePage = () => {
 
                 @media (max-width: 768px) {
                     :root {
-                        --logo-size: clamp(120px, 25vw, 180px);
-                        --orbital-size: clamp(125px, 30vw, 195px);
+                        --logo-size: clamp(140px, 30vw, 210px);
+                        --orbital-size: clamp(150px, 34vw, 225px);
                         --hrm-font-size: clamp(52px, 16vw, 96px);
                         --hrm-letter-spacing: clamp(6px, 2vw, 14px);
                         --content-gap: clamp(20px, 4vw, 36px);
@@ -320,6 +320,9 @@ const HomePage = () => {
                         width: 250px !important;
                         height: 250px !important;
                     }
+                    .logo-container {
+                        padding: clamp(16px, 3vw, 28px);
+                    }
                     .particle {
                         display: none;
                     }
@@ -327,8 +330,8 @@ const HomePage = () => {
 
                 @media (max-width: 480px) {
                     :root {
-                        --logo-size: clamp(80px, 26vw, 120px);
-                        --orbital-size: clamp(112px, 36vw, 165px);
+                        --logo-size: clamp(112px, 34vw, 150px);
+                        --orbital-size: clamp(125px, 40vw, 180px);
                         --hrm-font-size: clamp(48px, 18vw, 80px);
                         --hrm-letter-spacing: clamp(5px, 2.5vw, 12px);
                         --content-gap: clamp(18px, 5vw, 28px);
@@ -351,15 +354,15 @@ const HomePage = () => {
                     :root {
                         --hrm-font-size: 44px;
                         --hrm-letter-spacing: 4px;
-                        --logo-size: 80px;
-                        --orbital-size: 110px;
+                        --logo-size: 104px;
+                        --orbital-size: 122px;
                     }
                 }
 
                 @media (max-height: 500px) and (orientation: landscape) {
                     :root {
-                        --logo-size: 70px;
-                        --orbital-size: 100px;
+                        --logo-size: 86px;
+                        --orbital-size: 108px;
                         --hrm-font-size: clamp(36px, 10vh, 60px);
                         --hrm-letter-spacing: 8px;
                         --content-gap: 12px;
@@ -384,8 +387,8 @@ const HomePage = () => {
                     :root {
                         --hrm-font-size: 40px;
                         --hrm-letter-spacing: 3px;
-                        --logo-size: 70px;
-                        --orbital-size: 98px;
+                        --logo-size: 92px;
+                        --orbital-size: 110px;
                         --content-gap: 16px;
                     }
                 }

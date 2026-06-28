@@ -105,15 +105,16 @@ const LoginPage = () => {
             <rect x="600" y="740" width="14" height="14" fill="rgba(255,255,255,0.18)" transform="rotate(45 607 747)" />
             <rect x="55" y="75" width="9" height="9" fill="rgba(255,255,255,0.13)" transform="rotate(45 59 79)" />
           </svg>
+          <div className="mobile-aurora mobile-aurora-one" />
+          <div className="mobile-aurora mobile-aurora-two" />
           <div className="mobile-banner-inner">
-            <div className="breathe-ring" />
             <div className="mb-logo-ring-o">
               <div className="mb-logo-ring-i">
                 <div className="mb-logo-circ">
                   <img
                     src="/logo/LOGOFINAL.png"
                     alt="LOTUS HRM"
-                    style={{ width: "100%", height: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+                    className="mb-logo-img"
                   />
                 </div>
               </div>
@@ -386,82 +387,192 @@ const LoginPage = () => {
           }
           .login-right::before { display: none; }
 
+          .login-right {
+            background:
+              linear-gradient(180deg, #fff7fb 0%, #ffffff 42%, #fff 100%);
+          }
           .mobile-banner {
             display: flex; position: relative;
-            background: linear-gradient(150deg, #f472b6 0%, #ec4899 45%, #db2777 100%);
-            height: 280px;
+            background:
+              radial-gradient(circle at 18% 12%, rgba(255,255,255,0.36) 0, transparent 24%),
+              radial-gradient(circle at 84% 18%, rgba(251,207,232,0.5) 0, transparent 30%),
+              linear-gradient(145deg, #fb7185 0%, #ec4899 42%, #be185d 100%);
+            height: 292px;
             align-items: center; justify-content: center;
             overflow: hidden; flex-shrink: 0;
+            border-bottom-left-radius: 34px;
+            border-bottom-right-radius: 34px;
+            box-shadow: 0 22px 48px rgba(190,24,93,0.18);
+          }
+          .mobile-banner::before {
+            display: none;
+          }
+          .mobile-banner::after {
+            content: "";
+            position: absolute;
+            left: 28px;
+            right: 28px;
+            bottom: 18px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+            opacity: 0.75;
+          }
+          .mobile-aurora {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(12px);
+            pointer-events: none;
+            opacity: 0.52;
+          }
+          .mobile-aurora-one {
+            width: 180px;
+            height: 76px;
+            left: -34px;
+            bottom: 44px;
+            background: rgba(255,255,255,0.18);
+            transform: rotate(-18deg);
+          }
+          .mobile-aurora-two {
+            width: 150px;
+            height: 64px;
+            right: -38px;
+            top: 46px;
+            background: rgba(253,164,175,0.5);
+            transform: rotate(24deg);
+          }
+          .mobile-banner .geo-svg polygon {
+            display: none;
           }
           .mobile-banner-inner {
             position: relative; z-index: 10;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
+            transform: translateY(-18px);
             animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
           }
-          .breathe-ring {
-            position: absolute;
-            width: 240px; height: 240px; border-radius: 50%;
-            border: 1.5px solid rgba(255,255,255,0.25);
-            animation: breathe 4s ease-in-out infinite;
-            pointer-events: none;
-          }
+          .breathe-ring,
+          .orbit { display: none; }
           @keyframes breathe {
             0%, 100% { transform: scale(1);    opacity: 0.5; }
             50%       { transform: scale(1.07); opacity: 0.15; }
           }
           .mb-logo-ring-o {
-            width: 186px; height: 186px; border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.22);
+            width: 204px; height: 204px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.28);
             display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 32px rgba(255,255,255,0.08);
           }
           .mb-logo-ring-i {
-            width: 160px; height: 160px; border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.15);
+            width: 174px; height: 174px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.2);
             display: flex; align-items: center; justify-content: center;
           }
           .mb-logo-circ {
-            width: 136px; height: 136px; border-radius: 50%;
-            background: rgba(255,255,255,0.16);
+            position: relative;
+            isolation: isolate;
+            width: 148px; height: 148px; border-radius: 50%;
+            background:
+              radial-gradient(circle at 50% 38%, rgba(255,255,255,0.98), rgba(255,255,255,0.92)),
+              #fff;
             backdrop-filter: blur(16px);
-            border: 2px solid rgba(255,255,255,0.5);
-            box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 16px 48px rgba(190,24,93,0.25);
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow:
+              0 0 0 7px rgba(255,255,255,0.2),
+              0 0 0 12px rgba(255,255,255,0.08),
+              0 14px 34px rgba(157,23,77,0.26);
             display: flex; align-items: center; justify-content: center;
-            padding: 20px;
-            animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both,
-                       float 4s ease-in-out 0.9s infinite;
+            padding: 13px;
+            animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+          }
+          .mb-logo-circ::before {
+            content: "";
+            position: absolute;
+            inset: -13px;
+            z-index: -1;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.36), rgba(255,255,255,0.12) 58%, transparent 72%);
+            filter: blur(3px);
+          }
+          .mb-logo-circ::after {
+            content: "";
+            position: absolute;
+            inset: 10px 18px auto;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.66), transparent);
+            pointer-events: none;
+          }
+          .mb-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 5px rgba(157,23,77,0.14));
           }
           @keyframes float {
             0%, 100% { transform: translateY(0);    box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 16px 48px rgba(190,24,93,0.25); }
             50%       { transform: translateY(-7px); box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 24px 56px rgba(190,24,93,0.35); }
           }
           .form-brand { display: none; }
-          .form-container { padding: 28px 32px 40px; max-width: 100%; }
-          .form-heading { margin-bottom: 28px; }
+          .form-container {
+            position: relative;
+            z-index: 20;
+            width: min(520px, calc(100% - 32px));
+            max-width: 520px;
+            margin: -34px auto 0;
+            padding: 30px 28px 32px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(251,207,232,0.9);
+            box-shadow: 0 22px 54px rgba(190,24,93,0.13);
+            backdrop-filter: blur(18px);
+          }
+          .form-heading { margin-bottom: 24px; }
+          .form-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            line-height: 1.08;
+          }
+          .form-sub { font-size: 13.5px; color: #94a3b8; line-height: 1.45; }
+          .f-label { font-size: 12.5px; font-weight: 700; }
+          .login-input {
+            border-radius: 16px !important;
+            background: #fff !important;
+            border-color: #f3d3e4 !important;
+            box-shadow: 0 8px 24px rgba(148,163,184,0.09) !important;
+          }
+          .forgot-row { margin: -4px 0 20px; }
+          .submit-btn {
+            border-radius: 16px !important;
+            box-shadow: 0 12px 28px rgba(236,72,153,0.32) !important;
+          }
+          .activate-row {
+            padding-top: 2px;
+            flex-wrap: wrap;
+          }
         }
 
         /* ── MOBILE ≤ 640px ── */
         @media (max-width: 640px) {
-          .mobile-banner  { height: 260px; }
-          .breathe-ring   { width: 210px; height: 210px; }
-          .mb-logo-ring-o { width: 166px; height: 166px; }
-          .mb-logo-ring-i { width: 142px; height: 142px; }
-          .mb-logo-circ   { width: 120px; height: 120px; padding: 18px; }
-          .form-container { padding: 24px 20px 36px; }
-          .form-title     { font-size: 30px; }
+          .mobile-banner  { height: 274px; }
+          .mb-logo-ring-o { width: 180px; height: 180px; }
+          .mb-logo-ring-i { width: 154px; height: 154px; }
+          .mb-logo-circ   { width: 132px; height: 132px; padding: 12px; }
+          .form-container { width: calc(100% - 24px); padding: 24px 20px 30px; margin-top: -34px; }
+          .form-title     { font-size: 31px; }
           .login-input    { height: 44px !important; }
           .submit-btn     { height: 46px !important; font-size: 14px !important; }
         }
 
         /* ── SMALL MOBILE ≤ 390px ── */
         @media (max-width: 390px) {
-          .mobile-banner  { height: 235px; }
-          .breathe-ring   { width: 185px; height: 185px; }
-          .mb-logo-ring-o { width: 148px; height: 148px; }
-          .mb-logo-ring-i { width: 126px; height: 126px; }
-          .mb-logo-circ   { width: 106px; height: 106px; padding: 16px; }
-          .form-container { padding: 20px 16px 32px; }
-          .form-title     { font-size: 26px; }
+          .mobile-banner  { height: 254px; border-bottom-left-radius: 28px; border-bottom-right-radius: 28px; }
+          .mb-logo-ring-o { width: 164px; height: 164px; }
+          .mb-logo-ring-i { width: 140px; height: 140px; }
+          .mb-logo-circ   { width: 120px; height: 120px; padding: 11px; }
+          .form-container { width: calc(100% - 24px); padding: 22px 16px 28px; border-radius: 22px; margin-top: -30px; }
+          .form-title     { font-size: 29px; }
         }
       `}</style>
     </div>
