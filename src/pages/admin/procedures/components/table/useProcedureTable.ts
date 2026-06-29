@@ -174,6 +174,17 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
     };
 
+    const handleTableChange = (pagination: any, _filters: any, sorter: any) => {
+        const nextQuery = buildQuery(
+            {
+                current: pagination?.current ?? PAGINATION_CONFIG.DEFAULT_PAGE,
+                pageSize: pagination?.pageSize ?? PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+            },
+            sorter,
+        );
+        setQuery(nextQuery);
+    };
+
     // ── Handlers ──
     const handleReset = () => {
         setSearchValue("");
@@ -225,6 +236,7 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
         setSectionIdFilter,
         setPlanYearFilter,
         buildQuery,
+        handleTableChange,
         handleReset,
         handleExitPrintMode,
         handlePrintButtonClick,

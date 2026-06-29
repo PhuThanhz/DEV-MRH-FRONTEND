@@ -77,10 +77,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 columns={columns}
                 dataSource={ctx.procedures}
                 scroll={{ x: "max-content" }}
-                request={async (params, sort) => {
-                    const q = ctx.buildQuery(params, sort);
-                    return { data: ctx.procedures, success: true, total: ctx.meta.total };
-                }}
+                onChange={ctx.handleTableChange}
                 pagination={{
                     current: ctx.meta.page,
                     pageSize: ctx.meta.pageSize,

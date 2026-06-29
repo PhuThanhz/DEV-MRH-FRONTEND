@@ -25,6 +25,7 @@ const DataTable = <
     actionRef,
     dateFormatter = "string",
     rowSelection,
+    onChange,
 }: ProTableProps<T, U, ValueType>) => {
     return (
         <ConfigProvider locale={vi_VN}>
@@ -55,6 +56,7 @@ const DataTable = <
                     actionRef={actionRef}
                     dateFormatter={dateFormatter}
                     rowSelection={rowSelection}
+                    onChange={onChange}
                     tableLayout="auto"
                     sticky={{ offsetHeader: 48 }} // giảm cho mobile
                     options={false}

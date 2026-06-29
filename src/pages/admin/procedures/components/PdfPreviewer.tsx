@@ -1,28 +1,36 @@
+import { useState } from "react";
 import {
+    ColumnWidthOutlined,
     CloseOutlined,
-    DownloadOutlined,
+    FileSearchOutlined,
     FilePdfOutlined,
     LeftOutlined,
+    RotateLeftOutlined,
+    RotateRightOutlined,
     RightOutlined,
+    SearchOutlined,
     ZoomInOutlined,
     ZoomOutOutlined,
 } from "@ant-design/icons";
 import { Skeleton } from "antd";
-import { Worker, Viewer } from "@react-pdf-viewer/core";
+import { RotateDirection, SpecialZoomLevel, Worker, Viewer } from "@react-pdf-viewer/core";
 import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
+import { rotatePlugin } from "@react-pdf-viewer/rotate";
+import { searchPlugin } from "@react-pdf-viewer/search";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
 import "@react-pdf-viewer/core/lib/styles/index.css";
+import "@react-pdf-viewer/search/lib/styles/index.css";
 import { PDF_WORKER_URL } from "@/config/pdf-worker";
-import { downloadUrlAsBlob, getFileNameFromUrl } from "@/config/download-url";
 
 interface IPdfPreviewerProps { url: string; onClose: () => void; isMobile: boolean }
 
 const TBtn = ({
-    onClick, disabled = false, danger = false, children, title,
+    onClick, disabled = false, danger = false, children, title, type = "button",
 }: {
-    onClick?: () => void; disabled?: boolean; danger?: boolean; children: React.ReactNode; title?: string;
+    onClick?: () => void; disabled?: boolean; danger?: boolean; children: React.ReactNode; title?: string; type?: "button" | "submit";
 }) => (
     <button
+        type={type}
         onClick={onClick}
         disabled={disabled}
         title={title}
@@ -42,28 +50,37 @@ const TBtn = ({
 );
 
 const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
+    const [pageInput, setPageInput] = useState("1");
+    const [numberOfPages, setNumberOfPages] = useState(0);
+
     const pageNavPlugin = pageNavigationPlugin();
+    const rotatePlg = rotatePlugin();
+    const searchPlg = searchPlugin();
     const zoomPlg = zoomPlugin();
 
     const { GoToNextPage, GoToPreviousPage, CurrentPageLabel } = pageNavPlugin;
+    const { Rotate } = rotatePlg;
+    const { Search } = searchPlg;
     const { ZoomIn, ZoomOut, CurrentScale } = zoomPlg;
-    const defaultScale = isMobile ? 0.5 : 1.0;
+    const defaultScale = SpecialZoomLevel.PageWidth;
 
-    const handleDownload = async () => {
-        try {
-            await downloadUrlAsBlob(url, getFileNameFromUrl(url));
-        } catch (error) {
-            console.error("Download failed", error);
-            window.open(url, "_blank", "noopener,noreferrer");
+    const jumpToInputPage = () => {
+        const page = Number.parseInt(pageInput, 10);
+        if (!Number.isFinite(page) || page < 1 || (numberOfPages > 0 && page > numberOfPages)) {
+            setPageInput("1");
+            pageNavPlugin.jumpToPage(0);
+            return;
         }
+        pageNavPlugin.jumpToPage(page - 1);
     };
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100dvh", background: "#fff" }}>
             <div style={{
-                height: 50, minHeight: 50,
+                minHeight: 50,
                 display: "flex", alignItems: "center", gap: 6,
-                padding: "0 12px",
+                flexWrap: "wrap",
+                padding: "8px 12px",
                 background: "#fff",
                 borderBottom: "1px solid #e8e8e8",
                 flexShrink: 0,
@@ -80,15 +97,42 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
 
                 <CurrentPageLabel>
                     {({ currentPage, numberOfPages }: any) => (
-                        <span style={{
-                            fontSize: 12, color: "#444", fontWeight: 500,
-                            minWidth: 60, textAlign: "center",
-                            background: "#f5f5f5", borderRadius: 6,
-                            padding: "4px 8px", whiteSpace: "nowrap",
-                            border: "1px solid #e8e8e8",
-                        }}>
-                            {currentPage + 1} / {numberOfPages}
-                        </span>
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                jumpToInputPage();
+                            }}
+                            style={{
+                                display: "flex", alignItems: "center", gap: 5,
+                                fontSize: 12, color: "#444", fontWeight: 500,
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            <input
+                                aria-label="Nhập số trang"
+                                value={pageInput}
+                                onChange={(event) => setPageInput(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                                onBlur={() => {
+                                    if (!pageInput) setPageInput(String(currentPage + 1));
+                                }}
+                                style={{
+                                    width: 42,
+                                    height: 28,
+                                    border: "1px solid #e0e0e0",
+                                    borderRadius: 6,
+                                    textAlign: "center",
+                                    fontSize: 12,
+                                    color: "#333",
+                                    outline: "none",
+                                }}
+                            />
+                            <span style={{
+                                color: "#667085",
+                                minWidth: 34,
+                            }}>
+                                / {numberOfPages}
+                            </span>
+                        </form>
                     )}
                 </CurrentPageLabel>
 
@@ -100,7 +144,114 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
                     )}
                 </GoToNextPage>
 
+                <Search>
+                    {({
+                        clearKeyword,
+                        currentMatch,
+                        isDocumentLoaded,
+                        jumpToNextMatch,
+                        jumpToPreviousMatch,
+                        numberOfMatches,
+                        search,
+                        setKeyword,
+                    }: any) => (
+                        <form
+                            onSubmit={async (event) => {
+                                event.preventDefault();
+                                await search();
+                            }}
+                            style={{
+                                display: "flex", alignItems: "center", gap: 4,
+                                minWidth: isMobile ? 180 : 240,
+                                maxWidth: isMobile ? "100%" : 320,
+                                flex: isMobile ? "1 1 100%" : "0 1 320px",
+                            }}
+                        >
+                            <div style={{
+                                height: 34,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                flex: 1,
+                                minWidth: 150,
+                                padding: "0 9px",
+                                border: "1px solid #e0e0e0",
+                                borderRadius: 7,
+                                background: "#fff",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                            }}>
+                                <FileSearchOutlined style={{ color: "#667085", fontSize: 14, flexShrink: 0 }} />
+                                <input
+                                    aria-label="Tìm trong PDF"
+                                    disabled={!isDocumentLoaded}
+                                    placeholder="Tìm trong PDF"
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+                                        setKeyword(value);
+                                        if (!value) clearKeyword();
+                                    }}
+                                    style={{
+                                        border: "none",
+                                        outline: "none",
+                                        width: "100%",
+                                        minWidth: 0,
+                                        fontSize: 12,
+                                        color: "#333",
+                                        background: "transparent",
+                                    }}
+                                />
+                                <span style={{ fontSize: 11, color: "#98a2b3", whiteSpace: "nowrap" }}>
+                                    {numberOfMatches > 0 ? `${currentMatch}/${numberOfMatches}` : "0"}
+                                </span>
+                            </div>
+                            <TBtn type="submit" title="Tìm" disabled={!isDocumentLoaded}>
+                                <SearchOutlined style={{ fontSize: 14 }} />
+                            </TBtn>
+                            <TBtn
+                                onClick={jumpToPreviousMatch}
+                                disabled={!numberOfMatches}
+                                title="Kết quả trước"
+                            >
+                                <LeftOutlined style={{ fontSize: 12 }} />
+                            </TBtn>
+                            <TBtn
+                                onClick={jumpToNextMatch}
+                                disabled={!numberOfMatches}
+                                title="Kết quả sau"
+                            >
+                                <RightOutlined style={{ fontSize: 12 }} />
+                            </TBtn>
+                        </form>
+                    )}
+                </Search>
+
                 <div style={{ flex: 1 }} />
+
+                <TBtn onClick={() => zoomPlg.zoomTo(SpecialZoomLevel.PageWidth)} title="Vừa chiều ngang">
+                    <ColumnWidthOutlined style={{ fontSize: 15 }} />
+                </TBtn>
+
+                <TBtn onClick={() => zoomPlg.zoomTo(SpecialZoomLevel.PageFit)} title="Vừa trang">
+                    <span style={{ fontSize: 11, fontWeight: 700 }}>1:1</span>
+                </TBtn>
+
+                <Rotate direction={RotateDirection.Backward}>
+                    {({ onClick }: any) => (
+                        <TBtn onClick={onClick} title="Xoay trái">
+                            <RotateLeftOutlined style={{ fontSize: 15 }} />
+                        </TBtn>
+                    )}
+                </Rotate>
+
+                <Rotate direction={RotateDirection.Forward}>
+                    {({ onClick }: any) => (
+                        <TBtn onClick={onClick} title="Xoay phải">
+                            <RotateRightOutlined style={{ fontSize: 15 }} />
+                        </TBtn>
+                    )}
+                </Rotate>
+
+                <div style={{ width: 1, height: 22, background: "#e8e8e8", margin: "0 2px" }} />
 
                 <ZoomOut>
                     {({ onClick }: any) => (
@@ -110,7 +261,12 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
 
                 <CurrentScale>
                     {({ scale }: any) => (
-                        <span style={{ fontSize: 12, color: "#555", minWidth: 42, textAlign: "center", whiteSpace: "nowrap" }}>
+                        <span style={{
+                            fontSize: 12, color: "#555", minWidth: 42, textAlign: "center", whiteSpace: "nowrap",
+                            background: "#f5f5f5", borderRadius: 6,
+                            padding: "4px 8px",
+                            border: "1px solid #e8e8e8",
+                        }}>
                             {Math.round(scale * 100)}%
                         </span>
                     )}
@@ -123,10 +279,6 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
                 </ZoomIn>
 
                 <div style={{ width: 1, height: 22, background: "#e8e8e8", margin: "0 2px" }} />
-
-                <TBtn onClick={handleDownload} title="Tải xuống">
-                    <DownloadOutlined style={{ fontSize: 14 }} />
-                </TBtn>
 
                 <TBtn onClick={onClose} danger title="Đóng">
                     <CloseOutlined style={{ fontSize: 14 }} />
@@ -152,8 +304,13 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
                     <Worker workerUrl={PDF_WORKER_URL}>
                         <Viewer
                             fileUrl={url}
-                            plugins={[pageNavPlugin, zoomPlg]}
+                            plugins={[pageNavPlugin, searchPlg, rotatePlg, zoomPlg]}
                             defaultScale={defaultScale}
+                            onDocumentLoad={(event) => {
+                                setNumberOfPages(event.doc.numPages);
+                                setPageInput("1");
+                            }}
+                            onPageChange={(event) => setPageInput(String(event.currentPage + 1))}
                             transformGetDocumentParams={(params) => ({
                                 ...params,
                                 disableRange: false,
