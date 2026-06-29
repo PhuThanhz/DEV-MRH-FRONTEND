@@ -1,7 +1,9 @@
 import { Drawer, Table, Tag, Space, Popconfirm, Button } from "antd";
-import { useState, useEffect } from "react"; {/* ← thêm useEffect */ }
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { EyeOutlined, EditOutlined, DeleteOutlined, SafetyOutlined, PlusOutlined } from "@ant-design/icons";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
 
 import type {
     IPermissionCategory,
@@ -38,13 +40,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
     const [dataView, setDataView] = useState<IPermissionContentDetail | null>(null);
     const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
 
-    // ── Detect mobile ──────────────────────────────────────────────────────────
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 640);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
+    const isMobile = useIsMobile();
 
     /* ===================== QUERY ===================== */
     const query =
@@ -171,7 +167,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         </Tag>
                     </span>
                 }
-                width={isMobile ? "100vw" : Math.min(900, window.innerWidth - 48)}
+                width={getModalWidth(900)}
                 open={open}
                 onClose={() => setOpen(false)}
                 destroyOnClose

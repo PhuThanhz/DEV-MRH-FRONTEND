@@ -94,17 +94,13 @@ interface Props {
     isAccounting?: boolean;
 }
 
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
+
 const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting }: Props) => {
-    const [isMobile, setIsMobile] = useState(false);
+    const isMobile = useIsMobile(768);
     const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
     const [recipientSearch, setRecipientSearch] = useState("");
-
-    useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth < 768);
-        check();
-        window.addEventListener("resize", check);
-        return () => window.removeEventListener("resize", check);
-    }, []);
 
     // ← GỌI API LẤY CHI TIẾT MỚI NHẤT
     const docQuery = useDocumentByIdQuery(
@@ -456,7 +452,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting
         <Modal
             open={open}
             onCancel={handleClose}
-            width={isMobile ? "92vw" : 800}
+            width={getModalWidth(800)}
             centered
             closeIcon={<CloseOutlined style={{ fontSize: 12 }} />}
             styles={{
@@ -578,7 +574,7 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting
                         Đóng
                     </Button>
                 ]}
-                width={650}
+                width={getModalWidth(650)}
                 centered
             >
                 <div style={{ marginBottom: 16, marginTop: 8 }}>

@@ -34,6 +34,7 @@ import {
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { useBreakpoint } from "@/hooks/useIsMobile";
 import {
     callFetchOrgNodes,
     callUpdateOrgNode,
@@ -95,24 +96,7 @@ const extractList = (res: any): any[] => {
     return [];
 };
 
-// ── Responsive hook ───────────────────────────────────────────────────────────
-const useWindowSize = () => {
-    const [width, setWidth] = useState(
-        typeof window !== "undefined" ? window.innerWidth : 1280
-    );
-    useEffect(() => {
-        const handler = () => setWidth(window.innerWidth);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-    return {
-        width,
-        isMobile: width < 640,
-        isTablet: width >= 640 && width < 1024,
-        isSmallDesktop: width >= 1024 && width < 1280,
-        isDesktop: width >= 1280,
-    };
-};
+
 
 // ── Edge renderer ─────────────────────────────────────────────────────────────
 const OrgEdge = ({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) => {
@@ -254,7 +238,7 @@ const applyHighlight = (
 const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView, setCenter } = useReactFlow();
-    const { width, isMobile, isTablet } = useWindowSize();
+    const { width, isMobile, isTablet } = useBreakpoint();
     const isCompact = isMobile || isTablet;
 
     const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);

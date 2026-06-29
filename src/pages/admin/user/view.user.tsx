@@ -9,29 +9,7 @@ import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { useUserByIdQuery } from "@/hooks/useUsers";
 import type { IUserPosition } from "@/types/backend";
-import { useState, useEffect } from "react";
-
-// Tính width modal theo màn hình
-const useModalWidth = () => {
-    const [width, setWidth] = useState(() => {
-        if (typeof window === "undefined") return 760;
-        const vw = window.innerWidth;
-        if (vw < 480) return vw * 0.95;
-        if (vw < 768) return vw * 0.92;
-        return Math.min(vw * 0.72, 960);
-    });
-    useEffect(() => {
-        const handler = () => {
-            const vw = window.innerWidth;
-            if (vw < 480) setWidth(vw * 0.95);
-            else if (vw < 768) setWidth(vw * 0.92);
-            else setWidth(Math.min(vw * 0.72, 960));
-        };
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-    return width;
-};
+import { getModalWidth } from "@/utils/responsive";
 
 
 const { Text } = Typography;
@@ -274,7 +252,7 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
-    const modalWidth = useModalWidth();
+    const modalWidth = getModalWidth(760);
     const backendURL = import.meta.env.VITE_BACKEND_URL;
     const userId = dataInit?.id ? String(dataInit.id) : undefined;
 

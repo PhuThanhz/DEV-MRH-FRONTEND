@@ -303,7 +303,7 @@ const TemplatePage = () => {
                     actionRef={tableRef}
                     rowKey="id"
                     columns={columns}
-                    scroll={{ x: 1000 }}
+                    scroll={{ x: "max-content" }}
                     params={{ searchValue, statusFilter, typeFilter }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);

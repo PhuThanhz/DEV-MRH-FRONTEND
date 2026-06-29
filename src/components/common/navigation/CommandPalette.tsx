@@ -3,6 +3,7 @@ import { Empty, Input, Modal, Tag, Tooltip } from "antd";
 import { SearchOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useQuickAccess } from "@/hooks/useQuickAccess";
+import { getModalWidth } from "@/utils/responsive";
 import type { QuickAccessItem } from "@/config/quickAccess";
 
 interface CommandPaletteProps {
@@ -69,7 +70,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             open={open}
             onCancel={onClose}
             footer={null}
-            width={640}
+            width={getModalWidth(640)}
             centered
             closeIcon={null}
             styles={{

@@ -7,6 +7,7 @@ import { callFetchUsersCrossCompany, callFetchSubordinates, callFetchCompany, ca
 import queryString from 'query-string';
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -140,10 +141,11 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             title="Tìm kiếm & Chọn nhân viên"
             open={open}
             onCancel={onClose}
-            width={1000}
+            width={getModalWidth(1000)}
             footer={null}
             destroyOnClose
             style={{ top: 40 }}
+            styles={{ body: MODAL_BODY_SCROLL }}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
                 <SearchFilter

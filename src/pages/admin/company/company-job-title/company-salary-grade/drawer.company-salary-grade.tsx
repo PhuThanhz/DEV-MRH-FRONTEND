@@ -29,6 +29,7 @@ import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 
 import type { ICompanySalaryGrade } from "@/types/backend";
 import type { ColumnsType } from "antd/es/table";
+import { getModalWidth } from "@/utils/responsive";
 
 const { Title, Text } = Typography;
 
@@ -172,7 +173,7 @@ const DrawerCompanySalaryGrade = ({
                 open={open}
                 onClose={onClose}
                 destroyOnClose
-                width={850}
+                width={getModalWidth(850)}
                 title={
                     <Space direction="vertical" size={0}>
                         <Title level={4}>Bậc lương – Công ty</Title>
@@ -189,6 +190,7 @@ const DrawerCompanySalaryGrade = ({
                             columns={columns}
                             dataSource={data}
                             pagination={false}
+                            scroll={{ x: "max-content" }}
                             locale={{ emptyText: <Empty description="Không có dữ liệu" /> }}
                         />
                     )}

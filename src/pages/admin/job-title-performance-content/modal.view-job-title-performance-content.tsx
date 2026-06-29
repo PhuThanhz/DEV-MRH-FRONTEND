@@ -2,6 +2,7 @@
 
 import { Modal, Descriptions, Tag, Badge, Divider } from "antd";
 import type { IJobTitlePerformanceContent } from "@/types/backend";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 interface Props {
     open: boolean;
@@ -17,8 +18,9 @@ const ViewJobTitlePerformanceContentModal = ({ open, onClose, data }: Props) => 
             open={open}
             onCancel={onClose}
             footer={null}
-            width={1000}
+            width={getModalWidth(1000)}
             centered
+            styles={{ body: MODAL_BODY_SCROLL }}
             title={
                 <>
                     Chi tiết tiêu chí đánh giá - <Tag color="blue">Bậc {data.salaryGradeNumber}</Tag>

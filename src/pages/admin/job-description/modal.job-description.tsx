@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/components/common/modal/detail";
+import { getModalWidth } from "@/utils/responsive";
 import {
     Modal, Form, Input, Select, DatePicker,
     Button, Spin, Alert, Tag,
@@ -803,7 +804,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     {isEdit ? "Chỉnh sửa Job Description" : "Tạo Job Description mới"}
                 </span>
             }
-            width={isMobile ? "calc(100vw - 20px)" : Math.min(1000, (typeof window !== "undefined" ? window.innerWidth : 1200) - 32)}
+            width={getModalWidth(1000)}
             style={{ top: isMobile ? 12 : 20, maxWidth: "calc(100vw - 20px)" }}
             className="job-description-form-modal"
             styles={{ body: { padding: isMobile ? "12px 14px 8px" : "20px 24px 8px", background: "#f5f6fa" } }}

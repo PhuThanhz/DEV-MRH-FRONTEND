@@ -5,6 +5,7 @@ import type { IEvaluationTemplate } from '@/types/backend';
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
 import { notify } from '@/components/common/notification/notify';
+import { getModalWidth } from '@/utils/responsive';
 
 interface IProps {
     openModal: boolean;
@@ -155,7 +156,7 @@ const TemplateModal = (props: IProps) => {
                 if (setDataInit) setDataInit(null);
             }}
             confirmLoading={isSubmit}
-            width={600}
+            width={getModalWidth(600)}
             destroyOnClose
             maskClosable={false}
         >

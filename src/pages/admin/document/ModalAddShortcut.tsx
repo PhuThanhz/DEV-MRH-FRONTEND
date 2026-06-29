@@ -4,6 +4,7 @@ import { FolderOutlined, FolderOpenOutlined, FilePdfOutlined, FileExcelOutlined,
 import { callFetchFolderTree, callCreateDocumentShortcut, callFetchFolderDocuments } from '@/config/api';
 import type { IDocumentFolder, IDocument } from '@/types/backend';
 import { notify } from "@/components/common/notification/notify";
+import { getModalWidth } from '@/utils/responsive';
 
 const { Text } = Typography;
 
@@ -211,7 +212,7 @@ const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
                 confirmLoading={submitting}
                 okText="Thêm lối tắt"
                 cancelText="Hủy"
-                width={800}
+                width={getModalWidth(800)}
                 className="shortcut-modal"
                 okButtonProps={{ className: 'btn-ghim', disabled: selectedKeys.length === 0 }}
                 destroyOnHidden

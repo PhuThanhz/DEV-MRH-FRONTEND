@@ -12,6 +12,7 @@ import type {
     IPermissionCategoryMatrix,
     IProcessAction,
 } from "@/types/backend";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const ACCENT = "#e8637a";
 const HOVER_BG = "#f5f5f5";
@@ -64,13 +65,7 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     const [legendOpen, setLegendOpen] = useState(false);
 
-    // ── Detect mobile ──────────────────────────────────────────────────────────
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 640);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
+    const isMobile = useIsMobile();
 
     // ── Hover column highlight ─────────────────────────────────────────────────
     const [hoveredColId, setHoveredColId] = useState<number | null>(null);

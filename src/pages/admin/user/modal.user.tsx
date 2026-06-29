@@ -23,44 +23,12 @@ interface IProps {
 const ACCENT = "#f5317f";
 const CONNECTOR_COLOR = "#e5e7eb";
 
-// Hook detect màn hình nhỏ (chính xác hơn react-device-detect)
-const useIsMobile = (breakpoint = 768) => {
-    const [isMobile, setIsMobile] = useState(
-        typeof window !== "undefined" && window.innerWidth < breakpoint
-    );
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < breakpoint);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, [breakpoint]);
-    return isMobile;
-};
-
-// Hook tính modal width
-const useModalWidth = () => {
-    const [width, setWidth] = useState(() => {
-        if (typeof window === "undefined") return 680;
-        const vw = window.innerWidth;
-        if (vw < 480) return vw;          // full width trên mobile nhỏ
-        if (vw < 768) return vw * 0.96;   // gần full trên mobile lớn
-        return 680;                        // cố định 680px trên desktop
-    });
-    useEffect(() => {
-        const handler = () => {
-            const vw = window.innerWidth;
-            if (vw < 480) setWidth(vw);
-            else if (vw < 768) setWidth(vw * 0.96);
-            else setWidth(680);
-        };
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-    return width;
-};
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
 
 const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) => {
-    const isMobile = useIsMobile();
-    const modalWidth = useModalWidth();
+    const isMobile = useIsMobile(768);
+    const modalWidth = getModalWidth(680);
 
     const [selectedRole, setSelectedRole] = useState<IRoleSelect | null>(null);
     const [selectedDirectManager, setSelectedDirectManager] = useState<any | null>(null);

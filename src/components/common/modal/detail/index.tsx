@@ -11,11 +11,13 @@
  *  - DetailModal          — styled Modal wrapper (border-radius, blur, CSS fixes)
  */
 
-import { useEffect, useState } from "react";
 import { Modal, Typography, Avatar, Tag } from "antd";
 import type { ModalProps } from "antd";
+import { useBreakpoint, useIsMobile } from "@/hooks/useIsMobile";
 
 const { Text } = Typography;
+
+export { useIsMobile };
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 export const DETAIL_ACCENT     = "#f5317f";
@@ -28,39 +30,17 @@ export const DETAIL_BG_SUBTLE  = "#fafafa";
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
-/** Detect mobile bằng window.innerWidth (chính xác hơn react-device-detect) */
-export const useIsMobile = (breakpoint = 768): boolean => {
-    const [val, setVal] = useState(
-        typeof window !== "undefined" && window.innerWidth < breakpoint
-    );
-    useEffect(() => {
-        const h = () => setVal(window.innerWidth < breakpoint);
-        window.addEventListener("resize", h);
-        return () => window.removeEventListener("resize", h);
-    }, [breakpoint]);
-    return val;
-};
-
 /**
  * Tính width cho Modal theo kích thước màn hình.
  * @param desktopWidth  - width trên desktop (default 640)
  * @param mobileRatio   - tỉ lệ vw trên mobile <768 (default 0.95)
  */
 export const useModalWidth = (desktopWidth = 640, mobileRatio = 0.95): number => {
-    const calc = () => {
-        if (typeof window === "undefined") return desktopWidth;
-        const vw = window.innerWidth;
-        if (vw < 480) return vw * mobileRatio;
-        if (vw < 768) return vw * 0.92;
-        return desktopWidth;
-    };
-    const [width, setWidth] = useState(calc);
-    useEffect(() => {
-        const h = () => setWidth(calc());
-        window.addEventListener("resize", h);
-        return () => window.removeEventListener("resize", h);
-    }, [desktopWidth, mobileRatio]);
-    return width;
+    const { width, isDesktop } = useBreakpoint();
+
+    if (isDesktop) return desktopWidth;
+    if (width < 480) return width * mobileRatio;
+    return width * 0.92;
 };
 
 // ─── InfoRow ──────────────────────────────────────────────────────────────────

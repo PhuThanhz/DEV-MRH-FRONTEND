@@ -13,6 +13,7 @@ import useGuidePermission from "@/hooks/useGuidePermission";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
+import { getModalWidth } from "@/utils/responsive";
 
 dayjs.extend(relativeTime);
 dayjs.locale("vi");
@@ -795,7 +796,7 @@ const LotusCharmAssistant = () => {
                     setGuideSearchQuery("");
                 }}
                 footer={null}
-                width={900}
+                width={getModalWidth(900)}
                 style={{ top: 40 }}
                 styles={{
                     content: { padding: 0, borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.5) inset" },

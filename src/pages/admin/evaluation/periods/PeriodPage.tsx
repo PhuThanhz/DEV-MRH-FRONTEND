@@ -501,7 +501,7 @@ const PeriodPage = () => {
                     actionRef={tableRef}
                     rowKey="id"
                     columns={columns}
-                    scroll={{ x: 1000 }}
+                    scroll={{ x: "max-content" }}
                     params={{ searchValue, statusFilter }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);

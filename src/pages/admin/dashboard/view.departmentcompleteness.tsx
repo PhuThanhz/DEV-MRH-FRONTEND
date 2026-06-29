@@ -1,6 +1,7 @@
 import { Modal, Tag, Divider } from "antd";
 import { CheckCircleFilled, CloseCircleFilled } from "@ant-design/icons";
 import type { IDepartmentCompleteness } from "@/types/backend";
+import { getModalWidth } from "@/utils/responsive";
 
 interface Props {
     open: boolean;
@@ -22,7 +23,7 @@ const ViewDepartmentCompleteness = ({ open, onClose, record, criteria }: Props) 
             open={open}
             onCancel={onClose}
             footer={null}
-            width={480}
+            width={getModalWidth(480)}
             title={
                 <div>
                     <div style={{ fontWeight: 600, fontSize: 15, color: "#262626" }}>

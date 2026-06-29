@@ -1,5 +1,6 @@
 import { Modal, Table, Typography } from "antd";
 import { mockProcessCategories, mockProcessDetail } from "./mock-data";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 const { Title } = Typography;
 
@@ -27,7 +28,8 @@ const ProcessCategoryModal: React.FC<ProcessCategoryModalProps> = ({
             open={open}
             onCancel={onClose}
             footer={null}
-            width={900}
+            width={getModalWidth(900)}
+            styles={{ body: MODAL_BODY_SCROLL }}
         >
             <Title level={5}>Danh sách quy trình</Title>
             <Table
@@ -35,10 +37,10 @@ const ProcessCategoryModal: React.FC<ProcessCategoryModalProps> = ({
                 columns={columns}
                 rowKey="id"
                 pagination={false}
+                scroll={{ x: "max-content" }}
             />
         </Modal>
     );
 };
 
 export default ProcessCategoryModal;
-

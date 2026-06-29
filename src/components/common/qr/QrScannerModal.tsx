@@ -11,6 +11,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import axios from "@/config/axios-customize";
 import ViewProcedure from "@/pages/admin/procedures/view.procedure";
 import ViewDetailDocument from "@/pages/admin/document/view.document";
+import { getModalWidth } from "@/utils/responsive";
 import type { IDocument } from "@/types/backend";
 
 const { Text } = Typography;
@@ -392,7 +393,7 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
                 onCancel={handleClose}
                 footer={null}
                 centered
-                width={400}
+                width={getModalWidth(400)}
                 title={
                     <Flex align="center" gap={10}>
                         <div style={{

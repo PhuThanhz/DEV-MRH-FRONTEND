@@ -19,18 +19,8 @@ import MobileBottomSheet from "./AdvancedFilterSelect.mobile";
 
 export type { FilterField, FilterOption } from "./AdvancedFilterSelect.types";
 
-// ─── Hook detect mobile (< 768px) ────────────────────────────────────────────
-const useIsMobile = () => {
-    const [isMobile, setIsMobile] = React.useState(
-        typeof window !== "undefined" && window.innerWidth < 768
-    );
-    React.useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-    return isMobile;
-};
+import { useIsMobile } from "@/hooks/useIsMobile";
+
 
 // ─── Desktop: Submenu có ô tìm kiếm ──────────────────────────────────────────
 const SearchableSubmenu: React.FC<{
@@ -118,7 +108,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
     resetSignal,
     buttonLabel = "Bộ lọc",
 }) => {
-    const isMobile = useIsMobile();
+    const isMobile = useIsMobile(768);
 
     const [activeFilters, setActiveFilters] = React.useState<Record<string, any>>({});
     const [cache, setCache] = React.useState<Record<string, FilterOption[]>>({});

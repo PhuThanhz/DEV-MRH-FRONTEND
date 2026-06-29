@@ -143,7 +143,7 @@ export const ExpandedRow = ({ token, procedureCode }: Props) => {
                     pagination={logs.length > 5 ? { pageSize: 5, size: "small" } : false}
                     locale={{ emptyText: "Chưa có lượt truy cập nào" }}
                     style={{ background: "#fff", borderRadius: 6 }}
-                    scroll={{ x: isMobile ? 300 : undefined }}
+                    scroll={{ x: "max-content" }}
                 />
             </div>
         </Flex>

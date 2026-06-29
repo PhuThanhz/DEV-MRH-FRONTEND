@@ -20,6 +20,7 @@ import {
     callCreateCompanyJobTitle,
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
+import { getModalWidth } from "@/utils/responsive";
 
 import DrawerSalaryGrade from "./company-salary-grade/drawer.company-salary-grade";
 
@@ -206,7 +207,7 @@ const DrawerAssignCompanyJobTitle = ({
                 title="Gán chức danh vào công ty"
                 open={open}
                 onClose={onClose}
-                width={window.innerWidth < 768 ? "100%" : 750} destroyOnClose
+                width={getModalWidth(750)} destroyOnClose
                 footer={
                     <div style={{ textAlign: "right" }}>
                         <Button onClick={onClose} disabled={assigning}>

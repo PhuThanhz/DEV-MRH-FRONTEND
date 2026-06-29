@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Modal, Button, Flex, Typography, Tag, Tooltip } from "antd";
 import { PrinterOutlined, QrcodeOutlined, WarningOutlined } from "@ant-design/icons";
 import type { IProcedure } from "@/types/backend";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -146,11 +147,11 @@ const ModalPrintQR = ({ open, onClose, procedures }: IProps) => {
                     </div>
                 </Flex>
             }
-            width={920}
+            width={getModalWidth(920)}
             centered
             styles={{
                 header: { paddingBottom: 16, borderBottom: "1px solid #f3f4f6" },
-                body: { paddingTop: 20 },
+                body: { ...MODAL_BODY_SCROLL, paddingTop: 20 },
             }}
         >
             {/* Cảnh báo nếu có quy trình không có QR */}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Modal, Input, Table, Select, Button, Space, Tag, Typography } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import { callFetchUsersCrossCompany, callFetchCompany } from "@/config/api";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -146,7 +147,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
             open={open}
             onCancel={onClose}
             footer={null}
-            width={900}
+            width={getModalWidth(900)}
             title={
                 <div>
                     <div style={{ fontSize: 18, fontWeight: 600 }}>{title || "Danh sách Quản lý trực tiếp"}</div>
@@ -157,6 +158,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
             }
             centered
             destroyOnClose
+            styles={{ body: MODAL_BODY_SCROLL }}
         >
             <Space direction="vertical" style={{ width: "100%", marginTop: 16 }} size="middle">
                 <div style={{ display: "flex", gap: 12 }}>
@@ -193,7 +195,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
                         onClick: () => handleSelect(record),
                         style: { cursor: "pointer" }
                     })}
-                    scroll={{ y: 400 }}
+                    scroll={{ x: "max-content", y: 400 }}
                     pagination={{
                         current: page,
                         pageSize: PAGE_SIZE,

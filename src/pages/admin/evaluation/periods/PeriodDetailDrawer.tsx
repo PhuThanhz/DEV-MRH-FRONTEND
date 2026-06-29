@@ -25,6 +25,7 @@ import {
 import type { IEvaluationPeriod, IEvaluationTemplate } from "@/types/backend";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderUserOption = (u: any) => {
@@ -619,11 +620,11 @@ const PeriodDetailDrawer = (props: IProps) => {
             }
             open={open}
             onCancel={onClose}
-            width={1200}
+            width={getModalWidth(1200)}
             footer={null}
             centered
             maskClosable={false}
-            styles={{ body: { padding: "4px 12px 12px 12px" } }}
+            styles={{ body: { ...MODAL_BODY_SCROLL, padding: "4px 12px 12px 12px" } }}
         >
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {

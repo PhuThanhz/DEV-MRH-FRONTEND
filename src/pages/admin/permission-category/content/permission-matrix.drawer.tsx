@@ -5,6 +5,7 @@ import {
     Spin,
 } from "antd";
 import { useEffect } from "react";
+import { getModalWidth } from "@/utils/responsive";
 
 import {
     usePermissionMatrixQuery,
@@ -46,7 +47,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
     return (
         <Modal
             open={open}
-            width={Math.min(1200, window.innerWidth - 48)}
+            width={getModalWidth(1200)}
             title={
                 <div style={{ fontSize: 16, fontWeight: 600, color: "#262626" }}>
                     Ma trận phân quyền:{" "}

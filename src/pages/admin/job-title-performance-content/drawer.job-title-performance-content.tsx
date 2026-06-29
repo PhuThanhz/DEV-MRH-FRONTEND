@@ -20,6 +20,7 @@ import { EyeOutlined, EditOutlined, DeleteOutlined, RedoOutlined } from "@ant-de
 import ModalJobTitlePerformanceContent from "./modal.job-title-performance-content";
 import ViewJobTitlePerformanceContentModal from "./modal.view-job-title-performance-content";
 import SearchFilter from "@/components/common/filter/SearchFilter"; // 👈 đường dẫn tuỳ project bạn
+import { getModalWidth } from "@/utils/responsive";
 
 import {
     useJobTitlePerformanceContentQuery,
@@ -221,7 +222,7 @@ const DrawerJobTitlePerformanceContent = ({
             <Drawer
                 open={open}
                 onClose={onClose}
-                width={1000}
+                width={getModalWidth(1000)}
                 destroyOnClose
                 title={
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

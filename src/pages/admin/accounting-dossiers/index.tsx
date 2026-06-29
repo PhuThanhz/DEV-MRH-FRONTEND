@@ -37,6 +37,7 @@ import {
     DetailModal, InfoRow, ProfileHeader, SectionTitle, ActiveTag, OutlineTag, InactiveTag
 } from "@/components/common/modal/detail";
 import SearchFilter from "@/components/common/filter/SearchFilter";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 import Access from "@/components/share/access";
 import {
     callAddDossierDocument,
@@ -196,7 +197,7 @@ const AccountingDossierModal = ({
             className="accounting-dossier-form-modal"
             open={open}
             title={initialValues?.id ? "Cập nhật bộ chứng từ" : "Tạo bộ chứng từ"}
-            width={900}
+            width={getModalWidth(900)}
             centered
             destroyOnClose
             onCancel={handleCancel}
@@ -585,7 +586,7 @@ const DossierTemplateDrawer = ({
             title="Mẫu bộ chứng từ"
             open={open}
             onClose={onClose}
-            width={900}
+            width={getModalWidth(900)}
             extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Tạo mẫu</Button>}
         >
             <Table<IAccountingDossierCategory>
@@ -594,7 +595,7 @@ const DossierTemplateDrawer = ({
                 dataSource={rows}
                 columns={columns}
                 size="small"
-                scroll={{ x: 900 }}
+                scroll={{ x: "max-content" }}
                 pagination={false}
             />
 
@@ -605,7 +606,8 @@ const DossierTemplateDrawer = ({
                 cancelText="Hủy"
                 onCancel={() => setModalOpen(false)}
                 onOk={saveTemplate}
-                width={720}
+                width={getModalWidth(720)}
+                styles={{ body: MODAL_BODY_SCROLL }}
                 destroyOnClose
             >
                 <Form form={form} layout="vertical" className="mt-4" initialValues={{ scope: "GLOBAL", active: true }}>
@@ -1014,7 +1016,7 @@ const AccountingDossierPage = () => {
                 columns={columns}
                 dataSource={rows}
                 loading={isFetching || deleteMutation.isPending}
-                scroll={{ x: 1280 }}
+                scroll={{ x: "max-content" }}
                 pagination={{
                     current: data?.meta?.page || page,
                     pageSize: data?.meta?.pageSize || pageSize,

@@ -1494,7 +1494,7 @@ const CompletedEvaluationsPage = () => {
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 15, showTotal: (total) => `Tổng số ${total} bản ghi` }}
-                    scroll={{ x: 1000 }}
+                    scroll={{ x: "max-content" }}
                     size="middle"
                     locale={{ emptyText: <Empty description="Không tìm thấy kết quả phù hợp" /> }}
                 />

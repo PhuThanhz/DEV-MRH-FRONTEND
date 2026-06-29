@@ -69,18 +69,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const normStr = (s?: string | null) => (s ?? "").toLowerCase().trim();
 
-// ── Responsive hook ──
-function useIsMobile(breakpoint = 640) {
-    const [isMobile, setIsMobile] = useState(
-        typeof window !== "undefined" ? window.innerWidth < breakpoint : false
-    );
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < breakpoint);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, [breakpoint]);
-    return isMobile;
-}
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
 
 export default function ViewJobDescription({ open, onClose, record }: Props) {
     const [activeTab, setActiveTab] = useState("1");
@@ -176,12 +166,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
         setRfEdges([]);
     };
 
-    // ── Modal width: full trên mobile, giới hạn trên desktop ──
-    const modalWidth = typeof window !== "undefined"
-        ? (window.innerWidth < 640
-            ? window.innerWidth - 24   // mobile: cách mép 12px mỗi bên
-            : Math.min(900, window.innerWidth - 32))
-        : 900;
+    const modalWidth = getModalWidth(900);
 
     return (
         <Modal

@@ -77,16 +77,12 @@ interface IProps {
     refetch?: () => void;
 }
 
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
+
 const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
     const [openHistory, setOpenHistory] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth < 768);
-        check();
-        window.addEventListener("resize", check);
-        return () => window.removeEventListener("resize", check);
-    }, []);
+    const isMobile = useIsMobile(768);
 
     // ← GỌI API GET BY ID
     const { data: detail, isLoading: detailLoading } = useProcedureByIdQuery(
@@ -298,7 +294,7 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
             <Modal
                 open={open}
                 onCancel={onClose}
-                width={isMobile ? "92vw" : 800}
+                width={getModalWidth(800)}
                 centered
                 className="procedure-view-modal"
                 closeIcon={<CloseOutlined style={{ fontSize: 12 }} />}
@@ -366,7 +362,7 @@ const ViewProcedure = ({ type, open, onClose, dataInit }: IProps) => {
                 }
                 open={openHistory}
                 onClose={() => setOpenHistory(false)}
-                width={isMobile ? "90vw" : 600}
+                width={getModalWidth(600)}
                 loading={historyLoading}
                 styles={{ body: { paddingTop: 16, paddingLeft: 16, paddingRight: 16 } }}
             >

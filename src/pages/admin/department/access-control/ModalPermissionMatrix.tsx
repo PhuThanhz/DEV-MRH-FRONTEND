@@ -12,6 +12,7 @@ import type {
     IPermissionCategory,
     IPermissionCategoryMatrix,
 } from "@/types/backend";
+import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 interface Props {
     open: boolean;
@@ -99,9 +100,10 @@ const ModalPermissionMatrix = ({
             open={open}
             onCancel={onClose}
             title={`Phân quyền${departmentName ? ` — ${departmentName}` : ""}`}
-            width={1300}
+            width={getModalWidth(1300)}
             footer={null}
             destroyOnClose
+            styles={{ body: MODAL_BODY_SCROLL }}
         >
             <div className="grid grid-cols-3 gap-4">
                 {/* LEFT PANEL */}

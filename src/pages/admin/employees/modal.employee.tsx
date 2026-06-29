@@ -42,40 +42,8 @@ const { Option } = Select;
 const ACCENT = "#f5317f";
 const ACCENT_HOVER = "#d4206a";
 
-// Hook detect màn hình nhỏ (chính xác hơn react-device-detect)
-const useIsMobile = (breakpoint = 768) => {
-    const [val, setVal] = useState(
-        typeof window !== "undefined" && window.innerWidth < breakpoint
-    );
-    useEffect(() => {
-        const h = () => setVal(window.innerWidth < breakpoint);
-        window.addEventListener("resize", h);
-        return () => window.removeEventListener("resize", h);
-    }, [breakpoint]);
-    return val;
-};
-
-const useModalWidth = () => {
-    const [width, setWidth] = useState(() => {
-        if (typeof window === "undefined") return 620;
-        const vw = window.innerWidth;
-        if (vw < 480) return vw;
-        if (vw < 768) return vw * 0.96;
-        return 620;
-    });
-    useEffect(() => {
-        const h = () => {
-            const vw = window.innerWidth;
-            if (vw < 480) setWidth(vw);
-            else if (vw < 768) setWidth(vw * 0.96);
-            else setWidth(620);
-        };
-        window.addEventListener("resize", h);
-        return () => window.removeEventListener("resize", h);
-    }, []);
-    return width;
-};
-
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
 
 interface IProps {
     openModal: boolean;
@@ -92,8 +60,8 @@ const ModalEmployee = ({
     setDataInit,
     onSuccess,
 }: IProps) => {
-    const isMobile = useIsMobile();
-    const modalWidth = useModalWidth();
+    const isMobile = useIsMobile(768);
+    const modalWidth = getModalWidth(620);
 
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");

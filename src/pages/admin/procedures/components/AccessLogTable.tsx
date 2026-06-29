@@ -7,6 +7,7 @@ import {
 import dayjs from "dayjs";
 import type { IResShareTokenDTO } from "@/types/backend";
 import { useShareTokenAccessLogsQuery } from "@/hooks/useProcedure";
+import { getModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -78,7 +79,7 @@ const AccessLogTable = ({ open, onClose, token }: IProps) => {
                     <span>Lịch sử truy cập</span>
                 </Flex>
             }
-            width={680}
+            width={getModalWidth(680)}
             centered
             destroyOnClose
         >

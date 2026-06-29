@@ -51,6 +51,7 @@ import DataTable from "@/components/common/data-table";
 import type { IDocument, IDocumentFolder } from "@/types/backend";
 import useAccess from "@/hooks/useAccess";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { getModalWidth } from "@/utils/responsive";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
@@ -1010,7 +1011,7 @@ const AccountingDocumentPage = () => {
                 </div>
 
                 <Layout style={{ background: '#fff', padding: 0, borderRadius: 8, minHeight: 620, border: "1px solid #eef0f4" }}>
-                    <Sider width={280} style={{ background: '#fff', borderRight: '1px solid #eef0f4', padding: 16 }}>
+                    <Sider width={280} breakpoint="lg" collapsedWidth={0} style={{ background: '#fff', borderRight: '1px solid #eef0f4', padding: 16 }}>
                         <Space direction="vertical" size={16} style={{ width: "100%" }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px dashed #e5e7eb' }}>
                                 <span style={{ fontWeight: 700, fontSize: 15, color: '#374151' }}>
@@ -1117,7 +1118,7 @@ const AccountingDocumentPage = () => {
                 title="Đối soát chứng từ nhân viên"
                 open={reconcileOpen}
                 onClose={() => setReconcileOpen(false)}
-                width={980}
+                width={getModalWidth(980)}
                 destroyOnClose
             >
                 <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -1203,7 +1204,7 @@ const AccountingDocumentPage = () => {
 
                     {reconcileUserId ? (
                         <Layout style={{ minHeight: 460, background: "#fff", border: "1px solid #eef0f4", borderRadius: 8 }}>
-                            <Sider width={300} style={{ background: "#fff", borderRight: "1px solid #eef0f4", padding: 12 }}>
+                            <Sider width={300} breakpoint="lg" collapsedWidth={0} style={{ background: "#fff", borderRight: "1px solid #eef0f4", padding: 12 }}>
                                 <Space direction="vertical" size={12} style={{ width: "100%" }}>
                                     <div>
                                         <div style={{ fontWeight: 700, color: "#111827" }}>{reconcileUserName}</div>

@@ -4,6 +4,7 @@ import { Modal, Table, Spin, Empty, Tag } from "antd";
 import { TeamOutlined, CalendarOutlined, BankOutlined } from "@ant-design/icons";
 import { callFetchCompanyJobTitlesOfDepartment } from "@/config/api";
 import type { IDepartmentJobTitle } from "@/types/backend";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface PositionChartModalProps {
     open: boolean;
@@ -34,13 +35,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
 }) => {
     const [data, setData] = useState<IDepartmentJobTitle[]>([]);
     const [loading, setLoading] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 640);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (!open || !departmentId) return;

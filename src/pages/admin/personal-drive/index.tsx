@@ -85,6 +85,7 @@ import type { IDocument, IDocumentFolder } from "@/types/backend";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import dayjs from "dayjs";
 import ModalSelectEmployee from "./ModalSelectEmployee";
+import { getModalWidth } from "@/utils/responsive";
 
 const { Sider, Content } = Layout;
 const ACCOUNTING_DOC_CATEGORY_CODE = "ACCOUNTING_DOC";
@@ -1581,8 +1582,8 @@ const PersonalDrivePage: React.FC = () => {
                 open={previewOpen}
                 onCancel={() => setPreviewOpen(false)}
                 footer={null}
-                width={850}
-                styles={{ body: { height: 600, padding: 0 } }}
+                width={getModalWidth(850)}
+                styles={{ body: { height: "min(600px, 80vh)", padding: 0 } }}
                 destroyOnHidden
             >
                 {previewUrl.toLowerCase().endsWith(".pdf") ? (

@@ -3,6 +3,7 @@ import { Modal, Input, List, Typography, Space, Button, Empty, Spin, Tag } from 
 import { SearchOutlined, EyeOutlined, FileTextOutlined } from "@ant-design/icons";
 import { callFetchAccountingDocuments } from "@/config/api";
 import dayjs from "dayjs";
+import { getModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 const getValidityLabel = (active?: boolean) => active ? "Còn hiệu lực" : "Đã hủy";
@@ -70,7 +71,7 @@ const AccountingSpotlightSearch: React.FC<AccountingSpotlightSearchProps> = ({ o
             onCancel={onClose}
             footer={null}
             closable={false}
-            width={600}
+            width={getModalWidth(600)}
             style={{ top: 100 }}
             styles={{
                 body: { padding: 0, borderRadius: 12, overflow: "hidden" },

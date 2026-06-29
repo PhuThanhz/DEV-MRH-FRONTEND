@@ -18,6 +18,7 @@ import {
 import { useEffect } from "react";
 import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 import AppButton from "@/components/common/ui/AppButton";
+import { getModalWidth } from "@/utils/responsive";
 import {
     useDepartmentSalaryGradesQuery,
     useCreateDepartmentSalaryGradeMutation,
@@ -187,7 +188,7 @@ const DrawerDepartmentSalaryGrade = ({
                 open={open}
                 onClose={onClose}
                 destroyOnClose
-                width={850}
+                width={getModalWidth(850)}
                 title={
                     <Space direction="vertical" size={0}>
                         <Title level={4}>Quản lý bậc lương (Department)</Title>
@@ -206,6 +207,7 @@ const DrawerDepartmentSalaryGrade = ({
                             columns={columns}
                             dataSource={data}
                             pagination={false}
+                            scroll={{ x: "max-content" }}
                             locale={{
                                 emptyText: <Empty description="Không có dữ liệu" />,
                             }}

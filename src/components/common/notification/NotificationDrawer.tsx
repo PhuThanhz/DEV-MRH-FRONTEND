@@ -16,6 +16,7 @@ import "dayjs/locale/vi";
 
 import { useNotifications } from "@/hooks/useNotifications";
 import type { UnifiedNotification } from "@/hooks/useNotifications";
+import { getModalWidth } from "@/utils/responsive";
 
 dayjs.extend(relativeTime);
 dayjs.locale("vi");
@@ -55,7 +56,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
     return (
         <Drawer
             placement="right"
-            width={700}
+            width={getModalWidth(700)}
             onClose={onClose}
             open={open}
             closable={false}

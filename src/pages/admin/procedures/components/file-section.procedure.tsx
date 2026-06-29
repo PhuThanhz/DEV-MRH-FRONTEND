@@ -10,8 +10,9 @@ import {
     CloseOutlined,
 } from "@ant-design/icons";
 import { Button, Modal, Skeleton, Tooltip } from "antd";
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState } from "react";
 import { downloadUrlAsBlob } from "@/config/download-url";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 const loadPdfPreviewer = () => import("./PdfPreviewer");
 const PdfPreviewer = lazy(loadPdfPreviewer);
@@ -61,19 +62,6 @@ const getFileConfig = (ext: string): FileConfig =>
         bg: "#fafafa", border: "#d9d9d9", extBg: "#8c8c8c",
         extLabel: ext.toUpperCase() || "FILE",
     };
-
-// ─── Hook detect mobile ───────────────────────────────────────────────────────
-const useIsMobile = () => {
-    const [isMobile, setIsMobile] = useState(
-        typeof window !== "undefined" ? window.innerWidth < 768 : false
-    );
-    useEffect(() => {
-        const handler = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener("resize", handler);
-        return () => window.removeEventListener("resize", handler);
-    }, []);
-    return isMobile;
-};
 
 // ─── FileTile ─────────────────────────────────────────────────────────────────
 interface IFileTileProps { fileName: string; fileUrl: string; onPreview: (url: string, fileName: string) => void }

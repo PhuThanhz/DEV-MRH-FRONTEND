@@ -10,6 +10,7 @@ import {
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
 import type { IJobTitleAssignStatus } from "@/types/backend";
+import { getModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -281,7 +282,7 @@ const DrawerAssignJobTitle = ({
             open={open}
             onClose={onClose}
             title={`Gán chức danh vào phòng ban${departmentName ? ` - ${departmentName}` : ""}`}
-            width={1150}
+            width={getModalWidth(1150)}
             footer={
                 <div style={{ textAlign: "right" }}>
                     <Button onClick={onClose} disabled={assigning}>Hủy</Button>
@@ -346,7 +347,7 @@ const DrawerAssignJobTitle = ({
                         rowKey="id"
                         dataSource={data}
                         columns={columns}
-                        scroll={{ x: 1100 }}
+                        scroll={{ x: "max-content" }}
                         pagination={{
                             current: page,
                             pageSize: PAGE_SIZE,

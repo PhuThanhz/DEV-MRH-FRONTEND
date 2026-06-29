@@ -32,6 +32,7 @@ import {
     OrderedListOutlined,
     TrophyOutlined,
 } from "@ant-design/icons";
+import { getModalWidth } from "@/utils/responsive";
 import {
     callFetchEvaluationTemplateById,
     callCreateTemplateSection,
@@ -1116,7 +1117,7 @@ const TemplateDetailPage: React.FC = () => {
                 open={isLevelsModalOpen}
                 onCancel={() => setIsLevelsModalOpen(false)}
                 footer={null}
-                width={650}
+                width={getModalWidth(650)}
                 destroyOnHidden
             >
                 <Form

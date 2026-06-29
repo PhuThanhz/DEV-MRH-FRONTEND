@@ -11,6 +11,7 @@ import {
     DeleteOutlined,
     ReadOutlined,
 } from "@ant-design/icons";
+import { getModalWidth } from "@/utils/responsive";
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -1248,7 +1249,7 @@ const ModalNode = ({
                     margin: 0,
                 },
             }}
-            width={isBulk ? 920 : 560}
+            width={isBulk ? getModalWidth(920) : getModalWidth(560)}
         >
             <style>{`
                 .org-node-form-modal .org-node-mode-toggle button {

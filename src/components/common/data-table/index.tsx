@@ -2,6 +2,7 @@ import type { ParamsType, ProTableProps } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import vi_VN from "antd/locale/vi_VN";
 import { ConfigProvider } from "antd";
+import { TABLE_SCROLL_X } from "@/utils/responsive";
 
 const DataTable = <
     T extends Record<string, any>,
@@ -43,11 +44,7 @@ const DataTable = <
                     bordered
                     loading={loading}
                     rowKey={rowKey}
-                    scroll={
-                        scroll ?? {
-                            x: true, // ✅ tốt hơn max-content cho mobile
-                        }
-                    }
+                    scroll={scroll ?? TABLE_SCROLL_X}
                     params={params}
                     request={request} search={false}
                     polling={polling}

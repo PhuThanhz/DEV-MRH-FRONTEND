@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod, callFetchCompany } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
+import { getModalWidth } from "@/utils/responsive";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
 import {
@@ -205,7 +206,7 @@ const PeriodModal = (props: IProps) => {
             ]}
             onCancel={() => { setOpenModal(false); if (setDataInit) setDataInit(null); }}
             confirmLoading={isSubmit}
-            width={640}
+            width={getModalWidth(640)}
             destroyOnHidden
             maskClosable={false}
             styles={{ body: { padding: "16px 24px 8px" } }}

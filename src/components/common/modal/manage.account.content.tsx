@@ -13,6 +13,7 @@ import { updateUserProfile } from "@/redux/slice/accountSlide";
 import type { IUserInfo } from "@/redux/slice/accountSlide";
 import type { IReqUpdateProfileDTO } from "@/types/backend";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
+import { getModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
 
 /* ═══════════════════════════════════════════
@@ -97,7 +98,7 @@ export const AvatarLightbox = ({
             onCancel={onClose}
             footer={null}
             centered
-            width={380}
+            width={getModalWidth(380)}
             maskClosable
             closable={false}
             styles={{

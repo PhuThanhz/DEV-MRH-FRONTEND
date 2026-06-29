@@ -23,6 +23,7 @@ import type {
 } from "@/types/backend";
 
 import { useReviseProcedureMutation } from "@/hooks/useProcedure";
+import { getModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
 
 interface IProps {
@@ -196,7 +197,7 @@ const ModalRevise: React.FC<IProps> = ({
             open={open}
             form={form}
             onFinish={submitForm}
-            width={920}
+            width={getModalWidth(920)}
             layout="vertical"
             modalProps={{
                 onCancel: handleReset,

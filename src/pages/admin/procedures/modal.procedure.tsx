@@ -33,6 +33,7 @@ import dayjs from "dayjs";
 import UserSelectField from "./components/UserSelectField";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { getModalWidth } from "@/utils/responsive";
 
 const PINK = "#e91e8c";
 const PINK_HOVER = "#c4177a";
@@ -442,7 +443,7 @@ const ModalProcedure: React.FC<IProps> = ({
             open={open}
             form={form}
             onFinish={submitForm}
-            width={820}
+            width={getModalWidth(820)}
             layout="vertical"
             submitter={{
                 searchConfig: {

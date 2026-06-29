@@ -44,6 +44,7 @@ import ViewDetailDocument from "./view.document";
 import ModalDocumentShareToken from "./ModalDocumentShareToken";
 import ModalAddShortcut from "./ModalAddShortcut";
 import TabBar from "@/components/common/tabs/TabBar";
+import { getModalWidth } from "@/utils/responsive";
 
 type TabType = "ALL" | "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
@@ -601,7 +602,7 @@ const DocumentPage = () => {
                 onCancel={() => setOpenQrModal(false)}
                 footer={null}
                 closable={false}
-                width={420}
+                width={getModalWidth(420)}
                 centered
                 styles={{
                     content: { padding: 0, borderRadius: 28, overflow: "hidden" },

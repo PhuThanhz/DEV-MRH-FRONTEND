@@ -29,6 +29,7 @@ import {
 
 import type { ISectionSalaryGrade } from "@/types/backend";
 import type { ColumnsType } from "antd/es/table";
+import { getModalWidth } from "@/utils/responsive";
 
 const { Title, Text } = Typography;
 
@@ -193,7 +194,7 @@ const DrawerSectionSalaryGrade = ({
                 open={open}
                 onClose={onClose}
                 destroyOnClose
-                width={850}
+                width={getModalWidth(850)}
                 title={
                     <Space direction="vertical" size={0}>
                         <Title level={4}>Quản lý bậc lương (Section)</Title>
@@ -212,6 +213,7 @@ const DrawerSectionSalaryGrade = ({
                             columns={columns}
                             dataSource={data}
                             pagination={false}
+                            scroll={{ x: "max-content" }}
                             locale={{
                                 emptyText: <Empty description="Không có dữ liệu" />,
                             }}

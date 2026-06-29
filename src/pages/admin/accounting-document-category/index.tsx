@@ -330,7 +330,7 @@ const AccountingDocumentCategoryPage = () => {
                     loading={isFetching}
                     columns={columns}
                     dataSource={categories}
-                    scroll={{ x: 900 }}
+                    scroll={{ x: "max-content" }}
                     request={async (params, sort) => {
                         const q = buildQuery(params, sort);
                         setQuery(q);

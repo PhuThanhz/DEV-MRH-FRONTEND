@@ -8,6 +8,7 @@ import {
 import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import type { IUserPosition } from "@/types/backend";
+import { useBreakpoint } from "@/hooks/useIsMobile";
 
 const { Text } = Typography;
 
@@ -130,14 +131,12 @@ const ViewDetailEmployee = ({ open, onClose, dataInit, setDataInit }: IProps) =>
         },
     ].filter((f) => f.value && f.value !== "--");
 
-    /* width: dùng JS để đảm bảo override hoàn toàn trên mọi thiết bị */
-    const modalWidth = typeof window !== "undefined"
-        ? window.innerWidth <= 600
-            ? "calc(100vw - 16px)"
-            : window.innerWidth <= 900
-                ? "calc(100vw - 32px)"
-                : "72vw"
-        : "72vw";
+    const { isMobile, isTablet } = useBreakpoint();
+    const modalWidth = isMobile
+        ? "calc(100vw - 16px)"
+        : isTablet
+            ? "calc(100vw - 32px)"
+            : "72vw";
 
     return (
         <>
