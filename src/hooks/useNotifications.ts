@@ -190,15 +190,30 @@ const useNotificationsState = (): NotificationContextValue => {
             return;
         }
 
-        // Play "ding" sound
         if (soundEnabled) {
             playNotificationSound();
         }
-        // Gom toast realtime để người dùng không bị spam khi nhiều module cập nhật cùng lúc.
         pushGroupedNotification(msg.content ?? "Bạn có thông báo mới");
-        // Append to unread list
-        setAppNotifs((prev) => [msg, ...prev]);
-        // Real-time invalidate JD Inbox query to trigger fetch only when there's an actual update!
+
+        // Prepend realtime message vào state ngay lập tức cho UX nhanh
+        setAppNotifs((prev) => {
+            // Tránh duplicate nếu đã có id này
+            if (msg.id && prev.some((n: any) => n.id === msg.id)) return prev;
+            return [msg, ...prev];
+        });
+
+        // Refetch từ DB sau 1s để đảm bảo đồng bộ (phòng trường hợp state != DB)
+        setTimeout(() => {
+            callFetchEvaluationNotifications().then(res => {
+                const notifications = Array.isArray(res?.data)
+                    ? res.data
+                    : Array.isArray((res?.data as any)?.data)
+                        ? (res.data as any).data
+                        : [];
+                setAppNotifs(notifications);
+            }).catch(() => {});
+        }, 1000);
+
         queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
     });
 
@@ -229,6 +244,12 @@ const useNotificationsState = (): NotificationContextValue => {
                 title = "Thông báo Mô tả công việc";
             } else if (item.module === "DOCUMENT") {
                 title = "Thông báo Văn bản";
+            } else if (item.module === "COMPANY_PROCEDURES") {
+                title = "Thông báo Quy trình công ty";
+            } else if (item.module === "DEPARTMENT_PROCEDURES") {
+                title = "Thông báo Quy trình phòng ban";
+            } else if (item.module === "CONFIDENTIAL_PROCEDURES") {
+                title = "Thông báo Quy trình bảo mật";
             }
 
             items.push({

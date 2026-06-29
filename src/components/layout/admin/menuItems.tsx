@@ -23,7 +23,7 @@ interface Permission {
     method: string;
 }
 
-export const generateMenuItems = (permissions: Permission[] | undefined, roleName = "") => {
+export const generateMenuItems = (permissions: Permission[] | undefined, roleName: string = "") => {
     const ACL_ENABLE = import.meta.env.VITE_ACL_ENABLE;
     const isAclDisabled = ACL_ENABLE === "false" || roleName.toUpperCase() === "SUPER_ADMIN";
 

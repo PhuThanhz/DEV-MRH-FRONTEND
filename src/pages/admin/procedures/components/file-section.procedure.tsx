@@ -21,8 +21,9 @@ export const buildFileUrl = (fileName?: string, folder = "procedures") => {
     if (!fileName) return null;
     if (/^https?:\/\//i.test(fileName)) return fileName;
     const normalized = fileName.replace(/^\/+/, "");
-    const path = normalized.includes("/") ? normalized : `${folder}/${normalized}`;
-    return `${import.meta.env.VITE_BACKEND_URL}/uploads/${path.split("/").map(encodeURIComponent).join("/")}`;
+    const resolvedFolder = normalized.includes("/") ? normalized.split("/").slice(0, -1).join("/") : folder;
+    const resolvedName = normalized.includes("/") ? normalized.split("/").pop()! : normalized;
+    return `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(resolvedName)}&folder=${encodeURIComponent(resolvedFolder)}`;
 };
 
 export const getExt = (fileName?: string) =>

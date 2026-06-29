@@ -51,7 +51,7 @@ const Header = () => {
     }, [location]);
 
     const avatarSrc = user?.avatar
-        ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
+        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
         : undefined;
 
     // Lấy initials từ tên

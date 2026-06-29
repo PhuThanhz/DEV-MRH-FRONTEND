@@ -20,7 +20,7 @@ const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 const getAvatarUrl = (avatar?: string) => {
     if (!avatar) return undefined;
-    return `${backendURL}/uploads/avatar/${avatar}?t=${Date.now()}`;
+    return `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(avatar)}&folder=avatar&t=${Date.now()}`;
 };
 
 interface Props {

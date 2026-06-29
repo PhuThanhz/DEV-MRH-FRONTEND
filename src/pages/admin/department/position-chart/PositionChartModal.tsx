@@ -256,12 +256,14 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
             </div>
 
             {/* ── BODY ── */}
-            <div style={{
-                padding: isMobile ? "20px 16px" : "28px 48px",
-                maxHeight: "60vh",
-                overflow: "auto",
-                background: "#fff",
-            }}>
+            <div
+                data-guide-id="dept-position-chart-content"
+                style={{
+                    padding: isMobile ? "20px 16px" : "28px 48px",
+                    maxHeight: "60vh",
+                    overflow: "auto",
+                    background: "#fff",
+                }}>
                 {loading ? (
                     <div style={{ textAlign: "center", padding: "80px 0" }}>
                         <Spin size="large" />

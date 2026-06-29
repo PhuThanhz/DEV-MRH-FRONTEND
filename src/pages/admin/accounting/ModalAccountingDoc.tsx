@@ -24,8 +24,9 @@ const buildDocumentFileUrl = (fileName?: string) => {
     if (!fileName) return undefined;
     if (/^https?:\/\//i.test(fileName)) return fileName;
     const normalized = fileName.replace(/^\/+/, "");
-    const path = normalized.includes("/") ? normalized : `documents/${normalized}`;
-    return `${import.meta.env.VITE_BACKEND_URL}/storage/${path.split("/").map(encodeURIComponent).join("/")}`;
+    const folder = normalized.includes("/") ? normalized.split("/").slice(0, -1).join("/") : "documents";
+    const name = normalized.includes("/") ? normalized.split("/").pop()! : normalized;
+    return `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(name)}&folder=${encodeURIComponent(folder)}`;
 };
 
 const ModalAccountingDoc = ({

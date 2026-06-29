@@ -30,7 +30,7 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             render: (_, record) => (
                 <Space>
                     <Avatar
-                        src={record.avatar ? `${import.meta.env.VITE_BACKEND_URL}/uploads/avatar/${record.avatar}` : undefined}
+                        src={record.avatar ? `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(record.avatar)}&folder=avatar` : undefined}
                         icon={<UserOutlined />}
                     />
                     <div>

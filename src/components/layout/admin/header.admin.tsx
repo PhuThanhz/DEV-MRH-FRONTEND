@@ -45,7 +45,7 @@ const HeaderAdmin: React.FC<IProps> = ({
     const triggerRef = useRef<HTMLDivElement>(null);
 
     const avatarSrc = user?.avatar
-        ? `${backendURL}/uploads/avatar/${user.avatar}`
+        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar`
         : undefined;
 
     const getInitials = (name?: string) =>

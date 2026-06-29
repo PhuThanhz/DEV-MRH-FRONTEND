@@ -442,7 +442,7 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
     };
 
     return (
-        <div>
+        <div data-guide-id="dept-permissions-content">
             {/* ── LEGEND ── */}
             {renderLegend()}
 

@@ -3,12 +3,29 @@ import { Worker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import { PDF_WORKER_URL } from "@/config/pdf-worker";
 
+const buildViewerSource = (url: string): { fileUrl: string; httpHeaders?: Record<string, string> } => {
+    const match = url.match(/\/(?:uploads|storage)\/(.+)$/);
+    if (!match) return { fileUrl: url };
+
+    const parts = match[1].split("/");
+    const fileName = parts.pop()!;
+    const folder = parts.join("/");
+    const token = localStorage.getItem("access_token");
+    const viewUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/view?fileName=${encodeURIComponent(fileName)}&folder=${encodeURIComponent(folder)}`;
+
+    return token
+        ? { fileUrl: viewUrl, httpHeaders: { Authorization: `Bearer ${token}` } }
+        : { fileUrl: viewUrl };
+};
+
 const InlinePdfViewer = ({ fileUrl, onOpen, onDownload }: { fileUrl: string; onOpen: () => void; onDownload: () => void }) => {
+    const viewerSource = buildViewerSource(fileUrl);
     return (
         <div style={{ width: "100%", height: "100%", minHeight: 560, background: "#f3f4f6" }}>
             <Worker workerUrl={PDF_WORKER_URL}>
                 <Viewer
-                    fileUrl={fileUrl}
+                    fileUrl={viewerSource.fileUrl}
+                    httpHeaders={viewerSource.httpHeaders}
                     transformGetDocumentParams={(params) => ({
                         ...params,
                         disableRange: false,

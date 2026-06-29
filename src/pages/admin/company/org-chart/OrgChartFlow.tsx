@@ -846,6 +846,7 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
     return (
         <div
             ref={containerRef}
+            data-guide-id="dept-org-chart-canvas"
             style={{
                 height: containerHeight,
                 minHeight: containerMinHeight,

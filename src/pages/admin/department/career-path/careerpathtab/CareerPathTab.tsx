@@ -138,6 +138,7 @@ const CareerPathTab = () => {
                     onReset={handleReset}
                     onAddClick={() => { setDataInit(null); setOpenModal(true); }}
                     addPermission={ALL_PERMISSIONS.CAREER_PATHS.CREATE}
+                    guideAddId="career-path-add-button"
                 />
 
                 <div style={{

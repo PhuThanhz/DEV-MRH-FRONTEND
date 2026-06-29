@@ -64,7 +64,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             setSelectedDirectManager(directManagerItem);
 
             setPreviewUrl(
-                dataInit.avatar ? `${backendURL}/storage/avatar/${dataInit.avatar}` : ""
+                dataInit.avatar ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(dataInit.avatar)}&folder=avatar` : ""
             );
             form.setFieldsValue({
                 email: dataInit.email,

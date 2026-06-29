@@ -267,8 +267,8 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const handleClose = () => { onClose(false); setDataInit(null); };
 
-    const avatarSrc = user?.avatar // ← đổi từ dataInit?.avatar
-        ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
+    const avatarSrc = user?.avatar
+        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
         : undefined;
 
     const hrFields = [

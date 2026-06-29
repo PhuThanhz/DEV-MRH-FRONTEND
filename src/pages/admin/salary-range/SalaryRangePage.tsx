@@ -227,7 +227,7 @@ const SalaryRangePage = () => {
 
     return (
         <PageContainer title={departmentName ? `Cơ cấu thu nhập – ${departmentName}` : "Cơ cấu thu nhập"}>
-            <Card className="salary-range-card" variant="borderless">
+            <Card className="salary-range-card" data-guide-id="dept-salary-range-content" variant="borderless">
 
                 {/* Badge hiển thị khi user chỉ xem khung lương của mình */}
                 {(!canViewMatrix && canViewMy) && (

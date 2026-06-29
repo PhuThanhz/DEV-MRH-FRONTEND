@@ -497,7 +497,7 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
 
     const backendURL = import.meta.env.VITE_BACKEND_URL;
     const currentAvatar = user?.avatar
-        ? `${backendURL}/uploads/avatar/${user.avatar}?t=${Date.now()}`
+        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
         : "";
     const userId = user?.id ? String(user.id) : undefined;
 

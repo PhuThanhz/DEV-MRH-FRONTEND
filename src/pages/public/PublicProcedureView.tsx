@@ -44,9 +44,11 @@ const EXT_ICON: Record<string, React.ReactNode> = {
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL as string;
 
-// ─── FIX: build đường dẫn file đúng ──────────────────────────────────────────
-const buildFileUrl = (fileName: string) =>
-    `${BASE_URL}/uploads/procedures/${encodeURIComponent(fileName)}`;
+const buildFileUrl = (fileName: string) => {
+    const name = fileName.includes("/") ? fileName.split("/").pop()! : fileName;
+    const folder = fileName.includes("/") ? fileName.split("/").slice(0, -1).join("/") : "procedures";
+    return `${BASE_URL}/api/v1/files/public?fileName=${encodeURIComponent(name)}&folder=${encodeURIComponent(folder)}`;
+};
 
 function getFileIcon(ext: string) {
     return EXT_ICON[ext.toUpperCase()] ?? <FileOutlined style={{ color: "#6b7280", fontSize: 22 }} />;
