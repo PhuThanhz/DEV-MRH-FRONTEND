@@ -98,7 +98,7 @@ const Header = () => {
                     label: (
                         <Link to="/admin" className="flex items-center gap-3 py-1.5 px-2 text-gray-700 hover:text-pink-600 transition-colors text-[15px] font-medium">
                             <FireOutlined className="text-[18px] text-orange-500" />
-                            <span>Trang Quản Trị</span>
+                            <span>Trang quản trị</span>
                         </Link>
                     ),
                 },
@@ -199,7 +199,7 @@ const Header = () => {
                         <div style={{ width: 23, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <FireOutlined style={{ fontSize: 16, color: "#9ca3af" }} />
                         </div>
-                        <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Trang Quản Trị</span>
+                        <span style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>Trang quản trị</span>
                     </Link>
                 ) : null}
             </div>
@@ -239,26 +239,11 @@ const Header = () => {
 
     return (
         <>
-            <header className="bg-gradient-to-r from-pink-500 via-rose-400 to-pink-600 text-white shadow-xl sticky top-0 z-[1000] border-b-2 border-white/20 transition-all duration-300">
-                {/* Gradient overlay động */}
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-600/20 via-rose-500/20 to-pink-600/20 animate-gradient-flow pointer-events-none"></div>
-
-                {/* Subtle wave pattern */}
+            <header className="bg-gradient-to-r from-pink-500 via-rose-400 to-pink-600 text-white shadow-xl sticky top-0 z-[1000] border-b border-white/10 overflow-hidden transition-all duration-300">
+                {/* GPU-accelerated wave overlay */}
                 <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
-                    <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 60">
-                        <path
-                            d="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30"
-                            stroke="white"
-                            strokeWidth="2"
-                            fill="none"
-                        >
-                            <animate
-                                attributeName="d"
-                                values="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30; M0,30 Q150,50 300,30 T600,30 T900,30 T1200,30; M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30"
-                                dur="12s"
-                                repeatCount="indefinite"
-                            />
-                        </path>
+                    <svg className="absolute top-0 left-0 w-[200%] h-full animate-wave-flow" viewBox="0 0 2400 60" preserveAspectRatio="none">
+                        <path d="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30 T1500,30 T1800,30 T2100,30 T2400,30" stroke="white" strokeWidth="2" fill="none" />
                     </svg>
                 </div>
 
@@ -463,13 +448,12 @@ const Header = () => {
                 )}
 
                 <style>{`
-                    @keyframes gradient-flow {
-                        0%, 100% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
+                    @keyframes wave-flow {
+                        0% { transform: translate3d(0, 0, 0); }
+                        100% { transform: translate3d(-50%, 0, 0); }
                     }
-                    .animate-gradient-flow {
-                        animation: gradient-flow 18s ease infinite;
-                        background-size: 200% 200%;
+                    .animate-wave-flow {
+                        animation: wave-flow 25s linear infinite;
                     }
                     .animate-ping {
                         animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
@@ -530,7 +514,6 @@ const Header = () => {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-[15px] font-bold text-gray-700 leading-tight">Hồ sơ cá nhân</span>
-                                <span className="text-[12px] text-gray-400 mt-0.5">Quản lý thông tin & bảo mật</span>
                             </div>
                         </div>
 
@@ -544,8 +527,7 @@ const Header = () => {
                                     <FireOutlined className="text-[20px]" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[15px] font-bold text-gray-700 leading-tight">Trang Quản Trị</span>
-                                    <span className="text-[12px] text-gray-400 mt-0.5">Truy cập hệ thống quản lý</span>
+                                    <span className="text-[15px] font-bold text-gray-700 leading-tight">Trang quản trị</span>
                                 </div>
                             </Link>
                         ) : null}
@@ -559,7 +541,7 @@ const Header = () => {
                             <div className="w-12 h-12 rounded-[14px] bg-white flex items-center justify-center text-rose-500 shadow-sm">
                                 <LogoutOutlined className="text-[20px]" />
                             </div>
-                            <span className="text-[15px] font-bold text-rose-600">Đăng xuất an toàn</span>
+                            <span className="text-[15px] font-bold text-rose-600">Đăng xuất</span>
                         </div>
                     </div>
                 </div>

@@ -5,8 +5,17 @@ import { useNotifications } from "@/hooks/useNotifications";
 import NotificationGrid from "./NotificationGrid";
 import NotificationDrawer from "./NotificationDrawer";
 
-const NotificationBell: React.FC = () => {
-    const [open, setOpen] = useState(false);
+interface IProps {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+}
+
+const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) => {
+    const [openInternal, setOpenInternal] = useState(false);
+    const open = openProp ?? openInternal;
+    const setOpen = (val: boolean) => {
+        onOpenChange ? onOpenChange(val) : setOpenInternal(val);
+    };
     const [drawerOpen, setDrawerOpen] = useState(false);
     const { items, unreadCount, markAllRead, markOneRead, isLoading, soundEnabled, toggleSound } = useNotifications();
 

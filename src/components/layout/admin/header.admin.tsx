@@ -39,6 +39,7 @@ const HeaderAdmin: React.FC<IProps> = ({
     const backendURL = import.meta.env.VITE_BACKEND_URL;
 
     const [menuOpen, setMenuOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
     const [openAccountModal, setOpenAccountModal] = useState(false);
     const [dropdownWidth, setDropdownWidth] = useState(292);
     const triggerRef = useRef<HTMLDivElement>(null);
@@ -177,19 +178,11 @@ const HeaderAdmin: React.FC<IProps> = ({
 
     return (
         <>
-            <header className="bg-gradient-to-r from-pink-500 via-rose-400 to-pink-600 text-white shadow-xl sticky top-0 z-40 border-b-2 border-white/20 overflow-hidden transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-600/20 via-rose-500/20 to-pink-600/20 animate-gradient-flow pointer-events-none" />
-
+            <header className="bg-gradient-to-r from-pink-500 via-rose-400 to-pink-600 text-white shadow-xl sticky top-0 z-40 border-b border-white/10 overflow-hidden transition-all duration-300">
+                {/* GPU-accelerated wave overlay */}
                 <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
-                    <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 60">
-                        <path d="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30" stroke="white" strokeWidth="2" fill="none">
-                            <animate
-                                attributeName="d"
-                                values="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30; M0,30 Q150,50 300,30 T600,30 T900,30 T1200,30; M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30"
-                                dur="12s"
-                                repeatCount="indefinite"
-                            />
-                        </path>
+                    <svg className="absolute top-0 left-0 w-[200%] h-full animate-wave-flow" viewBox="0 0 2400 60" preserveAspectRatio="none">
+                        <path d="M0,30 Q150,10 300,30 T600,30 T900,30 T1200,30 T1500,30 T1800,30 T2100,30 T2400,30" stroke="white" strokeWidth="2" fill="none" />
                     </svg>
                 </div>
 
@@ -222,7 +215,13 @@ const HeaderAdmin: React.FC<IProps> = ({
                     <div className="flex items-center gap-3">
 
                         {/* 🔔 Chuông thông báo */}
-                        <NotificationBell />
+                        <NotificationBell
+                            open={notifOpen}
+                            onOpenChange={(open) => {
+                                setNotifOpen(open);
+                                if (open) setMenuOpen(false);
+                            }}
+                        />
 
                         {/* ✨ PILL USER */}
                         <Dropdown
@@ -231,8 +230,11 @@ const HeaderAdmin: React.FC<IProps> = ({
                             open={menuOpen}
                             onOpenChange={(open) => {
                                 setMenuOpen(open);
-                                if (open && triggerRef.current) {
-                                    setDropdownWidth(getAccountDropdownWidth(triggerRef.current.getBoundingClientRect().width));
+                                if (open) {
+                                    setNotifOpen(false);
+                                    if (triggerRef.current) {
+                                        setDropdownWidth(getAccountDropdownWidth(triggerRef.current.getBoundingClientRect().width));
+                                    }
                                 }
                             }}
                             placement="bottomRight"
@@ -296,24 +298,20 @@ const HeaderAdmin: React.FC<IProps> = ({
                 </div>
 
                 <style>{`
-                    @keyframes gradient-flow {
-                        0%, 100% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
+                    @keyframes wave-flow {
+                        0% { transform: translate3d(0, 0, 0); }
+                        100% { transform: translate3d(-50%, 0, 0); }
                     }
-                    .animate-gradient-flow {
-                        animation: gradient-flow 18s ease infinite;
-                        background-size: 200% 200%;
-                        transform: translateZ(0);
-                        will-change: background-position;
+                    .animate-wave-flow {
+                        animation: wave-flow 25s linear infinite;
                     }
                     @keyframes dropdown-slide {
                         from { opacity: 0; transform: translateY(-10px) scale(0.95); }
                         to { opacity: 1; transform: translateY(0) scale(1); }
                     }
                     @media (prefers-reduced-motion: reduce) {
-                        .animate-gradient-flow,
                         .animate-dropdown-slide,
-                        header svg animate {
+                        .animate-wave-flow {
                             animation: none !important;
                         }
                     }

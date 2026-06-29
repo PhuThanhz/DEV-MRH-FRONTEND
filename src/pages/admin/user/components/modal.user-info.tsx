@@ -1,4 +1,5 @@
 import { useState } from "react";
+import dayjs from "dayjs";
 import {
     ProForm,
     ProFormText,
@@ -254,6 +255,8 @@ const UserInfoForm = ({
                         format: "DD-MM-YYYY",
                         size: "large",
                         style: { width: "100%" },
+                        defaultPickerValue: dayjs().subtract(25, "year"),
+                        disabledDate: (d) => d && d > dayjs().endOf("day"),
                     }}
                 />
             </Col>

@@ -10,7 +10,7 @@ import LayoutClient from './components/layout/client/layout.client';
 import { PATHS } from '@/constants/paths';
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import Loading from "@/components/share/loading";
+import Loading from "@/components/common/loading/loading";
 
 const LoginPage = lazy(() => import("pages/auth/login"));
 const ForgotPassword = lazy(() => import("pages/auth/ForgotPassword"));
@@ -184,17 +184,21 @@ export default function App() {
         {
           path: PATHS.ADMIN.SECTION,
           element: (
-            <Access permission={ALL_PERMISSIONS.SECTIONS.GET_PAGINATE}>
-              <SectionPage />
-            </Access>
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.SECTIONS.GET_PAGINATE}>
+                <SectionPage />
+              </Access>
+            </ProtectedRoute>
           ),
         },
         {
           path: PATHS.ADMIN.POSITION_LEVEL,
           element: (
-            <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_PAGINATE}>
-              <PositionLevelPage />
-            </Access>
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_PAGINATE}>
+                <PositionLevelPage />
+              </Access>
+            </ProtectedRoute>
           ),
         },
         {

@@ -38,9 +38,23 @@ const LoginPage = () => {
         notify.error("Đăng nhập thất bại");
       }
     } catch (error: any) {
-      const msg = Array.isArray(error?.message)
-        ? error.message[0]
-        : error?.message || "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại!";
+      const status = error?.statusCode ?? error?.status ?? error?.response?.status;
+      const hasResponse = status !== undefined && status !== null;
+
+      let msg: string;
+      if (!hasResponse) {
+        msg = "Mất kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.";
+      } else if (status === 401 || status === 400) {
+        msg = "Email hoặc mật khẩu không đúng.";
+      } else if (status === 429) {
+        msg = "Bạn thử quá nhiều lần. Vui lòng đợi ít phút rồi thử lại.";
+      } else if (status >= 500) {
+        msg = "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.";
+      } else {
+        msg = Array.isArray(error?.message)
+          ? error.message[0]
+          : error?.message || "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại!";
+      }
       notify.error(msg);
     } finally {
       setIsSubmit(false);

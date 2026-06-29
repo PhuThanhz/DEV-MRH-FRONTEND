@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Result } from "antd";
+import { Navigate } from "react-router-dom";
 import { useAppSelector } from '@/redux/hooks';
 interface IProps {
     hideChildren?: boolean;
@@ -13,6 +14,7 @@ const Access = (props: IProps) => {
     const { permission, hideChildren = false } = props;
     const [allow, setAllow] = useState<boolean>(true);
 
+    const isAuthenticated = useAppSelector(state => state.account.isAuthenticated);
     const permissions = useAppSelector(state => state.account.user.role.permissions);
     const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
 
@@ -33,6 +35,10 @@ const Access = (props: IProps) => {
                 setAllow(false);
         }
     }, [permissions, roleName])
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
         <>

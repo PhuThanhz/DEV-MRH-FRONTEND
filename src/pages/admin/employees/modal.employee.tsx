@@ -526,7 +526,13 @@ const ModalEmployee = ({
                             <Row gutter={10}>
                                 <Col xs={24} sm={12} md={8}>
                                     <Form.Item name="dateOfBirth" label="Ngày sinh">
-                                        <DatePicker style={{ width: "100%" }} placeholder="DD/MM/YYYY" format="DD/MM/YYYY" />
+                                        <DatePicker
+                                            style={{ width: "100%" }}
+                                            placeholder="DD/MM/YYYY"
+                                            format="DD/MM/YYYY"
+                                            defaultPickerValue={dayjs().subtract(25, "year")}
+                                            disabledDate={(d) => d && d > dayjs().endOf("day")}
+                                        />
                                     </Form.Item>
                                 </Col>
                                 <Col xs={24} sm={12} md={8}>

@@ -136,18 +136,10 @@ const SliderAdmin: React.FC<IProps> = ({
                         <Switch
                             size="small"
                             checked={showScannerButton}
-                            onChange={(checked) => {
-                                setShowScannerButton(checked);
-                                localStorage.setItem("qr-scan-enabled", String(checked));
-                            }}
-                            onClick={(e: any) => {
-                                if (e && e.stopPropagation) {
-                                    e.stopPropagation();
-                                }
-                            }}
                             style={{
                                 backgroundColor: showScannerButton ? "#ec4899" : undefined,
                                 minWidth: 32,
+                                pointerEvents: "none",
                             }}
                         />
                     </div>
@@ -163,7 +155,7 @@ const SliderAdmin: React.FC<IProps> = ({
             items={filteredMenuItems}
             onClick={(e) => {
                 if (e.key === "qr-scanner-toggle") {
-                    setShowScannerButton(prev => {
+                    setShowScannerButton((prev) => {
                         const next = !prev;
                         localStorage.setItem("qr-scan-enabled", String(next));
                         return next;

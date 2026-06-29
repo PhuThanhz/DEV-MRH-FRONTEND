@@ -105,20 +105,29 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
 
     // ✅ FIX: stopScan thêm .clear() + null ref để release hoàn toàn camera stream
     const stopScan = async () => {
-        try {
-            if (scannerRef.current) {
+        const scanner = scannerRef.current;
+        if (scanner) {
+            scannerRef.current = null;
+            try {
                 if (torchOn) {
                     try {
-                        await scannerRef.current.applyVideoConstraints({
+                        await scanner.applyVideoConstraints({
                             advanced: [{ torch: false }]
                         });
                     } catch {}
                 }
-                await scannerRef.current.stop();
-                try { scannerRef.current.clear(); } catch { }
-                scannerRef.current = null;
+            } catch {}
+            try {
+                await scanner.stop();
+            } catch (err) {
+                console.warn("Html5Qrcode stop failed:", err);
             }
-        } catch { }
+            try {
+                scanner.clear();
+            } catch (err) {
+                console.warn("Html5Qrcode clear failed:", err);
+            }
+        }
         setScanning(false);
         setHasTorch(false);
         setTorchOn(false);
@@ -317,12 +326,13 @@ const QrScannerModal = ({ open, onClose }: IProps) => {
     // ✅ FIX: cleanup khi unmount — dùng finally để đảm bảo luôn chạy
     useEffect(() => {
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.stop()
+            const scanner = scannerRef.current;
+            if (scanner) {
+                scannerRef.current = null;
+                scanner.stop()
                     .catch(() => { })
                     .finally(() => {
-                        try { scannerRef.current?.clear(); } catch { }
-                        scannerRef.current = null;
+                        try { scanner.clear(); } catch { }
                     });
             }
         };
