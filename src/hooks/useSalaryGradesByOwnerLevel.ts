@@ -10,18 +10,14 @@ export const useSalaryGradesByOwnerLevel = (
     ownerLevel: OwnerLevel,
     ownerJobTitleId: number
 ) => {
-    let result:
-        | ReturnType<typeof useCompanySalaryGradesQuery>
-        | ReturnType<typeof useDepartmentSalaryGradesQuery>
-        | ReturnType<typeof useSectionSalaryGradesQuery>;
+    const companyResult = useCompanySalaryGradesQuery(ownerLevel === "COMPANY" ? ownerJobTitleId : undefined);
+    const departmentResult = useDepartmentSalaryGradesQuery(ownerLevel === "DEPARTMENT" ? ownerJobTitleId : undefined);
+    const sectionResult = useSectionSalaryGradesQuery(ownerLevel === "SECTION" ? ownerJobTitleId : undefined);
 
-    if (ownerLevel === "COMPANY") {
-        result = useCompanySalaryGradesQuery(ownerJobTitleId);
-    } else if (ownerLevel === "DEPARTMENT") {
-        result = useDepartmentSalaryGradesQuery(ownerJobTitleId);
-    } else {
-        result = useSectionSalaryGradesQuery(ownerJobTitleId);
-    }
+    const result =
+        ownerLevel === "COMPANY" ? companyResult :
+        ownerLevel === "DEPARTMENT" ? departmentResult :
+        sectionResult;
 
     // ⭐ LỌC ACTIVE + chuẩn hóa data
     const normalized =

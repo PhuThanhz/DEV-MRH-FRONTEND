@@ -69,8 +69,9 @@ const DepartmentPage = () => {
     const canViewProcedures = useAccess(ALL_PERMISSIONS.PROCEDURE_DEPARTMENT.GET_PAGINATE);
     const canViewPermissions = useAccess(ALL_PERMISSIONS.PERMISSION_ASSIGNMENT.GET_MATRIX);
     const canViewCareerPaths = useAccess(ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT);
-    const canViewSalary = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW)
-        || useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW_MY);
+    const canViewSalaryFull = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW);
+    const canViewSalaryMy = useAccess(ALL_PERMISSIONS.SALARY_RANGE.VIEW_MY);
+    const canViewSalary = canViewSalaryFull || canViewSalaryMy;
     const canViewPositionChart = useAccess(ALL_PERMISSIONS.POSITION_CHART.VIEW);
     const canViewJobTitles = useAccess(ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.GET_PAGINATE);
     const canDeleteDepartment = useAccess(ALL_PERMISSIONS.DEPARTMENTS.DELETE);
