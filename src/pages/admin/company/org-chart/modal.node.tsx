@@ -207,7 +207,7 @@ const P = {
 // Mode Toggle
 // ─────────────────────────────────────────────────────────
 const ModeToggle = ({ mode, onChange }: { mode: "single" | "bulk"; onChange: (m: "single" | "bulk") => void }) => (
-    <div className="org-node-mode-toggle" style={{ display: "inline-flex", background: P.gray100, border: `1px solid ${P.gray200}`, borderRadius: 8, padding: 3, gap: 2 }}>
+    <div className="org-node-mode-toggle" data-guide-id="org-node-mode-toggle" style={{ display: "inline-flex", background: P.gray100, border: `1px solid ${P.gray200}`, borderRadius: 8, padding: 3, gap: 2 }}>
         {([
             { key: "single" as const, label: "Một vị trí", icon: <ApartmentOutlined /> },
             { key: "bulk" as const, label: "Hàng loạt", icon: <ThunderboltOutlined /> },
@@ -216,6 +216,7 @@ const ModeToggle = ({ mode, onChange }: { mode: "single" | "bulk"; onChange: (m:
             return (
                 <button
                     key={tab.key}
+                    data-guide-id={`org-node-mode-${tab.key}`}
                     onClick={() => onChange(tab.key)}
                     style={{
                         display: "flex", alignItems: "center", gap: 5,
@@ -383,6 +384,7 @@ const SingleNodeForm = ({ form, nodes, jdOptions, jobTitleOptions, isEditing, no
                     Loại mục
                 </span>
                 <Segmented
+                    data-guide-id="org-node-kind-toggle"
                     size="small"
                     value={nodeKind}
                     onChange={(value) => {

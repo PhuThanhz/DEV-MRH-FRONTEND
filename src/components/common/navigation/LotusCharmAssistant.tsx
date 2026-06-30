@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowUpOutlined, CloseOutlined, SearchOutlined, BellOutlined, RightOutlined, UserAddOutlined, ApartmentOutlined, FileAddOutlined, SolutionOutlined, IdcardOutlined, ClusterOutlined, BankOutlined, FileDoneOutlined, FileTextOutlined, StarFilled, StarOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, CloseOutlined, SearchOutlined, BellOutlined, RightOutlined, UserAddOutlined, ApartmentOutlined, FileAddOutlined, SolutionOutlined, IdcardOutlined, ClusterOutlined, BankOutlined, FileDoneOutlined, FileTextOutlined, StarFilled, StarOutlined, PlayCircleOutlined, FolderOpenOutlined, EyeOutlined, TeamOutlined, AimOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
 import { Badge, Input, Modal } from "antd";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -19,6 +19,50 @@ dayjs.extend(relativeTime);
 dayjs.locale("vi");
 
 const ACCENT = "#e8637a";
+const HR_DOSSIER_MODULE = "Bộ hồ sơ nhân sự";
+const HR_DOSSIER_SUBMODULE_ORDER = [
+    "Khu vực training",
+    "Quản trị hồ sơ",
+    "Cấu hình nền",
+    "1. Sơ đồ & Cấu trúc",
+    "2. Mục tiêu & Nhiệm vụ",
+    "3. Mô tả công việc",
+    "4. Phân quyền",
+    "5. Quy trình & Quy định",
+    "6. Lộ trình thăng tiến",
+    "7. Khung lương",
+    "8. Tiêu chí đánh giá",
+    "9. Bản đồ chức danh",
+];
+
+const getModuleIcon = (moduleName: string) => {
+    switch (moduleName) {
+        case "Bộ hồ sơ nhân sự":
+            return <FolderOpenOutlined style={{ fontSize: 18 }} />;
+        case "Tổng quan":
+            return <EyeOutlined style={{ fontSize: 18 }} />;
+        case "Công ty":
+            return <BankOutlined style={{ fontSize: 18 }} />;
+        case "Cấu trúc tổ chức":
+            return <ClusterOutlined style={{ fontSize: 18 }} />;
+        case "Nhân sự":
+            return <TeamOutlined style={{ fontSize: 18 }} />;
+        case "Tài liệu":
+            return <FolderOpenOutlined style={{ fontSize: 18 }} />;
+        case "Văn bản & Quy trình":
+            return <FileTextOutlined style={{ fontSize: 18 }} />;
+        case "Tuyển dụng & Đánh giá":
+            return <SolutionOutlined style={{ fontSize: 18 }} />;
+        case "Kế toán":
+            return <BankOutlined style={{ fontSize: 18 }} />;
+        case "Thông báo":
+            return <BellOutlined style={{ fontSize: 18 }} />;
+        case "Công cụ":
+            return <AimOutlined style={{ fontSize: 18 }} />;
+        default:
+            return <FolderOpenOutlined style={{ fontSize: 18 }} />;
+    }
+};
 
 const LotusCharmAssistant = () => {
     const navigate = useNavigate();
@@ -30,17 +74,21 @@ const LotusCharmAssistant = () => {
     const [guideSearchQuery, setGuideSearchQuery] = useState("");
     const [activeGuideModule, setActiveGuideModule] = useState<string | null>(null);
 
+    const getDefaultGuideModule = React.useCallback(() => {
+        if (location.pathname.startsWith("/admin/departments")) return HR_DOSSIER_MODULE;
+        const matched = LOTUS_GUIDES.find(g =>
+            g.routePattern
+                ? g.routePattern.test(location.pathname)
+                : location.pathname.startsWith(g.routePrefix)
+        );
+        return matched?.module || HR_DOSSIER_MODULE;
+    }, [location.pathname]);
+
     React.useEffect(() => {
         if (isGuideOpen && !activeGuideModule) {
-            const matched = LOTUS_GUIDES.find(g =>
-                g.routePattern
-                    ? g.routePattern.test(location.pathname)
-                    : location.pathname.startsWith(g.routePrefix)
-            );
-            const defaultModule = matched?.module || LOTUS_GUIDES[0]?.module;
-            setActiveGuideModule(defaultModule);
+            setActiveGuideModule(getDefaultGuideModule());
         }
-    }, [isGuideOpen, location.pathname, activeGuideModule]);
+    }, [isGuideOpen, activeGuideModule, getDefaultGuideModule]);
 
     // Check if we are inside a department
     const match = location.pathname.match(/\/departments\/([^/]+)/);
@@ -91,6 +139,34 @@ const LotusCharmAssistant = () => {
         () => getFilteredGuidesForPath(location.pathname, canStartGuide).slice(0, 5),
         [location.pathname, canStartGuide]
     );
+
+    const guideModuleEntries = React.useMemo(() => {
+        const grouped = LOTUS_GUIDES
+            .filter(canStartGuide)
+            .reduce((acc, guide) => {
+                if (!acc[guide.module]) acc[guide.module] = [];
+                acc[guide.module].push(guide);
+                return acc;
+            }, {} as Record<string, typeof LOTUS_GUIDES>);
+
+        return Object.entries(grouped).sort(([a], [b]) => {
+            if (a === HR_DOSSIER_MODULE) return -1;
+            if (b === HR_DOSSIER_MODULE) return 1;
+            return a.localeCompare(b, "vi");
+        });
+    }, [canStartGuide]);
+
+    const sortHrDossierSubGroups = React.useCallback((entries: [string, typeof LOTUS_GUIDES][]) => {
+        if (activeGuideModule !== HR_DOSSIER_MODULE) return entries;
+        return entries.sort(([a], [b]) => {
+            const indexA = HR_DOSSIER_SUBMODULE_ORDER.indexOf(a);
+            const indexB = HR_DOSSIER_SUBMODULE_ORDER.indexOf(b);
+            if (indexA !== -1 || indexB !== -1) {
+                return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+            }
+            return a.localeCompare(b, "vi");
+        });
+    }, [activeGuideModule]);
 
     const [isHovered, setIsHovered] = useState(false);
     const [searchValue, setSearchValue] = useState("");
@@ -827,6 +903,53 @@ const LotusCharmAssistant = () => {
                                 Danh mục
                             </div>
 
+                            {/* TAB BỘ HỒ SƠ NHÂN SỰ (VÙNG LÊN ĐẦU) */}
+                            {guideModuleEntries
+                                .filter(([moduleName]) => moduleName === HR_DOSSIER_MODULE)
+                                .map(([moduleName]) => {
+                                    const isActive = activeGuideModule === moduleName && !guideSearchQuery;
+                                    return (
+                                        <div
+                                            key={moduleName}
+                                            onClick={() => {
+                                                setActiveGuideModule(moduleName);
+                                                setGuideSearchQuery("");
+                                            }}
+                                            style={{
+                                                padding: "12px 16px",
+                                                borderRadius: 12,
+                                                background: isActive ? "linear-gradient(90deg, rgba(232,99,122,0.08) 0%, rgba(232,99,122,0.01) 100%)" : "transparent",
+                                                color: isActive ? ACCENT : "#64748b",
+                                                fontWeight: isActive ? 800 : 600,
+                                                fontSize: 14,
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                borderLeft: isActive ? `3px solid ${ACCENT}` : "3px solid transparent",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 10,
+                                                marginBottom: 6
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.background = "#f1f5f9";
+                                                    e.currentTarget.style.color = "#334155";
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.background = "transparent";
+                                                    e.currentTarget.style.color = "#64748b";
+                                                }
+                                            }}
+                                        >
+                                            {getModuleIcon(moduleName)}
+                                            <span style={{ flex: 1 }}>{moduleName}</span>
+                                            {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: ACCENT }} />}
+                                        </div>
+                                    );
+                                })}
+
                             {/* TAB VIDEO LIBRARY */}
                             <div
                                 onClick={() => {
@@ -845,8 +968,8 @@ const LotusCharmAssistant = () => {
                                     borderLeft: activeGuideModule === "VIDEO_LIBRARY" && !guideSearchQuery ? `3px solid ${ACCENT}` : "3px solid transparent",
                                     display: "flex",
                                     alignItems: "center",
-                                    justifyContent: "space-between",
-                                    marginBottom: 16
+                                    gap: 10,
+                                    marginBottom: 6
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!(activeGuideModule === "VIDEO_LIBRARY" && !guideSearchQuery)) {
@@ -871,57 +994,54 @@ const LotusCharmAssistant = () => {
                                 }
                             </div>
 
-                            <div style={{ height: 1, background: "linear-gradient(90deg, #f1f5f9 0%, transparent 100%)", margin: "0 12px 16px" }} />
-                            {Object.entries(
-                                LOTUS_GUIDES
-                                    .filter(canStartGuide)
-                                    .reduce((acc, guide) => {
-                                        if (!acc[guide.module]) acc[guide.module] = [];
-                                        acc[guide.module].push(guide);
-                                        return acc;
-                                    }, {} as Record<string, typeof LOTUS_GUIDES>)
-                            ).map(([moduleName]) => {
-                                const isActive = activeGuideModule === moduleName && !guideSearchQuery;
-                                return (
-                                    <div
-                                        key={moduleName}
-                                        onClick={() => {
-                                            setActiveGuideModule(moduleName);
-                                            setGuideSearchQuery("");
-                                        }}
-                                        style={{
-                                            padding: "12px 16px",
-                                            borderRadius: 12,
-                                            background: isActive ? "linear-gradient(90deg, rgba(232,99,122,0.08) 0%, rgba(232,99,122,0.01) 100%)" : "transparent",
-                                            color: isActive ? ACCENT : "#64748b",
-                                            fontWeight: isActive ? 800 : 600,
-                                            fontSize: 14,
-                                            cursor: "pointer",
-                                            transition: "all 0.2s ease",
-                                            borderLeft: isActive ? `3px solid ${ACCENT}` : "3px solid transparent",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            marginBottom: 6
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isActive) {
-                                                e.currentTarget.style.background = "#f1f5f9";
-                                                e.currentTarget.style.color = "#334155";
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isActive) {
-                                                e.currentTarget.style.background = "transparent";
-                                                e.currentTarget.style.color = "#64748b";
-                                            }
-                                        }}
-                                    >
-                                        <span>{moduleName}</span>
-                                        {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: ACCENT }} />}
-                                    </div>
-                                );
-                            })}
+                            <div style={{ height: 1, background: "linear-gradient(90deg, #f1f5f9 0%, transparent 100%)", margin: "12px 12px 16px" }} />
+                            
+                            {/* CÁC MODULE CÒN LẠI */}
+                            {guideModuleEntries
+                                .filter(([moduleName]) => moduleName !== HR_DOSSIER_MODULE)
+                                .map(([moduleName]) => {
+                                    const isActive = activeGuideModule === moduleName && !guideSearchQuery;
+                                    return (
+                                        <div
+                                            key={moduleName}
+                                            onClick={() => {
+                                                setActiveGuideModule(moduleName);
+                                                setGuideSearchQuery("");
+                                            }}
+                                            style={{
+                                                padding: "12px 16px",
+                                                borderRadius: 12,
+                                                background: isActive ? "linear-gradient(90deg, rgba(232,99,122,0.08) 0%, rgba(232,99,122,0.01) 100%)" : "transparent",
+                                                color: isActive ? ACCENT : "#64748b",
+                                                fontWeight: isActive ? 800 : 600,
+                                                fontSize: 14,
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                borderLeft: isActive ? `3px solid ${ACCENT}` : "3px solid transparent",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 10,
+                                                marginBottom: 6
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.background = "#f1f5f9";
+                                                    e.currentTarget.style.color = "#334155";
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isActive) {
+                                                    e.currentTarget.style.background = "transparent";
+                                                    e.currentTarget.style.color = "#64748b";
+                                                }
+                                            }}
+                                        >
+                                            {getModuleIcon(moduleName)}
+                                            <span style={{ flex: 1 }}>{moduleName}</span>
+                                            {isActive && <div style={{ width: 4, height: 4, borderRadius: "50%", background: ACCENT }} />}
+                                        </div>
+                                    );
+                                })}
                         </div>
                     </div>
 
@@ -1000,19 +1120,19 @@ const LotusCharmAssistant = () => {
                                                         padding: 20,
                                                         borderRadius: 16,
                                                         background: "#ffffff",
-                                                        border: "1px solid #f1f5f9",
+                                                        border: "1px solid #cbd5e1",
                                                         cursor: "pointer",
                                                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                                        boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+                                                        boxShadow: "0 4px 14px rgba(15,23,42,0.06)"
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.borderColor = "rgba(232,99,122,0.3)";
-                                                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(232,99,122,0.12)";
+                                                        e.currentTarget.style.borderColor = "rgba(232,99,122,0.8)";
+                                                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(232,99,122,0.18)";
                                                         e.currentTarget.style.transform = "translateY(-3px)";
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        e.currentTarget.style.borderColor = "#f1f5f9";
-                                                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)";
+                                                        e.currentTarget.style.borderColor = "#cbd5e1";
+                                                        e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,0.06)";
                                                         e.currentTarget.style.transform = "none";
                                                     }}
                                                 >
@@ -1020,7 +1140,7 @@ const LotusCharmAssistant = () => {
                                                         {guide.icon}
                                                     </div>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ color: "#0f172a", fontSize: 15, fontWeight: 800, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{guide.title}</div>
+                                                        <div style={{ color: "#0f172a", fontSize: 15, fontWeight: 800, lineHeight: 1.4 }}>{guide.title}</div>
                                                         <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600, marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                                             <span>{guide.steps.length} bước</span>
                                                             <span style={{ color: "#e2e8f0" }}>•</span>
@@ -1092,7 +1212,7 @@ const LotusCharmAssistant = () => {
                                             return subAcc;
                                         }, {} as Record<string, typeof LOTUS_GUIDES>);
 
-                                        const subGroupEntries = Object.entries(subGroups);
+                                        const subGroupEntries = sortHrDossierSubGroups(Object.entries(subGroups));
                                         const hideSubHeader = subGroupEntries.length === 1;
 
                                         return (
@@ -1130,19 +1250,19 @@ const LotusCharmAssistant = () => {
                                                                         padding: 20,
                                                                         borderRadius: 16,
                                                                         background: "#ffffff",
-                                                                        border: "1px solid #f1f5f9",
+                                                                        border: "1px solid #cbd5e1",
                                                                         cursor: "pointer",
                                                                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                                                                        boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+                                                                        boxShadow: "0 4px 14px rgba(15,23,42,0.06)"
                                                                     }}
                                                                     onMouseEnter={(e) => {
-                                                                        e.currentTarget.style.borderColor = "rgba(232,99,122,0.3)";
-                                                                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(232,99,122,0.12)";
+                                                                        e.currentTarget.style.borderColor = "rgba(232,99,122,0.8)";
+                                                                        e.currentTarget.style.boxShadow = "0 12px 24px rgba(232,99,122,0.18)";
                                                                         e.currentTarget.style.transform = "translateY(-3px)";
                                                                     }}
                                                                     onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.borderColor = "#f1f5f9";
-                                                                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)";
+                                                                        e.currentTarget.style.borderColor = "#cbd5e1";
+                                                                        e.currentTarget.style.boxShadow = "0 4px 14px rgba(15,23,42,0.06)";
                                                                         e.currentTarget.style.transform = "none";
                                                                     }}
                                                                 >
@@ -1150,7 +1270,7 @@ const LotusCharmAssistant = () => {
                                                                         {guide.icon}
                                                                     </div>
                                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                                        <div style={{ color: "#0f172a", fontSize: 15, fontWeight: 800, lineHeight: 1.4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{guide.title}</div>
+                                                                        <div style={{ color: "#0f172a", fontSize: 15, fontWeight: 800, lineHeight: 1.4 }}>{guide.title}</div>
                                                                         <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600, marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                                                             <span>{guide.steps.length} bước</span>
                                                                         </div>

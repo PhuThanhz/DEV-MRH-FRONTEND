@@ -1395,7 +1395,7 @@ const CompletedEvaluationsPage = () => {
                                 label={{
                                     type: 'inner',
                                     offset: '-50%',
-                                    content: '{value}',
+                                    text: (datum: any) => datum.value,
                                     style: {
                                         textAlign: 'center',
                                         fontSize: 14,

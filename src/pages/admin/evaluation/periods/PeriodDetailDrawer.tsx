@@ -714,7 +714,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                         placeholder="Chọn Mẫu đánh giá..."
                                         optionFilterProp="label"
                                         options={activeTemplates.map(t => ({ label: t.name, value: t.id }))}
-                                        dropdownStyle={{ borderRadius: 8 }}
+                                        styles={{ popup: { root: { borderRadius: 8 } } }}
                                         size="small"
                                     />
                                 </Form.Item>
@@ -892,7 +892,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                     value={selectedCompanyId}
                                                     onChange={handleCompanyFilterChange}
                                                     options={companies.map(c => ({ label: c.name, value: c.id }))}
-                                                    dropdownStyle={{ borderRadius: 8 }}
+                                                    styles={{ popup: { root: { borderRadius: 8 } } }}
                                                     size="small"
                                                     style={{ width: "100%" }}
                                                     disabled={!!period?.company?.id}
@@ -907,7 +907,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                     onChange={setSelectedDepartmentId}
                                                     disabled={!selectedCompanyId}
                                                     options={departments.map(d => ({ label: d.name, value: d.id }))}
-                                                    dropdownStyle={{ borderRadius: 8 }}
+                                                    styles={{ popup: { root: { borderRadius: 8 } } }}
                                                     size="small"
                                                     style={{ width: "100%" }}
                                                 />
@@ -941,7 +941,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                         })}
                                                         optionRender={(option) => renderUserOption(option.data.rawUser)}
                                                         popupMatchSelectWidth={false}
-                                                        dropdownStyle={{ borderRadius: 8, minWidth: 350 }}
+                                                        styles={{ popup: { root: { borderRadius: 8, minWidth: 350 } } }}
                                                         size="small"
                                                         style={{ width: "100%" }}
                                                     />
@@ -973,7 +973,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                         })}
                                                         optionRender={(option) => renderUserOption(option.data.rawUser)}
                                                         popupMatchSelectWidth={false}
-                                                        dropdownStyle={{ borderRadius: 8, minWidth: 350 }}
+                                                        styles={{ popup: { root: { borderRadius: 8, minWidth: 350 } } }}
                                                         size="small"
                                                         style={{ width: "100%" }}
                                                     />

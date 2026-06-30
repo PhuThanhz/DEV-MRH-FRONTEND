@@ -307,10 +307,12 @@ const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
                                                         (e.currentTarget as HTMLDivElement).style.background = "#f0f0f0";
                                                 }}
                                                 onTouchEnd={(e) => {
-                                                    if (!isSelected)
+                                                    if (!isSelected) {
+                                                        const el = e.currentTarget as HTMLDivElement;
                                                         setTimeout(() => {
-                                                            (e.currentTarget as HTMLDivElement).style.background = "";
+                                                            if (el) el.style.background = "";
                                                         }, 150);
+                                                    }
                                                 }}
                                             >
                                                 {/* Tên option */}

@@ -121,6 +121,7 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
     return (
         <div
             ref={wrapRef}
+            data-guide-id="org-chart-search-input"
             style={{
                 position: "absolute",
                 top: isMobile ? 8 : 12,

@@ -276,7 +276,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
             modalProps={{
                 onCancel: onClose,
                 afterClose: resetState,
-                destroyOnClose: true,
+                destroyOnHidden: true,
                 width: 600,
                 maskClosable: false,
                 confirmLoading: isAssigning || isUpdating,
@@ -385,7 +385,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
                                 }}
                                 optionLabelProp="label"
                                 style={{ width: "100%" }}
-                                dropdownStyle={{ padding: "4px 0" }}
+                                styles={{ popup: { root: { padding: "4px 0" } } }}
                             >
                                 {userOptions.map((u) => (
                                     <Select.Option key={u.id} value={u.id} label={u.name}>

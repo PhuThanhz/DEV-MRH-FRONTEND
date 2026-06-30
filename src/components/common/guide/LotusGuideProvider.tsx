@@ -144,7 +144,7 @@ const LotusGuidePlayer: React.FC<{
             element = document.querySelector(step.targetId) as HTMLElement | null;
         }
         const targetRect = element?.getBoundingClientRect();
-        const isModalTarget = step.targetId.includes("ant-modal-content");
+        const isModalTarget = step.targetId.includes("ant-modal-content") || !!step.inModal;
         const isTargetVisible = targetRect
             ? targetRect.top >= 0 && targetRect.left >= 0 && targetRect.bottom <= window.innerHeight && targetRect.right <= window.innerWidth
             : false;
@@ -281,8 +281,8 @@ const LotusGuidePlayer: React.FC<{
     }, [clearPendingAdvance, guide.steps, step, setStepIndex, total, onClose, stepIndex]);
 
     const highlight = useMemo(() => {
-        const isModalTarget = step?.targetId.includes("ant-modal-content");
-        const padding = isModalTarget ? 0 : 6;
+        const isModalTarget = step?.targetId.includes("ant-modal-content") || !!step?.inModal;
+        const padding = step?.targetId.includes("ant-modal-content") ? 0 : isModalTarget ? 10 : 6;
         return targetRect
             ? {
                 top: targetRect.top - window.scrollY - padding,
@@ -290,9 +290,10 @@ const LotusGuidePlayer: React.FC<{
                 width: targetRect.width + padding * 2,
                 height: targetRect.height + padding * 2,
                 borderRadius: isModalTarget ? targetRect.borderRadius : undefined,
+                isModalTarget,
             }
             : null;
-    }, [targetRect, step?.targetId]);
+    }, [targetRect, step?.targetId, step?.inModal]);
 
     const cardStyle = useMemo<React.CSSProperties>(() => {
         const cardWidth = 300;
@@ -405,6 +406,7 @@ const LotusGuidePlayer: React.FC<{
                 <div
                     style={{
                         position: "absolute",
+                        zIndex: 1,
                         top: 0,
                         left: 0,
                         transform: `translate3d(${highlight.left}px, ${highlight.top}px, 0)`,
@@ -412,19 +414,43 @@ const LotusGuidePlayer: React.FC<{
                         height: highlight.height,
                         boxSizing: "border-box",
                         borderRadius: highlight.borderRadius ?? 16,
-                        border: "2px solid #ff5fa2",
-                        boxShadow: "0 0 0 9999px rgba(15,23,42,0.65), 0 0 0 5px rgba(255,255,255,0.72), 0 14px 36px rgba(255,95,162,0.28)",
-                        background: "rgba(255,255,255,0.04)",
+                        border: highlight.isModalTarget ? "3px solid #ff4f9a" : "2px solid #ff5fa2",
+                        boxShadow: highlight.isModalTarget
+                            ? "0 0 0 9999px rgba(15,23,42,0.58), 0 0 0 7px rgba(255,255,255,0.9), inset 0 0 0 2px rgba(255,255,255,0.92), 0 18px 44px rgba(255,79,154,0.42)"
+                            : "0 0 0 9999px rgba(15,23,42,0.65), 0 0 0 5px rgba(255,255,255,0.72), 0 14px 36px rgba(255,95,162,0.28)",
+                        background: highlight.isModalTarget ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
                         pointerEvents: "none",
                         transition: `${GUIDE_MOVE}, ${GUIDE_SIZE}, opacity 0.24s ease-out, box-shadow 0.42s ease-out`,
                         willChange: "transform, width, height, border-radius",
                     }}
-                />
+                >
+                    {highlight.isModalTarget && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: -13,
+                                left: 14,
+                                padding: "3px 9px",
+                                borderRadius: 999,
+                                background: "#ff4f9a",
+                                color: "#fff",
+                                fontSize: 11,
+                                fontWeight: 800,
+                                lineHeight: 1.2,
+                                boxShadow: "0 6px 18px rgba(255,79,154,0.32)",
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            Đang hướng dẫn
+                        </div>
+                    )}
+                </div>
             )}
 
             <div
                 style={{
                     position: "absolute",
+                    zIndex: 2,
                     top: 0,
                     left: 0,
                     ...cardStyle,

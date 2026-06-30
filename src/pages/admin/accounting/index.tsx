@@ -746,7 +746,7 @@ const AccountingDocumentPage = () => {
                             alignItems: "center",
                         }}
                     >
-                        <div style={filterItemStyle}>
+                        <div style={filterItemStyle} data-guide-id="accounting-doc-search-input">
                             <Input
                                 size="large"
                                 placeholder="Mã hồ sơ, nội dung, người tải..."
@@ -839,6 +839,7 @@ const AccountingDocumentPage = () => {
                             </Tooltip>
                             {canCreate && (
                                 <Button
+                                    data-guide-id="accounting-doc-add-button"
                                     icon={<PlusOutlined />}
                                     style={{
                                         height: 40,

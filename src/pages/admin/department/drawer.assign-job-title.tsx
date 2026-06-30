@@ -283,10 +283,12 @@ const DrawerAssignJobTitle = ({
             onClose={onClose}
             title={`Gán chức danh vào phòng ban${departmentName ? ` - ${departmentName}` : ""}`}
             width={getModalWidth(1150)}
+            className="department-job-title-assign-drawer"
             footer={
                 <div style={{ textAlign: "right" }}>
                     <Button onClick={onClose} disabled={assigning}>Hủy</Button>
                     <Button
+                        data-guide-id="department-job-title-assign-save-button"
                         type="primary"
                         disabled={selected.length === 0 || assigning}
                         loading={assigning}
@@ -303,6 +305,7 @@ const DrawerAssignJobTitle = ({
                 {/* ── SEARCH + FILTER BAR ── */}
                 <Space wrap style={{ width: "100%" }} size="small">
                     <Input.Search
+                        data-guide-id="department-job-title-assign-search-input"
                         placeholder="Tìm theo tên chức danh, tên tiếng Anh hoặc mã..."
                         allowClear
                         value={searchInput}
@@ -343,20 +346,22 @@ const DrawerAssignJobTitle = ({
 
                 {/* ── TABLE ── */}
                 <Spin spinning={loading}>
-                    <Table
-                        rowKey="id"
-                        dataSource={data}
-                        columns={columns}
-                        scroll={{ x: "max-content" }}
-                        pagination={{
-                            current: page,
-                            pageSize: PAGE_SIZE,
-                            total: total,
-                            showSizeChanger: false,
-                            showTotal: (t) => `Tổng ${t} chức danh`,
-                            onChange: (p) => setPage(p),
-                        }}
-                    />
+                    <div data-guide-id="department-job-title-assign-table">
+                        <Table
+                            rowKey="id"
+                            dataSource={data}
+                            columns={columns}
+                            scroll={{ x: "max-content" }}
+                            pagination={{
+                                current: page,
+                                pageSize: PAGE_SIZE,
+                                total: total,
+                                showSizeChanger: false,
+                                showTotal: (t) => `Tổng ${t} chức danh`,
+                                onChange: (p) => setPage(p),
+                            }}
+                        />
+                    </div>
                 </Spin>
             </Space>
         </Drawer>

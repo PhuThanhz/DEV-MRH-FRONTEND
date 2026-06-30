@@ -895,13 +895,22 @@ const OrgChartInner = ({ ownerType, ownerId }: Props) => {
                 </Access>
 
                 {/* ── Tùy chỉnh (Gom các tính năng phụ) ── */}
-                <Dropdown menu={settingMenu} trigger={["click"]} placement="bottomRight">
+                <Dropdown
+                    menu={settingMenu}
+                    trigger={["click"]}
+                    placement="bottomRight"
+                    popupRender={(menu) => (
+                        <div data-guide-id="org-chart-settings-dropdown">
+                            {menu}
+                        </div>
+                    )}
+                >
                     {isMobile ? (
                         <Tooltip title="Tùy chỉnh">
-                            <Button icon={<SettingOutlined />} size="small" style={btnBase} />
+                            <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} size="small" style={btnBase} />
                         </Tooltip>
                     ) : (
-                        <Button icon={<SettingOutlined />} style={btnBase}>
+                        <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} style={btnBase}>
                             {isTablet ? "" : "Tùy chỉnh"}
                         </Button>
                     )}

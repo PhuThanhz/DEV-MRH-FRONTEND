@@ -233,7 +233,7 @@ const DepartmentPage = () => {
                         cancelText="Huỷ"
                         placement="topRight"
                     >
-                        <span>Xóa phòng ban</span>
+                        <span className="guide-department-delete">Xóa phòng ban</span>
                     </Popconfirm>
                 ),
             });

@@ -293,51 +293,56 @@ const DepartmentJobTitleTab = ({
                     showFilterButton={false}
                     showResetButton={false}
                     addLabel="Gán chức danh"
+                    guideSearchId="department-job-title-search-input"
+                    guideAddId="department-job-title-assign-button"
                     onSearch={(val) => setSearchText(val)}
                     onAddClick={() => setOpenDrawer(true)}
                     addPermission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}
                 />
 
-                <DataTable<IDepartmentJobTitle>
-                    rowKey="id"
-                    loading={loading}
-                    columns={columns}
-                    dataSource={filteredData}
-                    pagination={{
-                        pageSize: 20,
-                        showSizeChanger: true,
-                        pageSizeOptions: ["10", "20", "50", "100"],
-                        showTotal: (total) => `${total} chức danh`,
-                        style: { marginTop: 16 },
-                    }}
-                    locale={{
-                        emptyText: (
-                            <Empty
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description={
-                                    searchText
-                                        ? "Không tìm thấy chức danh phù hợp"
-                                        : "Chưa có chức danh nào được gán"
-                                }
-                                style={{ padding: "48px 0" }}
-                            >
-                                {!searchText && (
-                                    <Access permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}>
-                                        <Button
-                                            type="primary"
-                                            icon={<PlusOutlined />}
-                                            onClick={() => setOpenDrawer(true)}
-                                            disabled={!departmentId}
-                                            style={styles.assignButton}
-                                        >
-                                            Gán chức danh ngay
-                                        </Button>
-                                    </Access>
-                                )}
-                            </Empty>
-                        ),
-                    }}
-                />
+                <div data-guide-id="department-job-title-table">
+                    <DataTable<IDepartmentJobTitle>
+                        rowKey="id"
+                        loading={loading}
+                        columns={columns}
+                        dataSource={filteredData}
+                        pagination={{
+                            pageSize: 20,
+                            showSizeChanger: true,
+                            pageSizeOptions: ["10", "20", "50", "100"],
+                            showTotal: (total) => `${total} chức danh`,
+                            style: { marginTop: 16 },
+                        }}
+                        locale={{
+                            emptyText: (
+                                <Empty
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                    description={
+                                        searchText
+                                            ? "Không tìm thấy chức danh phù hợp"
+                                            : "Chưa có chức danh nào được gán"
+                                    }
+                                    style={{ padding: "48px 0" }}
+                                >
+                                    {!searchText && (
+                                        <Access permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}>
+                                            <Button
+                                                data-guide-id="department-job-title-empty-assign-button"
+                                                type="primary"
+                                                icon={<PlusOutlined />}
+                                                onClick={() => setOpenDrawer(true)}
+                                                disabled={!departmentId}
+                                                style={styles.assignButton}
+                                            >
+                                                Gán chức danh ngay
+                                            </Button>
+                                        </Access>
+                                    )}
+                                </Empty>
+                            ),
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Drawer Gán chức danh */}

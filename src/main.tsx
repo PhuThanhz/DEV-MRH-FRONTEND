@@ -13,19 +13,6 @@ import { ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
 import "dayjs/locale/vi";
 
-// Bỏ qua các cảnh báo không cần thiết từ thư viện thứ 3 (như @ant-design/pro-components)
-const originalWarn = console.warn;
-console.warn = (...args: any[]) => {
-  if (typeof args[0] === 'string' && (args[0].includes('maskStyle is deprecated') || args[0].includes('bodyStyle is deprecated'))) return;
-  originalWarn(...args);
-};
-
-const originalError = console.error;
-console.error = (...args: any[]) => {
-  if (typeof args[0] === 'string' && (args[0].includes('maskStyle is deprecated') || args[0].includes('bodyStyle is deprecated'))) return;
-  originalError(...args);
-};
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>
