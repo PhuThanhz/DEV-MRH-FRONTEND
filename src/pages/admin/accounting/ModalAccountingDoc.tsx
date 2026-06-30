@@ -23,7 +23,8 @@ interface Props {
 const buildDocumentFileUrl = (fileName?: string) => {
     if (!fileName) return undefined;
     if (/^https?:\/\//i.test(fileName)) return fileName;
-    const normalized = fileName.replace(/^\/+/, "");
+    // Strip legacy /uploads/ or /storage/ prefix stored in DB
+    const normalized = fileName.replace(/^\/+/, "").replace(/^(?:uploads|storage)\//, "");
     const folder = normalized.includes("/") ? normalized.split("/").slice(0, -1).join("/") : "documents";
     const name = normalized.includes("/") ? normalized.split("/").pop()! : normalized;
     return `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(name)}&folder=${encodeURIComponent(folder)}`;

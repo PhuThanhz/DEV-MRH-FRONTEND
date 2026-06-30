@@ -86,6 +86,17 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import dayjs from "dayjs";
 import ModalSelectEmployee from "./ModalSelectEmployee";
 import { getModalWidth } from "@/utils/responsive";
+import { downloadFile } from "@/config/file-utils";
+
+const buildDocumentFileUrl = (fileUrl: string, isPublic = true): string => {
+    if (!fileUrl) return "";
+    if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+    const clean = fileUrl.replace(/^\/+/, "").replace(/^(?:uploads|storage)\//, "");
+    const folder = clean.includes("/") ? clean.split("/").slice(0, -1).join("/") : "documents";
+    const name = clean.includes("/") ? clean.split("/").pop()! : clean;
+    const path = isPublic ? "/api/v1/files/public" : "/api/v1/files";
+    return `${import.meta.env.VITE_BACKEND_URL}${path}?fileName=${encodeURIComponent(name)}&folder=${encodeURIComponent(folder)}`;
+};
 
 const { Sider, Content } = Layout;
 const ACCOUNTING_DOC_CATEGORY_CODE = "ACCOUNTING_DOC";
@@ -1360,14 +1371,14 @@ const PersonalDrivePage: React.FC = () => {
                                                         }}
                                                         onClick={() => {
                                                             const firstFile = doc.fileUrls?.[0] || "";
-                                                            setPreviewUrl(firstFile ? `/api/v1/files?fileName=${encodeURIComponent(firstFile)}&folder=documents` : "");
+                                                            setPreviewUrl(firstFile ? buildDocumentFileUrl(firstFile, true) : "");
                                                             setPreviewTitle(doc.documentName);
                                                             setPreviewOpen(true);
                                                         }}
                                                         cover={
                                                             <div style={{ height: 120, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #f1f5f9" }}>
                                                                 {doc.fileUrls?.[0]?.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) ? (
-                                                                    <img alt="preview" src={`/api/v1/files?fileName=${encodeURIComponent(doc.fileUrls[0])}&folder=documents`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                                                    <img alt="preview" src={buildDocumentFileUrl(doc.fileUrls[0], true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                                                 ) : doc.fileUrls?.[0]?.match(/\.(pdf)$/i) ? (
                                                                     <FilePdfOutlined style={{ fontSize: 48, color: "#ff4d4f" }} />
                                                                 ) : doc.fileUrls?.[0]?.match(/\.(xlsx|xls|csv)$/i) ? (
@@ -1777,7 +1788,7 @@ const PersonalDrivePage: React.FC = () => {
                                         style={{ flex: 1 }}
                                         onClick={() => {
                                             const firstFile = selectedDocDetails.fileUrls?.[0] || "";
-                                            setPreviewUrl(firstFile ? `/api/v1/files?fileName=${encodeURIComponent(firstFile)}&folder=documents` : "");
+                                            setPreviewUrl(buildDocumentFileUrl(firstFile, true));
                                             setPreviewTitle(selectedDocDetails.documentName);
                                             setPreviewOpen(true);
                                         }}
@@ -1786,10 +1797,14 @@ const PersonalDrivePage: React.FC = () => {
                                     </Button>
                                     <Button
                                         icon={<DownloadOutlined />}
-                                        href={`/api/v1/files?fileName=${encodeURIComponent(selectedDocDetails.fileUrls[0])}&folder=documents`}
-                                        download
-                                        target="_blank"
-                                        rel="noreferrer"
+                                        onClick={async () => {
+                                            const raw = selectedDocDetails.fileUrls?.[0];
+                                            if (raw) {
+                                                const secureUrl = buildDocumentFileUrl(raw, false);
+                                                const displayName = raw.split("/").pop() ?? raw;
+                                                await downloadFile(secureUrl, displayName);
+                                            }
+                                        }}
                                     >
                                         Tải về
                                     </Button>

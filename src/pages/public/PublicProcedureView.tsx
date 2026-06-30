@@ -45,8 +45,10 @@ const EXT_ICON: Record<string, React.ReactNode> = {
 const BASE_URL = import.meta.env.VITE_BACKEND_URL as string;
 
 const buildFileUrl = (fileName: string) => {
-    const name = fileName.includes("/") ? fileName.split("/").pop()! : fileName;
-    const folder = fileName.includes("/") ? fileName.split("/").slice(0, -1).join("/") : "procedures";
+    // Strip legacy /uploads/ or /storage/ prefix stored in DB
+    const cleaned = fileName.replace(/^\/+/, "").replace(/^(?:uploads|storage)\//, "");
+    const name = cleaned.includes("/") ? cleaned.split("/").pop()! : cleaned;
+    const folder = cleaned.includes("/") ? cleaned.split("/").slice(0, -1).join("/") : "procedures";
     return `${BASE_URL}/api/v1/files/public?fileName=${encodeURIComponent(name)}&folder=${encodeURIComponent(folder)}`;
 };
 

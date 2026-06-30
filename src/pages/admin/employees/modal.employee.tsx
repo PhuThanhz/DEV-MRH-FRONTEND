@@ -88,7 +88,7 @@ const ModalEmployee = ({
         if (dataInit?.id) {
             setPreviewUrl(
                 dataInit.avatar
-                    ? `${backendURL}/api/v1/files?fileName=${dataInit.avatar}&folder=avatar`
+                    ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(dataInit.avatar)}&folder=avatar`
                     : ""
             );
             if (dataInit.directManagerId && dataInit.directManagerName) {

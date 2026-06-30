@@ -113,7 +113,7 @@ const EmployeePage = () => {
             render: (_, record) => {
                 const backendURL = import.meta.env.VITE_BACKEND_URL;
                 const avatarUrl = record.avatar
-                    ? `${backendURL}/api/v1/files?fileName=${record.avatar}&folder=avatar`
+                    ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(record.avatar)}&folder=avatar`
                     : null;
                 const displayName = record.name || record.email || "NV";
                 const initials = displayName

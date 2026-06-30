@@ -40,19 +40,30 @@ const TBtn = ({
 );
 
 const buildViewerSource = (url: string): { fileUrl: string; httpHeaders?: Record<string, string> } => {
-    // Convert /uploads/... or /storage/... to authenticated /api/v1/files/view endpoint
-    const match = url.match(/\/(?:uploads|storage)\/(.+)$/);
-    if (!match) return { fileUrl: url };
-
-    const parts = match[1].split("/");
-    const fileName = parts.pop()!;
-    const folder = parts.join("/");
     const token = localStorage.getItem("access_token");
-    const viewUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/view?fileName=${encodeURIComponent(fileName)}&folder=${encodeURIComponent(folder)}`;
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-    return token
-        ? { fileUrl: viewUrl, httpHeaders: { Authorization: `Bearer ${token}` } }
-        : { fileUrl: viewUrl };
+    // URL đã là /api/v1/files/public?... → dùng thẳng, không cần auth
+    if (url.includes("/api/v1/files/public")) {
+        return { fileUrl: url };
+    }
+
+    // URL dạng /api/v1/files/view?... → đã là auth endpoint, chỉ attach token
+    if (url.includes("/api/v1/files/view")) {
+        return { fileUrl: url, httpHeaders: authHeaders };
+    }
+
+    // Legacy: /uploads/... hoặc /storage/... → chuyển sang /files/view với auth
+    const match = url.match(/\/(?:uploads|storage)\/(.+)$/);
+    if (match) {
+        const parts = match[1].split("/");
+        const fileName = parts.pop()!;
+        const folder = parts.join("/");
+        const viewUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/view?fileName=${encodeURIComponent(fileName)}&folder=${encodeURIComponent(folder)}`;
+        return { fileUrl: viewUrl, httpHeaders: authHeaders };
+    }
+
+    return { fileUrl: url };
 };
 
 const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
@@ -152,12 +163,20 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
                                     </span>
                                 </div>
                             )}
-                            renderError={() => (
-                                <div style={{ color: "#ff4d4f", padding: 32, textAlign: "center", background: "#fff1f0", borderRadius: 8, margin: 16 }}>
-                                    <FilePdfOutlined style={{ fontSize: 32, marginBottom: 8, display: "block" }} />
-                                    Không thể tải file PDF. Vui lòng thử lại.
-                                </div>
-                            )}
+                            renderError={(error) => {
+                                console.error("PDF load error:", error);
+                                return (
+                                    <div style={{ color: "#ff4d4f", padding: 32, textAlign: "center", background: "#fff1f0", borderRadius: 8, margin: 16 }}>
+                                        <FilePdfOutlined style={{ fontSize: 32, marginBottom: 8, display: "block" }} />
+                                        <span>Không thể tải file PDF. Vui lòng thử lại.</span>
+                                        {error?.message && (
+                                            <div style={{ fontSize: 11, color: "#8c1d18", marginTop: 8, fontFamily: "monospace" }}>
+                                                Chi tiết: {error.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }}
                         />
                     </Worker>
                 </div>

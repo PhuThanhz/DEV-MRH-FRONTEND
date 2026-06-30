@@ -20,7 +20,8 @@ const PdfPreviewer = lazy(loadPdfPreviewer);
 export const buildFileUrl = (fileName?: string, folder = "procedures") => {
     if (!fileName) return null;
     if (/^https?:\/\//i.test(fileName)) return fileName;
-    const normalized = fileName.replace(/^\/+/, "");
+    // Strip legacy /uploads/ or /storage/ prefix stored in DB
+    const normalized = fileName.replace(/^\/+/, "").replace(/^(?:uploads|storage)\//, "");
     const resolvedFolder = normalized.includes("/") ? normalized.split("/").slice(0, -1).join("/") : folder;
     const resolvedName = normalized.includes("/") ? normalized.split("/").pop()! : normalized;
     return `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(resolvedName)}&folder=${encodeURIComponent(resolvedFolder)}`;

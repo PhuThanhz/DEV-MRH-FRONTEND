@@ -104,7 +104,7 @@ const ViewDetailEmployee = ({ open, onClose, dataInit, setDataInit }: IProps) =>
     const handleClose = () => { onClose(false); setDataInit(null); };
 
     const avatarSrc = dataInit?.avatar
-        ? `${backendURL}/api/v1/files?fileName=${dataInit.avatar}&folder=avatar`
+        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(dataInit.avatar)}&folder=avatar`
         : undefined;
 
     const info = dataInit?.userInfo;
