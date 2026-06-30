@@ -1,4 +1,5 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import OrgChartFlow from "@/pages/admin/company/org-chart/OrgChartFlow";
@@ -9,11 +10,24 @@ const DepartmentOrgChartPage = () => {
     const { departmentId } = useParams();
     const { data: department } = useDepartmentByIdQuery(Number(departmentId));
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
     const id = Number(departmentId);
     const departmentName = searchParams.get("departmentName") || department?.name || "";
 
     const deptNavPages = useDeptNavPages(); // ← thêm
+
+    useEffect(() => {
+        if (departmentId && searchParams.get("modal") === "position-chart") {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete("modal");
+            const query = nextParams.toString();
+            navigate(
+                `/admin/departments/${departmentId}/position-chart${query ? `?${query}` : ""}`,
+                { replace: true }
+            );
+        }
+    }, [departmentId, navigate, searchParams]);
 
     if (!id) return null;
 

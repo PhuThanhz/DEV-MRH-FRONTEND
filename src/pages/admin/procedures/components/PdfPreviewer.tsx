@@ -4,7 +4,6 @@ import {
     ZoomInOutlined,
     ZoomOutOutlined,
 } from "@ant-design/icons";
-import { useMemo } from "react";
 import { Skeleton } from "antd";
 import { SpecialZoomLevel, Worker, Viewer } from "@react-pdf-viewer/core";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
@@ -69,7 +68,7 @@ const buildViewerSource = (url: string): { fileUrl: string; httpHeaders?: Record
 const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
     const defaultScale = isMobile ? SpecialZoomLevel.PageWidth : 0.92;
     const viewerSource = buildViewerSource(url);
-    const zoomPluginInstance = useMemo(() => zoomPlugin(), []);
+    const zoomPluginInstance = zoomPlugin();
     const { ZoomIn, ZoomOut, CurrentScale } = zoomPluginInstance;
 
     return (

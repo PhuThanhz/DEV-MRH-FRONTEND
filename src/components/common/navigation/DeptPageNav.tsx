@@ -35,7 +35,7 @@ const DEFAULT_PAGES: DeptPage[] = [
     },
     {
         label: "Bản đồ chức danh",
-        pathTemplate: "/admin/departments/:departmentId/org-chart?modal=position-chart",
+        pathTemplate: "/admin/departments/:departmentId/position-chart",
     },
 ];
 

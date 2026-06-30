@@ -58,7 +58,7 @@ const LotusCharmAssistant = () => {
         { label: "Phân quyền", path: `/admin/departments/${departmentId}/permissions`, icon: <UserAddOutlined />, requiredPermission: null },
         { label: "Lộ trình thăng tiến", path: `/admin/departments/${departmentId}/career-paths`, icon: <RightOutlined />, requiredPermission: ALL_PERMISSIONS.CAREER_PATHS.GET_BY_DEPARTMENT },
         { label: "Khung lương", path: `/admin/departments/${departmentId}/salary-range`, icon: <BankOutlined />, requiredPermission: null },
-        { label: "Bản đồ chức danh", path: `/admin/departments/${departmentId}/org-chart?modal=position-chart`, icon: <IdcardOutlined />, requiredPermission: null },
+        { label: "Bản đồ chức danh", path: `/admin/departments/${departmentId}/position-chart`, icon: <IdcardOutlined />, requiredPermission: null },
     ] : [], [departmentId]);
 
     const DEPARTMENT_MODULES = React.useMemo(
