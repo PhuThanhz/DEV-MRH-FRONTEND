@@ -30,7 +30,9 @@ import type {
     IDocumentFolder,
     IAccountingDocumentCategory,
     IAccountingDocumentCategoryRequest,
-    IDocumentAudit
+    IDocumentAudit,
+    IUserAdminScope,
+    IReqUpsertUserAdminScopes
 } from '@/types/backend';
 
 import axios from 'config/axios-customize';
@@ -233,6 +235,24 @@ export const callCreateUserPosition = (
 export const callDeleteUserPosition = (id: string) => {
     return axios.delete<IBackendRes<void>>(
         `/api/v1/users/positions/${id}`
+    );
+};
+
+/* ===================== USER ADMIN SCOPES ===================== */
+
+export const callFetchUserAdminScopes = (userId: string) => {
+    return axios.get<IBackendRes<IUserAdminScope[]>>(
+        `/api/v1/users/${userId}/admin-scopes`
+    );
+};
+
+export const callUpdateUserAdminScopes = (
+    userId: string,
+    data: IReqUpsertUserAdminScopes
+) => {
+    return axios.put<IBackendRes<IUserAdminScope[]>>(
+        `/api/v1/users/${userId}/admin-scopes`,
+        data
     );
 };
 

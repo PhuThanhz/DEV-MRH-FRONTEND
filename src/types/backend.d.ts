@@ -129,6 +129,26 @@ export interface IUserPosition {
     lockedAt?: string;
     lockedBy?: string;
 }
+
+export interface IUserAdminScope {
+    id?: number;
+    scopeType: "COMPANY" | "DEPARTMENT";
+    company?: { id: number; name: string };
+    department?: { id: number; name: string };
+    active?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface IReqUserAdminScopeItem {
+    scopeType: "COMPANY" | "DEPARTMENT";
+    companyId: number;
+    departmentId?: number;
+}
+
+export interface IReqUpsertUserAdminScopes {
+    scopes: IReqUserAdminScopeItem[];
+}
 export interface IReqUpdateProfileDTO {
     name: string;
     avatar?: string;

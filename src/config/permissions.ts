@@ -75,6 +75,8 @@ export const ALL_PERMISSIONS = {
         CREATE: { method: "POST", apiPath: "/api/v1/users", module: "USERS" },
         UPDATE: { method: "PUT", apiPath: "/api/v1/users", module: "USERS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/users/{id}", module: "USERS" },
+        GET_ADMIN_SCOPES: { method: "GET", apiPath: "/api/v1/users/{userId}/admin-scopes", module: "USERS" },
+        UPDATE_ADMIN_SCOPES: { method: "PUT", apiPath: "/api/v1/users/{userId}/admin-scopes", module: "USERS" },
     },
     /* ===================== USER POSITIONS ===================== */
     USER_POSITIONS: {

@@ -40,6 +40,24 @@ const BORDER = "#e5e7eb";
 const TEXT_MAIN = "#111827";
 const TEXT_LABEL = "#374151";
 const TEXT_MUTED = "#9ca3af";
+const SELECT_POPUP_WIDTH = 460;
+
+const renderFullOption = (option: any) => {
+    const label = String(option?.label ?? "");
+    return (
+        <Tooltip title={label} placement="right">
+            <div style={{
+                whiteSpace: "normal",
+                lineHeight: 1.35,
+                padding: "2px 0",
+                wordBreak: "break-word",
+                fontWeight: 500,
+            }}>
+                {label}
+            </div>
+        </Tooltip>
+    );
+};
 
 // ─── step config ────────────────────────────────────────────────────────────
 type StepKey = "company" | "source" | "department" | "section" | "jobTitle";
@@ -489,6 +507,8 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                 }}
                                 loading={loadingCompanies}
                                 showSearch optionFilterProp="label"
+                                popupMatchSelectWidth={SELECT_POPUP_WIDTH}
+                                optionRender={renderFullOption}
                                 style={{ width: "100%" }}
                                 size="large"
                             />
@@ -533,6 +553,8 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                     }}
                                     loading={loadingDepartments}
                                     showSearch optionFilterProp="label"
+                                    popupMatchSelectWidth={SELECT_POPUP_WIDTH}
+                                    optionRender={renderFullOption}
                                     style={{ width: "100%" }}
                                     size="large"
                                 />
@@ -557,6 +579,8 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                     loading={loadingSections}
                                     disabled={!selectedDepartmentId}
                                     showSearch optionFilterProp="label"
+                                    popupMatchSelectWidth={SELECT_POPUP_WIDTH}
+                                    optionRender={renderFullOption}
                                     style={{ width: "100%" }}
                                     size="large"
                                 />
@@ -581,6 +605,8 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                             loading={loadingJobTitles}
                                             disabled={!showJobTitle}
                                             showSearch optionFilterProp="label"
+                                            popupMatchSelectWidth={SELECT_POPUP_WIDTH}
+                                            optionRender={renderFullOption}
                                             style={{ width: "100%" }}
                                             size="large"
                                         />

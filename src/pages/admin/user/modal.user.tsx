@@ -10,6 +10,7 @@ import { callUploadSingleFile } from "@/config/api";
 
 import UserInfoForm, { type IRoleSelect } from "./components/modal.user-info";
 import UserPositionForm from "./components/modal.user-position";
+import UserAdminScopeForm from "./components/modal.user-admin-scope";
 
 const { Text } = Typography;
 
@@ -41,6 +42,13 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
     const activeUserId = isEdit ? (dataInit?.id) : (createdUserId ?? undefined);
+    const selectedRoleName = selectedRole?.label;
+    const adminScopeMode =
+        selectedRoleName === "ADMIN_SUB_2"
+            ? "COMPANY"
+            : selectedRoleName === "DEPARTMENT_MANAGER"
+                ? "DEPARTMENT"
+                : null;
 
     const { mutate: createUser, isPending: isCreating } = useCreateUserMutation();
     const { mutate: updateUser, isPending: isUpdating } = useUpdateUserMutation();
@@ -478,7 +486,15 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                         />
                     )}
                     {currentStep === 1 && (
-                        <UserPositionForm activeUserId={activeUserId} />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                            <UserPositionForm activeUserId={activeUserId} />
+                            {adminScopeMode && (
+                                <UserAdminScopeForm
+                                    activeUserId={activeUserId}
+                                    mode={adminScopeMode}
+                                />
+                            )}
+                        </div>
                     )}
                 </div>
 
