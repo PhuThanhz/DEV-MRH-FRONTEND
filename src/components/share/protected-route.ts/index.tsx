@@ -9,8 +9,9 @@ const RoleBaseRoute = ({ children }: any) => {
 
     const isAdmin = roleName.includes("ADMIN");
     const isEmployee = roleName === "EMPLOYEE";
+    const isDeptManager = roleName === "DEPARTMENT_MANAGER";
 
-    if (!isAdmin && !isEmployee) {
+    if (!isAdmin && !isEmployee && !isDeptManager) {
         return <NotFound />;
     }
 
