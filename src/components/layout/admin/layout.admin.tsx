@@ -67,7 +67,7 @@ const LayoutAdmin = () => {
 
     const isAdmin = roleName.includes("ADMIN");
     const isEmployee = roleName === "EMPLOYEE";
-    const isDeptManager = roleName === "DEPARTMENT_MANAGER";
+    const isDeptManager = roleName === "DEPARTMENT_MANAGER" || roleName === "ADMIN_SUB_3";
 
     if (!isAdmin && !isEmployee && !isDeptManager) {
         return (

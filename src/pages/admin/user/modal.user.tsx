@@ -46,7 +46,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const adminScopeMode =
         selectedRoleName === "ADMIN_SUB_2"
             ? "COMPANY"
-            : selectedRoleName === "DEPARTMENT_MANAGER"
+            : selectedRoleName === "ADMIN_SUB_3"
                 ? "DEPARTMENT"
                 : null;
 
