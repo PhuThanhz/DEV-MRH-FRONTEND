@@ -32,10 +32,16 @@ const DepartmentOrgChartPage = () => {
     if (!id) return null;
 
     return (
-        <PageContainer title={`Sơ đồ tổ chức${departmentName ? ` — ${departmentName}` : ""}`}>
+        <PageContainer 
+            title=""
+            fullHeight={true}
+            contentClassName="px-1 sm:px-3 py-1 flex-1 min-h-0"
+        >
             <OrgChartFlow
                 ownerType="DEPARTMENT"
                 ownerId={id}
+                chartTitle={`Sơ đồ tổ chức${departmentName ? ` — ${departmentName}` : ""}`}
+                onClose={() => navigate(-1)}
             />
             <DeptPageNav pages={deptNavPages} /> {/* ← thêm pages prop */}
         </PageContainer>

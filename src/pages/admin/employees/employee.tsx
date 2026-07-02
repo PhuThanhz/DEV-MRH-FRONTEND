@@ -8,8 +8,13 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
+import {
+    callFetchCompany,
+    callFetchDepartmentsByCompany,
+    callFetchSectionsByDepartment,
+} from "@/config/api";
 
-import type { IEmployee } from "@/types/backend";
+import type { IEmployee, ICompany, IDepartment, ISection } from "@/types/backend";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
@@ -18,12 +23,19 @@ import { useEmployeesQuery, useDeleteEmployeeMutation } from "@/hooks/useEmploye
 import ModalEmployee from "@/pages/admin/employees/modal.employee";
 import ViewDetailEmployee from "@/pages/admin/employees/view.employee";
 
+const getBackendData = <T,>(res: any): T => {
+    return res?.data ?? res;
+};
+
 const EmployeePage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IEmployee | null>(null);
     const [openViewDetail, setOpenViewDetail] = useState(false);
 
     const [activeFilter, setActiveFilter] = useState<boolean | null>(null);
+    const [companyFilter, setCompanyFilter] = useState<number | null>(null);
+    const [departmentFilter, setDepartmentFilter] = useState<number | null>(null);
+    const [sectionFilter, setSectionFilter] = useState<number | null>(null);
     const [searchValue, setSearchValue] = useState<string>("");
 
     const [query, setQuery] = useState<string>(
@@ -52,8 +64,12 @@ const EmployeePage = () => {
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
+        if (companyFilter !== null && companyFilter !== undefined) q.companyId = companyFilter;
+        if (departmentFilter !== null && departmentFilter !== undefined) q.departmentId = departmentFilter;
+        if (sectionFilter !== null && sectionFilter !== undefined) q.sectionId = sectionFilter;
+
         setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, activeFilter]);
+    }, [searchValue, activeFilter, companyFilter, departmentFilter, sectionFilter]);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -78,6 +94,10 @@ const EmployeePage = () => {
             filters.push(`active=${activeFilter}`);
 
         if (filters.length > 0) q.filter = filters.join(" and ");
+
+        if (companyFilter !== null && companyFilter !== undefined) q.companyId = companyFilter;
+        if (departmentFilter !== null && departmentFilter !== undefined) q.departmentId = departmentFilter;
+        if (sectionFilter !== null && sectionFilter !== undefined) q.sectionId = sectionFilter;
 
         const temp = queryString.stringify(q, { encode: false });
         let sortBy = "sort=createdAt,desc";
@@ -347,6 +367,49 @@ const EmployeePage = () => {
                         <AdvancedFilterSelect
                             fields={[
                                 {
+                                    key: "company",
+                                    label: "Công ty",
+                                    asyncOptions: async () => {
+                                        const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                                        return (res?.data?.result ?? []).map((c: ICompany) => ({
+                                            label: c.name || "",
+                                            value: c.id ?? 0,
+                                            color: "blue",
+                                        }));
+                                    },
+                                    searchable: true,
+                                },
+                                {
+                                    key: "department",
+                                    label: "Phòng ban",
+                                    dependsOn: "company",
+                                    asyncOptions: async (companyId: number) => {
+                                        if (!companyId) return [];
+                                        const res = await callFetchDepartmentsByCompany(companyId);
+                                        return (getBackendData<IDepartment[]>(res) ?? []).map((d: IDepartment) => ({
+                                            label: d.name || "",
+                                            value: d.id ?? 0,
+                                            color: "green",
+                                        }));
+                                    },
+                                    searchable: true,
+                                },
+                                {
+                                    key: "section",
+                                    label: "Bộ phận",
+                                    dependsOn: "department",
+                                    asyncOptions: async (departmentId: number) => {
+                                        if (!departmentId) return [];
+                                        const res = await callFetchSectionsByDepartment(departmentId);
+                                        return (getBackendData<ISection[]>(res) ?? []).map((s: ISection) => ({
+                                            label: s.name || "",
+                                            value: s.id ?? 0,
+                                            color: "purple",
+                                        }));
+                                    },
+                                    searchable: true,
+                                },
+                                {
                                     key: "active",
                                     label: "Trạng thái",
                                     options: [
@@ -358,6 +421,15 @@ const EmployeePage = () => {
                             onChange={(filters) => {
                                 setActiveFilter(
                                     filters.active !== undefined ? filters.active : null
+                                );
+                                setCompanyFilter(
+                                    filters.company !== undefined ? filters.company : null
+                                );
+                                setDepartmentFilter(
+                                    filters.department !== undefined ? filters.department : null
+                                );
+                                setSectionFilter(
+                                    filters.section !== undefined ? filters.section : null
                                 );
                             }}
                         />

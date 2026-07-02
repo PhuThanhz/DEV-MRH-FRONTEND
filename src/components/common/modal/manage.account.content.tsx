@@ -687,31 +687,6 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                             >Lưu thay đổi</Button>
                         </div>
 
-                        {/* Vai trò */}
-                        <div style={{
-                            padding: "12px 14px", borderRadius: 11,
-                            background: PINK_LIGHT, border: `1px solid ${PINK_BORDER}`,
-                        }}>
-                            <div style={{
-                                fontSize: 9.5, fontWeight: 700, letterSpacing: ".09em",
-                                textTransform: "uppercase" as const, color: PINK, marginBottom: 8,
-                            }}>Vai trò</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{
-                                    width: 32, height: 32, borderRadius: 9,
-                                    background: "#fff", border: `1px solid ${PINK_BORDER}`,
-                                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                                }}>
-                                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke={PINK} strokeWidth="1.6">
-                                        <circle cx="8" cy="5" r="3" />
-                                        <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" />
-                                    </svg>
-                                </div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                                    {user?.role?.name || "—"}
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </Form>

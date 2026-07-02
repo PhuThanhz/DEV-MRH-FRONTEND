@@ -23,11 +23,13 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
     const [results, setResults] = useState<Result[]>([]);
     const [open, setOpen] = useState(false);
     const [activeIdx, setActiveIdx] = useState(-1);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const wrapRef = useRef<HTMLDivElement>(null);
 
-    const barW = isMobile ? 180 : isTablet ? 220 : 260;
+    const barW = isMobile ? 220 : isTablet ? 280 : 340;
     const barH = isMobile ? 30 : 34;
     const fontSize = isMobile ? 11 : 12;
 
@@ -116,6 +118,16 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
         );
     };
 
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target as globalThis.Node)) {
+                if (!query) setIsExpanded(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [query]);
+
     const q = query.trim().toLowerCase();
 
     return (
@@ -123,33 +135,45 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
             ref={wrapRef}
             data-guide-id="org-chart-search-input"
             style={{
-                position: "absolute",
-                top: isMobile ? 8 : 12,
-                left: isMobile ? 8 : 12,
+                position: "relative",
                 zIndex: 20,
-                width: barW,
+                width: isExpanded ? barW : "auto",
+                transition: "width 0.25s ease",
             }}
         >
-            {/* ── Input ── */}
-            <div style={{
-                display: "flex", alignItems: "center", gap: isMobile ? 5 : 7,
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: isMobile ? 8 : 10,
-                padding: isMobile ? "0 8px" : "0 10px",
-                height: barH,
-                boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-                transition: "border-color 0.15s, box-shadow 0.15s",
-            }}>
-                <SearchOutlined style={{ fontSize: isMobile ? 11 : 13, color: "#9ca3af", flexShrink: 0 }} />
+            {!isExpanded ? (
+                <div 
+                    onClick={() => { setIsExpanded(true); setTimeout(() => inputRef.current?.focus(), 50); }}
+                    style={{
+                        width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", color: "#64748b", transition: "color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = "#ec4899"}
+                    onMouseLeave={(e) => e.currentTarget.style.color = "#64748b"}
+                >
+                    <SearchOutlined style={{ fontSize: 16 }} />
+                </div>
+            ) : (
+                /* ── Input ── */
+                <div style={{
+                    display: "flex", alignItems: "center", gap: isMobile ? 5 : 7,
+                    background: "#ffffff",
+                    border: `1px solid ${isFocused ? "#ec4899" : "#e2e8f0"}`,
+                    borderRadius: 20,
+                    padding: isMobile ? "0 10px" : "0 14px",
+                    height: barH,
+                    boxShadow: isFocused ? "0 0 0 2px rgba(236, 72, 153, 0.2)" : "0 1px 6px rgba(0,0,0,0.06)",
+                    transition: "all 0.15s",
+                }}>
+                <SearchOutlined style={{ fontSize: isMobile ? 12 : 14, color: isFocused ? "#ec4899" : "#9ca3af", flexShrink: 0 }} />
                 <input
                     ref={inputRef}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => { if (results.length > 0) setOpen(true); }}
-                    onBlur={() => setTimeout(() => setOpen(false), 150)}
-                    placeholder={isMobile ? "Tìm vị trí..." : "Tìm vị trí, tên người..."}
+                    onFocus={() => { setIsFocused(true); if (results.length > 0) setOpen(true); }}
+                    onBlur={() => { setIsFocused(false); setTimeout(() => setOpen(false), 150); }}
+                    placeholder="Tìm nhân viên, phòng ban..."
                     style={{
                         flex: 1, border: "none", outline: "none",
                         fontSize: fontSize,
@@ -159,28 +183,29 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
                         minWidth: 0,
                     }}
                 />
-                {query && (
-                    <button
-                        onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
-                        style={{
-                            background: "#f1f5f9",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#94a3b8",
-                            padding: 0,
-                            width: 16, height: 16,
-                            borderRadius: 4,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            flexShrink: 0,
-                            transition: "background 0.1s",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                    >
-                        <CloseOutlined style={{ fontSize: 8 }} />
-                    </button>
-                )}
+                <button
+                    onMouseDown={(e) => { 
+                        e.preventDefault(); 
+                        if (query) { handleClear(); } else { setIsExpanded(false); setOpen(false); }
+                    }}
+                    style={{
+                        background: isFocused ? "#ec4899" : "#cbd5e1",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "white",
+                        padding: 0,
+                        width: 16, height: 16,
+                        borderRadius: "50%",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0,
+                        transition: "background 0.1s",
+                        opacity: isFocused || query ? 1 : 0.5,
+                    }}
+                >
+                    <CloseOutlined style={{ fontSize: 9 }} />
+                </button>
             </div>
+            )}
 
             {/* ── Dropdown kết quả ── */}
             {open && results.length > 0 && (

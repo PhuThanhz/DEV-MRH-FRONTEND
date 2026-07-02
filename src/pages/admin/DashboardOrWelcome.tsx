@@ -1,7 +1,8 @@
+import { Navigate } from "react-router-dom";
 import { useAppSelector } from "@/redux/hooks";
 import DashboardPage from "./dashboard/dashboard";
-import WelcomePage from "./WelcomePage";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { PATHS } from "@/constants/paths";
 
 const DashboardOrWelcome = () => {
     const permissions = useAppSelector(
@@ -22,7 +23,7 @@ const DashboardOrWelcome = () => {
             item.module === ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY.module
     );
 
-    return hasDashboard ? <DashboardPage /> : <WelcomePage />;
+    return hasDashboard ? <DashboardPage /> : <Navigate to={PATHS.ADMIN.OVERVIEW} replace />;
 };
 
 export default DashboardOrWelcome;

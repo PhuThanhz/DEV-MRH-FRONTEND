@@ -171,6 +171,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
     return (
         <Modal
             open={open}
+            zIndex={2600}
             onCancel={handleClose}
             footer={null}
             width={modalWidth}

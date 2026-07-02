@@ -1,15 +1,8 @@
 import { Tooltip, Popconfirm, Dropdown, type MenuProps } from "antd";
 import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined, PlusOutlined, ApartmentOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Handle, Position } from "reactflow";
-import { useState, useRef } from "react";
-
-if (typeof document !== "undefined" && !document.getElementById("org-chart-fonts")) {
-    const link = document.createElement("link");
-    link.id = "org-chart-fonts";
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap";
-    document.head.appendChild(link);
-}
+import { memo, useState, useRef } from "react";
+import { ORG_CHART_NODE_SIZE } from "./orgChartConstants";
 
 export interface OrgNodeData {
     title: string;
@@ -22,6 +15,7 @@ export interface OrgNodeData {
     allowCreate?: boolean;
     isMobile?: boolean;
     isTablet?: boolean;
+    isSmallLaptop?: boolean;
     viewMode?: "compact" | "full";
     onEdit: () => void;
     onDelete: () => void;
@@ -39,6 +33,13 @@ export interface OrgNodeData {
 
 const T = "0.2s cubic-bezier(0.4, 0, 0.2, 1)";
 const TRANS = `border-color ${T}, box-shadow ${T}, opacity ${T}, transform ${T}`;
+const HIDDEN_HANDLE_STYLE: React.CSSProperties = {
+    background: "transparent",
+    border: "none",
+    width: 1,
+    height: 1,
+};
+const CARD_WRAP_STYLE: React.CSSProperties = { position: "relative" };
 
 const ACCENT_COLORS = {
     idle: { shadow: "0 4px 12px -2px rgba(15, 23, 42, 0.03), 0 2px 6px -1px rgba(15, 23, 42, 0.02)" },
@@ -79,6 +80,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const isMobile = data.isMobile ?? false;
     const isTablet = data.isTablet ?? false;
+    const isSmallLaptop = data.isSmallLaptop ?? false;
     const isCompactMode = data.viewMode === "compact";
 
     const hasHolder = !!data.holderName;
@@ -87,13 +89,30 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     // If a node does not have a level code, it represents a Department structural node
     const isDepartment = !data.levelCode;
 
-    // Both views have the exact same dimensions for perfect card symmetry! (W widened to 240px to prevent truncation!)
-    const NODE_W = isMobile ? 158 : isTablet ? 196 : 240;
-    const NODE_H = isMobile ? 116 : isTablet ? 142 : 176;
+    const nodeSize = isCompactMode
+        ? isMobile
+            ? ORG_CHART_NODE_SIZE.compactMobile
+            : isTablet
+                ? ORG_CHART_NODE_SIZE.compactTablet
+                : isSmallLaptop
+                    ? ORG_CHART_NODE_SIZE.compactSmallLaptop
+                    : ORG_CHART_NODE_SIZE.compactDesktop
+        : isMobile
+            ? ORG_CHART_NODE_SIZE.mobile
+            : isTablet
+                ? ORG_CHART_NODE_SIZE.tablet
+                : isSmallLaptop
+                    ? ORG_CHART_NODE_SIZE.smallLaptop
+                    : ORG_CHART_NODE_SIZE.desktop;
+    const NODE_W = nodeSize.width;
+    const NODE_H = nodeSize.height;
+    
+    // Adjust height for department nodes (which lack holder info) to remove excess empty space
+    const CARD_H = isDepartment ? NODE_H - 46 : NODE_H;
 
     // Font sizes (increased for maximum legibility, title slightly adjusted to fit)
-    const titleSize = isMobile ? 12.5 : isTablet ? 13.5 : 15;
-    const holderSize = isMobile ? 9.5 : isTablet ? 10.2 : 11;
+    const titleSize = isMobile ? 12.5 : isTablet ? 13.5 : isSmallLaptop ? 14 : 15;
+    const holderSize = isMobile ? 9.5 : isTablet ? 10.2 : isSmallLaptop ? 10.5 : 11;
     const levelSize = isMobile ? 8.5 : isTablet ? 9.5 : 10;
     const jdBtnSize = isMobile ? 9.5 : isTablet ? 10 : 11;
     const actionBtnW = isMobile ? 22 : 25;
@@ -104,8 +123,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     const cardPad = isMobile ? "10px 12px" : isTablet ? "12px 14px" : "14px 16px";
     const cardGap = isMobile ? 4 : 6;
 
-    // Always render full structured layout in both views, never simple!
-    const isSimple = false;
+    const isSimple = isCompactMode;
 
     const hs = data.highlightState ?? "idle";
     const accent = ACCENT_COLORS[hs];
@@ -197,11 +215,11 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
             <Handle
                 type="target"
                 position={Position.Top}
-                style={{ background: "transparent", border: "none", width: 1, height: 1, top: 0 }}
+                style={{ ...HIDDEN_HANDLE_STYLE, top: 0 }}
             />
 
             <div
-                style={{ position: "relative" }}
+                style={CARD_WRAP_STYLE}
                 onMouseEnter={handleCardMouseEnter}
                 onMouseLeave={handleCardMouseLeave}
             >
@@ -301,7 +319,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                     onClick={handleCardClick}
                     style={{
                         width: NODE_W,
-                        minHeight: NODE_H,
+                        minHeight: CARD_H,
                         background: cardBg,
                         borderRadius: 12,
                         // Clean solid uniform border for all cards
@@ -311,10 +329,11 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                         overflow: "hidden",
                         cursor: data.onSelect ? "pointer" : "default",
                         display: "flex", flexDirection: "column",
-                        opacity: hs === "dimmed" ? 0.8 : 1,
+                        opacity: hs === "dimmed" ? 0.4 : 1,
+                        filter: hs === "dimmed" ? "grayscale(100%)" : "none",
                         transform: hs === "active" ? "scale(1.02)" : "scale(1)",
                         transition: TRANS,
-                        willChange: "transform, opacity",
+                        willChange: "transform, opacity, filter",
                     }}
                 >
                     {isSimple ? (
@@ -674,10 +693,10 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
             <Handle
                 type="source"
                 position={Position.Bottom}
-                style={{ background: "transparent", border: "none", width: 1, height: 1, bottom: 0 }}
+                style={{ ...HIDDEN_HANDLE_STYLE, bottom: 0 }}
             />
         </>
     );
 };
 
-export default OrgNodeCard;
+export default memo(OrgNodeCard);

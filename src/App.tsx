@@ -38,6 +38,8 @@ const ProcedureAdminPage = lazy(() => import("@/pages/admin/procedures"));
 const CompanyProceduresPage = lazy(() => import("@/pages/admin/company/procedures"));
 const DepartmentProceduresPage = lazy(() => import("@/pages/admin/department/procedures"));
 const DashboardOrWelcome = lazy(() => import("@/pages/admin/DashboardOrWelcome"));
+const PersonalOverviewPage = lazy(() => import("@/pages/admin/overview/PersonalOverviewPage"));
+const WelcomePage = lazy(() => import("@/pages/admin/WelcomePage"));
 const PositionChartPage = lazy(() => import("@/pages/admin/department/position-chart/index"));
 const DepartmentProfilePage = lazy(() => import("@/pages/admin/dashboard/department-profile"));
 const PublicProcedureView = lazy(() => import("@/pages/public/PublicProcedureView"));
@@ -102,6 +104,14 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <DashboardOrWelcome />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "overview",
+          element: (
+            <ProtectedRoute>
+              <WelcomePage />
             </ProtectedRoute>
           ),
         },

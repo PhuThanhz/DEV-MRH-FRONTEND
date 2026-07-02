@@ -1,12 +1,12 @@
 // src/pages/admin/department/position-chart/PositionChartModal.tsx
 import { useEffect, useState } from "react";
-import { Modal, Table, Spin, Empty, Tag } from "antd";
-import { TeamOutlined, CalendarOutlined, BankOutlined } from "@ant-design/icons";
+import { Table, Spin, Empty, Tag, Input, Drawer } from "antd";
+import { TeamOutlined, CalendarOutlined, BankOutlined, SearchOutlined, CloseOutlined } from "@ant-design/icons";
 import { callFetchCompanyJobTitlesOfDepartment } from "@/config/api";
 import type { IDepartmentJobTitle } from "@/types/backend";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
-interface PositionChartModalProps {
+interface PositionChartContentProps {
     open: boolean;
     onClose: () => void;
     departmentId: number;
@@ -26,7 +26,7 @@ const getBandStyle = (code: string): { bg: string; border: string; color: string
     return map[prefix] ?? { bg: "#f8fafc", border: "1.5px solid #cbd5e1", color: "#475569" };
 };
 
-const PositionChartModal: React.FC<PositionChartModalProps> = ({
+const PositionChartContent: React.FC<PositionChartContentProps> = ({
     open,
     onClose,
     departmentId,
@@ -35,6 +35,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
 }) => {
     const [data, setData] = useState<IDepartmentJobTitle[]>([]);
     const [loading, setLoading] = useState(false);
+    const [searchText, setSearchText] = useState("");
     const isMobile = useIsMobile();
 
     useEffect(() => {
@@ -149,34 +150,58 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
         }] : []),
     ];
 
+    const filteredData = data.filter((item) => {
+        if (!searchText) return true;
+        const lower = searchText.toLowerCase();
+        return (
+            item.jobTitle?.nameVi?.toLowerCase().includes(lower) ||
+            item.jobTitle?.nameEn?.toLowerCase().includes(lower) ||
+            item.jobTitle?.positionCode?.toLowerCase().includes(lower)
+        );
+    });
+
     return (
-        <Modal
-            title={null}
+        <Drawer
+            placement="right"
+            closable={false}
+            onClose={onClose}
             open={open}
-            onCancel={onClose}
-            footer={null}
-            width="min(92vw, 1100px)"
-            centered
-            destroyOnClose
-            styles={{
-                mask: {
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                    background: "rgba(255, 255, 255, 0.45)",
-                },
-                body: {
-                    padding: 0,
-                    borderRadius: 16,
-                    overflow: "hidden",
-                },
-                content: {
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    boxShadow: "0 32px 80px rgba(190,24,93,0.12), 0 8px 24px rgba(0,0,0,0.08)",
-                    padding: 0,
-                },
+            width={isMobile ? "100%" : "90vw"}
+            bodyStyle={{ padding: 0, display: "flex", flexDirection: "column", height: "100vh" }}
+            maskStyle={{
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                background: "rgba(255, 255, 255, 0.45)",
             }}
+            rootClassName="global-position-chart-drawer" className="global-position-chart-drawer"
         >
+        <div style={{ 
+            display: "flex", flexDirection: "column", height: "100%", background: "#fff",
+            borderTopLeftRadius: 24, borderBottomLeftRadius: 24, overflow: "hidden",
+            boxShadow: "-10px 0 32px rgba(15, 23, 42, 0.12)"
+        }}>
+            <style>{`
+                /* Triệt tiêu triệt để nền trắng của các intermediate wrappers trong Drawer Antd */
+                .global-position-chart-drawer .ant-drawer-content-wrapper,
+                .global-position-chart-drawer .ant-drawer-content,
+                .global-position-chart-drawer .ant-drawer-wrapper-body,
+                .global-position-chart-drawer .ant-drawer-body {
+                    background: transparent !important;
+                    background-color: transparent !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                    overflow: visible !important;
+                }
+                .custom-search-input .ant-input::placeholder {
+                    color: rgba(255, 255, 255, 0.6) !important;
+                }
+                .custom-search-input.ant-input-affix-wrapper:hover,
+                .custom-search-input.ant-input-affix-wrapper-focused {
+                    background: rgba(255, 255, 255, 0.25) !important;
+                    border-color: rgba(255, 255, 255, 0.5) !important;
+                    box-shadow: 0 0 0 2px rgba(255,255,255,0.1) !important;
+                }
+            `}</style>
             {/* ── HEADER ── */}
             <div style={{
                 background: "linear-gradient(135deg, #831843 0%, #be185d 55%, #ec4899 100%)",
@@ -188,6 +213,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                 flexWrap: "wrap",
                 position: "relative",
                 overflow: "hidden",
+                borderTopLeftRadius: 24,
             }}>
                 <div style={{
                     position: "absolute", top: -40, right: -40,
@@ -200,16 +226,33 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                     background: "rgba(255,255,255,0.04)", pointerEvents: "none",
                 }} />
 
+                <div
+                    onClick={onClose}
+                    style={{
+                        position: "absolute", top: 16, right: 16, zIndex: 10,
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: "rgba(255,255,255,0.2)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: "#fff", cursor: "pointer",
+                        backdropFilter: "blur(4px)",
+                    }}
+                >
+                    <CloseOutlined style={{ fontSize: 14 }} />
+                </div>
                 <div style={{ position: "relative", zIndex: 1, flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                        <span style={{
-                            fontSize: 11, fontWeight: 600,
-                            textTransform: "uppercase", letterSpacing: "1.5px",
-                            color: "rgba(255,255,255,0.75)",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        }}>
-                            {companyName}                        </span>
-                    </div>
+                    {companyName && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                            <BankOutlined style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }} />
+                            <span style={{
+                                fontSize: 11, fontWeight: 600,
+                                textTransform: "uppercase", letterSpacing: "1.5px",
+                                color: "rgba(255,255,255,0.75)",
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>
+                                {companyName}
+                            </span>
+                        </div>
+                    )}
                     <div style={{
                         fontSize: isMobile ? 20 : 24, fontWeight: 800,
                         color: "#fff", lineHeight: 1.2,
@@ -226,7 +269,31 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                     </div>
                 </div>
 
-                {!loading && data.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", zIndex: 1, marginTop: isMobile ? 16 : 0 }}>
+                        <Input
+                            className="custom-search-input"
+                            placeholder="Tìm kiếm chức danh..."
+                            prefix={<SearchOutlined style={{ color: "rgba(255,255,255,0.8)", fontSize: 16, marginRight: 4 }} />}
+                            allowClear
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            style={{
+                                width: isMobile ? "100%" : 280,
+                                height: 48,
+                                borderRadius: 14,
+                                background: "rgba(255, 255, 255, 0.15)",
+                                border: "1px solid rgba(255, 255, 255, 0.3)",
+                                color: "#fff",
+                                backdropFilter: "blur(8px)",
+                                fontSize: 15,
+                                transition: "all 0.3s ease",
+                            }}
+                            styles={{
+                                input: { color: "#fff", background: "transparent" }
+                            }}
+                        />
+
+                        {!loading && data.length > 0 && (
                     <div style={{
                         display: "flex", alignItems: "center", gap: 10,
                         background: "rgba(255,255,255,0.15)",
@@ -253,6 +320,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                         </div>
                     </div>
                 )}
+                </div>
             </div>
 
             {/* ── BODY ── */}
@@ -260,7 +328,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                 data-guide-id="dept-position-chart-content"
                 style={{
                     padding: isMobile ? "20px 16px" : "28px 48px",
-                    maxHeight: "60vh",
+                    flex: 1,
                     overflow: "auto",
                     background: "#fff",
                 }}>
@@ -270,7 +338,7 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                     </div>
                 ) : data.length > 0 ? (
                     <Table
-                        dataSource={data}
+                        dataSource={filteredData}
                         columns={columns}
                         rowKey="id"
                         pagination={false}
@@ -357,8 +425,9 @@ const PositionChartModal: React.FC<PositionChartModalProps> = ({
                     {formattedDate}
                 </span>
             </div>
-        </Modal>
+        </div>
+        </Drawer>
     );
 };
 
-export default PositionChartModal;
+export default PositionChartContent;

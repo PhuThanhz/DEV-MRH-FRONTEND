@@ -140,7 +140,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
             const parentVal = activeFilters[field.dependsOn];
             if (!parentVal) return;
             const cacheKey = getCacheKey(field);
-            if (cache[cacheKey]) return;
+            if (cache[cacheKey] !== undefined) return; // da fetch (ke ca rong)
             setLoading((prev) => ({ ...prev, [field.key]: true }));
             field.asyncOptions!(parentVal)
                 .then((opts) => setCache((prev) => ({ ...prev, [cacheKey]: opts })))
@@ -152,7 +152,7 @@ const AdvancedFilterSelect: React.FC<Props> = ({
         if (!field.asyncOptions) return;
         if (field.dependsOn && !activeFilters[field.dependsOn]) return;
         const cacheKey = getCacheKey(field);
-        if (cache[cacheKey]) return;
+        if (cache[cacheKey] !== undefined) return; // da fetch (ke ca rong)
         const dependValue = field.dependsOn ? activeFilters[field.dependsOn] : null;
         setLoading((prev) => ({ ...prev, [field.key]: true }));
         field.asyncOptions!(dependValue)

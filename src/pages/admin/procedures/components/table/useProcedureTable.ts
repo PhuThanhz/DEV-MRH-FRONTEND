@@ -43,6 +43,13 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
     const [searchParams, setSearchParams] = useSearchParams();
     useEffect(() => {
         const viewIdStr = searchParams.get("viewId");
+        const tab = searchParams.get("tab")?.toLowerCase();
+        
+        // If tab=confidential, let ConfidentialProcedureView handle auto-opening
+        if (tab === "confidential") {
+            return;
+        }
+
         if (viewIdStr) {
             const viewId = Number(viewIdStr);
             if (!isNaN(viewId) && !openView) {

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     LockOutlined,
     SendOutlined,
@@ -12,6 +13,8 @@ import ViewProcedure from "../view.procedure";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useProcedureByIdQuery } from "@/hooks/useProcedure";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Badge } from "antd";
 
 interface IProps {
     companyId?: number;
@@ -39,42 +42,56 @@ const ChipBar: React.FC<{
     onChange: (key: string) => void;
 }> = ({ items, active, onChange }) => (
     <div style={{
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
-        gap: 6,
-        padding: "12px 0 16px",
-        borderBottom: "0.5px solid #f0f0f0",
+        gap: 4,
+        padding: 4,
+        background: "#f1f5f9", // slate-100
+        borderRadius: 20,
         marginBottom: 20,
         flexWrap: "wrap",
+        border: "1px solid #e2e8f0", // slate-200
     }}>
+        <style>{`
+            .custom-chip-button:hover {
+                color: #534AB7 !important;
+                background: rgba(255, 255, 255, 0.4) !important;
+            }
+            .custom-chip-button:hover span {
+                color: #534AB7 !important;
+            }
+        `}</style>
         {items.map((item) => {
             const isActive = item.key === active;
             return (
                 <button
                     key={item.key}
                     onClick={() => onChange(item.key)}
+                    className="custom-chip-button"
                     style={{
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 6,
-                        padding: "5px 14px",
-                        fontSize: 12,
-                        fontWeight: isActive ? 500 : 400,
-                        color: isActive ? "#534AB7" : "#6b7280",
-                        background: isActive ? "#EEEDFE" : "transparent",
-                        border: isActive ? "0.5px solid #AFA9EC" : "0.5px solid #e5e7eb",
-                        borderRadius: 20,          // pill shape — rõ ràng KHÔNG phải tab
+                        padding: "6px 16px",
+                        fontSize: 13,
+                        fontWeight: isActive ? 600 : 500,
+                        color: isActive ? "#534AB7" : "#475569", // slate-600 when inactive
+                        background: isActive ? "#ffffff" : "transparent",
+                        border: "none",
+                        borderRadius: 16,
+                        boxShadow: isActive ? "0 2px 8px rgba(15, 23, 42, 0.08)" : "none",
                         cursor: "pointer",
-                        transition: "all 0.15s ease",
+                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                         whiteSpace: "nowrap",
                         lineHeight: "20px",
+                        outline: "none",
                     }}
                 >
                     <span style={{
-                        display: "flex",
-                        fontSize: 12,
-                        opacity: isActive ? 1 : 0.5,
-                        color: isActive ? "#534AB7" : "inherit",
+                        display: "inline-flex",
+                        fontSize: 14,
+                        color: isActive ? "#534AB7" : "#64748b",
+                        transition: "color 0.2s ease",
                     }}>
                         {item.icon}
                     </span>
@@ -90,9 +107,41 @@ const ConfidentialProcedureView: React.FC<IProps> = ({ companyId, departmentId }
     const [activeView, setActiveView] = useState("list");
     const [viewProcedureId, setViewProcedureId] = useState<number | null>(null);
 
+    const [searchParams, setSearchParams] = useSearchParams();
+    useEffect(() => {
+        const viewIdStr = searchParams.get("viewId");
+        const tab = searchParams.get("tab")?.toLowerCase();
+        if (tab === "confidential" && viewIdStr) {
+            const viewId = Number(viewIdStr);
+            if (!isNaN(viewId)) {
+                setViewProcedureId(viewId);
+                // Clear viewId from URL
+                searchParams.delete("viewId");
+                setSearchParams(searchParams, { replace: true });
+            }
+        }
+    }, [searchParams, setSearchParams]);
+
     const canSeeSent = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_SENT);
     const canSeeReceived = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_RECEIVED);
     const canSeeAudit = useAccess(ALL_PERMISSIONS.PROCEDURE_CONFIDENTIAL.SHARE_LOG_ALL);
+
+    const { items: notifItems, markOneRead } = useNotifications();
+    const unreadConfidentialCount = notifItems.filter(
+        (i) => !i.isRead && i.module === "CONFIDENTIAL_PROCEDURES"
+    ).length;
+
+    // Tự động đánh dấu đã đọc các thông báo quy trình bảo mật khi xem tab "Đã nhận"
+    useEffect(() => {
+        if (activeView === "received") {
+            const unreadConfidentialNotifs = notifItems.filter(
+                (i) => !i.isRead && i.module === "CONFIDENTIAL_PROCEDURES"
+            );
+            unreadConfidentialNotifs.forEach((notif) => {
+                markOneRead(notif);
+            });
+        }
+    }, [activeView, notifItems, markOneRead]);
 
     const { data: viewProcedureData } = useProcedureByIdQuery(
         "CONFIDENTIAL",
@@ -102,7 +151,18 @@ const ConfidentialProcedureView: React.FC<IProps> = ({ companyId, departmentId }
     const chips = [
         { key: "list", icon: <LockOutlined />, label: "Danh sách" },
         ...(canSeeSent ? [{ key: "sent", icon: <SendOutlined />, label: "Đã gửi" }] : []),
-        ...(canSeeReceived ? [{ key: "received", icon: <InboxOutlined />, label: "Đã nhận" }] : []),
+        ...(canSeeReceived ? [{
+            key: "received",
+            icon: <InboxOutlined />,
+            label: "Đã nhận",
+            badge: unreadConfidentialCount > 0 ? (
+                <Badge
+                    count={unreadConfidentialCount}
+                    size="small"
+                    style={{ backgroundColor: "#534AB7", marginLeft: 4 }}
+                />
+            ) : null
+        }] : []),
         ...(canSeeAudit ? [{
             key: "audit",
             icon: <AuditOutlined />,

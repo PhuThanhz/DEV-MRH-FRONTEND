@@ -12,11 +12,12 @@ import type { UnifiedNotification } from "@/hooks/useNotifications";
 import { ALL_PERMISSIONS } from "./permissions";
 
 export const DOCUMENT_NOTIFICATION_MODULES = ["DOCUMENT", "DOCUMENTS", "ACCOUNTING_DOCUMENTS"];
+export const PROCEDURE_NOTIFICATION_MODULES = ["COMPANY_PROCEDURES", "CONFIDENTIAL_PROCEDURES"];
 export const KNOWN_NOTIFICATION_MODULES = [
     "JD_FLOW",
     "EVALUATION",
-    "COMPANY_PROCEDURES",
     "CAREER_PATHS",
+    ...PROCEDURE_NOTIFICATION_MODULES,
     ...DOCUMENT_NOTIFICATION_MODULES,
 ];
 
@@ -62,7 +63,7 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
         link: "/admin/procedures",
         requiredPermission: ALL_PERMISSIONS.PROCEDURE_COMPANY.GET_PAGINATE,
         moduleKey: "COMPANY_PROCEDURES",
-        filterUnread: (items) => items.filter(i => !i.isRead && i.module === "COMPANY_PROCEDURES").length
+        filterUnread: (items) => items.filter(i => !i.isRead && PROCEDURE_NOTIFICATION_MODULES.includes(i.module || "")).length
     },
     {
         id: "career_paths",

@@ -14,6 +14,7 @@ import {
     QrcodeOutlined,
     TrophyOutlined, CheckCircleOutlined, SettingOutlined,
     AccountBookOutlined,
+    IdcardOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -84,6 +85,13 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
 
 
     const full = [
+        // ===================== TRANG CHỦ =====================
+        // {
+        //     label: <Link to="/admin/overview">Trang chủ</Link>,
+        //     key: "/admin/overview",
+        //     icon: <IdcardOutlined />,
+        // },
+
         // ===================== TỔNG QUAN =====================
         ...(checkPermission(ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY)
             ? [

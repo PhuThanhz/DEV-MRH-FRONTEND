@@ -1,370 +1,322 @@
-import { useRef } from "react";
-import { CloseOutlined, UserOutlined, ApartmentOutlined, TeamOutlined, ArrowUpOutlined } from "@ant-design/icons";
-import type { Node, Edge } from "reactflow";
+import { useMemo, useState } from "react";
+import { CloseOutlined, UserOutlined, SearchOutlined, PushpinOutlined, DoubleRightOutlined } from "@ant-design/icons";
+import { type Node, type Edge } from "reactflow";
+import "./org-chart.css";
 
 interface Props {
     nodeId: string | null;
     nodes: Node[];
     edges: Edge[];
-    anchorPos?: { x: number; y: number } | null;
+
     onClose: () => void;
     isMobile?: boolean;
     isTablet?: boolean;
+    isSmallLaptop?: boolean;
 }
 
-const MiniPanel = ({ nodeId, nodes, edges, anchorPos, onClose, isMobile = false, isTablet = false }: Props) => {
-    const panelRef = useRef<HTMLDivElement>(null);
+type PanelPerson = {
+    id: string;
+    name: string;
+    caption: string;
+    badge?: string;
+    muted?: boolean;
+};
 
-    const PANEL_W = isMobile ? 200 : 228;
-    const PANEL_H = 280;
-    const ARROW_W = 9;
-    const OFFSET = 6;
-    const NODE_W = isMobile ? 160 : isTablet ? 185 : 220;
-    const NODE_H = isMobile ? 120 : isTablet ? 150 : 185;
+const MiniPanel = ({ nodeId, nodes, edges, onClose, isMobile = false, isTablet = false, isSmallLaptop = false }: Props) => {
+    const [activeTab, setActiveTab] = useState<"people" | "communication">("people");
+    const [searchText, setSearchText] = useState("");
 
-    if (!nodeId) return null;
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return null;
+    const PANEL_W = isMobile ? 320 : isTablet || isSmallLaptop ? 360 : 400;
+    const node = useMemo(() => nodeId ? nodes.find((n) => n.id === nodeId) : null, [nodeId, nodes]);
+    const childNodes = useMemo(() => {
+        if (!nodeId) return [];
+        const childIds = new Set(edges.filter((e) => e.source === nodeId).map((e) => e.target));
+        return nodes.filter((n) => childIds.has(n.id));
+    }, [edges, nodeId, nodes]);
 
-    const parentEdge = edges.find((e) => e.target === nodeId);
-    const parentNode = parentEdge ? nodes.find((n) => n.id === parentEdge.source) : null;
-    const parentTitle = parentNode?.data.title as string | undefined;
-    const parentHolder = parentNode?.data.holderName as string | undefined;
-    const directChildren = edges.filter((e) => e.source === nodeId).length;
-
-    const countDescendants = (id: string): number => {
-        const children = edges.filter((e) => e.source === id).map((e) => e.target);
-        return children.reduce((acc, cid) => acc + 1 + countDescendants(cid), 0);
-    };
-    const totalDescendants = countDescendants(nodeId);
+    if (!nodeId || !node) return null;
 
     const { title, levelCode, holderName } = node.data as {
         title: string; levelCode?: string; holderName?: string;
     };
     const isDepartment = !levelCode && !holderName;
 
-    // ── Tính vị trí + hướng arrow ────────────────────────────────────────────
-    const computeLayout = () => {
-        if (!anchorPos) {
-            return {
-                panelStyle: { position: "absolute" as const, bottom: 16, right: 16 },
-                arrowStyle: { display: "none" } as React.CSSProperties,
-                arrowInnerStyle: { display: "none" } as React.CSSProperties,
-            };
-        }
+    const supervisors: PanelPerson[] = holderName
+        ? [{
+            id: `${nodeId}-holder`,
+            name: holderName,
+            caption: isDepartment ? title : levelCode ? `${title}` : "Giám sát viên",
+            badge: "Giám sát viên",
+        }]
+        : [{
+            id: `${nodeId}-empty-holder`,
+            name: "Chưa bổ nhiệm",
+            caption: isDepartment ? "Phòng ban chưa có người đại diện" : "Chức vụ chưa có người đảm nhiệm",
+            muted: true,
+        }];
 
-        const container = panelRef.current?.closest(".react-flow") as HTMLElement | null;
-        const containerW = container?.offsetWidth ?? window.innerWidth;
-        const containerH = container?.offsetHeight ?? window.innerHeight;
-
-        const spaceRight = containerW - anchorPos.x;
-        const flipLeft = spaceRight < PANEL_W + ARROW_W + OFFSET + 16;
-
-        let left: number;
-        let arrowLeft: number;
-        let arrowBorder: React.CSSProperties;
-        let arrowInnerBorder: React.CSSProperties;
-
-        if (flipLeft) {
-            left = anchorPos.x - NODE_W - PANEL_W - ARROW_W - OFFSET * 2;
-            arrowLeft = left + PANEL_W;
-            arrowBorder = { borderLeft: "8px solid rgba(226,232,240,0.9)", borderRight: "none" };
-            arrowInnerBorder = { borderLeft: "7px solid #ffffff", borderRight: "none", left: -9 };
-        } else {
-            left = anchorPos.x + OFFSET;
-            arrowLeft = left - ARROW_W;
-            arrowBorder = { borderRight: "8px solid rgba(226,232,240,0.9)", borderLeft: "none" };
-            arrowInnerBorder = { borderRight: "7px solid #ffffff", borderLeft: "none", left: 1 };
-        }
-
-        if (left < 8) left = 8;
-        if (left + PANEL_W > containerW - 8) left = containerW - PANEL_W - 8;
-
-        let top = anchorPos.y + NODE_H / 2 - PANEL_H / 2;
-        if (top < 50) top = 50;
-        if (top + PANEL_H > containerH - 8) top = containerH - PANEL_H - 8;
-
-        const arrowTop = top + 16;
-
+    const employees: PanelPerson[] = childNodes.map((child) => {
+        const childData = child.data as { title?: string; levelCode?: string; holderName?: string };
+        const childBadge = childData.levelCode || (!childData.holderName ? "Phòng ban" : undefined);
         return {
-            panelStyle: { position: "absolute" as const, top, left, bottom: "auto", right: "auto" },
-            arrowStyle: {
-                position: "absolute" as const,
-                top: arrowTop, left: arrowLeft,
-                width: 0, height: 0,
-                borderTop: "7px solid transparent",
-                borderBottom: "7px solid transparent",
-                zIndex: 21,
-                ...arrowBorder,
-            } as React.CSSProperties,
-            arrowInnerStyle: {
-                position: "absolute" as const,
-                top: arrowTop + 1, left: arrowLeft + 1,
-                width: 0, height: 0,
-                borderTop: "6px solid transparent",
-                borderBottom: "6px solid transparent",
-                zIndex: 22,
-                ...arrowInnerBorder,
-            } as React.CSSProperties,
+            id: child.id,
+            name: childData.holderName || childData.title || "Chưa cập nhật",
+            caption: childData.holderName ? childData.title || "Chức vụ chưa cập nhật" : "Chức vụ chưa được quy định",
+            badge: childBadge,
+            muted: !childData.holderName,
         };
-    };
+    });
 
-    const { panelStyle, arrowStyle, arrowInnerStyle } = computeLayout();
+    const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const keyword = normalize(searchText.trim());
+    const filterPeople = (items: PanelPerson[]) => keyword
+        ? items.filter((item) => normalize(`${item.name} ${item.caption} ${item.badge ?? ""}`).includes(keyword))
+        : items;
+    const filteredSupervisors = filterPeople(supervisors);
+    const filteredEmployees = filterPeople(employees);
+    const visiblePeopleCount = supervisors.filter((item) => !item.muted).length + employees.length;
 
     const fs = {
-        label: isMobile ? 9 : 10,
-        value: isMobile ? 12 : 12.5,
-        title: isMobile ? 13 : 14,
-        badge: isMobile ? 8 : 9,
-        icon: isMobile ? 10 : 11,
-        subValue: isMobile ? 10.5 : 11,
+        title: isMobile ? 18 : 22,
+        tab: isMobile ? 12 : 14,
+        section: isMobile ? 14 : 16,
+        name: isMobile ? 14 : 16,
+        caption: isMobile ? 12 : 14,
     };
 
-    // ── Row cho stat đơn giản (cấp dưới / tổng) ──────────────────────────────
-    const StatRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+    const PersonRow = ({ person }: { person: PanelPerson }) => (
         <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "5px 0",
-            borderTop: "1px solid #f1f5f9",
+            display: "flex",
+            alignItems: "center",
+            gap: isMobile ? 10 : 14,
+            padding: isMobile ? "10px 0" : "12px 0",
         }}>
-            <span style={{ color: "#cbd5e1", flexShrink: 0 }}>{icon}</span>
-            <span style={{ fontSize: fs.label, color: "#94a3b8", fontFamily: "'Be Vietnam Pro',sans-serif", flex: 1 }}>
-                {label}
-            </span>
-            <span style={{ fontSize: fs.label + 1, fontWeight: 700, color: "#475569", fontFamily: "'Be Vietnam Pro',sans-serif" }}>
-                {value}
-            </span>
+            <div style={{
+                width: isMobile ? 36 : 44,
+                height: isMobile ? 36 : 44,
+                borderRadius: "50%",
+                background: person.muted ? "#eef1f5" : "#64748b",
+                color: person.muted ? "#a1a8b3" : "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                fontWeight: 850,
+                fontSize: isMobile ? 13 : 16,
+                boxShadow: person.muted ? "none" : "0 6px 16px -10px rgba(15, 23, 42, 0.45)",
+            }}>
+                {person.muted ? <UserOutlined style={{ fontSize: isMobile ? 16 : 19 }} /> : person.name.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <span style={{
+                        fontSize: fs.name,
+                        fontWeight: 650,
+                        color: person.muted ? "#6b7280" : "#333333",
+                        lineHeight: 1.25,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                    }}>
+                        {person.name}
+                    </span>
+                    {person.badge && (
+                        <span style={{
+                            flexShrink: 0,
+                            maxWidth: isMobile ? 92 : 130,
+                            borderRadius: 999,
+                            background: "#f1f5f9",
+                            color: "#64748b",
+                            border: "1px solid #e2e8f0",
+                            fontSize: isMobile ? 10 : 11,
+                            fontWeight: 800,
+                            padding: "3px 8px",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                        }}>
+                            {person.badge}
+                        </span>
+                    )}
+                </div>
+                <div style={{
+                    fontSize: fs.caption,
+                    color: "#9ca3af",
+                    lineHeight: 1.3,
+                    marginTop: 2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                }}>
+                    {person.caption}
+                </div>
+            </div>
+        </div>
+    );
+
+    const EmptyState = ({ text }: { text: string }) => (
+        <div style={{
+            padding: isMobile ? "18px 0" : "24px 0",
+            color: "#a8b0bb",
+            fontSize: fs.caption,
+            textAlign: "center",
+        }}>
+            {text}
         </div>
     );
 
     return (
-        <>
-            <style>{`
-                @keyframes panelIn {
-                    from { opacity: 0; transform: scale(0.96) translateY(4px); }
-                    to   { opacity: 1; transform: scale(1) translateY(0); }
-                }
-            `}</style>
-
-            {/* Arrow border */}
-            <div style={arrowStyle} />
-            {/* Arrow fill */}
-            <div style={arrowInnerStyle} />
-
-            {/* Panel */}
-            <div
-                ref={panelRef}
-                style={{
-                    ...panelStyle,
-                    zIndex: 20,
-                    width: PANEL_W,
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    boxShadow: "0 8px 32px rgba(15,23,42,0.10), 0 2px 8px rgba(15,23,42,0.06)",
-                    overflow: "hidden",
-                    animation: "panelIn 0.18s ease",
-                }}
-            >
-                {/* ── Header ── */}
+        <div
+            style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 100,
+                width: `min(${PANEL_W}px, 100vw)`,
+                background: "#ffffff",
+                boxShadow: "-8px 0 28px rgba(15, 23, 42, 0.12)",
+                overflow: "hidden",
+                animation: "orgPanelSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+                fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
+                pointerEvents: "auto",
+                display: "flex",
+                flexDirection: "column",
+                borderRadius: isMobile ? 0 : "24px 0 0 24px",
+            }}
+        >
                 <div style={{
-                    padding: isMobile ? "10px 11px 8px" : "11px 13px 9px",
-                    background: "linear-gradient(135deg, #fff5f7 0%, #fafafa 100%)",
-                    borderBottom: "1px solid #f1f5f9",
-                    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8,
-                }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Badges */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 5 }}>
-                            {levelCode && (
-                                <span style={{
-                                    fontSize: fs.badge, fontWeight: 700,
-                                    fontFamily: "'JetBrains Mono',monospace",
-                                    letterSpacing: "0.08em", color: "#e8637a",
-                                    background: "#fff0f3", border: "1px solid #fecdd3",
-                                    borderRadius: 5, padding: "2px 6px",
-                                    textTransform: "uppercase",
-                                }}>
-                                    {levelCode}
-                                </span>
-                            )}
-                            {isDepartment && (
-                                <span style={{
-                                    fontSize: fs.badge, fontWeight: 800,
-                                    fontFamily: "'Be Vietnam Pro',sans-serif",
-                                    background: "#eff6ff", color: "#1d4ed8",
-                                    border: "1px solid #bfdbfe",
-                                    borderRadius: 5, padding: "2px 6px",
-                                }}>
-                                    Phòng ban
-                                </span>
-                            )}
-                        </div>
-                        {/* Title */}
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                padding: isMobile ? "16px 16px 14px" : "22px 24px 20px",
+            }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: isMobile ? 14 : 22 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{
-                            fontSize: fs.title, fontWeight: 800, color: "#0f172a",
-                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                            lineHeight: 1.3, letterSpacing: "-0.01em",
+                            fontSize: fs.title,
+                            fontWeight: 750,
+                            color: "#333333",
+                            lineHeight: 1.22,
+                            overflow: "hidden",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
                         }}>
                             {title}
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: "#f8fafc", border: "1px solid #e2e8f0",
-                            cursor: "pointer", color: "#94a3b8",
-                            width: 22, height: 22, flexShrink: 0,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            borderRadius: 6, transition: "all 0.12s",
-                            padding: 0,
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#f1f5f9";
-                            e.currentTarget.style.color = "#334155";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "#f8fafc";
-                            e.currentTarget.style.color = "#94a3b8";
-                        }}
-                    >
-                        <CloseOutlined style={{ fontSize: 9 }} />
-                    </button>
                 </div>
 
-                {!isDepartment && (
-                    <div style={{
-                        padding: isMobile ? "9px 11px" : "10px 13px",
-                        borderBottom: "1px solid #f1f5f9",
-                        background: "#fff",
-                    }}>
+                <div style={{ display: "flex", gap: 10, marginBottom: isMobile ? 12 : 20 }}>
+                    {([
+                        { key: "people", label: `Tổng số nhân viên ${visiblePeopleCount}` },
+                    ] as const).map((tab) => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                height: isMobile ? 36 : 42,
+                                minWidth: 0,
+                                padding: isMobile ? "0 10px" : "0 18px",
+                                borderRadius: 5,
+                                border: activeTab === tab.key ? "1px solid #b8c0cb" : "1px solid #e4e7eb",
+                                background: "#ffffff",
+                                color: activeTab === tab.key ? "#737b87" : "#b7bdc6",
+                                cursor: "pointer",
+                                fontSize: fs.tab,
+                                fontWeight: 750,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {activeTab === "people" ? (
+                    <>
                         <div style={{
-                            fontSize: fs.label, color: "#94a3b8",
-                            fontFamily: "'Be Vietnam Pro',sans-serif",
-                            marginBottom: 5, display: "flex", alignItems: "center", gap: 5,
+                            height: isMobile ? 40 : 48,
+                            borderRadius: 999,
+                            background: "#f4f5f7",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: isMobile ? "0 14px" : "0 18px",
+                            marginBottom: isMobile ? 16 : 22,
+                            flexShrink: 0,
                         }}>
-                            <UserOutlined style={{ fontSize: fs.icon - 1 }} />
-                            Người đảm nhiệm
+                            <SearchOutlined style={{ fontSize: isMobile ? 16 : 20, color: "#b6bdc7" }} />
+                            <input
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                placeholder="Tìm theo tên hoặc chức vụ"
+                                style={{
+                                    border: "none",
+                                    outline: "none",
+                                    background: "transparent",
+                                    width: "100%",
+                                    fontSize: isMobile ? 13 : 16,
+                                    color: "#4b5563",
+                                    fontFamily: "inherit",
+                                }}
+                            />
                         </div>
-                        {holderName ? (
+
+                        <div style={{ overflowY: "auto", minHeight: 0, paddingRight: 4 }}>
                             <div style={{
-                                display: "flex", alignItems: "center", gap: 8,
-                                background: "#f8fafc", border: "1px solid #e2e8f0",
-                                borderRadius: 8, padding: "6px 9px",
+                                fontSize: fs.section,
+                                fontWeight: 750,
+                                color: "#3f3f46",
+                                lineHeight: 1.3,
+                                marginBottom: isMobile ? 6 : 10,
                             }}>
-                                <div style={{
-                                    width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
-                                    borderRadius: 7, flexShrink: 0,
-                                    background: "linear-gradient(135deg, #f43f5e, #fb923c)",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
-                                    <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#fff" }} />
-                                </div>
-                                <span style={{
-                                    fontSize: fs.value, fontWeight: 700, color: "#0f172a",
-                                    fontFamily: "'Be Vietnam Pro',sans-serif",
-                                    lineHeight: 1.3, wordBreak: "break-word",
-                                }}>
-                                    {holderName}
-                                </span>
+                                Giám sát viên <span style={{ color: "#c4c9d1" }}>{supervisors.filter((item) => !item.muted).length}</span>
                             </div>
-                        ) : (
+                            {filteredSupervisors.length ? filteredSupervisors.map((person) => (
+                                <PersonRow key={person.id} person={person} />
+                            )) : <EmptyState text="Không tìm thấy giám sát viên" />}
+
                             <div style={{
-                                display: "flex", alignItems: "center", gap: 8,
-                                background: "#f8fafc", border: "1px dashed #e2e8f0",
-                                borderRadius: 8, padding: "6px 9px",
+                                fontSize: fs.section,
+                                fontWeight: 750,
+                                color: "#3f3f46",
+                                lineHeight: 1.3,
+                                marginTop: isMobile ? 14 : 20,
+                                marginBottom: isMobile ? 6 : 10,
                             }}>
-                                <div style={{
-                                    width: isMobile ? 22 : 26, height: isMobile ? 22 : 26,
-                                    borderRadius: 7, flexShrink: 0,
-                                    background: "#f1f5f9", border: "1.5px dashed #e2e8f0",
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
-                                    <UserOutlined style={{ fontSize: isMobile ? 10 : 11, color: "#cbd5e1" }} />
-                                </div>
-                                <span style={{
-                                    fontSize: fs.subValue, color: "#94a3b8",
-                                    fontStyle: "italic", fontFamily: "'Be Vietnam Pro',sans-serif",
-                                }}>
-                                    Chưa bổ nhiệm
-                                </span>
+                                Nhân viên <span style={{ color: "#c4c9d1" }}>{employees.length}</span>
                             </div>
-                        )}
+                            {filteredEmployees.length ? filteredEmployees.map((person) => (
+                                <PersonRow key={person.id} person={person} />
+                            )) : <EmptyState text={searchText ? "Không tìm thấy nhân viên" : "Chưa có node con trực tiếp"} />}
+                        </div>
+                    </>
+                ) : (
+                    <div style={{
+                        flex: 1,
+                        borderRadius: 12,
+                        background: "#f7f8fa",
+                        color: "#9ca3af",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 10,
+                        textAlign: "center",
+                        padding: 24,
+                    }}>
+                        <PushpinOutlined style={{ fontSize: isMobile ? 20 : 24 }} />
+                        <div style={{ fontSize: fs.caption, lineHeight: 1.45 }}>
+                            Chưa có dữ liệu truyền thông cho node này.
+                        </div>
                     </div>
                 )}
-
-                {/* ── Cấp trên trực tiếp ── */}
-                <div style={{
-                    padding: isMobile ? "9px 11px" : "10px 13px",
-                    borderBottom: "1px solid #f1f5f9",
-                    background: "#fff",
-                }}>
-                    <div style={{
-                        fontSize: fs.label, color: "#94a3b8",
-                        fontFamily: "'Be Vietnam Pro',sans-serif",
-                        marginBottom: 5, display: "flex", alignItems: "center", gap: 5,
-                    }}>
-                        <ArrowUpOutlined style={{ fontSize: fs.icon - 1 }} />
-                        {isDepartment ? "Thuộc đơn vị" : "Cấp trên trực tiếp"}
-                    </div>
-                    {parentNode ? (
-                        <div style={{
-                            background: "#f8fafc", border: "1px solid #e2e8f0",
-                            borderRadius: 8, padding: "6px 9px",
-                        }}>
-                            <div style={{
-                                fontSize: fs.value, fontWeight: 700, color: "#0f172a",
-                                fontFamily: "'Be Vietnam Pro',sans-serif",
-                                lineHeight: 1.3, marginBottom: 2,
-                            }}>
-                                {parentTitle}
-                            </div>
-                            {!isDepartment && parentHolder ? (
-                                <div style={{
-                                    fontSize: fs.subValue, color: "#64748b",
-                                    fontFamily: "'Be Vietnam Pro',sans-serif", fontWeight: 500,
-                                }}>
-                                    {parentHolder}
-                                </div>
-                            ) : (
-                                <div style={{
-                                    fontSize: fs.subValue, color: "#94a3b8",
-                                    fontFamily: "'Be Vietnam Pro',sans-serif", fontStyle: "italic",
-                                }}>
-                                    {isDepartment ? "Phòng ban cấp trên" : "Chưa bổ nhiệm"}
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div style={{
-                            background: "#f8fafc", border: "1px dashed #e2e8f0",
-                            borderRadius: 8, padding: "6px 9px",
-                        }}>
-                            <span style={{
-                                fontSize: fs.subValue, color: "#94a3b8",
-                                fontStyle: "italic", fontFamily: "'Be Vietnam Pro',sans-serif",
-                            }}>
-                                Không có
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* ── Stats: cấp dưới + tổng ── */}
-                <div style={{ padding: isMobile ? "5px 11px 7px" : "5px 13px 8px", background: "#fafafa" }}>
-                    <StatRow
-                        icon={<ApartmentOutlined style={{ fontSize: fs.icon }} />}
-                        label={isDepartment ? "Mục trực thuộc" : "Cấp dưới trực tiếp"}
-                        value={`${directChildren} ${isDepartment ? "mục" : "vị trí"}`}
-                    />
-                    <StatRow
-                        icon={<TeamOutlined style={{ fontSize: fs.icon }} />}
-                        label={isDepartment ? "Tổng mục con" : "Tổng cấp dưới"}
-                        value={`${totalDescendants} ${isDepartment ? "mục" : "vị trí"}`}
-                    />
-                </div>
             </div>
-        </>
+        </div>
     );
 };
 

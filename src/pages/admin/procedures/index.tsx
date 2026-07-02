@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BankOutlined, ApartmentOutlined, LockOutlined } from "@ant-design/icons";
 import ProcedureTable from "./components/table/ProcedureTable";
 import ConfidentialProcedureView from "./components/ConfidentialProcedureView";  // ← thêm
@@ -38,7 +39,26 @@ const ProcedureAdminPage = () => {
     }, [canViewCompany, canViewDepartment, canViewConfidential]);
 
     // ===================== ACTIVE TAB =====================
-    const [activeTab, setActiveTab] = useState<TabType>("COMPANY");
+    const [searchParams] = useSearchParams();
+    const queryTab = searchParams.get("tab");
+    const [activeTab, setActiveTab] = useState<TabType>(() => {
+        if (queryTab) {
+            const upper = queryTab.toUpperCase() as TabType;
+            if (upper === "COMPANY" || upper === "DEPARTMENT" || upper === "CONFIDENTIAL") {
+                return upper;
+            }
+        }
+        return "COMPANY";
+    });
+
+    useEffect(() => {
+        if (queryTab) {
+            const upper = queryTab.toUpperCase() as TabType;
+            if (upper === "COMPANY" || upper === "DEPARTMENT" || upper === "CONFIDENTIAL") {
+                setActiveTab(upper);
+            }
+        }
+    }, [queryTab]);
 
     useEffect(() => {
         if (!tabs.length) return;
