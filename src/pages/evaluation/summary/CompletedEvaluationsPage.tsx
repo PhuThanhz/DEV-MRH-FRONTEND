@@ -28,7 +28,7 @@ import {
 } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import dayjs from "dayjs";
-import { Pie, Column } from "@ant-design/charts";
+import { Pie, Column } from "@/components/common/chart/LazyChart";
 
 let XLSXStyle: any;
 const ensureXlsxStyle = async () => {

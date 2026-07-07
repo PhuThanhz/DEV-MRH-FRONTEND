@@ -47,7 +47,7 @@ const CompanyOrgChartPage = () => {
                 ownerType="COMPANY" 
                 ownerId={id} 
                 chartTitle={companyName ? `Sơ đồ tổ chức - ${companyName}` : "Sơ đồ tổ chức công ty"}
-                onClose={() => navigate(-1)}
+                onClose={() => navigate("/admin/company")}
             />
         </PageContainer>
     );

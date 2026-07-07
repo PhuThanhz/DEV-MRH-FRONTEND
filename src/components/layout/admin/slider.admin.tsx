@@ -163,6 +163,7 @@ const SliderAdmin: React.FC<IProps> = ({
                     return;
                 }
                 setActiveMenu(e.key);
+                navigate(e.key);
                 if (isMobile) setMobileOpen(false);
             }}
             style={{

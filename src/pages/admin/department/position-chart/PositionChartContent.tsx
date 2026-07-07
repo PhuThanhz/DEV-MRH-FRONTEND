@@ -1,7 +1,8 @@
 // src/pages/admin/department/position-chart/PositionChartModal.tsx
 import { useEffect, useState } from "react";
-import { Table, Spin, Empty, Tag, Input, Drawer } from "antd";
+import { Table, Spin, Empty, Tag, Input } from "antd";
 import { TeamOutlined, CalendarOutlined, BankOutlined, SearchOutlined, CloseOutlined } from "@ant-design/icons";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import { callFetchCompanyJobTitlesOfDepartment } from "@/config/api";
 import type { IDepartmentJobTitle } from "@/types/backend";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -161,37 +162,16 @@ const PositionChartContent: React.FC<PositionChartContentProps> = ({
     });
 
     return (
-        <Drawer
-            placement="right"
-            closable={false}
-            onClose={onClose}
+        <LotusDetailDrawer
             open={open}
-            width={isMobile ? "100%" : "90vw"}
-            bodyStyle={{ padding: 0, display: "flex", flexDirection: "column", height: "100vh" }}
-            maskStyle={{
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                background: "rgba(255, 255, 255, 0.45)",
-            }}
-            rootClassName="global-position-chart-drawer" className="global-position-chart-drawer"
+            onClose={onClose}
+            height="calc(100vh - 16px)"
         >
         <div style={{ 
             display: "flex", flexDirection: "column", height: "100%", background: "#fff",
-            borderTopLeftRadius: 24, borderBottomLeftRadius: 24, overflow: "hidden",
-            boxShadow: "-10px 0 32px rgba(15, 23, 42, 0.12)"
+            overflow: "hidden"
         }}>
             <style>{`
-                /* Triệt tiêu triệt để nền trắng của các intermediate wrappers trong Drawer Antd */
-                .global-position-chart-drawer .ant-drawer-content-wrapper,
-                .global-position-chart-drawer .ant-drawer-content,
-                .global-position-chart-drawer .ant-drawer-wrapper-body,
-                .global-position-chart-drawer .ant-drawer-body {
-                    background: transparent !important;
-                    background-color: transparent !important;
-                    box-shadow: none !important;
-                    border: none !important;
-                    overflow: visible !important;
-                }
                 .custom-search-input .ant-input::placeholder {
                     color: rgba(255, 255, 255, 0.6) !important;
                 }
@@ -226,19 +206,7 @@ const PositionChartContent: React.FC<PositionChartContentProps> = ({
                     background: "rgba(255,255,255,0.04)", pointerEvents: "none",
                 }} />
 
-                <div
-                    onClick={onClose}
-                    style={{
-                        position: "absolute", top: 16, right: 16, zIndex: 10,
-                        width: 32, height: 32, borderRadius: "50%",
-                        background: "rgba(255,255,255,0.2)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", cursor: "pointer",
-                        backdropFilter: "blur(4px)",
-                    }}
-                >
-                    <CloseOutlined style={{ fontSize: 14 }} />
-                </div>
+                {/* Custom inner close button removed - handled by LotusDetailDrawer */}
                 <div style={{ position: "relative", zIndex: 1, flex: 1, minWidth: 0 }}>
                     {companyName && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
@@ -426,7 +394,7 @@ const PositionChartContent: React.FC<PositionChartContentProps> = ({
                 </span>
             </div>
         </div>
-        </Drawer>
+        </LotusDetailDrawer>
     );
 };
 

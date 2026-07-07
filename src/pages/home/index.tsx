@@ -34,6 +34,7 @@ const HomePage = () => {
                     pointerEvents: "none",
                     animation: "gridMove 30s linear infinite",
                     opacity: 0.4,
+                    willChange: "transform",
                 }}
             />
 
@@ -48,8 +49,7 @@ const HomePage = () => {
                     height: "400px",
                     background: "radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%)",
                     borderRadius: "50%",
-                    filter: "blur(60px)",
-                    animation: "floatOrb 20s ease-in-out infinite",
+                    filter: "blur(40px)",
                     pointerEvents: "none",
                 }}
             />
@@ -63,8 +63,7 @@ const HomePage = () => {
                     height: "450px",
                     background: "radial-gradient(circle, rgba(244, 114, 182, 0.06) 0%, transparent 70%)",
                     borderRadius: "50%",
-                    filter: "blur(70px)",
-                    animation: "floatOrb 25s ease-in-out infinite 5s",
+                    filter: "blur(50px)",
                     pointerEvents: "none",
                 }}
             />
@@ -85,6 +84,8 @@ const HomePage = () => {
                         <img
                             src="/logo/LOGOFINAL.png"
                             alt="LOTUS HRM"
+                            width={240}
+                            height={240}
                             style={{
                                 width: "100%",
                                 height: "auto",
@@ -138,7 +139,7 @@ const HomePage = () => {
             </div>
 
             {/* Floating particles */}
-            {[...Array(12)].map((_, i) => (
+            {[...Array(5)].map((_, i) => (
                 <div
                     key={i}
                     className="particle"
@@ -148,12 +149,13 @@ const HomePage = () => {
                         height: `${(i % 3) + 2}px`,
                         background: "#ec4899",
                         borderRadius: "50%",
-                        left: `${(i * 8.5) % 100}%`,
-                        top: `${(i * 13.7) % 100}%`,
+                        left: `${(i * 19.5) % 100}%`,
+                        top: `${(i * 22.3) % 100}%`,
                         animation: `floatParticle ${15 + (i % 5) * 3}s ease-in-out infinite ${(i % 5)}s`,
                         opacity: 0.1 + (i % 3) * 0.1,
                         boxShadow: "0 0 8px rgba(236, 72, 153, 0.4)",
                         pointerEvents: "none",
+                        willChange: "transform, opacity",
                     }}
                 />
             ))}
@@ -165,8 +167,6 @@ const HomePage = () => {
 
             {/* Animation styles */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
-
                 :root {
                     --logo-size: clamp(140px, 15vw, 240px);
                     --orbital-size: clamp(130px, 14vw, 220px);
@@ -195,8 +195,7 @@ const HomePage = () => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: rgba(255, 255, 255, 0.85);
-                    backdrop-filter: blur(20px);
+                    background: rgba(255, 255, 255, 0.95);
                     border-radius: 50%;
                     padding: clamp(20px, 4vw, 40px);
                     border: 2px solid rgba(236, 72, 153, 0.15);
@@ -247,7 +246,7 @@ const HomePage = () => {
                     font-size: clamp(12px, 1.5vw, 18px);
                     font-weight: 700;
                     letter-spacing: 4px;
-                    font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+                    font-family: 'Be Vietnam Pro', 'Helvetica Neue', Arial, sans-serif;
                     color: #9d174d;
                     text-transform: uppercase;
                     animation: fadeInUp 1s ease-out 0.3s both;
@@ -277,29 +276,9 @@ const HomePage = () => {
                     50%      { opacity: 1;   transform: scale(1.2); }
                 }
 
-                @keyframes floatLogo {
-                    0%, 100% { transform: translateY(0); }
-                    50%      { transform: translateY(-10px); }
-                }
-
-                @keyframes shadowScale {
-                    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
-                    50%      { transform: translateX(-50%) scale(0.8); opacity: 0.3; }
-                }
-
-                @keyframes textShine {
-                    0%, 100% { filter: drop-shadow(0 10px 30px rgba(236, 72, 153, 0.2)); }
-                    50%      { filter: drop-shadow(0 10px 40px rgba(236, 72, 153, 0.35)); }
-                }
-
                 @keyframes gridMove {
                     0%   { transform: translateY(0); }
                     100% { transform: translateY(60px); }
-                }
-
-                @keyframes floatOrb {
-                    0%, 100% { transform: translate(0, 0); }
-                    50%      { transform: translate(-20px, -30px); }
                 }
 
                 @keyframes floatParticle {
@@ -390,6 +369,13 @@ const HomePage = () => {
                         --logo-size: 92px;
                         --orbital-size: 110px;
                         --content-gap: 16px;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .particle, .gradient-orb-1, .gradient-orb-2, .logo-container, .hrm-text, .hrm-underline, .orbital-ring {
+                        animation: none !important;
+                        transition: none !important;
                     }
                 }
             `}</style>

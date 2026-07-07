@@ -12,7 +12,7 @@ import useAccess from "@/hooks/useAccess";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { Radar, Column } from "@ant-design/charts";
+import { Radar, Column } from "@/components/common/chart/LazyChart";
 import {
     callFetchEvaluationRecordById,
     callManagerSaveScore,
@@ -126,7 +126,7 @@ const ManagerEvaluationDetailPage = () => {
             exportDetailedEvaluation(record);
         }
     };
-    
+
     if (loading) return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Spin size="large" />
@@ -332,8 +332,8 @@ const ManagerEvaluationDetailPage = () => {
                     </div>
                     <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
                         <div style={{ display: "flex", gap: "8px" }}>
-                            <Button 
-                                icon={<FileExcelOutlined />} 
+                            <Button
+                                icon={<FileExcelOutlined />}
                                 onClick={handleExportExcel}
                                 style={{ borderRadius: 6, color: "#047857", borderColor: "#34d399", background: "#ecfdf5" }}
                             >
@@ -365,10 +365,10 @@ const ManagerEvaluationDetailPage = () => {
                                 </div>
                             </>
                         )}
-                        
+
                         {/* Nếu chưa complete mà quản lý đang chấm thì vẫn hiện thẻ điểm quản lý đơn giản */}
                         {!isCompleted && record.managerTotalScore != null && (
-                             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 20px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 20px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                                 <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý chấm</div>
                                 <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{record.managerTotalScore.toFixed(2)}</div>
                             </div>
@@ -396,7 +396,7 @@ const ManagerEvaluationDetailPage = () => {
                 </div>
             )}
 
-            
+
             {/* ─── CHART ─── */}
             {radarData.length > 0 && (
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
@@ -405,17 +405,17 @@ const ManagerEvaluationDetailPage = () => {
                     </div>
                     <div style={{ height: 350 }}>
                         {uniqueItems >= 3 ? (
-                            <Radar 
-                                {...chartConfig} 
-                                shapeField="smooth" 
-                                area={{ style: { fillOpacity: 0.2 } }} 
-                                axis={{ x: { grid: true }, y: { zIndex: 1, title: false } }} 
+                            <Radar
+                                {...chartConfig}
+                                shapeField="smooth"
+                                area={{ style: { fillOpacity: 0.2 } }}
+                                axis={{ x: { grid: true }, y: { zIndex: 1, title: false } }}
                             />
                         ) : (
-                            <Column 
-                                {...chartConfig} 
+                            <Column
+                                {...chartConfig}
                                 seriesField="user"
-                                isGroup={true} 
+                                isGroup={true}
                                 group={true}
                                 maxColumnWidth={60}
                             />
@@ -494,7 +494,7 @@ const ManagerEvaluationDetailPage = () => {
                             <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Đánh giá của Quản lý</th>
                         </tr>
                         <tr>
-                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
+                            {[1, 2, 3, 4, 5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
                             <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
                             <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
                             <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>
@@ -505,165 +505,165 @@ const ManagerEvaluationDetailPage = () => {
                         {(() => {
                             let dynamicEmpTotal = 0;
                             let dynamicMgrTotal = 0;
-                            
+
                             const sectionElements = record.template?.sections?.map((section: any) => {
                                 let empTotal = 0, mgrTotal = 0;
                                 const rows: React.ReactNode[] = [];
 
-                            rows.push(
-                                <tr key={`sec-${section.id}`}>
-                                    <td colSpan={13} style={{
-                                        padding: "10px 18px",
-                                        background: "#f3f4f6",
-                                        borderTop: "1px solid #e5e7eb",
-                                        borderBottom: "1px solid #e5e7eb",
-                                        borderLeft: "4px solid #f43f5e"
-                                    }}>
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                            <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Trọng số {(section.weight * 100).toFixed(0)}%</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-
-                            section.criteria?.forEach((c: any, cIdx: number) => {
-                                const hasSub = c.subCriteria?.length > 0;
-                                const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
-                                const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
-                                
-                                let avgEmp: number | null = null;
-                                let avgMgr: number | null = null;
-
-                                if (hasSub) {
-                                    let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
-                                    c.subCriteria.forEach((sub: any) => {
-                                        const e = getScore(record.scores, sub.id, "EMPLOYEE");
-                                        const m = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                                        if (e != null) { sumEmp += e; cntEmp++; }
-                                        if (m != null) { sumMgr += m; cntMgr++; }
-                                    });
-                                    if (cntEmp > 0) avgEmp = sumEmp / c.subCriteria.length;
-                                    if (cntMgr > 0) avgMgr = sumMgr / c.subCriteria.length;
-                                    
-                                    if (avgEmp != null) empTotal += avgEmp * c.weight;
-                                    if (avgMgr != null) mgrTotal += avgMgr * c.weight;
-                                } else {
-                                    if (empScore != null) empTotal += empScore * c.weight;
-                                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
-                                }
-
                                 rows.push(
-                                    <tr key={`c-${c.id}`} className="eval-row">
-                                        <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-                                        <td style={{ ...tdB, color: "#111827" }}>
-                                            <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
-                                            {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
-                                        </td>
-                                        <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-                                        {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-                                        <td style={{ ...tdB, textAlign: "center" }}>
-                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                {(c.weight * 100).toFixed(0)}%
-                                            </span>
-                                        </td>
-                                        <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
-                                            ) : (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
-                                            )}
-                                        </td>
-                                        <td style={tdSc}>
-                                            {hasSub ? (
-                                                avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                            ) : (
-                                                empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                            )}
-                                        </td>
-                                        <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
-                                            ) : isEditable ? (
-                                                <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                    className={mgrScore == null ? "unfilled-select" : ""}
-                                                    value={mgrScore ?? undefined} loading={savingScore === c.id}
-                                                    onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
-                                            ) : (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
-                                            )}
-                                        </td>
-                                        <td style={tdSc}>
-                                            {hasSub ? (
-                                                avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                            ) : (
-                                                mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                            )}
+                                    <tr key={`sec-${section.id}`}>
+                                        <td colSpan={13} style={{
+                                            padding: "10px 18px",
+                                            background: "#f3f4f6",
+                                            borderTop: "1px solid #e5e7eb",
+                                            borderBottom: "1px solid #e5e7eb",
+                                            borderLeft: "4px solid #f43f5e"
+                                        }}>
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Trọng số {(section.weight * 100).toFixed(0)}%</span>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
 
-                                if (hasSub) {
-                                    c.subCriteria?.forEach((sub: any, si: number) => {
-                                        const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
-                                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                                        const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
-                                        
-                                        rows.push(
-                                            <tr key={`sub-${sub.id}`} className="eval-row">
-                                                <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-                                                <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
-                                                    <div style={{ fontWeight: 500 }}>{sub.name}</div>
-                                                    {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
-                                                </td>
-                                                <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-                                                {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-                                                <td style={{ ...tdB, textAlign: "center" }}>
-                                                    <span style={{ color: "#e5e7eb" }}>—</span>
-                                                </td>
-                                                <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
-                                                </td>
-                                                <td style={tdSc}>
-                                                    <span style={{ color: "#e5e7eb" }}>—</span>
-                                                </td>
-                                                <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                    {isEditable ? (
-                                                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                            className={subMgr == null ? "unfilled-select" : ""}
-                                                            value={subMgr ?? undefined} loading={savingScore === sub.id}
-                                                            onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
-                                                    ) : (
-                                                        <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
-                                                    )}
-                                                </td>
-                                                <td style={tdSc}>
-                                                    <span style={{ color: "#e5e7eb" }}>—</span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    });
-                                }
-                            });
+                                section.criteria?.forEach((c: any, cIdx: number) => {
+                                    const hasSub = c.subCriteria?.length > 0;
+                                    const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                                    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
 
-                            // Section subtotal
-                            rows.push(
-                                <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                    <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                                        Tổng kết {section.name}
-                                    </td>
-                                    <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                    <td style={{ padding: "12px", borderLeft: "none" }} />
-                                    <td style={{ padding: "12px", textAlign: "center" }}>
-                                        <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{empTotal.toFixed(2)}</span>
-                                    </td>
-                                    <td style={{ padding: "12px", borderLeft: "none" }} />
-                                    <td style={{ padding: "12px", textAlign: "center" }}>
-                                        <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
-                                    </td>
-                                </tr>
-                            );
+                                    let avgEmp: number | null = null;
+                                    let avgMgr: number | null = null;
+
+                                    if (hasSub) {
+                                        let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
+                                        c.subCriteria.forEach((sub: any) => {
+                                            const e = getScore(record.scores, sub.id, "EMPLOYEE");
+                                            const m = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                                            if (e != null) { sumEmp += e; cntEmp++; }
+                                            if (m != null) { sumMgr += m; cntMgr++; }
+                                        });
+                                        if (cntEmp > 0) avgEmp = sumEmp / c.subCriteria.length;
+                                        if (cntMgr > 0) avgMgr = sumMgr / c.subCriteria.length;
+
+                                        if (avgEmp != null) empTotal += avgEmp * c.weight;
+                                        if (avgMgr != null) mgrTotal += avgMgr * c.weight;
+                                    } else {
+                                        if (empScore != null) empTotal += empScore * c.weight;
+                                        if (mgrScore != null) mgrTotal += mgrScore * c.weight;
+                                    }
+
+                                    rows.push(
+                                        <tr key={`c-${c.id}`} className="eval-row">
+                                            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
+                                            <td style={{ ...tdB, color: "#111827" }}>
+                                                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
+                                                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
+                                            </td>
+                                            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
+                                            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
+                                            <td style={{ ...tdB, textAlign: "center" }}>
+                                                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                                                    {(c.weight * 100).toFixed(0)}%
+                                                </span>
+                                            </td>
+                                            <td style={{ ...tdSc, borderLeft: "none" }}>
+                                                {hasSub ? (
+                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
+                                                ) : (
+                                                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
+                                                )}
+                                            </td>
+                                            <td style={tdSc}>
+                                                {hasSub ? (
+                                                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                                ) : (
+                                                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                                )}
+                                            </td>
+                                            <td style={{ ...tdSc, borderLeft: "none" }}>
+                                                {hasSub ? (
+                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
+                                                ) : isEditable ? (
+                                                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                                                        className={mgrScore == null ? "unfilled-select" : ""}
+                                                        value={mgrScore ?? undefined} loading={savingScore === c.id}
+                                                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                                                ) : (
+                                                    <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
+                                                )}
+                                            </td>
+                                            <td style={tdSc}>
+                                                {hasSub ? (
+                                                    avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                                ) : (
+                                                    mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+
+                                    if (hasSub) {
+                                        c.subCriteria?.forEach((sub: any, si: number) => {
+                                            const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
+                                            const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                                            const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
+
+                                            rows.push(
+                                                <tr key={`sub-${sub.id}`} className="eval-row">
+                                                    <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+                                                    <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
+                                                        <div style={{ fontWeight: 500 }}>{sub.name}</div>
+                                                        {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
+                                                    </td>
+                                                    <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
+                                                    {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
+                                                    <td style={{ ...tdB, textAlign: "center" }}>
+                                                        <span style={{ color: "#e5e7eb" }}>—</span>
+                                                    </td>
+                                                    <td style={{ ...tdSc, borderLeft: "none" }}>
+                                                        <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
+                                                    </td>
+                                                    <td style={tdSc}>
+                                                        <span style={{ color: "#e5e7eb" }}>—</span>
+                                                    </td>
+                                                    <td style={{ ...tdSc, borderLeft: "none" }}>
+                                                        {isEditable ? (
+                                                            <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                                                                className={subMgr == null ? "unfilled-select" : ""}
+                                                                value={subMgr ?? undefined} loading={savingScore === sub.id}
+                                                                onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                                                        ) : (
+                                                            <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={tdSc}>
+                                                        <span style={{ color: "#e5e7eb" }}>—</span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    }
+                                });
+
+                                // Section subtotal
+                                rows.push(
+                                    <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
+                                        <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                            Tổng kết {section.name}
+                                        </td>
+                                        <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
+                                        <td style={{ padding: "12px", borderLeft: "none" }} />
+                                        <td style={{ padding: "12px", textAlign: "center" }}>
+                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{empTotal.toFixed(2)}</span>
+                                        </td>
+                                        <td style={{ padding: "12px", borderLeft: "none" }} />
+                                        <td style={{ padding: "12px", textAlign: "center" }}>
+                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
+                                        </td>
+                                    </tr>
+                                );
 
                                 dynamicEmpTotal += empTotal;
                                 dynamicMgrTotal += mgrTotal;

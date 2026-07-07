@@ -818,6 +818,8 @@ const LotusCharmAssistant = () => {
                         src="/logo/logolinhvat.png"
                         alt="Trợ lý Lotus-chan"
                         draggable={false}
+                        width={138}
+                        height={138}
                         style={{
                             width: 138,
                             height: "auto",

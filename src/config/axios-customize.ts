@@ -1,8 +1,6 @@
 import type { IBackendRes } from "@/types/backend";
 import axios from "axios";
 import { Mutex } from "async-mutex";
-import { store } from "@/redux/store";
-import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { notification } from "antd";
 
 interface AccessTokenResponse {
@@ -93,6 +91,8 @@ instance.interceptors.response.use(
                 return instance.request(originalRequest);
             } else {
                 // Refresh token fail -> Bắt buộc logout
+                const { store } = await import("@/redux/store");
+                const { setLogoutAction } = await import("@/redux/slice/accountSlide");
                 store.dispatch(setLogoutAction());
                 localStorage.removeItem("access_token");
                 window.location.href = '/login';
@@ -107,6 +107,8 @@ instance.interceptors.response.use(
             originalRequest.url?.includes("/api/v1/auth/refresh")
         ) {
             // 1. Xóa sạch mọi token lưu trong localStorage và reset Redux
+            const { store } = await import("@/redux/store");
+            const { setLogoutAction } = await import("@/redux/slice/accountSlide");
             store.dispatch(setLogoutAction());
             localStorage.removeItem("access_token");
 

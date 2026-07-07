@@ -1,30 +1,21 @@
 import { useRef, useState } from "react";
 import { Button, Input, Popconfirm } from "antd";
 import { PlusOutlined, DeleteOutlined, HolderOutlined } from "@ant-design/icons";
-import type { LocalSectionTask, LocalTaskItem } from "../index";
+import type { LocalSectionTask, LocalTaskItem } from "./DepartmentMissionDetail";
 
 const ACCENT = "#e8637a";
 const COLORS = ["#e8637a", "#4a9eff", "#52c41a", "#fa8c16", "#722ed1", "#13c2c2"];
 
 function SectionHeader({ label, count }: { label: string; count: string }) {
     return (
-        <div style={{
-            display: "flex", alignItems: "center",
-            justifyContent: "space-between", marginBottom: 16,
-        }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{
-                    width: 3, height: 16, borderRadius: 2,
-                    background: ACCENT, display: "inline-block",
-                }} />
-                <span style={{
-                    fontSize: 11, fontWeight: 700, letterSpacing: ".08em",
-                    textTransform: "uppercase", color: "#555",
-                }}>
+        <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+                <span className="w-1 h-4 rounded-sm bg-[#e8637a] inline-block" />
+                <span className="text-[11px] font-bold tracking-[.08em] uppercase text-gray-500">
                     {label}
                 </span>
             </div>
-            <span style={{ fontSize: 12, color: "#aaa" }}>{count}</span>
+            <span className="text-xs text-gray-400">{count}</span>
         </div>
     );
 }
@@ -148,15 +139,7 @@ const TasksSection = ({
                             const color = COLORS[si % COLORS.length];
 
                             return (
-                                <div key={sec.sectionId} style={{
-                                    background: "#fff",
-                                    border: "1px solid #f0f0f0",
-                                    borderRadius: 12,
-                                    overflow: "hidden",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    height: "100%",
-                                }}>
+                                <div key={sec.sectionId} className="bg-white border border-gray-100 rounded-xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow transition-shadow">
                                     {/* card header */}
                                     <div style={{
                                         display: "flex", alignItems: "center",
@@ -235,18 +218,10 @@ const TasksSection = ({
                                                     }}
                                                 >
                                                     {editMode && (
-                                                        <HolderOutlined style={{
-                                                            color: "#ccc", fontSize: 12,
-                                                            flexShrink: 0, paddingTop: 4,
-                                                            cursor: "grab",
-                                                        }} />
+                                                        <HolderOutlined className="text-gray-300 text-xs shrink-0 mt-1.5 cursor-grab" />
                                                     )}
 
-                                                    <span style={{
-                                                        fontSize: 11, color: "#ccc",
-                                                        fontWeight: 600, minWidth: 16,
-                                                        flexShrink: 0, paddingTop: 2,
-                                                    }}>
+                                                    <span className="text-[11px] text-gray-400 font-bold min-w-[16px] shrink-0 mt-[5px]">
                                                         {idx + 1}
                                                     </span>
 
@@ -257,24 +232,18 @@ const TasksSection = ({
                                                             placeholder={"Nhập nhiệm vụ…"}
                                                             size="small"
                                                             autoSize={{ minRows: 2, maxRows: 8 }}
-                                                            style={{ flex: 1, fontSize: 12.5, resize: "none" }}
+                                                            variant="borderless"
+                                                            className="flex-1 !px-2 !py-0.5 text-[12.5px] bg-gray-50 focus:bg-white border border-transparent focus:border-blue-400 focus:shadow-[0_0_0_2px_rgba(24,144,255,0.2)] rounded transition-all resize-none"
                                                         />
                                                     ) : (
-                                                        <div style={{ flex: 1, fontSize: 13, color: "#222", lineHeight: 1.6 }}>
+                                                        <div className="flex-1 text-[13px] text-gray-800 leading-relaxed mt-1">
                                                             {task.content.split("\n").map((line, li) => {
                                                                 const isBullet = /^[\*\-]\s/.test(line.trimStart());
                                                                 const text = isBullet ? line.trimStart().replace(/^[\*\-]\s/, "") : line;
                                                                 return (
-                                                                    <div key={li} style={{
-                                                                        display: "flex", alignItems: "flex-start", gap: 6,
-                                                                        marginTop: li > 0 ? 3 : 0,
-                                                                    }}>
+                                                                    <div key={li} className={`flex items-start gap-1.5 ${li > 0 ? 'mt-1' : ''}`}>
                                                                         {isBullet && (
-                                                                            <span style={{
-                                                                                marginTop: 5, width: 5, height: 5,
-                                                                                borderRadius: "50%", background: "#999",
-                                                                                flexShrink: 0,
-                                                                            }} />
+                                                                            <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-400 shrink-0" />
                                                                         )}
                                                                         <span>{text}</span>
                                                                     </div>
@@ -307,11 +276,7 @@ const TasksSection = ({
                                                 icon={<PlusOutlined />}
                                                 onClick={() => addTask(sec.sectionId)}
                                                 block
-                                                style={{
-                                                    marginTop: "auto",
-                                                    color: "#aaa",
-                                                    borderColor: "#e0e0e0"
-                                                }}
+                                                className="mt-auto h-8 text-gray-500 border-gray-300 hover:text-blue-500 hover:border-blue-500"
                                             >
                                                 Thêm nhiệm vụ
                                             </Button>
@@ -352,57 +317,42 @@ const TasksSection = ({
                                     onDragLeave={() => setDragOverGeneral(null)}
                                     onDrop={() => handleGeneralDrop(i)}
                                     onDragEnd={() => { dragSrcGeneral.current = null; setDragOverGeneral(null); }}
-                                    style={{
-                                        display: "flex", alignItems: "center", gap: 12,
-                                        background: isDragOver ? "#fafafa" : "#fff",
-                                        border: isDragOver ? "1.5px dashed #d0d0d0" : "1px solid #f0f0f0",
-                                        borderRadius: 10, padding: "12px 16px",
-                                        cursor: editMode ? "grab" : "default",
-                                        transition: "background .15s",
-                                    }}
+                                    className={`flex items-start gap-3 p-3 sm:px-4 rounded-lg border ${isDragOver ? 'bg-gray-50 border-dashed border-gray-300' : 'bg-white border-gray-100'} ${editMode ? 'cursor-grab' : 'cursor-default'} shadow-sm hover:shadow-md transition-all`}
+                                    style={{ outline: isDragOver ? `1.5px dashed ${COLORS[0]}55` : "none" }}
                                 >
-                                    {editMode && (
-                                        <HolderOutlined style={{ color: "#ccc", fontSize: 13, cursor: "grab" }} />
-                                    )}
+                                        {editMode && (
+                                            <HolderOutlined className="text-gray-300 text-[13px] shrink-0 mt-2" />
+                                        )}
 
-                                    <span style={{
-                                        fontSize: 12, color: "#ccc", fontWeight: 600,
-                                        minWidth: 20, flexShrink: 0, textAlign: "right",
-                                    }}>
-                                        {i + 1}
-                                    </span>
+                                        <span className="min-w-6 h-6 rounded-full bg-gray-50 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                            {i + 1}
+                                        </span>
 
-                                    {editMode ? (
-                                        <Input.TextArea
-                                            value={task.content}
-                                            onChange={(e) => updateGeneral(i, e.target.value)}
-                                            placeholder={"Nhập nội dung nhiệm vụ…"}
-                                            autoSize={{ minRows: 2, maxRows: 8 }}
-                                            style={{ flex: 1, resize: "none" }}
-                                        />
-                                    ) : (
-                                        <div style={{ flex: 1, fontSize: 14, color: "#111", lineHeight: 1.65 }}>
-                                            {task.content.split("\n").map((line, li) => {
-                                                const isBullet = /^[\*\-]\s/.test(line.trimStart());
-                                                const text = isBullet ? line.trimStart().replace(/^[\*\-]\s/, "") : line;
-                                                return (
-                                                    <div key={li} style={{
-                                                        display: "flex", alignItems: "flex-start", gap: 6,
-                                                        marginTop: li > 0 ? 4 : 0,
-                                                    }}>
-                                                        {isBullet && (
-                                                            <span style={{
-                                                                marginTop: 7, width: 5, height: 5,
-                                                                borderRadius: "50%", background: "#999",
-                                                                flexShrink: 0,
-                                                            }} />
-                                                        )}
-                                                        <span>{text}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                        {editMode ? (
+                                            <Input.TextArea
+                                                value={task.content}
+                                                onChange={(e) => updateGeneral(i, e.target.value)}
+                                                placeholder={"Nhập nội dung nhiệm vụ…"}
+                                                autoSize={{ minRows: 2, maxRows: 8 }}
+                                                variant="borderless"
+                                                className="flex-1 !px-2 !py-1 text-sm bg-gray-50 focus:bg-white border border-transparent focus:border-blue-400 focus:shadow-[0_0_0_2px_rgba(24,144,255,0.2)] rounded transition-all resize-none"
+                                            />
+                                        ) : (
+                                            <div className="flex-1 text-sm text-gray-900 leading-relaxed mt-0.5">
+                                                {task.content.split("\n").map((line, li) => {
+                                                    const isBullet = /^[\*\-]\s/.test(line.trimStart());
+                                                    const text = isBullet ? line.trimStart().replace(/^[\*\-]\s/, "") : line;
+                                                    return (
+                                                        <div key={li} className={`flex items-start gap-1.5 ${li > 0 ? 'mt-1.5' : ''}`}>
+                                                            {isBullet && (
+                                                                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0" />
+                                                            )}
+                                                            <span>{text}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
 
                                     {editMode && (
                                         <Popconfirm
@@ -411,7 +361,7 @@ const TasksSection = ({
                                             okText="Xoá" cancelText="Huỷ"
                                             okButtonProps={{ danger: true }}
                                         >
-                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} className="mt-0.5" />
                                         </Popconfirm>
                                     )}
                                 </div>
@@ -422,7 +372,7 @@ const TasksSection = ({
                             <Button
                                 type="dashed" icon={<PlusOutlined />}
                                 onClick={addGeneral} block
-                                style={{ marginTop: 4, color: "#aaa", borderColor: "#e0e0e0" }}
+                                className="mt-1 h-10 text-gray-500 border-gray-300 hover:text-blue-500 hover:border-blue-500"
                             >
                                 Thêm nhiệm vụ
                             </Button>

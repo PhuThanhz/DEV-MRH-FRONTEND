@@ -11,82 +11,66 @@ const Loading: React.FC<{ message?: string }> = ({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 16,
-                background: "#fff",
+                gap: 20,
+                background: "#ffffff",
             }}
         >
-            {/* Ring + icon */}
+            {/* Premium Single-Ring Spinner Container */}
             <div
                 style={{
                     position: "relative",
-                    width: 72,
-                    height: 72,
+                    width: 96,
+                    height: 96,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                 }}
             >
+                {/* SVG Single-Ring Spinner */}
                 <svg
-                    viewBox="0 0 72 72"
-                    fill="none"
+                    viewBox="0 0 100 100"
                     style={{
                         position: "absolute",
-                        inset: 0,
-                        animation: "spin 1.8s linear infinite",
+                        width: "100%",
+                        height: "100%",
+                        animation: "spin 1.2s linear infinite",
+                        transformOrigin: "center",
                     }}
                 >
-                    {/* Track */}
-                    <circle cx="36" cy="36" r="31" stroke="#FBEAF0" strokeWidth="5" />
-                    {/* Arc đổi màu */}
+                    {/* ONLY one elegant rotating arc with rounded caps */}
                     <circle
-                        cx="36"
-                        cy="36"
-                        r="31"
+                        cx="50"
+                        cy="50"
+                        r="44"
                         stroke="#D4537E"
-                        strokeWidth="5"
+                        strokeWidth="3"
                         strokeLinecap="round"
-                        strokeDasharray="200"
-                        style={{
-                            animation: "dash 1.8s ease-in-out infinite",
-                            transformOrigin: "center",
-                        }}
+                        strokeDasharray="100 180"
+                        fill="none"
                     />
                 </svg>
 
-                {/* Icon giữa */}
-                <div
+                {/* Lotus Logo in the center */}
+                <img
+                    src="/logo/LOGOFINAL.png"
+                    alt="Lotus"
                     style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        background: "#FBEAF0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        animation: "breathe 1.8s ease-in-out infinite",
+                        width: 60,
+                        height: 60,
+                        objectFit: "contain",
+                        zIndex: 2,
                     }}
-                >
-                    <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#993556"
-                        strokeWidth="1.8"
-                    >
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                </div>
+                />
             </div>
 
-            {/* Text */}
+            {/* Soft, minimal text */}
             <p
                 style={{
                     margin: 0,
-                    fontSize: 13,
-                    color: "#D4537E",
-                    animation: "txt 1.8s ease-in-out infinite",
+                    fontSize: "12px",
+                    color: "#8c8c8c",
+                    fontWeight: 500,
+                    letterSpacing: "0.2px",
                 }}
             >
                 {message}
@@ -94,20 +78,9 @@ const Loading: React.FC<{ message?: string }> = ({
 
             <style>{`
                 @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes dash {
-                    0%   { stroke-dashoffset: 200; stroke: #D4537E; }
-                    50%  { stroke-dashoffset: 40;  stroke: #ED93B1; }
-                    100% { stroke-dashoffset: 200; stroke: #D4537E; }
-                }
-                @keyframes breathe {
-                    0%, 100% { transform: scale(0.92); }
-                    50%      { transform: scale(1.08); }
-                }
-                @keyframes txt {
-                    0%, 100% { opacity: 0.4; }
-                    50%      { opacity: 1;   }
+                    100% {
+                        transform: rotate(360deg);
+                    }
                 }
             `}</style>
         </div>

@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /evaluation/
+Disallow: /auth/
+Disallow: /accounting/

@@ -1,3 +1,4 @@
+import React from "react";
 import { Tag, Space, Popconfirm, Tooltip } from "antd";
 import { EyeOutlined, EditOutlined, DeleteOutlined, QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { MoreOutlined } from "@ant-design/icons";
@@ -5,7 +6,6 @@ import { Dropdown } from "antd";
 import type { ProColumns } from "@ant-design/pro-components";
 import dayjs from "dayjs";
 
-import Access from "@/components/share/access";
 import type { IProcedure, ProcedureType } from "@/types/backend";
 
 export const statusMap: Record<string, { label: string; color: string }> = {
@@ -13,6 +13,66 @@ export const statusMap: Record<string, { label: string; color: string }> = {
     IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
     NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
     TERMINATED: { label: "Hết hiệu lực", color: "red" },
+};
+
+// Static style definitions to avoid object recreation on every render
+const AVATAR_STYLE: React.CSSProperties = {
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: "#eef2ff",
+    color: "#4f46e5",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 600,
+    flexShrink: 0,
+};
+
+const NAME_STYLE: React.CSSProperties = {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#111827",
+    lineHeight: "18px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: 140,
+};
+
+const EMAIL_STYLE: React.CSSProperties = {
+    fontSize: 11,
+    color: "#6b7280",
+    lineHeight: "16px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: 140,
+};
+
+const QR_BTN_STYLE: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    cursor: "pointer",
+    background: "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)",
+    border: "1.5px solid #ff85c0",
+    transition: "all 0.2s ease",
+    boxShadow: "0 1px 4px rgba(255,133,192,0.15)",
+};
+
+const CONTAINER_GAP_STYLE: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+};
+
+const MIN_WIDTH_STYLE: React.CSSProperties = {
+    minWidth: 0,
 };
 
 interface BuildColumnsParams {
@@ -172,28 +232,15 @@ export const buildProcedureColumns = ({
                 const name = record.createdByName ?? record.createdBy ?? "—";
                 const email = record.createdBy ?? "";
                 return (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                            width: 32, height: 32, borderRadius: "50%",
-                            background: "#eef2ff", color: "#4f46e5",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 12, fontWeight: 600, flexShrink: 0,
-                        }}>
+                    <div style={CONTAINER_GAP_STYLE}>
+                        <div style={AVATAR_STYLE}>
                             {name !== "—" ? name.charAt(0).toUpperCase() : "?"}
                         </div>
-                        <div style={{ minWidth: 0 }}>
-                            <div style={{
-                                fontSize: 13, fontWeight: 600, color: "#111827",
-                                lineHeight: "18px", overflow: "hidden",
-                                textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140,
-                            }}>
+                        <div style={MIN_WIDTH_STYLE}>
+                            <div style={NAME_STYLE}>
                                 {name}
                             </div>
-                            <div style={{
-                                fontSize: 11, color: "#6b7280", lineHeight: "16px",
-                                overflow: "hidden", textOverflow: "ellipsis",
-                                whiteSpace: "nowrap", maxWidth: 140,
-                            }}>
+                            <div style={EMAIL_STYLE}>
                                 {email || "—"}
                             </div>
                         </div>
@@ -209,13 +256,7 @@ export const buildProcedureColumns = ({
                 <Tooltip title="Xem mã QR nội bộ" placement="top">
                     <div
                         onClick={() => onQrClick(record)}
-                        style={{
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            width: 34, height: 34, borderRadius: 8, cursor: "pointer",
-                            background: "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)",
-                            border: "1.5px solid #ff85c0", transition: "all 0.2s ease",
-                            boxShadow: "0 1px 4px rgba(255,133,192,0.15)",
-                        }}
+                        style={QR_BTN_STYLE}
                         onMouseEnter={e => {
                             const el = e.currentTarget;
                             el.style.background = "linear-gradient(135deg, #ff4d94 0%, #eb2f7a 100%)";

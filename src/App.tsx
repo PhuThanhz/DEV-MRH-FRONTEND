@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { useAppDispatch } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
-import LayoutAdmin from '@/components/layout/admin/layout.admin';
 import ProtectedRoute from 'components/share/protected-route.ts';
 import { fetchAccount, setLogoutAction } from './redux/slice/accountSlide';
 import LayoutApp from './components/share/layout.app';
@@ -20,12 +19,13 @@ const CompanyPage = lazy(() => import("./pages/admin/company/company"));
 const DepartmentPage = lazy(() => import("./pages/admin/department/department"));
 const SectionPage = lazy(() => import("@/pages/admin/section/section"));
 const PositionLevelPage = lazy(() => import("@/pages/admin/position-levels/position-levels"));
-const PermissionPage = lazy(() => import("./pages/admin/permission/permission"));
-const RolePage = lazy(() => import("./pages/admin/role/role"));
+const PermissionPage = lazy(() => import("@/pages/admin/permission/permission"));
+const RolePage = lazy(() => import("@/pages/admin/role/role"));
 const JobTitlePage = lazy(() => import("@/pages/admin/job-title/job-title.page"));
 const CareerPathPage = lazy(() => import("@/pages/admin/department/career-path/CareerPathPage"));
 const DepartmentPermissionPage = lazy(() => import("@/pages/admin/department/permissions"));
 const DepartmentObjectivesTasksPage = lazy(() => import("@/pages/admin/department/objectives-tasks"));
+const MissionConsolePage = lazy(() => import("@/pages/admin/department/mission-console"));
 const CompanyOrgChartPage = lazy(() => import("@/pages/admin/company/org-chart"));
 const SalaryRangePage = lazy(() => import("@/pages/admin/salary-range/SalaryRangePage"));
 const ProcessActionPage = lazy(() => import("@/pages/admin/process-action"));
@@ -38,6 +38,7 @@ const ProcedureAdminPage = lazy(() => import("@/pages/admin/procedures"));
 const CompanyProceduresPage = lazy(() => import("@/pages/admin/company/procedures"));
 const DepartmentProceduresPage = lazy(() => import("@/pages/admin/department/procedures"));
 const DashboardOrWelcome = lazy(() => import("@/pages/admin/DashboardOrWelcome"));
+const LayoutAdmin = lazy(() => import('@/components/layout/admin/layout.admin'));
 const PersonalOverviewPage = lazy(() => import("@/pages/admin/overview/PersonalOverviewPage"));
 const WelcomePage = lazy(() => import("@/pages/admin/WelcomePage"));
 const PositionChartPage = lazy(() => import("@/pages/admin/department/position-chart/index"));
@@ -49,6 +50,8 @@ const DocumentCategoryPage = lazy(() => import("@/pages/admin/document-category"
 const DocumentPage = lazy(() => import("@/pages/admin/document"));
 const PersonalDrivePage = lazy(() => import("@/pages/admin/personal-drive"));
 const AccountingDossierPage = lazy(() => import("@/pages/admin/accounting-dossiers"));
+const DossierQrDetail = lazy(() => import("@/pages/admin/accounting-dossiers/DossierQrDetail"));
+const AccountingReportsPage = lazy(() => import("@/pages/admin/accounting-reports"));
 const AccountingDocumentPage = lazy(() => import("@/pages/admin/accounting"));
 const AccountingDocumentCategoryPage = lazy(() => import("@/pages/admin/accounting-document-category"));
 const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/EvaluationProcessPage"));
@@ -97,7 +100,6 @@ export default function App() {
           <LayoutAdmin />
         </LayoutApp>
       ),
-      errorElement: <NotFound />,
       children: [
         {
           index: true,
@@ -160,6 +162,16 @@ export default function App() {
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.COMPANIES.GET_PAGINATE}>
                 <CompanyOrgChartPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/admin/departments/mission-console",
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW}>
+                <MissionConsolePage />
               </Access>
             </ProtectedRoute>
           ),
@@ -277,6 +289,14 @@ export default function App() {
           ),
         },
         {
+          path: "accounting-dossiers/qr/:token",
+          element: (
+            <ProtectedRoute>
+              <DossierQrDetail />
+            </ProtectedRoute>
+          ),
+        },
+        {
           path: PATHS.ADMIN.CAREER_PATH,
           element: (
             <ProtectedRoute>
@@ -389,6 +409,16 @@ export default function App() {
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE}>
                 <AccountingDossierPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "/admin/accounting-reports",
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_DASHBOARD_SUMMARY}>
+                <AccountingReportsPage />
               </Access>
             </ProtectedRoute>
           ),

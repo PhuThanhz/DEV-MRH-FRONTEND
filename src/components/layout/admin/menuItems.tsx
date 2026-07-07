@@ -22,6 +22,7 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 interface Permission {
     apiPath: string;
     method: string;
+    module?: string;
 }
 
 export const generateMenuItems = (permissions: Permission[] | undefined, roleName: string = "") => {
@@ -32,10 +33,21 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
         return [];
     }
 
+    const matchApiPath = (pattern: string, path: string) => {
+        if (!pattern || !path) return false;
+
+        const toRegex = (value: string) =>
+            new RegExp(`^${value.replace(/\{[^/]+\}/g, "[^/]+").replace(/\*/g, "[^/]+")}$`);
+
+        return toRegex(pattern).test(path) || toRegex(path).test(pattern);
+    };
+
     const checkPermission = (perm: Permission) =>
         permissions?.find(
             (item) =>
-                item.apiPath === perm.apiPath && item.method === perm.method
+                item.method?.toUpperCase() === perm.method?.toUpperCase() &&
+                item.module === perm.module &&
+                matchApiPath(perm.apiPath, item.apiPath)
         ) || isAclDisabled;
 
     // ── pre-check từng nhóm ──
@@ -107,7 +119,9 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
         // Nhóm con: Công ty & Cấu trúc tổ chức
         ...(checkPermission(ALL_PERMISSIONS.COMPANIES.GET_PAGINATE) ||
             checkPermission(ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE) ||
-            checkPermission(ALL_PERMISSIONS.SECTIONS.GET_PAGINATE)
+            checkPermission(ALL_PERMISSIONS.SECTIONS.GET_PAGINATE) ||
+            checkPermission(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW) ||
+            checkPermission(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.CREATE)
             ? [
                 {
                     type: "subgroup",
@@ -127,6 +141,15 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                                 {
                                     label: <Link to="/admin/departments">Phòng ban</Link>,
                                     key: "/admin/departments",
+                                },
+                            ]
+                            : []),
+                        ...(checkPermission(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.VIEW) ||
+                            checkPermission(ALL_PERMISSIONS.DEPARTMENT_OBJECTIVES.CREATE)
+                            ? [
+                                {
+                                    label: <Link to="/admin/departments/mission-console">Mục tiêu - Nhiệm vụ</Link>,
+                                    key: "/admin/departments/mission-console",
                                 },
                             ]
                             : []),
@@ -254,6 +277,14 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                                 {
                                     label: <Link to="/admin/accounting-documents">Chứng từ kế toán</Link>,
                                     key: "/admin/accounting-documents",
+                                },
+                            ]
+                            : []),
+                        ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_DASHBOARD_SUMMARY)
+                            ? [
+                                {
+                                    label: <Link to="/admin/accounting-reports">Báo cáo & Thống kê</Link>,
+                                    key: "/admin/accounting-reports",
                                 },
                             ]
                             : []),

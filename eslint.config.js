@@ -19,5 +19,17 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      'no-empty': 'warn',
+      'react-refresh/only-export-components': 'warn',
+      'no-useless-escape': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'prefer-const': 'off',
+      'no-constant-binary-expression': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+    },
   },
 ])

@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Form, Input, Button, Upload, message, Spin, Modal } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import { CloseOutlined, EditOutlined } from "@ant-design/icons";
 
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { callUploadSingleFile, callUpdateProfile } from "@/config/api";
@@ -15,13 +15,18 @@ import type { IReqUpdateProfileDTO } from "@/types/backend";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { getModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
+import { useBreakpoint } from "@/hooks/useIsMobile";
+import backgroundTrangCaNhan from "../../../../backgroundtrangcanhan.png";
 
 /* ═══════════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════════ */
+   CONSTANTS & STYLES (Awwwards-Tier)
+   ═══════════════════════════════════════════ */
 export const PINK = "#f5317f";
 export const PINK_LIGHT = "#fff0f6";
 export const PINK_BORDER = "rgba(245,49,127,0.2)";
+
+// Custom spring transition
+export const TASTE_TRANSITION = "all 0.6s cubic-bezier(0.16, 1, 0.3, 1)";
 
 export const SOURCE_CFG = {
     COMPANY: {
@@ -60,7 +65,7 @@ export const SOURCE_CFG = {
 
 /* ═══════════════════════════════════════════
    HELPERS
-═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 export const getInitials = (name?: string) => {
     if (!name) return "?";
     const p = name.trim().split(" ");
@@ -74,7 +79,7 @@ export const genderLabel = (g?: string | null) =>
 
 /* ═══════════════════════════════════════════
    AvatarLightbox
-═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 interface AvatarLightboxProps {
     open: boolean;
     onClose: () => void;
@@ -84,13 +89,19 @@ interface AvatarLightboxProps {
     userEmail?: string;
     onFileSelect: (f: File) => false;
     disabled?: boolean;
+    positions?: any[];
 }
 
 export const AvatarLightbox = ({
     open, onClose, displayAvatar, initials,
-    userName, userEmail, onFileSelect, disabled,
+    userName, userEmail, onFileSelect, disabled, positions = [],
 }: AvatarLightboxProps) => {
     const [uploadHover, setUploadHover] = useState(false);
+    const [avatarError, setAvatarError] = useState(false);
+
+    useEffect(() => {
+        setAvatarError(false);
+    }, [displayAvatar]);
 
     return (
         <Modal
@@ -98,7 +109,7 @@ export const AvatarLightbox = ({
             onCancel={onClose}
             footer={null}
             centered
-            width={getModalWidth(380)}
+            width={getModalWidth(440)}
             maskClosable
             closable={false}
             styles={{
@@ -156,8 +167,8 @@ export const AvatarLightbox = ({
                     }} />
                     <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
 
-                    {displayAvatar
-                        ? <img src={displayAvatar} alt="avatar" style={{
+                    {displayAvatar && !avatarError
+                        ? <img src={displayAvatar} alt="avatar" onError={() => setAvatarError(true)} style={{
                             width: 160, height: 160, borderRadius: "50%", objectFit: "cover",
                             border: "4px solid #fff",
                             boxShadow: "0 8px 32px rgba(245,49,127,0.25)",
@@ -174,12 +185,7 @@ export const AvatarLightbox = ({
                         }}>{initials}</div>
                     }
 
-                    <div style={{
-                        position: "absolute", bottom: 8, right: 8, zIndex: 2,
-                        width: 16, height: 16, borderRadius: "50%",
-                        background: "#3EBF8F", border: "3px solid #fff",
-                        boxShadow: "0 2px 6px rgba(62,191,143,0.4)",
-                    }} />
+
                 </div>
             </div>
 
@@ -203,15 +209,52 @@ export const AvatarLightbox = ({
                 }}>
                     {userEmail}
                 </div>
-                <div style={{
-                    display: "flex", alignItems: "center", gap: 5,
-                    marginTop: 10, fontSize: 11, color: "#3EBF8F", fontWeight: 500,
-                }}>
-                    <div style={{
-                        width: 6, height: 6, borderRadius: "50%", background: "#3EBF8F",
-                        boxShadow: "0 0 6px rgba(62,191,143,0.6)",
-                    }} />
-                    Đang hoạt động
+                {/* Job title badges */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 14 }}>
+                    {positions.length > 0 ? (
+                        <>
+                            {/* Combined Title & Level Capsule */}
+                            <span style={{
+                                display: "inline-flex", alignItems: "center", gap: 8,
+                                fontSize: 12, padding: "5px 16px", borderRadius: 999,
+                                background: "#f8fafc", border: "1px solid #e2e8f0",
+                                maxWidth: "100%", boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+                            }}>
+                                <span style={{
+                                    fontWeight: 600, color: "#334155",
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                    maxWidth: 240
+                                }}>
+                                    {positions[0]?.jobTitle?.nameVi ?? positions[0]?.name ?? "—"}
+                                </span>
+                                {(positions[0]?.jobTitle?.positionCode || positions[0]?.levelCode) && (
+                                    <>
+                                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#cbd5e1" }} />
+                                        <span style={{ color: PINK, fontWeight: 700 }}>
+                                            {positions[0]?.jobTitle?.positionCode ?? positions[0]?.levelCode}
+                                        </span>
+                                    </>
+                                )}
+                            </span>
+                            
+                            {/* Extra count badge */}
+                            {positions.length > 1 && (
+                                <span style={{
+                                    display: "inline-flex", alignItems: "center",
+                                    fontSize: 11, fontWeight: 700,
+                                    padding: "5px 10px", borderRadius: 999,
+                                    background: "#fff1f2", color: "#e11d48",
+                                    border: "1px solid #ffe4e6",
+                                }}>
+                                    +{positions.length - 1}
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <span style={{
+                            fontSize: 11, color: "#cbd5e1", fontStyle: "italic",
+                        }}>Chưa có chức danh</span>
+                    )}
                 </div>
 
                 <div style={{
@@ -252,164 +295,34 @@ export const AvatarLightbox = ({
 };
 
 /* ═══════════════════════════════════════════
-   HeroBanner
-═══════════════════════════════════════════ */
-interface HeroBannerProps {
-    displayAvatar: string; initials: string;
-    userName?: string; userEmail?: string; positionCount: number;
-    onAvatarClick: () => void; onFileSelect: (f: File) => false; disabled?: boolean;
-}
-
-export const HeroBanner = ({
-    displayAvatar, initials, userName, userEmail,
-    positionCount, onAvatarClick, onFileSelect, disabled,
-}: HeroBannerProps) => {
-    const [hover, setHover] = useState(false);
-
-    return (
-        <div style={{
-            background: "linear-gradient(135deg, #fff0f6 0%, #fce7f3 100%)",
-            border: `1px solid ${PINK_BORDER}`,
-            borderRadius: 14,
-            padding: "14px 16px",
-            position: "relative", overflow: "hidden",
-            display: "flex", alignItems: "center", gap: 12,
-            marginBottom: 20,
-            flexWrap: "wrap",       // ← responsive: wrap trên mobile
-        }}>
-            <div style={{
-                position: "absolute", top: -30, right: -30,
-                width: 120, height: 120, borderRadius: "50%",
-                background: "rgba(245,49,127,0.07)", pointerEvents: "none",
-            }} />
-
-            {/* Avatar */}
-            <div
-                style={{ position: "relative", flexShrink: 0, cursor: "pointer", zIndex: 1 }}
-                onClick={onAvatarClick}
-                onMouseEnter={() => setHover(true)}
-                onMouseLeave={() => setHover(false)}
-            >
-                {displayAvatar
-                    ? <img src={displayAvatar} alt="avatar" style={{
-                        width: 56, height: 56, borderRadius: "50%", objectFit: "cover",
-                        border: `2px solid ${PINK_BORDER}`,
-                        transition: "transform .2s",
-                        transform: hover ? "scale(1.06)" : "scale(1)",
-                        display: "block",
-                        boxShadow: "0 4px 14px rgba(245,49,127,0.18)",
-                    }} />
-                    : <div style={{
-                        width: 56, height: 56, borderRadius: "50%",
-                        background: `linear-gradient(145deg,#ff9dc4,${PINK})`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 17, fontWeight: 700, color: "#fff",
-                        border: `2px solid ${PINK_BORDER}`,
-                        transition: "transform .2s",
-                        transform: hover ? "scale(1.06)" : "scale(1)",
-                        boxShadow: "0 4px 14px rgba(245,49,127,0.18)",
-                    }}>{initials}</div>
-                }
-                <div style={{
-                    position: "absolute", inset: 0, borderRadius: "50%",
-                    background: "rgba(245,49,127,0.55)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: hover ? 1 : 0, transition: "opacity .15s",
-                }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">
-                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                    </svg>
-                </div>
-                <div style={{
-                    position: "absolute", bottom: 2, right: 2,
-                    width: 10, height: 10, borderRadius: "50%",
-                    background: "#3EBF8F", border: "2px solid #fce7f3",
-                }} />
-            </div>
-
-            {/* Name / email / tags */}
-            <div style={{ zIndex: 1, flex: 1, minWidth: 0 }}>
-                <div style={{
-                    fontSize: 16, fontWeight: 700, color: "#111827",
-                    letterSpacing: "-0.02em",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{userName}</div>
-                <div style={{
-                    fontSize: 12, color: "#9ca3af", marginTop: 2,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{userEmail}</div>
-                <div style={{ display: "flex", gap: 5, marginTop: 6, flexWrap: "wrap" }}>
-                    <span style={{
-                        fontSize: 10, padding: "2px 8px", borderRadius: 20,
-                        border: `1px solid ${PINK_BORDER}`, color: PINK,
-                        background: "rgba(245,49,127,0.08)", whiteSpace: "nowrap",
-                    }}>{positionCount} chức danh</span>
-                    <span style={{
-                        fontSize: 10, padding: "2px 8px", borderRadius: 20,
-                        border: "1px solid rgba(62,191,143,.35)", color: "#3EBF8F",
-                        background: "rgba(62,191,143,.10)", whiteSpace: "nowrap",
-                    }}>● Đang hoạt động</span>
-                </div>
-            </div>
-
-            {/* Upload button */}
-            <div style={{ zIndex: 1, flexShrink: 0 }}>
-                <Upload showUploadList={false} beforeUpload={onFileSelect} accept="image/*" multiple={false}>
-                    <Button
-                        disabled={disabled}
-                        icon={
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>
-                        }
-                        style={{
-                            display: "flex", alignItems: "center", gap: 4,
-                            fontSize: 11, borderRadius: 20, height: 28, paddingInline: 12,
-                            border: `1px solid ${PINK_BORDER}`,
-                            background: "#fff", color: PINK,
-                            boxShadow: "0 2px 8px rgba(245,49,127,0.10)",
-                        }}
-                    >Đổi ảnh</Button>
-                </Upload>
-            </div>
-        </div>
-    );
-};
-
-/* ═══════════════════════════════════════════
    InfoItem
-═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 export const InfoItem = ({
     label, value, icon,
 }: {
     label: string; value?: string | null; icon?: React.ReactNode;
 }) => (
-    <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 10px", borderRadius: 9,
-        background: "#f9fafb", border: "1px solid #f0f0f5",
-    }}>
-        {icon && <span style={{ color: "#9ca3af", flexShrink: 0, display: "flex" }}>{icon}</span>}
+    <div className="taste-info-item">
         <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{
-                fontSize: 9.5, fontWeight: 600, color: "#9ca3af",
-                letterSpacing: ".07em", textTransform: "uppercase" as const,
+                fontSize: 12, fontWeight: 500, color: "#888888",
             }}>{label}</div>
             <div style={{
-                fontSize: 12.5, fontWeight: value ? 500 : 400,
-                color: value ? "#111827" : "#d1d5db", marginTop: 1,
+                fontSize: 14, fontWeight: 500,
+                color: value ? "#111111" : "#cbd5e1", marginTop: 4,
+                display: "flex", alignItems: "center", gap: 6,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>{value || "—"}</div>
+            }}>
+                <span>{value || "—"}</span>
+                {icon && <span style={{ display: "inline-flex", flexShrink: 0 }}>{icon}</span>}
+            </div>
         </div>
     </div>
 );
 
 /* ═══════════════════════════════════════════
    PositionCard
-═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 export const PositionCard = ({ record }: { record: any }) => {
     const cfg = SOURCE_CFG[record.source as keyof typeof SOURCE_CFG] ?? SOURCE_CFG.COMPANY;
     const [hovered, setHovered] = useState(false);
@@ -419,52 +332,67 @@ export const PositionCard = ({ record }: { record: any }) => {
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
-                display: "flex", alignItems: "center", gap: 9,
-                padding: "8px 10px", borderRadius: 9,
-                border: `1px solid ${hovered ? "#e5e7eb" : "#f3f4f6"}`,
-                background: hovered ? "#fff" : "#fafafa",
-                transition: "all .15s",
-                transform: hovered ? "translateX(3px)" : "none",
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: `1px solid ${hovered ? cfg.border : "#f1f5f9"}`,
+                background: hovered ? cfg.bg : "#fafafa",
+                transition: TASTE_TRANSITION,
                 cursor: "default",
+                borderLeft: `3px solid ${cfg.color}`,
             }}
         >
-            <div style={{
-                width: 30, height: 30, borderRadius: 7,
-                background: cfg.bg, border: `1px solid ${cfg.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>{cfg.icon}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Row 1: Title + badge */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                 <div style={{
-                    fontSize: 12, fontWeight: 500, color: "#111827",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{record.jobTitle?.nameVi ?? "—"}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2, flexWrap: "wrap" }}>
-                    {record.company?.name && (
-                        <span style={{ fontSize: 10, color: "#4a7fef" }}>{record.company.name}</span>
-                    )}
-                    {record.department?.name && (
-                        <><span style={{ fontSize: 10, color: "#d1d5db" }}>›</span>
-                            <span style={{ fontSize: 10, color: "#3EBF8F" }}>{record.department.name}</span></>
-                    )}
-                    {record.source === "SECTION" && record.section?.name && (
-                        <><span style={{ fontSize: 10, color: "#d1d5db" }}>›</span>
-                            <span style={{ fontSize: 10, color: "#F08050" }}>{record.section.name}</span></>
-                    )}
+                    fontSize: 13, fontWeight: 700, color: "#0f172a",
+                    lineHeight: 1.45, flex: 1,
+                }}>
+                    {record.jobTitle?.nameVi ?? "—"}
                 </div>
+                {record.jobTitle?.positionCode && (
+                    <span style={{
+                        fontSize: 10, padding: "2px 7px", borderRadius: 6,
+                        background: cfg.bg, border: `1px solid ${cfg.border}`,
+                        color: cfg.color, fontWeight: 700, flexShrink: 0,
+                        fontFamily: "monospace", whiteSpace: "nowrap", marginTop: 2,
+                    }}>
+                        {record.jobTitle.positionCode}
+                    </span>
+                )}
             </div>
-            <span style={{
-                fontSize: 9.5, padding: "1px 6px", borderRadius: 5,
-                background: cfg.bg, border: `1px solid ${cfg.border}`,
-                color: cfg.color, fontWeight: 600, flexShrink: 0, fontFamily: "monospace",
-                whiteSpace: "nowrap",
-            }}>{record.jobTitle?.positionCode ?? "—"}</span>
+
+            {/* Row 2: Company › Dept › Section breadcrumb */}
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 4px", marginTop: 6 }}>
+                {record.company?.name && (
+                    <span style={{ fontSize: 11, color: "#4a7fef", fontWeight: 500 }}>
+                        {record.company.name}
+                    </span>
+                )}
+                {record.department?.name && (
+                    <>
+                        <span style={{ fontSize: 11, color: "#cbd5e1" }}>›</span>
+                        <span style={{ fontSize: 11, color: "#3EBF8F", fontWeight: 500 }}>
+                            {record.department.name}
+                        </span>
+                    </>
+                )}
+                {record.source === "SECTION" && record.section?.name && (
+                    <>
+                        <span style={{ fontSize: 11, color: "#cbd5e1" }}>›</span>
+                        <span style={{ fontSize: 11, color: "#F08050", fontWeight: 500 }}>
+                            {record.section.name}
+                        </span>
+                    </>
+                )}
+            </div>
         </div>
     );
+
 };
 
 /* ═══════════════════════════════════════════
    SectionLabel
-═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════ */
 export const SectionLabel = ({
     children, extra,
 }: {
@@ -472,20 +400,21 @@ export const SectionLabel = ({
 }) => (
     <div style={{
         display: "flex", alignItems: "center",
-        justifyContent: "space-between", marginBottom: 8,
+        justifyContent: "space-between", marginBottom: 10,
     }}>
         <span style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: ".1em",
-            textTransform: "uppercase" as const, color: "#9ca3af",
+            fontSize: 10, fontWeight: 800, letterSpacing: ".12em",
+            textTransform: "uppercase" as const, color: "#94a3b8",
         }}>{children}</span>
         {extra}
     </div>
 );
 
 /* ═══════════════════════════════════════════
-   UserUpdateInfo — main content
-═══════════════════════════════════════════ */
+   UserUpdateInfo — main content (Bento Double-Bezel)
+   ═══════════════════════════════════════════ */
 export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) => {
+    const { isMobile } = useBreakpoint();
     const dispatch = useAppDispatch();
     const user = useAppSelector((s) => s.account.user);
     const [form] = Form.useForm();
@@ -494,6 +423,8 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
     const [previewUrl, setPreviewUrl] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [panelAvatarError, setPanelAvatarError] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const backendURL = import.meta.env.VITE_BACKEND_URL;
     const currentAvatar = user?.avatar
@@ -507,6 +438,10 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
         () => () => { if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl); },
         [previewUrl],
     );
+
+    useEffect(() => {
+        setPanelAvatarError(false);
+    }, [previewUrl, currentAvatar]);
 
     const handleFileSelect = (file: File): false => {
         if (!file.type.startsWith("image/")) { message.error("Vui lòng chọn file ảnh!"); return false; }
@@ -526,11 +461,14 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                 if (fileName) finalAvatar = fileName;
                 else { message.error("Upload ảnh thất bại!"); return; }
             }
-            const payload: IReqUpdateProfileDTO = { name: values.name, avatar: finalAvatar };
+            const payload: IReqUpdateProfileDTO = { name: values.name ?? user?.name ?? "", avatar: finalAvatar };
             const res = await callUpdateProfile(payload);
             if (res?.data) {
                 dispatch(updateUserProfile(res.data));
                 message.success("Cập nhật thành công!");
+                setIsEditing(false);
+                setAvatarFile(null);
+                setPreviewUrl("");
                 onClose(false);
             } else {
                 message.error("Cập nhật thất bại!");
@@ -548,147 +486,548 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
 
     return (
         <>
+            <style>{`
+                @keyframes pulse-dot {
+                    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.4); }
+                    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(132, 204, 22, 0); }
+                    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(132, 204, 22, 0); }
+                }
+                .online-indicator-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #84cc16;
+                    display: inline-block;
+                    animation: pulse-dot 2s infinite ease-in-out;
+                }
+                
+                /* Double-Bezel nested architecture styles */
+                .double-bezel-outer-pink {
+                    background: rgba(245, 49, 127, 0.02);
+                    border: 1px solid rgba(245, 49, 127, 0.08);
+                    padding: 10px;
+                    border-radius: 22px;
+                    transition: ${TASTE_TRANSITION};
+                }
+                .double-bezel-outer-pink:hover {
+                    border-color: rgba(245, 49, 127, 0.2);
+                    background: rgba(245, 49, 127, 0.04);
+                }
+                
+                .double-bezel-outer {
+                    background: #ffffff;
+                    border: 1px solid #eef2f7;
+                    padding: 10px;
+                    border-radius: 22px;
+                    transition: ${TASTE_TRANSITION};
+                }
+                .double-bezel-outer:hover {
+                    border-color: rgba(245, 49, 127, 0.15);
+                    background: rgba(245, 49, 127, 0.01);
+                }
+
+                .double-bezel-inner {
+                    background: #ffffff;
+                    border-radius: 12px;
+                    box-shadow: inset 0 1px 2px rgba(255,255,255,1), 0 4px 16px rgba(15, 23, 42, 0.015);
+                    height: 100%;
+                }
+
+                .taste-info-item {
+                    display: block;
+                    padding: 0;
+                    background: transparent;
+                    border: none;
+                    transition: ${TASTE_TRANSITION};
+                }
+                .taste-info-item:hover {
+                    background: transparent;
+                    border-color: transparent;
+                }
+                
+                .taste-input {
+                    border-radius: 10px !important;
+                    font-size: 13px !important;
+                    height: 40px !important;
+                    border-color: #cbd5e1 !important;
+                    transition: ${TASTE_TRANSITION} !important;
+                    box-shadow: none !important;
+                }
+                .taste-input:hover {
+                    border-color: #94a3b8 !important;
+                }
+                .taste-input:focus, .taste-input-focused {
+                    border-color: ${PINK} !important;
+                    box-shadow: 0 0 0 3px ${PINK_LIGHT} !important;
+                }
+                
+                .taste-close-btn {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
+                    border: 1px solid #e2e8f0;
+                    background: #fff;
+                    color: #64748b;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+                    transition: ${TASTE_TRANSITION};
+                }
+                .taste-close-btn:hover {
+                    border-color: ${PINK};
+                    color: ${PINK};
+                    transform: rotate(90deg);
+                    background: ${PINK_LIGHT};
+                }
+                
+                .taste-avatar-ring {
+                    position: absolute;
+                    inset: -5px;
+                    border-radius: 50%;
+                    background: conic-gradient(${PINK}, #ff9dc4, ${PINK});
+                    opacity: 0.3;
+                    animation: spin-avatar 6s linear infinite;
+                }
+                @keyframes spin-avatar {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                .manage-account-hero {
+                    position: relative;
+                    overflow: hidden;
+                    isolation: isolate;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                    background-size: cover;
+                    background-position: center 72%;
+                }
+                .manage-account-hero::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background:
+                        linear-gradient(90deg, rgba(126, 12, 70, 0.64) 0%, rgba(170, 24, 91, 0.24) 34%, rgba(255, 255, 255, 0) 68%),
+                        linear-gradient(180deg, rgba(70, 9, 42, 0.04) 0%, rgba(70, 9, 42, 0.10) 100%);
+                    pointer-events: none;
+                }
+                .manage-account-hero::after {
+                    content: "";
+                    position: absolute;
+                    inset: auto 0 0 0;
+                    height: 1px;
+                    background: linear-gradient(90deg, rgba(255,255,255,0.45), rgba(255,255,255,0.08));
+                    pointer-events: none;
+                }
+                .manage-account-hero-grid {
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: 20px;
+                }
+                .manage-account-hero-card {
+                    display: none;
+                }
+            `}</style>
+
             <Form
                 form={form}
                 layout="vertical"
                 onFinish={handleSubmit}
                 initialValues={{ name: user?.name, email: user?.email }}
+                style={{
+                    height: "100%",
+                    minHeight: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    background: "#f8fafc",
+                }}
             >
-                <HeroBanner
-                    displayAvatar={displayAvatar} initials={initials}
-                    userName={user?.name} userEmail={user?.email}
-                    positionCount={positions.length}
-                    onAvatarClick={() => setLightboxOpen(true)}
-                    onFileSelect={handleFileSelect}
-                    disabled={submitting}
-                />
-
-                {/*
-                    Responsive grid:
-                    - Desktop (≥ 560px): 2 cột
-                    - Mobile (< 560px) : 1 cột (stack dọc)
-                    Dùng CSS custom property trick vì không có media query inline
-                */}
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",  // ← tự wrap
-                    gap: 20,
-                    alignItems: "start",
-                }}>
-                    {/* ──────── LEFT ──────── */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        {/* Thông tin cá nhân */}
-                        <div>
-                            <SectionLabel>Thông tin cá nhân</SectionLabel>
+                <div
+                    className="manage-account-hero"
+                    style={{
+                        padding: isMobile ? "16px 20px 14px" : "32px 30px 24px",
+                        backgroundImage: `url(${backgroundTrangCaNhan})`,
+                        color: "#ffffff",
+                        boxShadow: "inset 0 -1px 0 rgba(255,255,255,0.12)",
+                    }}
+                >
+                    <div className="manage-account-hero-grid">
+                        <div style={{ minWidth: 0, width: "100%" }}>
                             <div style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",  // ← tự wrap
-                                gap: 6,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                color: "rgba(255,255,255,0.72)",
+                                letterSpacing: ".16em",
+                                textTransform: "uppercase",
                             }}>
-                                <InfoItem label="Mã NV" value={info?.employeeCode}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="2" /><line x1="5" y1="8" x2="11" y2="8" /><line x1="5" y1="5" x2="11" y2="5" /><line x1="5" y1="11" x2="8" y2="11" /></svg>}
-                                />
-                                <InfoItem label="Giới tính" value={genderLabel(info?.gender)}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="6" r="3.5" /><line x1="8" y1="9.5" x2="8" y2="13.5" /><line x1="6" y1="11.5" x2="10" y2="11.5" /></svg>}
-                                />
-                                <InfoItem label="Ngày sinh" value={formatDate(info?.dateOfBirth)}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5" /><line x1="5" y1="1.5" x2="5" y2="4.5" /><line x1="11" y1="1.5" x2="11" y2="4.5" /><line x1="2" y1="7" x2="14" y2="7" /></svg>}
-                                />
-                                <InfoItem label="Điện thoại" value={info?.phone}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M13 10.5c0 .28-.06.55-.19.8-.13.25-.31.48-.54.67-.38.34-.8.5-1.25.5-.31 0-.65-.08-1-.24a10.7 10.7 0 01-1-.54 16.8 16.8 0 01-.96-.75 16.5 16.5 0 01-.75-.96 10.5 10.5 0 01-.54-1C6.57 8.65 6.5 8.31 6.5 7.98c0-.44.15-.86.46-1.23.31-.37.69-.55 1.1-.55.16 0 .32.03.46.1.15.07.28.17.38.31L9.86 8c.1.14.15.3.15.45 0 .19-.06.37-.17.54l-.42.48-.17.2c-.05.07-.08.14-.08.2l.03.12.07.12.88 1.46.1.09.12.03c.06 0 .13-.03.2-.08l.2-.17c.15-.17.31-.3.49-.41.17-.1.35-.16.54-.16.16 0 .31.04.45.12.14.08.25.19.33.33l1.08 1.52c.1.14.14.3.14.48z" /></svg>}
-                                />
-                                <InfoItem label="Vào làm" value={formatDate(info?.startDate)}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5" /><line x1="5" y1="1.5" x2="5" y2="4.5" /><line x1="11" y1="1.5" x2="11" y2="4.5" /><line x1="2" y1="7" x2="14" y2="7" /><path d="M6 10l1.5 1.5L10 9" /></svg>}
-                                />
-                                <InfoItem label="Ký HĐ" value={formatDate(info?.contractSignDate)}
-                                    icon={<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5l-3-3z" /><polyline points="10 2 10 5 13 5" /><line x1="5" y1="9" x2="11" y2="9" /><line x1="5" y1="12" x2="8" y2="12" /></svg>}
-                                />
+                                Hồ sơ nhân sự
                             </div>
-                        </div>
+                            <div style={{
+                                marginTop: 4,
+                                fontSize: isMobile ? 18 : 24,
+                                fontWeight: 800,
+                                color: "#ffffff",
+                                letterSpacing: 0,
+                                textShadow: "0 1px 2px rgba(0,0,0,0.12)",
+                            }}>
+                                {user?.name || "Tài khoản"}
+                            </div>
 
-                        {/* Chức danh */}
-                        <div>
-                            <SectionLabel extra={
+                            <div style={{
+                                marginTop: 11,
+                                display: "flex",
+                                flexWrap: "wrap",
+                                alignItems: "center",
+                                gap: 8,
+                            }}>
                                 <span style={{
-                                    fontSize: 10, padding: "1px 7px", borderRadius: 20,
-                                    background: "#f3f4f6", color: "#6b7280", border: "1px solid #e5e7eb",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    width: 38,
+                                    height: 38,
+                                    borderRadius: 12,
+                                    background: "rgba(255,255,255,0.16)",
+                                    border: "1px solid rgba(255,255,255,0.18)",
+                                    backdropFilter: "blur(10px)",
+                                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
                                 }}>
-                                    {positions.length} vị trí
+                                    <span style={{
+                                        width: 10,
+                                        height: 10,
+                                        borderRadius: "50%",
+                                        margin: "0 auto",
+                                        background: "#dcfce7",
+                                        boxShadow: "0 0 0 5px rgba(220,252,231,0.14)",
+                                    }} />
                                 </span>
-                            }>Chức danh</SectionLabel>
-
-                            {loadingPositions ? (
-                                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                                    <Spin size="small" />
-                                </div>
-                            ) : positions.length === 0 ? (
-                                <div style={{
-                                    textAlign: "center", padding: "12px",
-                                    fontSize: 12, color: "#d1d5db",
-                                    border: "1px dashed #e5e7eb", borderRadius: 9,
-                                }}>
-                                    Chưa có chức danh nào
-                                </div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                    {positions.map((r: any) => <PositionCard key={r.id} record={r} />)}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* ──────── RIGHT ──────── */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        {/* Form chỉnh sửa */}
-                        <div>
-                            <SectionLabel>Chỉnh sửa thông tin</SectionLabel>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                <Form.Item
-                                    label={<span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Họ và tên</span>}
-                                    name="name"
-                                    style={{ marginBottom: 0 }}
-                                    rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
-                                >
-                                    <Input
-                                        disabled={submitting}
-                                        style={{ borderRadius: 9, fontSize: 13, height: 38, borderColor: "#e5e7eb" }}
-                                    />
-                                </Form.Item>
-                                <Form.Item
-                                    label={<span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Email</span>}
-                                    name="email"
-                                    style={{ marginBottom: 0 }}
-                                >
-                                    <Input
-                                        disabled
-                                        style={{ borderRadius: 9, fontSize: 13, height: 38, background: "#f9fafb", borderColor: "#f0f0f0", color: "#9ca3af" }}
-                                    />
-                                </Form.Item>
                             </div>
                         </div>
 
-                        {/* Nút action */}
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <Button
+                        {isMobile && (
+                            <button
+                                type="button"
                                 onClick={() => onClose(false)}
-                                disabled={submitting}
-                                style={{ borderRadius: 9, height: 38, fontSize: 13, borderColor: "#e5e7eb", color: "#6b7280" }}
-                            >Huỷ</Button>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                loading={submitting}
-                                icon={<EditOutlined />}
+                                aria-label="Đóng"
                                 style={{
-                                    flex: 1, background: PINK, borderColor: PINK,
-                                    borderRadius: 9, height: 38, fontWeight: 600, fontSize: 13,
-                                    boxShadow: "0 4px 14px rgba(245,49,127,0.25)",
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    border: "1px solid rgba(255,255,255,0.25)",
+                                    background: "rgba(255,255,255,0.1)",
+                                    color: "#ffffff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
                                 }}
-                            >Lưu thay đổi</Button>
-                        </div>
-
+                            >
+                                <CloseOutlined style={{ fontSize: 12 }} />
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                <div
+                    style={{
+                        minHeight: 0,
+                        flex: 1,
+                        overflowY: "auto",
+                        padding: "24px 28px 24px",
+                        background: "#f8fafc",
+                    }}
+                >
+                    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+                            <style>{`
+                                .manage-account-bitrix-grid {
+                                    display: grid;
+                                    grid-template-columns: 310px minmax(0, 1fr);
+                                    gap: 20px;
+                                    align-items: start;
+                                }
+
+                                @media (max-width: 900px) {
+                                    .manage-account-bitrix-grid {
+                                        grid-template-columns: 1fr;
+                                    }
+                                }
+                            `}</style>
+                            <div className="manage-account-bitrix-grid">
+                                {/* Left Column: Avatar & Position */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                                    {/* Double-Bezel Avatar Card */}
+                                    <div className="double-bezel-outer-pink">
+                                        <div className="double-bezel-inner" style={{ padding: "20px 16px 20px" }}>
+
+
+                                            <div style={{ position: "relative", width: 160, height: 160, margin: "14px auto 16px" }}>
+                                                <div className="taste-avatar-ring" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLightboxOpen(true)}
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100%",
+                                                        borderRadius: "50%",
+                                                        border: "4px solid #ffffff",
+                                                        padding: 0,
+                                                        overflow: "hidden",
+                                                        background: `linear-gradient(145deg, #ff8fbd 0%, ${PINK} 58%, #b83280 100%)`,
+                                                        color: "#fff",
+                                                        cursor: "pointer",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        fontSize: 48,
+                                                        fontWeight: 800,
+                                                        boxShadow: "0 10px 24px rgba(245, 49, 127, 0.16)",
+                                                        position: "relative",
+                                                        zIndex: 1,
+                                                    }}
+                                                    aria-label="Xem ảnh đại diện"
+                                                >
+                                                    {displayAvatar && !panelAvatarError ? (
+                                                        <img
+                                                            src={displayAvatar}
+                                                            alt="avatar"
+                                                            onError={() => setPanelAvatarError(true)}
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                                                        />
+                                                    ) : initials}
+                                                </button>
+                                            </div>
+
+                                            <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", textAlign: "center" }}>
+                                                {user?.name || "—"}
+                                            </div>
+
+
+                                            <div style={{ display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap", marginTop: 14 }}>
+                                                <span style={{
+                                                    fontSize: 10.5,
+                                                    padding: "3px 8px",
+                                                    borderRadius: 999,
+                                                    border: `1px solid ${PINK_BORDER}`,
+                                                    color: PINK,
+                                                    background: "rgba(245, 49, 127, 0.04)",
+                                                    fontWeight: 700,
+                                                }}>
+                                                    {positions.length} chức danh
+                                                </span>
+                                            </div>
+
+
+                                        </div>
+                                    </div>
+
+                                    {/* Double-Bezel Positions Card */}
+                                    <div className="double-bezel-outer">
+                                        <div className="double-bezel-inner" style={{ padding: 18 }}>
+                                            <SectionLabel
+                                                extra={
+                                                    <span style={{
+                                                        fontSize: 9,
+                                                        padding: "1px 6px",
+                                                        borderRadius: 20,
+                                                        background: "#f1f5f9",
+                                                        color: "#475569",
+                                                        border: "1px solid #e2e8f0",
+                                                        fontWeight: 700,
+                                                    }}>
+                                                        {positions.length} vị trí
+                                                    </span>
+                                                }
+                                            >
+                                                Chức danh
+                                            </SectionLabel>
+
+                                            {loadingPositions ? (
+                                                <div style={{ textAlign: "center", padding: "10px 0" }}>
+                                                    <Spin size="small" />
+                                                </div>
+                                            ) : positions.length === 0 ? (
+                                                <div
+                                                    style={{
+                                                        textAlign: "center",
+                                                        padding: "14px 10px",
+                                                        fontSize: 11,
+                                                        color: "#cbd5e1",
+                                                        border: "1px dashed #dbe4ef",
+                                                        borderRadius: 10,
+                                                        background: "#fbfdff",
+                                                    }}
+                                                >
+                                                    Chưa có chức danh nào
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                    {positions.map((r: any) => <PositionCard key={r.id} record={r} />)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Double-Bezel Contact Form */}
+                                <div className="double-bezel-outer">
+                                    <div className="double-bezel-inner" style={{ padding: 24 }}>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, borderBottom: "1px solid #f1f5f9", paddingBottom: 14, marginBottom: 20 }}>
+                                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.01em" }}>
+                                                Thông tin liên hệ
+                                            </h3>
+                                            {!isEditing && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEditing(true)}
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 5,
+                                                        padding: "5px 12px",
+                                                        borderRadius: 999,
+                                                        border: `1px solid ${PINK_BORDER}`,
+                                                        background: "rgba(245,49,127,0.04)",
+                                                        color: PINK,
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                        transition: "all 0.18s ease",
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = PINK;
+                                                        e.currentTarget.style.color = "#fff";
+                                                        e.currentTarget.style.borderColor = PINK;
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = "rgba(245,49,127,0.04)";
+                                                        e.currentTarget.style.color = PINK;
+                                                        e.currentTarget.style.borderColor = PINK_BORDER;
+                                                    }}
+                                                >
+                                                    <EditOutlined style={{ fontSize: 11 }} />
+                                                    Chỉnh sửa
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", columnGap: 24, rowGap: 18, marginBottom: 20 }}>
+                                            <InfoItem label="Mã NV" value={info?.employeeCode} />
+                                            <InfoItem label="Giới tính" value={genderLabel(info?.gender)} />
+                                            <InfoItem label="Ngày sinh" value={formatDate(info?.dateOfBirth)} />
+                                            <InfoItem label="Điện thoại" value={info?.phone} />
+                                            <InfoItem label="Vào làm" value={formatDate(info?.startDate)} />
+                                            <InfoItem label="Ký HĐ" value={formatDate(info?.contractSignDate)} />
+                                        </div>
+
+                                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", columnGap: 24, rowGap: 18, marginBottom: 24 }}>
+                                            {isEditing ? (
+                                                <Form.Item
+                                                    label={<span style={{ fontSize: 12, fontWeight: 500, color: "#888888" }}>Họ và tên</span>}
+                                                    name="name"
+                                                    style={{ marginBottom: 0 }}
+                                                    preserve
+                                                    rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
+                                                >
+                                                    <Input
+                                                        disabled={submitting}
+                                                        className="taste-input"
+                                                        autoFocus
+                                                        style={{ height: 38, borderRadius: 8 }}
+                                                    />
+                                                </Form.Item>
+                                            ) : (
+                                                <div style={{ cursor: "pointer" }} onClick={() => setIsEditing(true)}>
+                                                    <InfoItem 
+                                                        label="Họ và tên" 
+                                                        value={user?.name} 
+                                                        icon={<EditOutlined style={{ fontSize: 12, color: PINK, marginLeft: 4 }} />} 
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {isEditing ? (
+                                                <Form.Item
+                                                    label={<span style={{ fontSize: 12, fontWeight: 500, color: "#888888" }}>Email</span>}
+                                                    name="email"
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input
+                                                        disabled
+                                                        className="taste-input"
+                                                        style={{ background: "#f8fafc", color: "#94a3b8", height: 38, borderRadius: 8 }}
+                                                    />
+                                                </Form.Item>
+                                            ) : (
+                                                <InfoItem label="Email" value={user?.email} />
+                                            )}
+                                        </div>
+
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                {/* Sticky Footer Actions (Bitrix Style) - only shown when form is modified */}
+                {(isEditing || avatarFile !== null) && (
+                    <div style={{
+                        padding: isMobile ? "12px 20px" : "16px 30px",
+                        background: "#ffffff",
+                        borderTop: "1px solid #eef2f7",
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 12,
+                        boxShadow: "0 -4px 12px rgba(15, 23, 42, 0.03)",
+                        zIndex: 10,
+                    }}>
+                        <Button
+                            onClick={() => {
+                                form.resetFields();
+                                setAvatarFile(null);
+                                setPreviewUrl("");
+                                setIsEditing(false);
+                            }}
+                            disabled={submitting}
+                            className="taste-btn-cancel"
+                            style={{
+                                borderRadius: 8,
+                                height: 38,
+                                paddingInline: 22,
+                                fontSize: 13,
+                                borderColor: "#cbd5e1",
+                                color: "#475569",
+                                transition: TASTE_TRANSITION,
+                            }}
+                        >
+                            Huỷ
+                        </Button>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={submitting}
+                            className="taste-btn-primary"
+                            icon={<EditOutlined />}
+                            style={{
+                                background: `linear-gradient(135deg, ${PINK} 0%, #ff4d91 100%)`,
+                                borderColor: PINK,
+                                borderRadius: 8,
+                                height: 38,
+                                paddingInline: 26,
+                                fontWeight: 700,
+                                fontSize: 13,
+                                boxShadow: "0 4px 14px rgba(245, 49, 127, 0.16)",
+                                transition: TASTE_TRANSITION,
+                            }}
+                        >
+                            Lưu thay đổi
+                        </Button>
+                    </div>
+                )}
             </Form>
 
             <AvatarLightbox
@@ -698,7 +1037,11 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                 initials={initials}
                 userName={user?.name}
                 userEmail={user?.email}
-                onFileSelect={(f) => { setLightboxOpen(false); return handleFileSelect(f); }}
+                positions={positions}
+                onFileSelect={(f) => {
+                    setLightboxOpen(false);
+                    return handleFileSelect(f);
+                }}
                 disabled={submitting}
             />
         </>

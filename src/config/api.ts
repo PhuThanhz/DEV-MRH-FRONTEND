@@ -1,4 +1,4 @@
-import type {
+import type { IResNotificationDTO,
     IBackendRes, IAccount, IUser, ICompany, IModelPaginate, IGetAccount, IPermission, IRole,
     IDepartment, ISection, IPositionLevel, IJobTitle, ICompanyProcedure, ICareerPath,
     IDepartmentJobTitle, IResCareerPathBandGroup, ICareerPathRequest,
@@ -10,7 +10,7 @@ import type {
     ISalaryMatrix, IReqSalaryStructure, IProcessAction, IPermissionCategory,
     IPermissionCategoryMatrix,
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
-    IJobDescription, IDepartmentMissionTree,
+    IJobDescription, IDepartmentMissionTree, IDepartmentMissionVersion,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
     , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
     , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO, ICreateShareTokenRequest,
@@ -20,11 +20,16 @@ import type {
     IDocumentRequest,
     IAccountingDossier,
     IAccountingDossierAuditLog,
+    IAccountingDossierApprovalStep,
+    IAccountingDossierBulkActionResult,
     IAccountingDossierCategory,
     IAccountingDossierCategoryRequest,
     IAccountingDossierRequest,
     IAccountingDossierDocument,
+    IAccountingDossierDocumentCheckRequest,
     IAccountingDossierDocumentRequest,
+    IAccountingDossierReportRow,
+    IAccountingDossierStorageSummary,
     IAccountingDocumentRequest,
     ProcedureType,
     IDocumentFolder,
@@ -32,7 +37,8 @@ import type {
     IAccountingDocumentCategoryRequest,
     IDocumentAudit,
     IUserAdminScope,
-    IReqUpsertUserAdminScopes
+    IReqUpsertUserAdminScopes,
+    IDepartmentMissionSummary
 } from '@/types/backend';
 
 import axios from 'config/axios-customize';
@@ -1243,6 +1249,14 @@ export const callFetchDepartmentObjectives = (departmentId: number) => {
     return axios.get(`/api/v1/departments/${departmentId}/objectives`)
 }
 
+export const callFetchDepartmentMissionSummary = () => {
+    return axios.get<IBackendRes<IDepartmentMissionSummary[]>>(`/api/v1/department-objectives/summary`)
+}
+
+export const callFetchDepartmentMissionVersions = (departmentId: number) => {
+    return axios.get<IBackendRes<IDepartmentMissionVersion[]>>(`/api/v1/departments/${departmentId}/objectives/versions`)
+}
+
 export const callCreateDepartmentObjective = (data: any) => {
     return axios.post<IBackendRes<IDepartmentMissionTree>>(
         `/api/v1/department-objectives`, data
@@ -1253,6 +1267,15 @@ export const callCreateDepartmentObjective = (data: any) => {
 
 export const callDeleteDepartmentObjective = (id: number) => {
     return axios.delete(`/api/v1/department-objectives/${id}`)
+}
+
+export const callPublishDepartmentObjective = (
+    departmentId: number,
+    payload?: { title?: string; changeSummary?: string; effectiveDate?: string }
+) => {
+    return axios.post<IBackendRes<IDepartmentMissionTree>>(
+        `/api/v1/department-objectives/publish`, { departmentId, ...payload }
+    );
 }
 /* ===================== DEPARTMENT PROCEDURES ===================== */
 
@@ -1820,6 +1843,7 @@ export const callFetchAllShareLog = (query: string) => {
         `/api/v1/procedures/share-log/all?${query}`
     );
 };
+
 /* ===================== PROCEDURE SHARE TOKEN ===================== */
 
 // Tạo share token
@@ -1878,6 +1902,7 @@ export const callSendShareEmail = (tokenId: number, email: string) => {
         { email }
     );
 };
+
 /* ===================== DOCUMENT CATEGORIES ===================== */
 
 export const callFetchDocumentCategory = (query: string) =>
@@ -1912,12 +1937,15 @@ export const callToggleActiveDocumentCategory = (id: number) =>
         `/api/v1/document-categories/${id}/active`
     );
 
-
-
 /* ===================== ACCOUNTING DOCUMENTS ===================== */
 export const callFetchAccountingDossiers = (query: string) =>
     axios.get<IBackendRes<IModelPaginate<IAccountingDossier>>>(
         `/api/v1/accounting-dossiers?${query}`
+    );
+
+export const callFetchDossiersPendingMyApproval = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IAccountingDossier>>>(
+        `/api/v1/accounting-dossiers/pending-my-approval?${query}`
     );
 
 export const callFetchAccountingDossierById = (id: number) =>
@@ -1940,8 +1968,8 @@ export const callUpdateAccountingDossier = (id: number, data: IAccountingDossier
 export const callDeleteAccountingDossier = (id: number) =>
     axios.delete<IBackendRes<void>>(`/api/v1/accounting-dossiers/${id}`);
 
-export const callSubmitAccountingDossier = (id: number) =>
-    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/submit`);
+export const callSubmitAccountingDossier = (id: number, data?: { customSteps?: any[] }) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/submit`, data);
 
 export const callRequestReturnAccountingDossier = (id: number, note?: string) =>
     axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/request-return`, { note });
@@ -1960,6 +1988,59 @@ export const callFetchAccountingDossierCategoryActive = () =>
 export const callCreateAccountingDossierCategory = (data: IAccountingDossierCategoryRequest) =>
     axios.post<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories`, data);
 
+export const callApproveAccountingDossier = (id: number, note?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/approve`, { note });
+
+export const callRejectAccountingDossier = (id: number, note: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/reject`, { note });
+
+export const callTerminateAccountingDossier = (id: number, note: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/terminate`, { note });
+
+export const callArchiveAccountingDossier = (id: number, note?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/archive`, { note });
+
+export const callHandleReturnResponseAccountingDossier = (id: number, action: string, note?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/return-response?action=${action}`, { note });
+
+export const callRejectAccountingDossierTemplateSync = (id: number, note?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/sync-template/reject`, { note });
+
+export const callRefreshExpiredAccountingDossierStorage = () =>
+    axios.post<IBackendRes<number>>(`/api/v1/accounting-dossiers/storage/refresh-expired`);
+
+export const callFetchAccountingDossierStorageSummary = () =>
+    axios.get<IBackendRes<IAccountingDossierStorageSummary>>(`/api/v1/accounting-dossiers/dashboard/summary`);
+
+export const callFetchAccountingDossierPendingByRole = () =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/dashboard/pending-by-role`);
+
+export const callFetchAccountingDossierReportByStatus = () =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-status`);
+
+export const callFetchAccountingDossierReportByDepartment = () =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-department`);
+
+export const callFetchAccountingDossierReportByCategory = () =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-category`);
+
+export const callFetchAccountingDossierApprovalSteps = (id: number) =>
+    axios.get<IBackendRes<IAccountingDossierApprovalStep[]>>(`/api/v1/accounting-dossiers/${id}/approval-steps`);
+
+export const callBulkApproveAccountingDossiers = (ids: number[], note?: string) =>
+    axios.post<IBackendRes<IAccountingDossierBulkActionResult>>(
+        `/api/v1/accounting-dossiers/bulk-approve?ids=${ids.join(",")}`,
+        note ? { note } : undefined
+    );
+
+export const callBulkCheckDossierDocuments = (dossierId: number, documentIds: number[], checkStatus: string, note?: string) => {
+    const params = new URLSearchParams();
+    documentIds.forEach(id => params.append("documentIds", String(id)));
+    params.append("checkStatus", checkStatus);
+    if (note) params.append("note", note);
+    return axios.post<IBackendRes<IAccountingDossierBulkActionResult>>(`/api/v1/accounting-dossiers/${dossierId}/documents/bulk-check?${params.toString()}`);
+};
+
 export const callUpdateAccountingDossierCategory = (id: number, data: IAccountingDossierCategoryRequest) =>
     axios.put<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories/${id}`, data);
 
@@ -1969,6 +2050,14 @@ export const callToggleAccountingDossierCategoryActive = (id: number, active: bo
 export const callFetchDossierDocuments = (dossierId: number) =>
     axios.get<IBackendRes<IAccountingDossierDocument[]>>(`/api/v1/accounting-dossiers/${dossierId}/documents`);
 
+export const callFetchAllDossierDocuments = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<IAccountingDossierDocument>>>(
+        `/api/v1/accounting-dossiers/documents?${query}`
+    );
+
+export const callFetchDossierByQrToken = (token: string) =>
+    axios.get<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/qr/${token}`);
+
 export const callAddDossierDocument = (dossierId: number, data: IAccountingDossierDocumentRequest) =>
     axios.post<IBackendRes<IAccountingDossierDocument>>(`/api/v1/accounting-dossiers/${dossierId}/documents`, data);
 
@@ -1977,6 +2066,16 @@ export const callUpdateDossierDocument = (dossierId: number, docId: number, data
 
 export const callDeleteDossierDocument = (dossierId: number, docId: number) =>
     axios.delete<IBackendRes<void>>(`/api/v1/accounting-dossiers/${dossierId}/documents/${docId}`);
+
+export const callCheckDossierDocument = (
+    dossierId: number,
+    docId: number,
+    data: IAccountingDossierDocumentCheckRequest
+) =>
+    axios.post<IBackendRes<IAccountingDossierDocument>>(
+        `/api/v1/accounting-dossiers/${dossierId}/documents/${docId}/check`,
+        data
+    );
 
 export const callFetchAccountingDocuments = (query: string) =>
     axios.get<IBackendRes<IModelPaginate<IDocument>>>(
@@ -2380,6 +2479,19 @@ export const callReadEvaluationNotification = (id: number) =>
 
 export const callReadAllEvaluationNotifications = () =>
     axios.patch<IBackendRes<void>>(`/api/v1/notifications/read-all`);
+
+export const callFetchNotificationsPaginate = (page: number, size: number) =>
+    axios.get<IBackendRes<IModelPaginate<IResNotificationDTO>>>(
+        `/api/v1/notifications/paginate?page=${page}&size=${size}`
+    );
+
+export const callReadAllNotificationsByModule = (module: string) =>
+    axios.patch<IBackendRes<void>>(
+        `/api/v1/notifications/read-all/module?module=${encodeURIComponent(module)}`
+    );
+
+export const callDeleteNotification = (id: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/notifications/${id}`);
 
 /* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
 

@@ -85,21 +85,12 @@ const LoginPage = () => {
           <rect x="630" y="290" width="6" height="6" fill="rgba(255,255,255,0.16)" transform="rotate(45 633 293)" />
         </svg>
         <div className="left-content">
-          <div className="logo-ring-outer">
-            <div className="logo-ring-inner">
-              <div className="logo-circle">
-                <img
-                  src="/logo/LOGOFINAL.png"
-                  alt="LOTUS HRM"
-                  style={{ width: "100%", height: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="hrm-block">
-            <span className="hrm-letter" style={{ animationDelay: "0.05s" }}>H</span>
-            <span className="hrm-letter" style={{ animationDelay: "0.12s" }}>R</span>
-            <span className="hrm-letter" style={{ animationDelay: "0.19s" }}>M</span>
+          <div className="logo-clean-container">
+            <img
+              src="/logo/LOGOFINAL.png"
+              alt="LOTUS HRM"
+              style={{ width: "100%", height: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            />
           </div>
         </div>
       </div>
@@ -122,16 +113,11 @@ const LoginPage = () => {
           <div className="mobile-aurora mobile-aurora-one" />
           <div className="mobile-aurora mobile-aurora-two" />
           <div className="mobile-banner-inner">
-            <div className="mb-logo-ring-o">
-              <div className="mb-logo-ring-i">
-                <div className="mb-logo-circ">
-                  <img
-                    src="/logo/LOGOFINAL.png"
-                    alt="LOTUS HRM"
-                    className="mb-logo-img"
-                  />
-                </div>
-              </div>
+            <div className="mb-logo-clean">
+              <img
+                src="/logo/LOGOFINAL.png"
+                alt="LOTUS HRM"
+              />
             </div>
           </div>
         </div>
@@ -158,7 +144,7 @@ const LoginPage = () => {
             >
               <Input
                 prefix={<MailOutlined className="input-icon" />}
-                placeholder="vd: email@lotusgroup.com.vn"
+                placeholder="Nhập email của bạn"
                 size="large"
                 className="login-input"
               />
@@ -218,16 +204,23 @@ const LoginPage = () => {
         input, select, textarea { font-size: 16px !important; }
 
         .login-root {
+          --login-logo-x: 59.4vh;
+          --login-logo-y: 52.5vh;
+          --login-logo-size: 21vh;
           min-height: 100vh; min-height: 100dvh;
           display: flex; font-family: 'Inter', sans-serif;
           overflow: hidden;
+          position: relative;
+          background:
+            linear-gradient(90deg, rgba(128, 11, 74, 0.15) 0%, rgba(219, 39, 119, 0.02) 50%, rgba(128, 11, 74, 0.08) 100%),
+            url('/logo/tranglogin.png') left center / cover no-repeat;
         }
 
         /* ── LEFT ── */
         .login-left {
-          flex: 1; position: relative;
-          background: linear-gradient(150deg, #f472b6 0%, #ec4899 45%, #db2777 100%);
-          display: flex; align-items: center; justify-content: center;
+          flex: 1.08; position: relative;
+          background: transparent;
+          display: flex; align-items: center; justify-content: flex-start;
           overflow: hidden;
         }
         .geo-svg {
@@ -235,32 +228,23 @@ const LoginPage = () => {
           width: 100%; height: 100%; pointer-events: none;
         }
         .left-content {
-          position: relative; z-index: 10;
+          position: absolute; z-index: 10;
+          left: var(--login-logo-x);
+          top: var(--login-logo-y);
+          transform: translate(-50%, -50%);
           display: flex; flex-direction: column;
-          align-items: center; gap: 36px;
+          align-items: center; gap: 0;
           animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
         }
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to   { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)); }
+          to   { opacity: 1; transform: translate(-50%, -50%); }
         }
-        .logo-ring-outer {
-          width: 196px; height: 196px; border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.22);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .logo-ring-inner {
-          width: 168px; height: 168px; border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.15);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .logo-circle {
-          width: 136px; height: 136px; border-radius: 50%;
-          background: rgba(255,255,255,0.14); backdrop-filter: blur(16px);
-          border: 1.5px solid rgba(255,255,255,0.45);
-          box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 20px 50px rgba(190,24,93,0.25);
-          display: flex; align-items: center; justify-content: center;
-          padding: 20px;
+        .logo-clean-container {
+          width: var(--login-logo-size);
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .hrm-block { display: flex; align-items: flex-end; }
         .hrm-letter {
@@ -277,20 +261,65 @@ const LoginPage = () => {
         /* ── MOBILE BANNER — ẩn mặc định ── */
         .mobile-banner { display: none; }
 
+        @media (min-width: 1025px) and (max-height: 760px) and (max-aspect-ratio: 849 / 463) {
+          .login-root {
+            --login-logo-x: 59.2vh;
+            --login-logo-y: 52.9vh;
+            --login-logo-size: 20.5vh;
+          }
+        }
+
+        @media (min-width: 1025px) and (min-height: 900px) and (max-aspect-ratio: 849 / 463) {
+          .login-root {
+            --login-logo-x: 59.4vh;
+            --login-logo-y: 52.5vh;
+            --login-logo-size: 21vh;
+          }
+        }
+
+        @media (min-aspect-ratio: 849 / 463) and (max-aspect-ratio: 21 / 9) {
+          .login-root {
+            --login-logo-x: 32.4vw;
+            --login-logo-y: calc(50vh + 1.35vw);
+            --login-logo-size: 11.4vw;
+          }
+        }
+
+        @media (min-aspect-ratio: 21 / 9) and (max-aspect-ratio: 32 / 9) {
+          .login-root {
+            --login-logo-x: 32.4vw;
+            --login-logo-y: calc(50vh + 1.35vw);
+            --login-logo-size: 11.4vw;
+          }
+        }
+
+        @media (min-aspect-ratio: 32 / 9) {
+          .login-root {
+            --login-logo-x: 32.4vw;
+            --login-logo-y: calc(50vh + 1.35vw);
+            --login-logo-size: 11.2vw;
+          }
+        }
+
         /* ── RIGHT ── */
         .login-right {
           flex: 1; display: flex;
           align-items: center; justify-content: center;
-          padding: 60px 48px; background: #ffffff;
+          padding: 60px 48px; background: transparent;
           position: relative; overflow-y: auto;
         }
         .login-right::before {
-          content: ''; position: absolute;
-          left: 0; top: 12%; bottom: 12%; width: 1px;
-          background: linear-gradient(180deg, transparent, #fce7f3 30%, #f9a8d4 50%, #fce7f3 70%, transparent);
+          display: none;
         }
         .form-container {
-          width: 100%; max-width: 400px;
+          width: 100%; max-width: 440px;
+          padding: 42px 42px 36px;
+          border-radius: 28px;
+          background: rgba(255, 255, 255, 0.45);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 24px 64px rgba(128, 11, 74, 0.15);
           animation: slideUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.08s both;
         }
         @keyframes slideUp {
@@ -310,18 +339,27 @@ const LoginPage = () => {
           font-size: 36px; font-weight: 700; color: #111827;
           letter-spacing: -0.5px; margin-bottom: 8px; line-height: 1.15;
         }
-        .form-sub { font-size: 14px; color: #9ca3af; line-height: 1.5; }
+        .form-sub { font-size: 14px; color: #4b5563; line-height: 1.5; }
 
         /* Inputs */
         .f-label { font-size: 12px; font-weight: 600; color: #374151; letter-spacing: 0.4px; }
         .login-input {
           border-radius: 10px !important; height: 48px !important;
-          border-color: #e5e7eb !important; background: #fafafa !important;
+          border-color: #ffffff !important;
+          background: #ffffff !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
           font-size: 16px !important; font-family: 'Inter', sans-serif !important;
           color: #111827 !important; transition: all 0.18s ease !important;
         }
-        .login-input:hover { border-color: #f9a8d4 !important; background: #fff !important; }
-        .input-icon { color: #d1d5db !important; font-size: 14px !important; transition: color 0.18s !important; }
+        .login-input::placeholder, .login-input input::placeholder {
+          color: #9ca3af !important;
+          opacity: 1 !important;
+        }
+        .login-input:hover {
+          border-color: #f3f4f6 !important;
+          background: #ffffff !important;
+        }
+        .input-icon { color: #71717a !important; font-size: 14px !important; transition: color 0.18s !important; }
 
         /* Forgot */
         .forgot-row { text-align: right; margin: -6px 0 24px; }
@@ -345,7 +383,7 @@ const LoginPage = () => {
           display: flex; align-items: center; justify-content: center;
           gap: 6px; margin-top: 20px;
         }
-        .activate-label { font-size: 13px; color: #9ca3af; }
+        .activate-label { font-size: 13px; color: #4b5563; }
         .activate-link {
           font-size: 13px; font-weight: 600;
           color: #ec4899 !important; text-decoration: none;
@@ -356,7 +394,7 @@ const LoginPage = () => {
         .activate-link:hover { color: #be185d !important; border-color: #ec4899; }
 
         /* Footer */
-        .form-footer { margin-top: 28px; font-size: 11.5px; color: #d1d5db; text-align: center; letter-spacing: 0.2px; }
+        .form-footer { margin-top: 28px; font-size: 11.5px; color: #4b5563; text-align: center; letter-spacing: 0.2px; }
 
         /* ── Ant overrides ── */
         .ant-form-item { margin-bottom: 20px !important; }
@@ -369,12 +407,12 @@ const LoginPage = () => {
 
         .ant-input-affix-wrapper:focus,
         .ant-input-affix-wrapper-focused {
-          border-color: #ec4899 !important;
-          box-shadow: 0 0 0 3px rgba(236,72,153,0.1) !important;
-          background: #fff !important;
+          border-color: rgba(236, 72, 153, 0.5) !important;
+          box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15), inset 0 1px 4px rgba(255, 255, 255, 0.1) !important;
+          background: rgba(255, 255, 255, 0.18) !important;
         }
         .ant-input-affix-wrapper-focused .input-icon { color: #ec4899 !important; }
-        .ant-input, .ant-input-password input { font-size: 16px !important; }
+        .ant-input, .ant-input-password input { font-size: 16px !important; background: transparent !important; color: inherit !important; }
         *:focus-visible { outline: none !important; }
 
         /* ── Fix autofill màu xanh của Chrome ── */
@@ -402,21 +440,17 @@ const LoginPage = () => {
           .login-right::before { display: none; }
 
           .login-right {
-            background:
-              linear-gradient(180deg, #fff7fb 0%, #ffffff 42%, #fff 100%);
+            background: linear-gradient(180deg, #fdf2f8 0%, #fce7f3 100%);
           }
           .mobile-banner {
             display: flex; position: relative;
-            background:
-              radial-gradient(circle at 18% 12%, rgba(255,255,255,0.36) 0, transparent 24%),
-              radial-gradient(circle at 84% 18%, rgba(251,207,232,0.5) 0, transparent 30%),
-              linear-gradient(145deg, #fb7185 0%, #ec4899 42%, #be185d 100%);
-            height: 292px;
+            background: linear-gradient(135deg, #ec4899 0%, #9d174d 100%);
+            height: 320px;
             align-items: center; justify-content: center;
             overflow: hidden; flex-shrink: 0;
             border-bottom-left-radius: 34px;
             border-bottom-right-radius: 34px;
-            box-shadow: 0 22px 48px rgba(190,24,93,0.18);
+            box-shadow: 0 16px 32px rgba(190,24,93,0.15);
           }
           .mobile-banner::before {
             display: none;
@@ -451,7 +485,7 @@ const LoginPage = () => {
             height: 64px;
             right: -38px;
             top: 46px;
-            background: rgba(253,164,175,0.5);
+            background: rgba(255,255,255,0.15);
             transform: rotate(24deg);
           }
           .mobile-banner .geo-svg polygon {
@@ -461,8 +495,11 @@ const LoginPage = () => {
             position: relative; z-index: 10;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            transform: translateY(-18px);
-            animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+            animation: mobileFadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+          }
+          @keyframes mobileFadeUp {
+            from { opacity: 0; transform: translateY(25px); }
+            to   { opacity: 1; transform: translateY(5px); }
           }
           .breathe-ring,
           .orbit { display: none; }
@@ -470,61 +507,32 @@ const LoginPage = () => {
             0%, 100% { transform: scale(1);    opacity: 0.5; }
             50%       { transform: scale(1.07); opacity: 0.15; }
           }
-          .mb-logo-ring-o {
-            width: 204px; height: 204px; border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.28);
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: inset 0 0 32px rgba(255,255,255,0.08);
-          }
-          .mb-logo-ring-i {
-            width: 174px; height: 174px; border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.2);
-            display: flex; align-items: center; justify-content: center;
-          }
-          .mb-logo-circ {
+          .mb-logo-clean {
             position: relative;
-            isolation: isolate;
-            width: 148px; height: 148px; border-radius: 50%;
-            background:
-              radial-gradient(circle at 50% 38%, rgba(255,255,255,0.98), rgba(255,255,255,0.92)),
-              #fff;
-            backdrop-filter: blur(16px);
-            border: 2px solid rgba(255,255,255,0.9);
-            box-shadow:
-              0 0 0 7px rgba(255,255,255,0.2),
-              0 0 0 12px rgba(255,255,255,0.08),
-              0 14px 34px rgba(157,23,77,0.26);
-            display: flex; align-items: center; justify-content: center;
-            padding: 13px;
-            animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+            width: 125px;
+            height: 125px;
+            border-radius: 50%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-shadow: 0 12px 24px rgba(157, 23, 77, 0.15);
+            border: none;
           }
-          .mb-logo-circ::before {
+          .mb-logo-clean::before {
             content: "";
             position: absolute;
-            inset: -13px;
-            z-index: -1;
+            inset: -8px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.36), rgba(255,255,255,0.12) 58%, transparent 72%);
-            filter: blur(3px);
-          }
-          .mb-logo-circ::after {
-            content: "";
-            position: absolute;
-            inset: 10px 18px auto;
-            height: 28px;
-            border-radius: 50%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.66), transparent);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
             pointer-events: none;
           }
-          .mb-logo-img {
+          .mb-logo-clean img {
             width: 100%;
-            height: 100%;
+            height: auto;
             object-fit: contain;
-            filter: drop-shadow(0 2px 5px rgba(157,23,77,0.14));
-          }
-          @keyframes float {
-            0%, 100% { transform: translateY(0);    box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 16px 48px rgba(190,24,93,0.25); }
-            50%       { transform: translateY(-7px); box-shadow: 0 0 0 5px rgba(255,255,255,0.07), 0 24px 56px rgba(190,24,93,0.35); }
           }
           .form-brand { display: none; }
           .form-container {
@@ -538,7 +546,6 @@ const LoginPage = () => {
             background: rgba(255,255,255,0.96);
             border: 1px solid rgba(251,207,232,0.9);
             box-shadow: 0 22px 54px rgba(190,24,93,0.13);
-            backdrop-filter: blur(18px);
           }
           .form-heading { margin-bottom: 24px; }
           .form-title {

@@ -1177,6 +1177,11 @@ export interface IJobTitleForm {
 /* ===================== DEPARTMENT OBJECTIVES ===================== */
 
 export interface IDepartmentMissionTree {
+    lastUpdatedAt?: string;
+    lastUpdatedByName?: string;
+    lastUpdatedBy?: number | string;
+    version?: number;
+    status?: string;
     department: {
         id: number
         name: string
@@ -2096,7 +2101,7 @@ export type AccountingDossierStatus =
     | "TERMINATED"
     | "ARCHIVED";
 
-export type AccountingDossierStorageStatus = "IN_RETENTION" | "EXPIRED";
+export type AccountingDossierStorageStatus = "IN_RETENTION" | "EXPIRED" | "ARCHIVED";
 
 export type AccountingDossierDocumentType =
     | "PDF"
@@ -2130,12 +2135,15 @@ export interface IAccountingDossier {
     creatorId?: string | null;
     status: AccountingDossierStatus;
     storageStatus?: AccountingDossierStorageStatus;
+    returnCount?: number;
     retentionYears?: number;
     retentionUntil?: string | null;
     submittedAt?: string | null;
     approvedAt?: string | null;
     terminatedAt?: string | null;
     active?: boolean;
+    qrToken?: string;
+    qrCode?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: string;
@@ -2143,6 +2151,12 @@ export interface IAccountingDossier {
 }
 
 export interface IAccountingDossierAuditLog {
+    fromStatus?: string;
+    toStatus?: string;
+    targetType?: string;
+    targetId?: number;
+    beforeValue?: string;
+    afterValue?: string;
     id?: number;
     dossierId?: number;
     actionType: string;
@@ -2187,6 +2201,7 @@ export interface IAccountingDossierCategory {
 }
 
 export interface IAccountingDossierCategoryRequest {
+    documentCategoryItems?: { documentCategoryId: number; required: boolean }[];
     categoryCode?: string;
     categoryName: string;
     description?: string;
@@ -2208,12 +2223,29 @@ export interface IAccountingDocumentRequest {
 
 /* ===================== ACCOUNTING DOSSIER DOCUMENT ===================== */
 export interface IAccountingDossierDocument {
+    fileUrl?: string;
+    externalLink?: string;
+    invoiceDate?: string;
+    invoiceNumber?: string;
+    invoiceContent?: string;
+    partnerName?: string;
+    partnerType?: "SUPPLIER" | "CUSTOMER" | "OTHER";
+    amount?: number;
+    currency?: string;
     id?: number;
     dossierId?: number;
+    dossierCode?: string;
+    dossierContent?: string;
+    dossierStatus?: AccountingDossierStatus | string;
+    dossierStorageStatus?: AccountingDossierStorageStatus | string;
+    company?: ICompany;
+    department?: IDepartment;
+    section?: ISection | null;
     accountingCategory?: {
         id: number;
         categoryCode?: string;
         categoryName?: string;
+        symbol?: string;
     };
     document?: {
         id: number;
@@ -2236,4 +2268,93 @@ export interface IAccountingDossierDocumentRequest {
     documentName: string;
     documentType?: AccountingDossierDocumentType;
     documentId?: number;
+}
+
+
+export interface IAccountingDossierDocumentRequest {
+    accountingCategoryId: number;
+    documentName: string;
+    documentType?: string;
+    documentId?: number;
+    fileUrl?: string;
+    externalLink?: string;
+    invoiceDate?: string;
+    invoiceNumber?: string;
+    invoiceContent?: string;
+    partnerName?: string;
+    partnerType?: "SUPPLIER" | "CUSTOMER" | "OTHER";
+    amount?: number;
+    currency?: string;
+    confirmDuplicate?: boolean;
+    duplicateReason?: string;
+}
+
+export interface IAccountingDossierDocumentCheckRequest {
+    checkStatus: string;
+    note?: string;
+}
+
+export interface IAccountingDossierReportRow {
+    key: string;
+    label: string;
+    count: number;
+}
+
+export interface IAccountingDossierStorageSummary {
+    total: number;
+    inRetention: number;
+    expired: number;
+    archived: number;
+    expiringSoon: number;
+    pendingApproval: number;
+    byStatus: Record<string, number>;
+    byStorageStatus: Record<string, number>;
+}
+
+export interface IDepartmentMissionSummary {
+    id: number;
+    status: string;
+    version: number;
+    lastUpdatedAt?: string;
+    objectiveCount?: number;
+    taskCount?: number;
+    missionStatus?: string;
+    issueDate?: string;
+    departmentId?: number;
+}
+
+export interface IDepartmentMissionVersion {
+    id: number;
+    status: string;
+    version: number;
+    snapshotJson?: string;
+    title?: string;
+    objectiveCount?: number;
+    taskCount?: number;
+    authorityCount?: number;
+    createdAt?: string;
+    createdByName?: string;
+    effectiveDate?: string;
+    changeSummary?: string;
+}
+
+export interface IAccountingDossierApprovalStep {
+    id: number;
+    dossierId: number;
+    stepOrder: number;
+    stepName?: string;
+    approverType: string;
+    approverUserId?: string;
+    approverName?: string;
+    status: string;
+    note?: string;
+    actionNote?: string;
+    actedAt?: string;
+}
+
+export interface IAccountingDossierBulkActionResult {
+    success: boolean;
+    dossierId?: number;
+    documentId?: number;
+    message?: string;
 }

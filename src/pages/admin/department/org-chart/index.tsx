@@ -41,7 +41,7 @@ const DepartmentOrgChartPage = () => {
                 ownerType="DEPARTMENT"
                 ownerId={id}
                 chartTitle={`Sơ đồ tổ chức${departmentName ? ` — ${departmentName}` : ""}`}
-                onClose={() => navigate(-1)}
+                onClose={() => navigate("/admin/departments")}
             />
             <DeptPageNav pages={deptNavPages} /> {/* ← thêm pages prop */}
         </PageContainer>

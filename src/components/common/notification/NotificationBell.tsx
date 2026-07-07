@@ -17,7 +17,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
         onOpenChange ? onOpenChange(val) : setOpenInternal(val);
     };
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const { items, unreadCount, markAllRead, markOneRead, isLoading, soundEnabled, toggleSound } = useNotifications();
+    const { items, unreadCount, markAllRead, markAllReadByModules, markOneRead, isLoading, soundEnabled, toggleSound } = useNotifications();
 
     return (
         <>
@@ -34,6 +34,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                         onClose={() => setOpen(false)}
                         markOneRead={markOneRead}
                         markAllRead={markAllRead}
+                        markAllReadByModules={markAllReadByModules}
                         isLoading={isLoading}
                         soundEnabled={soundEnabled}
                         toggleSound={toggleSound}
@@ -77,7 +78,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                                 minWidth: 18,
                                 height: 18,
                                 padding: "0 4px",
-                                background: "#E8356D",
+                                background: "#e11d48",
                                 color: "#fff",
                                 borderRadius: 99,
                                 fontSize: 10,
@@ -85,7 +86,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                border: "2px solid #ec4899",
+                                border: "2px solid #fff",
                                 lineHeight: 1,
                                 zIndex: 1,
                             }}>
@@ -98,8 +99,8 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                                 width: 18,
                                 height: 18,
                                 borderRadius: "50%",
-                                background: "#E8356D",
-                                opacity: 0.4,
+                                background: "#e11d48",
+                                opacity: 0.35,
                                 animation: "bell-pulse 1.5s ease-out infinite",
                             }} />
                         </>

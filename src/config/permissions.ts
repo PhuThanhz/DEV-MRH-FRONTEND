@@ -35,6 +35,7 @@ export const ALL_PERMISSIONS = {
     ACCOUNTING_DOSSIERS: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-dossiers", module: "ACCOUNTING_DOSSIERS" },
         GET_BY_ID: { method: "GET", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
+        GET_BY_QR_TOKEN: { method: "GET", apiPath: "/api/v1/accounting-dossiers/qr/{token}", module: "ACCOUNTING_DOSSIERS" },
         CREATE: { method: "POST", apiPath: "/api/v1/accounting-dossiers", module: "ACCOUNTING_DOSSIERS" },
         UPDATE: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/accounting-dossiers/{id}", module: "ACCOUNTING_DOSSIERS" },
@@ -50,6 +51,15 @@ export const ALL_PERMISSIONS = {
         CREATE_DOCUMENT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/documents", module: "ACCOUNTING_DOSSIERS" },
         UPDATE_DOCUMENT: { method: "PUT", apiPath: "/api/v1/accounting-dossiers/{id}/documents/{docId}", module: "ACCOUNTING_DOSSIERS" },
         DELETE_DOCUMENT: { method: "DELETE", apiPath: "/api/v1/accounting-dossiers/{id}/documents/{docId}", module: "ACCOUNTING_DOSSIERS" },
+        GET_DASHBOARD_SUMMARY: { method: "GET", apiPath: "/api/v1/accounting-dossiers/dashboard/summary", module: "ACCOUNTING_DOSSIERS" },
+        CHECK_DOCUMENT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/documents/{docId}/check", module: "ACCOUNTING_DOSSIERS" },
+        PENDING_MY_APPROVAL: { method: "GET", apiPath: "/api/v1/accounting-dossiers/pending-my-approval", module: "ACCOUNTING_DOSSIERS" },
+        APPROVE: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/approve", module: "ACCOUNTING_DOSSIERS" },
+        REJECT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/reject", module: "ACCOUNTING_DOSSIERS" },
+        TERMINATE: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/terminate", module: "ACCOUNTING_DOSSIERS" },
+        ARCHIVE: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/archive", module: "ACCOUNTING_DOSSIERS" },
+        RETURN_RESPONSE: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/return-response", module: "ACCOUNTING_DOSSIERS" },
+        SYNC_TEMPLATE_REJECT: { method: "POST", apiPath: "/api/v1/accounting-dossiers/{id}/sync-template/reject", module: "ACCOUNTING_DOSSIERS" },
     },
     /* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
     ACCOUNTING_DOCUMENT_CATEGORIES: {
@@ -674,6 +684,24 @@ export const ALL_PERMISSIONS = {
         GET_BY_ID: {
             method: "GET",
             apiPath: "/api/v1/department-objectives/{id}",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+
+        GET_SUMMARY: {
+            method: "GET",
+            apiPath: "/api/v1/department-objectives/summary",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+
+        GET_VERSIONS: {
+            method: "GET",
+            apiPath: "/api/v1/departments/{departmentId}/objectives/versions",
+            module: "DEPARTMENT_OBJECTIVES",
+        },
+
+        PUBLISH: {
+            method: "POST",
+            apiPath: "/api/v1/department-objectives/publish",
             module: "DEPARTMENT_OBJECTIVES",
         },
     },

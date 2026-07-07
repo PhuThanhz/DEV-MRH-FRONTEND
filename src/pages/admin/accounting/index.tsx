@@ -46,9 +46,10 @@ import dayjs from "dayjs";
 import queryString from "query-string";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
+import SearchFilter from "@/components/common/filter/SearchFilter";
 import DataTable from "@/components/common/data-table";
 
-import type { IDocument, IDocumentFolder } from "@/types/backend";
+import type { IAccountingDossier, IAccountingDossierDocument, IDocument, IDocumentFolder } from "@/types/backend";
 import useAccess from "@/hooks/useAccess";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { getModalWidth } from "@/utils/responsive";
@@ -64,6 +65,8 @@ import {
     useDeleteAccountingFolderMutation,
     useLockAccountingDocumentMutation
 } from "@/hooks/useAccountingDocuments";
+import { useAllDossierDocumentsQuery } from "@/hooks/useDossierDocuments";
+import { useAccountingDossierByIdQuery } from "@/hooks/useAccountingDossiers";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import {
     callFetchCompany,
@@ -76,11 +79,13 @@ import {
 
 import ModalAccountingDoc from "./ModalAccountingDoc";
 import ViewDetailDocument from "../document/view.document";
+import DossierDocumentList from "../accounting-dossiers/components/DossierDocumentList";
 
 const { Sider, Content } = Layout;
 const ACCOUNTING_DOC_CATEGORY_CODE = "ACCOUNTING_DOC";
 
 type AccountingFolderNode = IDocumentFolder & { id: number };
+type AccountingListRow = IAccountingDossierDocument & { sourceType: "DOSSIER"; rowKey: string };
 type CompanyOption = {
     id: number;
     name: string;
@@ -119,6 +124,24 @@ const VALIDITY_OPTIONS = [
 
 const filterItemStyle = { minWidth: 0 };
 const getValidityLabel = (active?: boolean) => active ? "Còn hiệu lực" : "Đã hủy";
+const CHECK_STATUS_LABEL: Record<string, { color: string; label: string }> = {
+    PENDING: { color: "default", label: "Chờ kiểm tra" },
+    VALID: { color: "success", label: "Hợp lệ" },
+    NEED_SUPPLEMENT: { color: "warning", label: "Cần bổ sung" },
+    INVALID: { color: "error", label: "Không hợp lệ" },
+    NOT_REQUIRED: { color: "blue", label: "Không yêu cầu" },
+};
+
+const buildDocumentFileUrl = (fileName: string) =>
+    `/api/v1/files/public?folder=documents&fileName=${encodeURIComponent(fileName)}`;
+
+const splitDossierFileUrls = (value?: string) =>
+    value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+
+const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
+    APPROVED: { color: "success", label: "Đã duyệt" },
+    ARCHIVED: { color: "purple", label: "Đã lưu trữ" },
+};
 
 const AccountingDocumentPage = () => {
     const isCompact = useIsMobile(1180);
@@ -130,6 +153,8 @@ const AccountingDocumentPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [openViewModal, setOpenViewModal] = useState(false);
     const [dataInit, setDataInit] = useState<IDocument | null>(null);
+    const [viewDossierId, setViewDossierId] = useState<number | undefined>();
+    const [openDossierModal, setOpenDossierModal] = useState(false);
 
     const [searchValue, setSearchValue] = useState("");
     const [current, setCurrent] = useState(PAGINATION_CONFIG.DEFAULT_PAGE);
@@ -197,6 +222,7 @@ const AccountingDocumentPage = () => {
     const { data: folderTree } = useAccountingFoldersQuery(selectedCompanyId as number);
     const { data: departments = [] } = useDepartmentsByCompanyQuery(selectedCompanyId as number);
     const { data: accountingCategories = [] } = useAccountingDocumentCategoryActiveQuery();
+    const { data: viewDossier, isFetching: isFetchingViewDossier } = useAccountingDossierByIdQuery(viewDossierId);
 
     useEffect(() => {
         setSelectedDepartmentId(undefined);
@@ -309,65 +335,108 @@ const AccountingDocumentPage = () => {
         return { start, end };
     }, [selectedMonth, selectedYear]);
 
-    const queryParams = {
+    const dossierDocumentQueryParams = {
         current,
         pageSize,
-        ...(selectedCompanyId && { "department.company.id": selectedCompanyId }),
-        ...(selectedDepartmentId && { "department.id": selectedDepartmentId }),
+        ...(selectedCompanyId && { "dossier.company.id": selectedCompanyId }),
+        ...(selectedDepartmentId && { "dossier.department.id": selectedDepartmentId }),
         ...(selectedCategoryId && { "accountingCategory.id": selectedCategoryId }),
-        ...(selectedYear && { "issuedDate>=": periodRange.start.toISOString(), "issuedDate<=": periodRange.end.toISOString() }),
-        ...(selectedFolderId && { "folder.id": selectedFolderId }),
-        ...(selectedValidity !== "ALL" && { validity: selectedValidity }),
-        ...(selectedLockStatus !== "ALL" && { isLocked: selectedLockStatus === "LOCKED" }),
+        ...(selectedYear && { "createdAt>=": periodRange.start.toISOString(), "createdAt<=": periodRange.end.toISOString() }),
+        ...(selectedStatus !== "ALL" && { fileStatus: selectedStatus }),
+        dossierStatus: "APPROVED,ARCHIVED",
         ...(searchValue.trim() && { keyword: searchValue.trim() }),
     };
+    const dossierDocumentQueryStr = queryString.stringify(dossierDocumentQueryParams);
+    const { data: dossierDocumentPageData, isLoading: isLoadingDossierDocuments } = useAllDossierDocumentsQuery(dossierDocumentQueryStr);
+    const dossierDocuments = dossierDocumentPageData?.result || [];
+    const totalDossierDocuments = dossierDocumentPageData?.meta.total || 0;
 
-    const queryStr = queryString.stringify(queryParams);
-    const { data: pageData, isLoading } = useAccountingDocumentsQuery(queryStr);
-    const documents = pageData?.result || [];
-    const totalDocuments = pageData?.meta.total || 0;
     const selectedDepartmentName = departments.find((department) => department.id === selectedDepartmentId)?.name || "Tất cả phòng ban";
     const activeFilterCount = [
         selectedDepartmentId,
         selectedCategoryId,
         selectedMonth,
         selectedStatus !== "ALL",
-        selectedValidity !== "ALL",
-        selectedLockStatus !== "ALL",
         selectedYear !== CURRENT_YEAR,
     ].filter(Boolean).length;
 
-    const filteredDocuments = useMemo(() => {
-        const result = documents;
+    const tableRows: AccountingListRow[] = useMemo(() => {
+        return dossierDocuments.map((item) => ({
+            ...item,
+            sourceType: "DOSSIER" as const,
+            rowKey: `dossier-${item.id}`,
+        }));
+    }, [dossierDocuments]);
 
-        if (selectedStatus === "HAS_FILE") {
-            return result.filter((item) => item.fileUrls && item.fileUrls.length > 0);
-        }
+    const totalRows = totalDossierDocuments;
 
-        if (selectedStatus === "MISSING_FILE") {
-            return result.filter((item) => !item.fileUrls || item.fileUrls.length === 0);
-        }
-
-        return result;
-    }, [documents, selectedStatus]);
-
-    const columns: ProColumns<IDocument>[] = [
+    const columns: ProColumns<AccountingListRow>[] = [
         {
-            title: "Mã lưu hồ sơ",
-            dataIndex: "documentCode",
-            width: 140,
+            title: "Bộ chứng từ",
+            dataIndex: "dossierCode",
+            width: 170,
             render: (dom, entity) => (
-                <Tag color="geekblue" style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6 }}>
-                    {entity.documentCode}
-                </Tag>
+                <Space direction="vertical" size={4}>
+                    <Button
+                        type="link"
+                        size="small"
+                        onClick={() => {
+                            if (entity.dossierId) {
+                                setViewDossierId(entity.dossierId);
+                                setOpenDossierModal(true);
+                            }
+                        }}
+                    >
+                        <Tag color="magenta" style={{ fontSize: 13, padding: "4px 8px", borderRadius: 6, margin: 0, cursor: "pointer" }}>
+                            {entity.dossierCode || `BCT-${entity.dossierId}`}
+                        </Tag>
+                    </Button>
+                </Space>
             ),
+        },
+        {
+            title: "Số hóa đơn / Mã lưu",
+            dataIndex: "invoiceNumber",
+            width: 180,
+            render: (_, entity) => (
+                <Space direction="vertical" size={2}>
+                    <span style={{ fontWeight: 600, color: "#1f2937" }}>
+                        {entity.invoiceNumber || "---"}
+                    </span>
+                    {entity.document?.documentCode && (
+                        <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                            {entity.document.documentCode}
+                        </span>
+                    )}
+                </Space>
+            )
+        },
+        {
+            title: "Nhà cung cấp",
+            dataIndex: "partnerName",
+            width: 180,
+            render: (_, entity) => (
+                <span style={{ color: "#374151" }}>
+                    {entity.partnerName || "---"}
+                </span>
+            )
+        },
+        {
+            title: "Số tiền",
+            dataIndex: "amount",
+            width: 140,
+            render: (_, entity) => (
+                <span style={{ fontWeight: 600, color: "#059669" }}>
+                    {entity.amount ? `${new Intl.NumberFormat('vi-VN').format(entity.amount)} ${entity.currency || 'VND'}` : "---"}
+                </span>
+            )
         },
         {
             title: "Tên chứng từ",
             dataIndex: "documentName",
-            width: 320,
+            width: 360,
             render: (dom, entity) => (
-                <Space direction="vertical" size={3} style={{ maxWidth: 300 }}>
+                <Space direction="vertical" size={3} style={{ maxWidth: 340 }}>
                     <span
                         title={entity.documentName}
                         style={{
@@ -383,7 +452,7 @@ const AccountingDocumentPage = () => {
                         {entity.documentName}
                     </span>
                     <span style={{ color: "#6b7280", fontSize: 12 }}>
-                        {entity.folder?.folderName || "Chưa xếp thư mục"}
+                        {entity.dossierContent || "Bộ chứng từ chưa có nội dung"}
                     </span>
                 </Space>
             ),
@@ -417,9 +486,9 @@ const AccountingDocumentPage = () => {
                             overflow: "hidden",
                             lineHeight: 1.3
                         }}
-                        title={entity.department?.companyName || ""}
+                        title={entity.company?.name || ""}
                     >
-                        {entity.department?.companyName || ""}
+                        {entity.company?.name || ""}
                     </span>
                 </Space>
             ),
@@ -442,18 +511,24 @@ const AccountingDocumentPage = () => {
             dataIndex: "issuedDate",
             width: 105,
             render: (dom, entity) => (
-                <>{entity.issuedDate ? dayjs(entity.issuedDate).format("DD/MM/YYYY") : ""}</>
+                <>{dayjs(entity.invoiceDate || entity.createdAt).format("DD/MM/YYYY")}</>
             ),
         },
         {
-            title: "Hiệu lực",
+            title: "Trạng thái",
             dataIndex: "active",
-            width: 115,
-            render: (_, entity) => (
-                <Tag color={entity.active ? "success" : "default"} style={{ borderRadius: 6, margin: 0, fontWeight: 600 }}>
-                    {getValidityLabel(entity.active)}
-                </Tag>
-            ),
+            width: 145,
+            render: (_, entity) => {
+                const checkMeta = CHECK_STATUS_LABEL[entity.checkStatus || "PENDING"] || CHECK_STATUS_LABEL.PENDING;
+                return (
+                    <Space direction="vertical" size={4}>
+                        <Tag color={checkMeta.color} style={{ borderRadius: 6, margin: 0, fontWeight: 600 }}>
+                            {checkMeta.label}
+                        </Tag>
+                        {entity.dossierStatus && <Tag style={{ margin: 0 }}>{entity.dossierStatus}</Tag>}
+                    </Space>
+                );
+            },
         },
 
         {
@@ -464,59 +539,39 @@ const AccountingDocumentPage = () => {
             hideInSearch: true,
             render: (dom, entity) => (
                 <Space size={4} align="center">
+                    <Tooltip title="Xem nguyên bộ chứng từ">
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<FileDoneOutlined style={{ color: "#722ed1", fontSize: 16 }} />}
+                            onClick={() => {
+                                if (entity.dossierId) {
+                                    setViewDossierId(entity.dossierId);
+                                    setOpenDossierModal(true);
+                                }
+                            }}
+                        />
+                    </Tooltip>
                     {canView && (
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                            onClick={() => {
-                                setDataInit(entity);
-                                setOpenViewModal(true);
-                            }}
-                        />
-                    )}
-                    {canUpdate && !entity.isLocked && (
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
-                            onClick={() => {
-                                setDataInit(entity);
-                                setOpenModal(true);
-                            }}
-                        />
-                    )}
-                    {canDelete && !entity.isLocked && (
-                        <Popconfirm
-                            title={`Bạn có chắc muốn xoá chứng từ này?`}
-                            onConfirm={() => entity.id && deleteMutation.mutate(entity.id)}
-                            okText="Xoá"
-                            cancelText="Huỷ"
-                        >
+                        <Tooltip title="Mở file/link đầu tiên của chứng từ con">
                             <Button
                                 type="text"
                                 size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                onClick={() => {
+                                    const firstFile = splitDossierFileUrls(entity.fileUrl)[0];
+                                    const firstUrl = entity.externalLink || (firstFile ? buildDocumentFileUrl(firstFile) : undefined);
+                                    if (firstUrl) {
+                                        window.open(firstUrl, "_blank");
+                                    } else {
+                                        Modal.info({
+                                            title: "Chưa có file/link",
+                                            content: "Chứng từ con này đang nằm trong bộ hồ sơ nhưng chưa có file hoặc link đính kèm.",
+                                        });
+                                    }
+                                }}
                             />
-                        </Popconfirm>
-                    )}
-                    {/* Nút khoá dành cho Kế toán */}
-                    {canUpdate && (
-                        <Popconfirm
-                            title={entity.isLocked ? "Mở khoá chứng từ này để nhân viên có thể sửa?" : "Khoá chứng từ này lại?"}
-                            onConfirm={() => entity.id && lockMutation.mutate({ id: entity.id, lockStatus: !entity.isLocked })}
-                            okText="Đồng ý"
-                            cancelText="Huỷ"
-                        >
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={entity.isLocked
-                                    ? <LockOutlined style={{ color: "#cf1322", fontSize: 16 }} />
-                                    : <UnlockOutlined style={{ color: "#8c8c8c", fontSize: 16 }} />}
-                                title={entity.isLocked ? `Đã khoá bởi ${entity.lockedBy}` : "Chưa khoá"}
-                            />
-                        </Popconfirm>
+                        </Tooltip>
                     )}
                 </Space>
             ),
@@ -727,292 +782,141 @@ const AccountingDocumentPage = () => {
         setOpenModal(true);
     };
 
-    return (
-        <PageContainer title="Chứng từ Kế toán">
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    const filter = (
+        <div className="flex w-full flex-col gap-3">
+            <SearchFilter
+                searchPlaceholder="Mã hồ sơ, nội dung, người tải..."
+                showAddButton={false}
+                showResetButton={true}
+                activeFilterCount={activeFilterCount}
+                onSearch={(val) => {
+                    setSearchValue(val);
+                    setCurrent(1);
+                }}
+                onReset={resetFilters}
+                extraButtons={
+                    <Space size={8} wrap>
+                        <Button
+                            icon={<FilterOutlined />}
+                            type={filtersOpen ? "primary" : "default"}
+                            onClick={() => setFiltersOpen((open) => !open)}
+                            style={{ height: 40, borderRadius: 10 }}
+                        >
+                            Bộ lọc
+                        </Button>
+                        <Tag color="blue" style={{ margin: 0, padding: "8px 12px", borderRadius: 8, height: 40, display: "flex", alignItems: "center" }}>
+                            Chứng từ được tạo trong bộ chứng từ
+                        </Tag>
+                    </Space>
+                }
+                guideSearchId="accounting-doc-search-input"
+            />
+
+            {filtersOpen && (
                 <div
                     style={{
-                        background: "#fff",
-                        border: "1px solid #eef0f4",
-                        borderRadius: 8,
-                        padding: 12,
+                        display: "grid",
+                        gridTemplateColumns: isCompact
+                            ? "repeat(auto-fit, minmax(180px, 1fr))"
+                            : "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 12,
+                        background: "#f9fafb",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 12,
+                        padding: "16px 20px",
+                        marginTop: 4,
                     }}
                 >
-                    <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: isCompact ? "1fr" : "minmax(420px, 1fr) auto",
-                            gap: 10,
-                            alignItems: "center",
-                        }}
-                    >
-                        <div style={filterItemStyle} data-guide-id="accounting-doc-search-input">
-                            <Input
-                                size="large"
-                                placeholder="Mã hồ sơ, nội dung, người tải..."
-                                value={searchValue}
-                                onChange={(e) => {
-                                    setSearchValue(e.target.value);
-                                    setCurrent(1);
-                                }}
-                                allowClear
-                                prefix={<SearchOutlined style={{ color: "#9ca3af" }} />}
-                            />
-                        </div>
-                        <Space
-                            size={8}
-                            wrap={isCompact}
-                            style={{ justifyContent: isCompact ? "flex-start" : "flex-end", whiteSpace: "nowrap" }}
-                        >
-                            <Badge count={activeFilterCount} size="small">
-                                <Button
-                                    icon={<FilterOutlined />}
-                                    type={filtersOpen ? "primary" : "default"}
-                                    onClick={() => setFiltersOpen((open) => !open)}
-                                >
-                                    Bộ lọc
-                                </Button>
-                            </Badge>
-                            <Tooltip title="Xuất danh sách đang lọc">
-                                <Button
-                                    icon={<FileExcelOutlined />}
-                                    onClick={async () => {
-                                        try {
-                                            const res = await callExportAccountingDocuments(queryStr);
-                                            if (res && res.data && Array.isArray(res.data)) {
-                                                const XLSX = await import("xlsx");
-                                                // Format data for Excel
-                                                const excelData = res.data.map((doc, index) => ({
-                                                    "STT": index + 1,
-                                                    "Mã chứng từ": doc.documentCode || "",
-                                                    "Nội dung / Diễn giải": doc.documentName || "",
-                                                    "Ngày tạo": doc.issuedDate ? dayjs(doc.issuedDate).format("DD/MM/YYYY") : "",
-                                                    "Người nhập": doc.createdBy || "",
-                                                    "Ngày nhập hệ thống": doc.createdAt ? dayjs(doc.createdAt).format("DD/MM/YYYY HH:mm") : "",
-                                                    "Hiệu lực": getValidityLabel(doc.active)
-                                                }));
-
-                                                const worksheet = XLSX.utils.json_to_sheet(excelData);
-                                                const workbook = XLSX.utils.book_new();
-                                                XLSX.utils.book_append_sheet(workbook, worksheet, "Chứng từ kế toán");
-
-                                                // Make header bold
-                                                const range = XLSX.utils.decode_range(worksheet['!ref'] || "A1:G1");
-                                                for (let C = range.s.c; C <= range.e.c; ++C) {
-                                                    const address = XLSX.utils.encode_col(C) + "1";
-                                                    if (!worksheet[address]) continue;
-                                                    worksheet[address].s = { font: { bold: true } };
-                                                }
-
-                                                // Auto adjust column widths
-                                                const colWidths = [
-                                                    { wch: 5 }, // STT
-                                                    { wch: 20 }, // Mã
-                                                    { wch: 40 }, // Nội dung
-                                                    { wch: 15 }, // Ngày tạo
-                                                    { wch: 20 }, // Người nhập
-                                                    { wch: 20 }, // Ngày nhập hệ thống
-                                                    { wch: 15 } // Hiệu lực
-                                                ];
-                                                worksheet['!cols'] = colWidths;
-
-                                                XLSX.writeFile(workbook, "accounting_documents.xlsx");
-                                            }
-                                        } catch (error) {
-                                            console.error("Export error:", error);
-                                        }
-                                    }}
-                                >
-                                    Xuất Excel
-                                </Button>
-                            </Tooltip>
-                            <Tooltip title="Chọn nhân viên để lấy chứng từ từ kho cá nhân">
-                                <Button
-                                    icon={<AuditOutlined />}
-                                    onClick={() => {
-                                        setFiltersOpen(true);
-                                        setReconcileOpen(true);
-                                    }}
-                                >
-                                    Đối soát
-                                </Button>
-                            </Tooltip>
-                            {canCreate && (
-                                <Button
-                                    data-guide-id="accounting-doc-add-button"
-                                    icon={<PlusOutlined />}
-                                    style={{
-                                        height: 40,
-                                        borderRadius: 10,
-                                        backgroundColor: "#ff5fa2",
-                                        color: "#fff",
-                                        border: "none",
-                                        fontWeight: 600,
-                                        fontSize: 14,
-                                        boxShadow: "0 2px 8px rgba(255, 95, 162, 0.35)",
-                                        paddingInline: 18,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 6,
-                                        whiteSpace: "nowrap",
-                                        flexShrink: 0,
-                                        transition: "all 0.2s ease",
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#ff4b97";
-                                        e.currentTarget.style.boxShadow = "0 4px 14px rgba(255, 95, 162, 0.5)";
-                                        e.currentTarget.style.transform = "translateY(-1px)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#ff5fa2";
-                                        e.currentTarget.style.boxShadow = "0 2px 8px rgba(255, 95, 162, 0.35)";
-                                        e.currentTarget.style.transform = "translateY(0)";
-                                    }}
-                                    onClick={() => {
-                                        setDataInit(selectedFolderId ? { folder: { id: selectedFolderId, folderName: "" } } as IDocument : null);
-                                        setOpenModal(true);
-                                    }}
-                                >
-                                    Thêm chứng từ
-                                </Button>
-                            )}
-                        </Space>
+                    <div style={filterItemStyle}>
+                        <Select
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedCompanyId}
+                            onChange={(value) => setSelectedCompanyId(value)}
+                            options={companies.map(c => ({ label: c.name, value: c.id }))}
+                            placeholder="Lọc theo công ty"
+                            suffixIcon={<BankOutlined />}
+                        />
                     </div>
-
-                    {filtersOpen && (
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: isCompact
-                                    ? "repeat(auto-fit, minmax(180px, 1fr))"
-                                    : "1.3fr 1.15fr 90px 140px 1fr 150px 145px auto",
-                                gap: 10,
-                                alignItems: "center",
-                                borderTop: "1px solid #eef0f4",
-                                marginTop: 12,
-                                paddingTop: 12,
+                    <div style={filterItemStyle}>
+                        <Select
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedDepartmentId}
+                            onChange={(value) => {
+                                setSelectedDepartmentId(value);
+                                setCurrent(1);
                             }}
-                        >
-                            <div style={filterItemStyle}>
-                                <Select
-                                    style={{ width: "100%" }}
-                                    value={selectedCompanyId}
-                                    onChange={(value) => setSelectedCompanyId(value)}
-                                    options={companies.map(c => ({ label: c.name, value: c.id }))}
-                                    placeholder="Lọc theo công ty"
-                                    suffixIcon={<BankOutlined />}
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    allowClear
-                                    showSearch
-                                    optionFilterProp="label"
-                                    style={{ width: "100%" }}
-                                    value={selectedDepartmentId}
-                                    onChange={(value) => {
-                                        setSelectedDepartmentId(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={departments.map(department => ({ label: department.name, value: department.id }))}
-                                    placeholder="Lọc theo phòng ban"
-                                    suffixIcon={<ApartmentOutlined />}
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    style={{ width: "100%" }}
-                                    value={selectedYear}
-                                    onChange={(value) => {
-                                        setSelectedYear(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={YEAR_OPTIONS}
-                                    placeholder="Năm"
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    allowClear
-                                    style={{ width: "100%" }}
-                                    value={selectedMonth}
-                                    onChange={(value) => {
-                                        setSelectedMonth(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={MONTH_OPTIONS}
-                                    placeholder="Kỳ / tháng"
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    allowClear
-                                    showSearch
-                                    optionFilterProp="label"
-                                    style={{ width: "100%" }}
-                                    value={selectedCategoryId}
-                                    onChange={(value) => {
-                                        setSelectedCategoryId(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={accountingCategories.map(category => ({
-                                        label: category.categoryName,
-                                        value: category.id,
-                                    }))}
-                                    placeholder="Loại chứng từ kế toán"
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    style={{ width: "100%" }}
-                                    value={selectedStatus}
-                                    onChange={(value) => {
-                                        setSelectedStatus(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={STATUS_OPTIONS}
-                                    placeholder="Tình trạng file"
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    style={{ width: "100%" }}
-                                    value={selectedValidity}
-                                    onChange={(value) => {
-                                        setSelectedValidity(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={VALIDITY_OPTIONS}
-                                    placeholder="Hiệu lực"
-                                />
-                            </div>
-                            <div style={filterItemStyle}>
-                                <Select
-                                    style={{ width: "100%" }}
-                                    value={selectedLockStatus}
-                                    onChange={(value) => {
-                                        setSelectedLockStatus(value);
-                                        setCurrent(1);
-                                    }}
-                                    options={[
-                                        { label: "Tất cả trạng thái", value: "ALL" },
-                                        { label: "Chờ thu thập", value: "UNLOCKED" },
-                                        { label: "Đã khoá", value: "LOCKED" },
-                                    ]}
-                                    placeholder="Trạng thái thu thập"
-                                />
-                            </div>
-                            <Tooltip title="Đưa bộ lọc về kỳ hiện tại">
-                                <Button icon={<ClearOutlined />} onClick={resetFilters}>
-                                    Xóa lọc
-                                </Button>
-                            </Tooltip>
-                        </div>
-                    )}
+                            options={departments.map(department => ({ label: department.name, value: department.id }))}
+                            placeholder="Lọc theo phòng ban"
+                            suffixIcon={<ApartmentOutlined />}
+                        />
+                    </div>
+                    <div style={filterItemStyle}>
+                        <Select
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedYear}
+                            onChange={(value) => {
+                                setSelectedYear(value);
+                                setCurrent(1);
+                            }}
+                            options={YEAR_OPTIONS}
+                            placeholder="Năm"
+                        />
+                    </div>
+                    <div style={filterItemStyle}>
+                        <Select
+                            allowClear
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedMonth}
+                            onChange={(value) => {
+                                setSelectedMonth(value);
+                                setCurrent(1);
+                            }}
+                            options={MONTH_OPTIONS}
+                            placeholder="Kỳ / tháng"
+                        />
+                    </div>
+                    <div style={filterItemStyle}>
+                        <Select
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedCategoryId}
+                            onChange={(value) => {
+                                setSelectedCategoryId(value);
+                                setCurrent(1);
+                            }}
+                            options={accountingCategories.map(category => ({
+                                label: category.categoryName,
+                                value: category.id,
+                            }))}
+                            placeholder="Loại chứng từ kế toán"
+                        />
+                    </div>
+                    <div style={filterItemStyle}>
+                        <Select
+                            style={{ width: "100%", height: 40 }}
+                            value={selectedStatus}
+                            onChange={(value) => {
+                                setSelectedStatus(value);
+                                setCurrent(1);
+                            }}
+                            options={STATUS_OPTIONS}
+                            placeholder="Tình trạng file"
+                        />
+                    </div>
                 </div>
+            )}
+        </div>
+    );
 
-                <Layout style={{ background: '#fff', padding: 0, borderRadius: 8, minHeight: 620, border: "1px solid #eef0f4" }}>
-                    <Sider width={280} breakpoint="lg" collapsedWidth={0} style={{ background: '#fff', borderRight: '1px solid #eef0f4', padding: 16 }}>
+    return (
+        <PageContainer title="Chứng từ Kế toán" filter={filter}>
+            <Layout style={{ background: '#fff', padding: 0, borderRadius: 8, minHeight: 620, border: "1px solid #eef0f4" }}>
+                    <Sider width={0} collapsed style={{ display: "none" }}>
                         <Space direction="vertical" size={16} style={{ width: "100%" }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 12, borderBottom: '1px dashed #e5e7eb' }}>
                                 <span style={{ fontWeight: 700, fontSize: 15, color: '#374151' }}>
@@ -1061,32 +965,31 @@ const AccountingDocumentPage = () => {
                     </Sider>
 
 
-                    <Content style={{ padding: '16px 20px', background: '#fff' }}>
+                    <Content style={{ padding: '16px 20px', background: '#fff', width: "100%" }}>
                         <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center" }}>
                             <Space direction="vertical" size={2}>
                                 <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>
                                     Danh sách chứng từ
                                 </span>
                                 <span style={{ color: "#6b7280" }}>
-                                    {totalDocuments} chứng từ · {selectedMonth ? `Tháng ${String(selectedMonth).padStart(2, "0")}` : "Cả năm"} {selectedYear} · {selectedDepartmentName}
+                                    {totalRows} chứng từ thuộc bộ · {selectedMonth ? `Tháng ${String(selectedMonth).padStart(2, "0")}` : "Cả năm"} {selectedYear} · {selectedDepartmentName}
                                 </span>
                             </Space>
                             <Space wrap style={{ justifyContent: "flex-end" }}>
                                 {searchValue && <Tag color="blue">Tìm: {searchValue}</Tag>}
                                 {selectedStatus !== "ALL" && <Tag color="orange">{STATUS_OPTIONS.find((item) => item.value === selectedStatus)?.label}</Tag>}
-                                {selectedValidity !== "ALL" && <Tag color="green">{VALIDITY_OPTIONS.find((item) => item.value === selectedValidity)?.label}</Tag>}
                             </Space>
                         </div>
 
                         <DataTable
-                            rowKey="id"
-                            loading={isLoading}
+                            rowKey="rowKey"
+                            loading={isLoadingDossierDocuments}
                             columns={columns}
-                            dataSource={filteredDocuments}
+                            dataSource={tableRows}
                             pagination={{
                                 current,
                                 pageSize,
-                                total: selectedStatus === "ALL" ? totalDocuments : filteredDocuments.length,
+                                total: selectedStatus === "ALL" ? totalRows : tableRows.length,
                                 showSizeChanger: true,
                                 onChange: (page, size) => {
                                     setCurrent(page);
@@ -1096,7 +999,6 @@ const AccountingDocumentPage = () => {
                         />
                     </Content>
                 </Layout>
-            </Space>
 
             {openModal && (
                 <ModalAccountingDoc
@@ -1307,6 +1209,52 @@ const AccountingDocumentPage = () => {
                         <Input placeholder="VD: Năm 2026, Tháng 06..." autoFocus />
                     </Form.Item>
                 </Form>
+            </Modal>
+
+            <Modal
+                title={`Chi tiết bộ chứng từ: ${viewDossier?.dossierCode || ""}`}
+                open={openDossierModal}
+                onCancel={() => {
+                    setOpenDossierModal(false);
+                    setViewDossierId(undefined);
+                }}
+                footer={null}
+                width={getModalWidth(1000)}
+                destroyOnClose
+            >
+                <Spin spinning={isFetchingViewDossier}>
+                    {viewDossier ? (
+                        <Space direction="vertical" size={16} style={{ width: "100%", marginTop: 12 }}>
+                            <div style={{ background: "#f9fafb", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                    <div>
+                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Nội dung</div>
+                                        <div style={{ fontWeight: 600 }}>{viewDossier.content}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Ngày lập</div>
+                                        <div style={{ fontWeight: 600 }}>{viewDossier.createdAt ? dayjs(viewDossier.createdAt).format("DD/MM/YYYY HH:mm") : "--"}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Người lập</div>
+                                        <div style={{ fontWeight: 600 }}>{viewDossier.createdBy || "--"}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Trạng thái</div>
+                                        <div>
+                                            <Tag color={DOSSIER_STATUS_LABEL[viewDossier.status]?.color || "default"}>
+                                                {DOSSIER_STATUS_LABEL[viewDossier.status]?.label || viewDossier.status}
+                                            </Tag>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <DossierDocumentList dossier={viewDossier} editable={false} reviewable={false} />
+                        </Space>
+                    ) : (
+                        <Empty description="Không tìm thấy dữ liệu bộ chứng từ" />
+                    )}
+                </Spin>
             </Modal>
         </PageContainer>
     );

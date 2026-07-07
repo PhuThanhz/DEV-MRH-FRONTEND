@@ -8,6 +8,7 @@ import {
 } from "@ant-design/icons";
 import axios from "@/config/axios-customize";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
 const { useToken } = theme;
@@ -124,6 +125,7 @@ const PulseIcon = () => (
 
 const QrScanPage = () => {
     const { token } = useToken();
+    const navigate = useNavigate();
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const [scanning, setScanning] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -297,6 +299,14 @@ const QrScanPage = () => {
             }
 
             // Trường hợp 2: Quét mã QR nội bộ hệ thống (Internal view QR)
+            if (url.includes("/accounting-dossiers/qr/")) {
+                const token = url.split("/accounting-dossiers/qr/")[1]?.split("?")[0];
+                if (!token) throw new Error("Mã QR không hợp lệ");
+                navigate(`/admin/accounting-dossiers/qr/${token}`);
+                handleReset();
+                return;
+            }
+
             const t = url.split("/qr/")[1]?.split("?")[0];
             if (!t) throw new Error("Mã QR không thuộc hệ thống hoặc không hợp lệ");
             const res = await axios.get(`/api/v1/procedures/qr/${t}`);

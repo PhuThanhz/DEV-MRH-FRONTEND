@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Skeleton } from "antd";
-import { Pie } from "@ant-design/charts";
+import { Pie } from "@/components/common/chart/LazyChart";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { useDashboardSummaryQuery, useDepartmentCompletenessQuery } from "@/hooks/useDashboard";

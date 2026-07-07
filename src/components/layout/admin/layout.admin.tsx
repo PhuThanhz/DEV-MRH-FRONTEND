@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Layout } from "antd";
 import { Outlet, useLocation } from "react-router-dom";
 import SliderAdmin from "./slider.admin";
@@ -6,12 +6,13 @@ import HeaderAdmin from "./header.admin";
 import { useAppSelector } from "@/redux/hooks";
 import NotPermitted from "@/components/share/not-permitted";
 import Loading from "@/components/common/loading/loading";
-import QrScannerModal from "@/components/common/qr/QrScannerModal";
 import LotusCharmAssistant from "@/components/common/navigation/LotusCharmAssistant";
 import { NotificationProvider } from "@/hooks/useNotifications";
 import CommandPalette from "@/components/common/navigation/CommandPalette";
 import { useTrackRecentQuickAccess } from "@/hooks/useQuickAccess";
 import { LotusGuideProvider } from "@/components/common/guide/LotusGuideProvider";
+
+const QrScannerModal = lazy(() => import("@/components/common/qr/QrScannerModal"));
 
 const { Content } = Layout;
 
@@ -68,8 +69,11 @@ const LayoutAdmin = () => {
     const isAdmin = roleName.includes("ADMIN");
     const isEmployee = roleName === "EMPLOYEE";
     const isDeptManager = roleName === "DEPARTMENT_MANAGER" || roleName === "ADMIN_SUB_3";
+    const isAccountingRole = roleName.includes("ACCOUNTANT")
+        || roleName.includes("KETOAN")
+        || roleName.includes("KẾ TOÁN");
 
-    if (!isAdmin && !isEmployee && !isDeptManager) {
+    if (!isAdmin && !isEmployee && !isDeptManager && !isAccountingRole) {
         return (
             <NotPermitted message="Bạn không có quyền truy cập nội dung này." />
         );
@@ -108,10 +112,14 @@ const LayoutAdmin = () => {
                         </Content>
                     </Layout>
 
-                    <QrScannerModal
-                        open={openScanner}
-                        onClose={() => setOpenScanner(false)}
-                    />
+                    {openScanner && (
+                        <Suspense fallback={null}>
+                            <QrScannerModal
+                                open={openScanner}
+                                onClose={() => setOpenScanner(false)}
+                            />
+                        </Suspense>
+                    )}
 
                     {/* Global Assistant Mascot */}
                     <LotusCharmAssistant />

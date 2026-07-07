@@ -1,8 +1,9 @@
 import { memo, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button, message, Tooltip, Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined, EyeOutlined, EyeInvisibleOutlined, CloseOutlined } from "@ant-design/icons";
+import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import { unstable_batchedUpdates } from "react-dom";
+import DrawerCloseButton from "@/components/common/drawer/DrawerCloseButton";
 
 import ReactFlow, {
     Background,
@@ -20,6 +21,8 @@ import ReactFlow, {
     applyNodeChanges,
     applyEdgeChanges,
     type EdgeProps,
+    Position,
+    getSmoothStepPath,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import dagre from "dagre";
@@ -103,21 +106,36 @@ const extractList = (res: any): any[] => {
 
 
 // ── Edge renderer ─────────────────────────────────────────────────────────────
-const OrgEdge = memo(({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) => {
-    const midY = (sourceY + targetY) / 2;
-    const d = `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, data }: EdgeProps) => {
+    // Compute dynamic border radius proportional to the vertical gap
+    const verticalGap = Math.abs(targetY - sourceY);
+    const dynamicRadius = Math.min(16, Math.max(6, verticalGap * 0.12));
+    const dynamicOffset = Math.min(36, Math.max(16, verticalGap * 0.2));
+
+    const [d] = getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        borderRadius: dynamicRadius,
+        offset: dynamicOffset,
+    });
     const edgeType: string = data?.edgeType ?? "none";
     const stroke =
         edgeType === "ancestor" ? "#60a5fa" :
             edgeType === "descendant" ? "#f59e0b" :
                 "#cbd5e1";
-    const strokeWidth = edgeType === "none" ? 1.25 : 2.25;
+    const strokeWidth = edgeType === "none" ? 1.45 : 2.3;
     const strokeOpacity = edgeType === "none" && data?.dimmed ? 0.14 : edgeType === "none" ? 0.9 : 1;
     const strokeDasharray = edgeType === "ancestor" ? "6 4" : undefined;
     return (
         <path id={id} d={d} fill="none"
             stroke={stroke} strokeWidth={strokeWidth}
             strokeOpacity={strokeOpacity} strokeDasharray={strokeDasharray}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             style={{ transition: "stroke 0.15s, stroke-width 0.15s, stroke-opacity 0.15s" }}
         />
     );
@@ -134,19 +152,21 @@ const getLayoutedElements = (
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: direction, ranksep: 110, nodesep: 75 });
     g.setDefaultEdgeLabel(() => ({}));
+    // Use uniform height for ALL nodes so edges align perfectly at every rank
     nodes.forEach((n) => {
-        const isDepartment = !n.data?.levelCode;
-        const actualNodeH = isDepartment ? nodeH - 46 : nodeH;
-        g.setNode(n.id, { width: nodeW, height: actualNodeH });
+        g.setNode(n.id, { width: nodeW, height: nodeH });
     });
     edges.forEach((e) => g.setEdge(e.source, e.target));
     dagre.layout(g);
     return {
         nodes: nodes.map((n) => {
             const pos = g.node(n.id);
-            const isDepartment = !n.data?.levelCode;
-            const actualNodeH = isDepartment ? nodeH - 46 : nodeH;
-            return { ...n, position: { x: pos.x - nodeW / 2, y: pos.y - actualNodeH / 2 } };
+            return {
+                ...n,
+                position: { x: pos.x - nodeW / 2, y: pos.y - nodeH / 2 },
+                sourcePosition: direction === "TB" ? Position.Bottom : Position.Right,
+                targetPosition: direction === "TB" ? Position.Top : Position.Left,
+            };
         }),
         edges,
     };
@@ -1030,20 +1050,40 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 style={{
                     display: "flex",
                     flexDirection: "column",
-                    background: "#f8f9fb",
-                    borderRadius: isMobile ? 18 : 24,
                     position: "fixed",
                     top: isMobile ? 8 : 16,
                     bottom: isMobile ? 8 : 16,
-                    left: isMobile ? 8 : 16,
+                    left: isMobile ? 40 : 48,
                     right: isMobile ? 8 : 16,
                     zIndex: 2500,
-                    border: "1px solid rgba(226, 232, 240, 0.95)",
-                    boxShadow: "0 26px 80px -28px rgba(15, 23, 42, 0.48), 0 8px 24px rgba(15, 23, 42, 0.10)",
-                    overflow: "hidden",
+                    overflow: "visible",
                     animation: isClosing ? "slideDownOrgChart 0.4s cubic-bezier(0.4, 0, 1, 1) forwards" : "slideUpOrgChart 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
             >
+                {/* ── Outer Close Button ── */}
+                {onClose && (
+                    <DrawerCloseButton
+                        onClick={handleCloseWithAnimation}
+                        variant="bottom"
+                        size={isMobile ? "sm" : "md"}
+                        left={isMobile ? -36 : -44}
+                        top={isMobile ? 12 : 20}
+                    />
+                )}
+
+                {/* ── Inner Content Container ── */}
+                <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    flex: 1,
+                    background: "#f8f9fb",
+                    borderRadius: isMobile ? 18 : 24,
+                    border: "1px solid rgba(226, 232, 240, 0.95)",
+                    boxShadow: "0 26px 80px -28px rgba(15, 23, 42, 0.48), 0 8px 24px rgba(15, 23, 42, 0.10)",
+                    overflow: "hidden",
+                    position: "relative",
+                    zIndex: 2,
+                }}>
             {/* ── Floating Toolbar ── */}
             <div style={{
                 position: "absolute",
@@ -1064,50 +1104,27 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 <div style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: onClose ? 0 : 12,
+                    gap: 12,
                     flex: 1,
                     minWidth: 0,
+                    position: "relative",
                     pointerEvents: "auto",
                 }}>
-                    {onClose && (
-                        <div
-                            onClick={handleCloseWithAnimation}
-                            style={{
-                                width: isMobile ? 38 : isToolbarCollapsed ? 44 : 48,
-                                height: isMobile ? 32 : isToolbarCollapsed ? 36 : 40,
-                                background: "linear-gradient(135deg, #f43f5e 0%, #ec4899 100%)",
-                                color: "white",
-                                borderRadius: "20px 0 0 20px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                paddingRight: 12,
-                                boxShadow: "-4px 4px 16px rgba(236, 72, 153, 0.25)",
-                                cursor: "pointer",
-                                transition: "all 0.2s",
-                                zIndex: 1,
-                                flexShrink: 0,
-                            }}
-                        >
-                            <CloseOutlined style={{ fontSize: isMobile ? 15 : 17 }} />
-                        </div>
-                    )}
+                    {/* Inner close button removed */}
                     {chartTitle && (
                         <div style={{
                             display: "flex",
                             alignItems: "center",
                             gap: 12,
-                            minHeight: isMobile ? 32 : isToolbarCollapsed ? 36 : 40,
-                            padding: isMobile ? "4px 12px" : isToolbarCollapsed ? "4px 14px" : "5px 16px",
+                            minHeight: isMobile ? 32 : 40,
+                            padding: isMobile ? "4px 12px" : "5px 16px",
                             background: "rgba(255, 255, 255, 0.95)",
                             border: "1px solid rgba(203, 213, 225, 0.75)",
-                            borderLeftColor: onClose ? "transparent" : "rgba(203, 213, 225, 0.75)",
-                            borderRadius: isToolbarCollapsed ? 16 : 20,
+                            borderRadius: 20,
                             boxShadow: "4px 4px 16px rgba(15, 23, 42, 0.06)",
                             backdropFilter: "blur(10px)",
-                            marginLeft: onClose ? -16 : 0,
                             zIndex: 2,
-                            maxWidth: isMobile ? "calc(100% - 30px)" : "none",
+                            maxWidth: "100%",
                         }}>
                             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
                                 <span style={{
@@ -1121,9 +1138,9 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                                 </span>
                                 <span style={{
                                     color: "#1e293b",
-                                    fontSize: isMobile ? 11 : isToolbarCollapsed ? 12 : 14,
+                                    fontSize: isMobile ? 11 : 14,
                                     fontWeight: 700,
-                                    lineHeight: isMobile ? "15px" : isToolbarCollapsed ? "16px" : "19px",
+                                    lineHeight: isMobile ? "15px" : "19px",
                                     overflow: "hidden",
                                     display: "-webkit-box",
                                     WebkitBoxOrient: "vertical",
@@ -1134,15 +1151,13 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                                 </span>
                             </div>
 
-                            {!isToolbarCollapsed && (
-                                <SearchBar
-                                    nodes={nodes}
-                                    onSelect={(id) => handleSearchSelect(id)}
-                                    onClear={() => setSelectedNodeId(null)}
-                                    isMobile={isMobile}
-                                    isTablet={isTablet}
-                                />
-                            )}
+                            <SearchBar
+                                nodes={nodes}
+                                onSelect={(id) => handleSearchSelect(id)}
+                                onClear={() => setSelectedNodeId(null)}
+                                isMobile={isMobile}
+                                isTablet={isTablet}
+                            />
                         </div>
                     )}
                 </div>
@@ -1155,13 +1170,10 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     justifyContent: "flex-end",
                     pointerEvents: "auto",
                 }}>
-                    <Tooltip title={isToolbarCollapsed ? "Hiện công cụ" : "Ẩn công cụ để xem bao quát"}>
+                    <Tooltip title={isToolbarCollapsed ? "Hiện công cụ" : "Ẩn công cụ"}>
                         <Button
                             icon={isToolbarCollapsed ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                            onClick={() => {
-                                setIsToolbarCollapsed((prev) => !prev);
-                                scheduleFitView(undefined, 120);
-                            }}
+                            onClick={() => setIsToolbarCollapsed((prev) => !prev)}
                             size={isMobile ? "small" : "middle"}
                             style={{
                                 ...btnBase,
@@ -1169,7 +1181,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                                 boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)",
                             }}
                         >
-                            {isToolbarCollapsed || isCompactViewport ? "" : "Bao quát"}
+                            {isToolbarCollapsed || isCompactViewport ? "" : "Ẩn công cụ"}
                         </Button>
                     </Tooltip>
                     {!isToolbarCollapsed && (
@@ -1316,6 +1328,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 />
             </ReactFlow>
             </div>
+            </div> {/* ── End of Inner Content Container ── */}
 
             <ModalNode
                 open={openModal} onClose={handleCloseModal}

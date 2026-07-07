@@ -46,6 +46,8 @@ const LotusChanRadial = () => {
                 <img
                     src="/logo/logolinhvat.png"
                     alt="Lotus-chan"
+                    width={200}
+                    height={200}
                     style={{
                         width: "100%",
                         height: "auto",

@@ -1,3 +1,4 @@
+import React, { useMemo, useCallback } from "react";
 import { Button, Modal, Image } from "antd";
 import { DownloadOutlined, LockOutlined } from "@ant-design/icons";
 import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
@@ -25,7 +26,32 @@ interface IProps {
 const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const ctx = useProcedureTable({ type, companyId, departmentId });
 
-    const columns = buildProcedureColumns({
+    const handleView = useCallback((record: IProcedure) => {
+        ctx.setDataInit(record);
+        ctx.setOpenView(true);
+    }, [ctx]);
+
+    const handleEdit = useCallback((record: IProcedure) => {
+        ctx.setDataInit(record);
+        ctx.setOpenModal(true);
+    }, [ctx]);
+
+    const handleRevise = useCallback((record: IProcedure) => {
+        ctx.setDataInit(record);
+        ctx.setOpenRevise(true);
+    }, [ctx]);
+
+    const handleQrClick = useCallback((record: IProcedure) => {
+        ctx.setSelectedProcedure(record);
+        ctx.setOpenQrModal(true);
+    }, [ctx]);
+
+    const handleShare = useCallback((record: IProcedure) => {
+        ctx.setSelectedProcedure(record);
+        ctx.setOpenShareModal(true);
+    }, [ctx]);
+
+    const columns = useMemo(() => buildProcedureColumns({
         type, companyId, departmentId,
         isAdmin: ctx.isAdmin,
         canShare: ctx.canShare,
@@ -36,15 +62,17 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
         meta: ctx.meta,
         permission: ctx.permission,
         deleteMutation: ctx.deleteMutation,
-        onView: (record) => { ctx.setDataInit(record); ctx.setOpenView(true); },
-        onEdit: (record) => { ctx.setDataInit(record); ctx.setOpenModal(true); },
-        onRevise: (record) => { ctx.setDataInit(record); ctx.setOpenRevise(true); },
-        onQrClick: (record) => { ctx.setSelectedProcedure(record); ctx.setOpenQrModal(true); },
-        onShare: (record) => {
-            ctx.setSelectedProcedure(record);
-            ctx.setOpenShareModal(true);
-        },
-    });
+        onView: handleView,
+        onEdit: handleEdit,
+        onRevise: handleRevise,
+        onQrClick: handleQrClick,
+        onShare: handleShare,
+    }), [
+        type, companyId, departmentId,
+        ctx.isAdmin, ctx.canShare, ctx.canView, ctx.canUpdate, ctx.canRevise, ctx.canDelete,
+        ctx.meta, ctx.permission, ctx.deleteMutation,
+        handleView, handleEdit, handleRevise, handleQrClick, handleShare
+    ]);
 
     return (
         <>

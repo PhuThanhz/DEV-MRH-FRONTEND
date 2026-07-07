@@ -1,14 +1,5 @@
 import React from "react";
-import {
-    FileDoneOutlined,
-    StarOutlined,
-    CheckSquareOutlined,
-    SwapOutlined,
-    FolderOpenOutlined,
-    NotificationOutlined
-} from "@ant-design/icons";
 import type { UnifiedNotification } from "@/hooks/useNotifications";
-
 import { ALL_PERMISSIONS } from "./permissions";
 
 export const DOCUMENT_NOTIFICATION_MODULES = ["DOCUMENT", "DOCUMENTS", "ACCOUNTING_DOCUMENTS"];
@@ -25,21 +16,27 @@ export interface NotificationModuleConfig {
     id: string;
     label: string;
     icon: React.ReactNode;
-    color: "pink" | "rose";
+    color: "blue" | "emerald" | "amber" | "violet" | "cyan" | "slate";
     link: string;
-    requiredPermission: any; // Added for role permission check
+    requiredPermission: any;
     moduleKey: string;
     filterUnread: (items: UnifiedNotification[]) => number;
 }
 
-// Cấu hình các module hiển thị trên Notification Grid. 
-// Sau này có thêm module nào mới, bạn chỉ cần thêm 1 object vào mảng này là xong.
+// Cấu hình các module hiển thị trên Notification Grid với các icon SVG cao cấp.
 export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     {
         id: "jd_approval",
-        label: "Duyệt MTCV",
-        icon: <FileDoneOutlined />,
-        color: "pink",
+        label: "Duyệt mô tả CV",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <circle cx="10" cy="13" r="2.5" />
+                <line x1="12" y1="15" x2="16" y2="19" />
+            </svg>
+        ),
+        color: "blue",
         link: "/admin/job-descriptions?tab=inbox",
         requiredPermission: ALL_PERMISSIONS.JD_FLOW.FETCH_INBOX,
         moduleKey: "JD_FLOW",
@@ -48,8 +45,13 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     {
         id: "evaluation",
         label: "Đánh giá năng lực",
-        icon: <StarOutlined />,
-        color: "rose",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 11 2 2 4-4" />
+            </svg>
+        ),
+        color: "emerald",
         link: "/admin/evaluation/process",
         requiredPermission: ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS,
         moduleKey: "EVALUATION",
@@ -58,8 +60,13 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     {
         id: "procedures",
         label: "Quy trình nội bộ",
-        icon: <CheckSquareOutlined />,
-        color: "pink",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+        ),
+        color: "amber",
         link: "/admin/procedures",
         requiredPermission: ALL_PERMISSIONS.PROCEDURE_COMPANY.GET_PAGINATE,
         moduleKey: "COMPANY_PROCEDURES",
@@ -67,9 +74,14 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     },
     {
         id: "career_paths",
-        label: "Duyệt Thăng tiến",
-        icon: <SwapOutlined />,
-        color: "rose",
+        label: "Lộ trình thăng tiến",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                <polyline points="16 7 22 7 22 13" />
+            </svg>
+        ),
+        color: "violet",
         link: "/admin/career-paths",
         requiredPermission: ALL_PERMISSIONS.CAREER_PATHS.GET_ALL_ACTIVE,
         moduleKey: "CAREER_PATHS",
@@ -77,9 +89,13 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     },
     {
         id: "documents",
-        label: "Văn bản & Chứng từ",
-        icon: <FolderOpenOutlined />,
-        color: "pink",
+        label: "Văn bản, chứng từ",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+        ),
+        color: "cyan",
         link: "/admin/documents",
         requiredPermission: ALL_PERMISSIONS.DOCUMENTS.GET_PAGINATE,
         moduleKey: "DOCUMENTS",
@@ -87,13 +103,17 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
     },
     {
         id: "system_alerts",
-        label: "Thông báo khác",
-        icon: <NotificationOutlined />,
-        color: "rose",
+        label: "Thông báo hệ thống",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+        ),
+        color: "slate",
         link: "#",
         requiredPermission: null,
         moduleKey: "SYSTEM_ALERTS",
-        // Lấy các thông báo hệ thống còn lại chưa đọc
         filterUnread: (items) => items.filter(i => !i.isRead && !KNOWN_NOTIFICATION_MODULES.includes(i.module || "")).length
     }
 ];
