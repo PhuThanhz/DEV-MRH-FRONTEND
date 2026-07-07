@@ -29,7 +29,7 @@ const NotFound = () => {
             }}>
                 {/* Mascot Image */}
                 <img
-                    src="/logo/lotuserror.png"
+                    src="/logo/lotuserror.webp"
                     alt="Lỗi 404"
                     style={{
                         width: 'clamp(240px, 30vw, 360px)',

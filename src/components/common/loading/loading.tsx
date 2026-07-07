@@ -52,7 +52,7 @@ const Loading: React.FC<{ message?: string }> = ({
 
                 {/* Lotus Logo in the center */}
                 <img
-                    src="/logo/LOGOFINAL.png"
+                    src="/logo/LOGOFINAL.webp"
                     alt="Lotus"
                     style={{
                         width: 60,

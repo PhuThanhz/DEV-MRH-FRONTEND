@@ -255,7 +255,7 @@ const Header = () => {
                             onClick={() => navigate("/")}
                         >
                             <div className="relative w-12 h-12 bg-white rounded-xl p-1.5 flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-lg">
-                                <img src="/logo/LOGOFINAL.png" alt="Logo" className="w-full h-full object-contain" />
+                                <img src="/logo/LOGOFINAL.webp" alt="Logo" className="w-full h-full object-contain" />
                             </div>
                             <div className="flex flex-col leading-tight">
                                 <span className="text-base font-bold text-white drop-shadow-md group-hover:text-pink-50 transition-colors">
@@ -384,7 +384,7 @@ const Header = () => {
                     <div className="relative z-10 flex items-center justify-between h-[72px] px-4 gap-4">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
                             <div className="relative w-[54px] h-[54px] bg-white rounded-[14px] p-1.5 flex items-center justify-center shadow-[0_4px_12px_rgba(236,72,153,0.35)] border border-pink-100">
-                                <img src="/logo/LOGOFINAL.png" alt="Logo" className="w-full h-full object-contain" />
+                                <img src="/logo/LOGOFINAL.webp" alt="Logo" className="w-full h-full object-contain" />
                             </div>
                             <div className="flex flex-col leading-tight mt-0.5">
                                 <span className="text-[18px] font-black text-white drop-shadow-md tracking-wide">Bộ Hồ Sơ</span>

@@ -20,6 +20,7 @@ export default defineConfig({
         return deps.filter(
           (dep) =>
             !dep.includes('charts') &&
+            !dep.includes('pro-components') &&
             !dep.includes('pdf') &&
             !dep.includes('excel') &&
             !dep.includes('websocket') &&
@@ -32,7 +33,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          antd: ['antd', '@ant-design/icons', '@ant-design/pro-components'],
+          antd: ['antd', '@ant-design/icons'],
+          'pro-components': ['@ant-design/pro-components'],
           charts: ['@ant-design/charts'],
           flow: ['@xyflow/react', 'reactflow'],
           pdf: ['@react-pdf-viewer/core', '@react-pdf-viewer/default-layout', 'pdfjs-dist'],

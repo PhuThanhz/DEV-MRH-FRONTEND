@@ -72,7 +72,7 @@ const ForgotPassword = () => {
         <div className="left-content">
           <div className="logo-clean-container">
             <img
-              src="/logo/LOGOFINAL.png"
+              src="/logo/LOGOFINAL.webp"
               alt="LOTUS HRM"
               style={{ width: "100%", height: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
             />
@@ -98,7 +98,7 @@ const ForgotPassword = () => {
           <div className="mobile-banner-inner">
             <div className="mb-logo-clean">
               <img
-                src="/logo/LOGOFINAL.png"
+                src="/logo/LOGOFINAL.webp"
                 alt="LOTUS HRM"
               />
             </div>
@@ -172,7 +172,7 @@ const ForgotPassword = () => {
           position: relative;
           background:
             linear-gradient(90deg, rgba(128, 11, 74, 0.15) 0%, rgba(219, 39, 119, 0.02) 50%, rgba(128, 11, 74, 0.08) 100%),
-            url('/logo/tranglogin.png') left center / cover no-repeat;
+            url('/logo/tranglogin.webp') left center / cover no-repeat;
         }
 
         /* ── LEFT ── */

@@ -10,7 +10,7 @@ const HomePage = () => {
                 width: "100%",
                 flex: 1,
                 minHeight: "calc(100vh - 111px)",
-                backgroundImage: "url('/logo/backgroundlotus.png')",
+                backgroundImage: "url('/logo/backgroundlotus.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -82,7 +82,7 @@ const HomePage = () => {
                 >
                     <div className="logo-container">
                         <img
-                            src="/logo/LOGOFINAL.png"
+                            src="/logo/LOGOFINAL.webp"
                             alt="LOTUS HRM"
                             width={240}
                             height={240}
@@ -161,7 +161,7 @@ const HomePage = () => {
             ))}
 
             {/* Lotus-chan Assistant FAB */}
-            <div style={{ position: "fixed", bottom: 15, right: -15, zIndex: 1000 }}>
+            <div className="lotus-fab">
                 <LotusChanRadial />
             </div>
 
@@ -173,6 +173,22 @@ const HomePage = () => {
                     --hrm-font-size: clamp(52px, 9vw, 120px);
                     --hrm-letter-spacing: clamp(10px, 2.5vw, 20px);
                     --content-gap: clamp(20px, 2.5vw, 40px);
+                }
+
+                .lotus-fab {
+                    position: fixed;
+                    bottom: 15px;
+                    right: -15px;
+                    z-index: 1000;
+                }
+
+                @media (max-width: 640px) {
+                    .lotus-fab {
+                        bottom: 0;
+                        right: 0;
+                        transform: scale(0.62);
+                        transform-origin: bottom right;
+                    }
                 }
 
                 .main-content {

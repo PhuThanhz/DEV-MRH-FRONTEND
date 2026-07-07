@@ -16,7 +16,7 @@ import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { getModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
 import { useBreakpoint } from "@/hooks/useIsMobile";
-import backgroundTrangCaNhan from "../../../../backgroundtrangcanhan.png";
+import backgroundTrangCaNhan from "../../../../backgroundtrangcanhan.webp";
 
 /* ═══════════════════════════════════════════
    CONSTANTS & STYLES (Awwwards-Tier)

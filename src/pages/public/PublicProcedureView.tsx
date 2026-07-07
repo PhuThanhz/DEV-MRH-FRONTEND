@@ -258,7 +258,7 @@ const PublicProcedureView = () => {
                             overflow: "hidden",
                         }}>
                             <img
-                                src="/logo/LOGOFINAL.png"
+                                src="/logo/LOGOFINAL.webp"
                                 alt="LOTUS HRM"
                                 style={{ width: 38, height: 38, objectFit: "contain" }}
                             />
@@ -340,7 +340,7 @@ const PublicProcedureView = () => {
                             background: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
                             boxShadow: "0 4px 10px rgba(0,0,0,0.04)", border: "0.5px solid #e2e8f0"
                         }}>
-                            <img src="/logo/LOGOFINAL.png" alt="LOTUS HRM"
+                            <img src="/logo/LOGOFINAL.webp" alt="LOTUS HRM"
                                 style={{ width: 22, height: 22, objectFit: "contain" }} />
                         </div>
                         <div>
@@ -600,7 +600,7 @@ const PublicProcedureView = () => {
 
                 {/* ── System Footer ── */}
                 <Flex justify="center" align="center" gap={6} style={{ paddingTop: 8, opacity: 0.5 }}>
-                    <img src="/logo/LOGOFINAL.png" alt="" style={{ width: 14, height: 14, objectFit: "contain" }} />
+                    <img src="/logo/LOGOFINAL.webp" alt="" style={{ width: 14, height: 14, objectFit: "contain" }} />
                     <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 500, letterSpacing: "0.02em" }}>
                         © Lotus HRM · Tài liệu nội bộ
                     </Text>

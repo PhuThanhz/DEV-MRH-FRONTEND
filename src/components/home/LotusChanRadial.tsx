@@ -44,7 +44,7 @@ const LotusChanRadial = () => {
                 className="lotus-mascot-btn"
             >
                 <img
-                    src="/logo/logolinhvat.png"
+                    src="/logo/logolinhvat.webp"
                     alt="Lotus-chan"
                     width={200}
                     height={200}

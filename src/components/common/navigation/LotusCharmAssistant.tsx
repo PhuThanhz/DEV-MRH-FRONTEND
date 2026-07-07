@@ -815,7 +815,7 @@ const LotusCharmAssistant = () => {
 
                 <Badge count={unreadCount} offset={[-24, 18]} size="small" color={ACCENT}>
                     <img
-                        src="/logo/logolinhvat.png"
+                        src="/logo/logolinhvat.webp"
                         alt="Trợ lý Lotus-chan"
                         draggable={false}
                         width={138}

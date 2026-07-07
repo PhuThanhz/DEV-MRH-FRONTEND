@@ -68,14 +68,14 @@ const SliderAdmin: React.FC<IProps> = ({
         >
             {collapsed && !isMobile ? (
                 <img
-                    src="/logo/LOGOFINAL.png"
+                    src="/logo/LOGOFINAL.webp"
                     alt="LOTUS HRM"
                     style={{ width: 36, height: "auto", objectFit: "contain" }}
                 />
             ) : (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <img
-                        src="/logo/LOGOFINAL.png"
+                        src="/logo/LOGOFINAL.webp"
                         alt="LOTUS HRM"
                         style={{ width: 42, height: "auto", objectFit: "contain" }}
                     />
@@ -312,7 +312,7 @@ const SliderAdmin: React.FC<IProps> = ({
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <img
-                                src="/logo/LOGOFINAL.png"
+                                src="/logo/LOGOFINAL.webp"
                                 alt="LOTUS HRM"
                                 style={{ width: 40, height: "auto" }}
                             />
