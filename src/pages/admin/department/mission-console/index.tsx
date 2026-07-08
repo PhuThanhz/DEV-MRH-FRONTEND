@@ -146,6 +146,32 @@ const MetricChip = ({ value, tone }: { value: number; tone: "blue" | "violet" })
     );
 };
 
+const DEPARTMENT_CODE_TAG_STYLE: React.CSSProperties = {
+    borderRadius: 4,
+    padding: "0px 8px",
+    fontSize: 12,
+    fontWeight: 500,
+    height: 22,
+    lineHeight: "20px",
+    border: "1px solid #AFA9EC",
+    background: "#EEEDFE",
+    color: "#3C3489",
+    margin: 0,
+};
+
+const TABLE_TEXT_STYLE: React.CSSProperties = {
+    color: "#262626",
+    fontSize: 14,
+    fontWeight: 400,
+};
+
+const TABLE_NAME_BUTTON_STYLE: React.CSSProperties = {
+    color: "#262626",
+    fontSize: 13,
+    fontWeight: 500,
+    lineHeight: "22px",
+};
+
 const MissionConsolePage: React.FC = () => {
     const tableRef = useRef<ActionType>(null);
 
@@ -188,7 +214,7 @@ const MissionConsolePage: React.FC = () => {
 
     const buildFilters = (search: string, companyId: number | null) => {
         const parts: string[] = [];
-        if (search) parts.push(`(name~'${search}')`);
+        if (search) parts.push(`(name~'${search}' or code~'${search}')`);
         if (companyId) parts.push(`company.id:${companyId}`);
         return parts;
     };
@@ -318,10 +344,21 @@ const MissionConsolePage: React.FC = () => {
             align: "center",
             render: (_, __, index) =>
                 (
-                    <span className="text-[13px] font-medium text-slate-500">
+                    <span style={TABLE_TEXT_STYLE}>
                         {index + 1 + ((meta.page || 1) - 1) * (meta.pageSize || 20)}
                     </span>
                 ),
+        },
+        {
+            title: "Mã phòng ban",
+            dataIndex: "code",
+            width: 140,
+            ellipsis: true,
+            render: (_, record) => (
+                <Tag style={DEPARTMENT_CODE_TAG_STYLE}>
+                    {record.code || "—"}
+                </Tag>
+            ),
         },
         {
             title: "Tên phòng ban",
@@ -331,7 +368,8 @@ const MissionConsolePage: React.FC = () => {
             ellipsis: true,
             render: (_, record) => (
                 <button
-                    className="max-w-full text-left text-[14px] font-semibold leading-6 text-slate-800 transition-colors hover:text-[#e84373]"
+                    className="max-w-full text-left transition-colors hover:text-[#e84373]"
+                    style={TABLE_NAME_BUTTON_STYLE}
                     onClick={(e) => {
                         e.stopPropagation();
                         openDetail(record);
@@ -347,7 +385,7 @@ const MissionConsolePage: React.FC = () => {
             ellipsis: true,
             render: (_, record) => (
                 <Tooltip title={record.company?.name}>
-                    <span className="block max-w-[390px] truncate text-[13px] font-medium uppercase tracking-[0.01em] text-slate-500">
+                    <span className="block max-w-[390px] truncate" style={TABLE_TEXT_STYLE}>
                         {record.company?.name || "—"}
                     </span>
                 </Tooltip>
@@ -390,7 +428,7 @@ const MissionConsolePage: React.FC = () => {
             render: (_, record) => {
                 const summary = summaryMap.get(record.id);
                 if (summary?.missionStatus !== "PUBLISHED" || !summary.version) {
-                    return <span style={{ color: "#bfbfbf", fontSize: 13 }}>—</span>;
+                    return <span style={{ color: "#bfbfbf", fontSize: 13, fontWeight: 500 }}>—</span>;
                 }
                 return (
                     <Tag color="blue" style={{ margin: 0, borderRadius: 4, fontWeight: 600 }}>
@@ -405,9 +443,9 @@ const MissionConsolePage: React.FC = () => {
             align: "center",
             render: (_, record) => {
                 const summary = summaryMap.get(record.id);
-                if (!summary?.issueDate) return <span style={{ color: "#bfbfbf", fontSize: 13 }}>—</span>;
+                if (!summary?.issueDate) return <span style={{ color: "#bfbfbf", fontSize: 13, fontWeight: 500 }}>—</span>;
                 return (
-                    <span style={{ color: "#595959", fontSize: 13, fontWeight: 500 }}>
+                    <span style={TABLE_TEXT_STYLE}>
                         {new Date(summary.issueDate).toLocaleDateString("vi-VN")}
                     </span>
                 );
@@ -522,6 +560,7 @@ const MissionConsolePage: React.FC = () => {
                 columns={columns}
                 dataSource={displayedDepts}
                 scroll={{ x: "max-content" }}
+                params={{ statusFilter, searchValue, companyIdFilter }}
                 request={async (params, sort) => {
                     const q = buildQuery(params, sort);
                     setQuery(q);

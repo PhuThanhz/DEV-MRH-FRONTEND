@@ -31,7 +31,6 @@ const DepartmentObjectivesPage = () => {
                 <DepartmentMissionDetail
                     departmentId={idNumber}
                     departmentName={departmentName}
-                    showEditAction={false}
                 />
             </LotusDetailDrawer>
 
