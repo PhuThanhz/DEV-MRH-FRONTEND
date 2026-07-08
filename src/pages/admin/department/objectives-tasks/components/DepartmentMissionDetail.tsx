@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, DatePicker, Divider, Form, Input, Modal, Skeleton, Space, Tag, Timeline, Typography } from "antd";
+import { Alert, Button, DatePicker, Divider, Form, Input, Modal, Skeleton, Space, Tag, Timeline, Typography, Select } from "antd";
 import { EditOutlined, SaveOutlined, FileAddOutlined, HistoryOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -135,6 +135,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
     const [authorities, setAuthorities] = useState<LocalAuthorityItem[]>([]);
     const [editMode, setEditMode] = useState(false);
     const [issueDate, setIssueDate] = useState<Dayjs | null>(null);
+    const [status, setStatus] = useState<string>("PUBLISHED");
     const [historyOpen, setHistoryOpen] = useState(false);
     const [versionListOpen, setVersionListOpen] = useState(false);
     const [versionOpen, setVersionOpen] = useState(false);
@@ -150,6 +151,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
     const missionSnapshot = useMemo(() => normalizeMissionSnapshot(mission), [mission]);
     const localSnapshot = useMemo(() => JSON.stringify({
         issueDate: issueDate ? issueDate.format("YYYY-MM-DD") : null,
+        status,
         objectives: objectives.map((item, index) => ({
             id: item.id,
             content: item.content || "",
@@ -173,7 +175,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
             content: item.content || "",
             orderNo: item.orderNo || index + 1,
         })),
-    }), [authorities, generalTasks, issueDate, objectives, sections]);
+    }), [authorities, generalTasks, issueDate, status, objectives, sections]);
     const hasUnsavedChanges = editMode && localSnapshot !== missionSnapshot;
 
     const departmentName = useMemo(() => {
@@ -322,6 +324,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
             setGeneralTasks([]);
             setAuthorities([]);
             setIssueDate(null);
+            setStatus("PUBLISHED");
             return;
         }
 
@@ -339,6 +342,9 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
 
         if (mission.issueDate) setIssueDate(dayjs(mission.issueDate));
         else setIssueDate(null);
+        
+        if (mission.status) setStatus(mission.status);
+        else setStatus("PUBLISHED");
 
         setAuthorities(
             mission.authorities?.map((a, i) => ({
@@ -409,6 +415,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
             await createObjective({
                 departmentId: departmentId,
                 issueDate: issueDate ? issueDate.format("YYYY-MM-DD") : undefined,
+                status,
                 objectives,
                 tasks: [
                     ...(hasSections ? sections.map((s) => ({ sectionId: s.sectionId, items: s.items })) : []),
@@ -493,7 +500,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                         {mission?.status && (
                             <Tag
                                 className="!m-0 shrink-0"
-                                color={mission.status === "PUBLISHED" ? "green" : "default"}
+                                color={mission.status === "PUBLISHED" ? "green" : mission.status === "ARCHIVED" ? "red" : "default"}
                                 style={{
                                     borderRadius: 6,
                                     fontSize: 13,
@@ -502,7 +509,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                                     padding: "0 10px",
                                 }}
                             >
-                                {mission.status === "PUBLISHED" ? "Đã ban hành" : "Nháp"}
+                                {mission.status === "PUBLISHED" ? "Đã ban hành" : mission.status === "ARCHIVED" ? "Ngừng áp dụng" : "Bản nháp"}
                             </Tag>
                         )}
                     </div>
@@ -523,6 +530,21 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                                 </span>
                             )}
                         </div>
+                        {editMode && (
+                            <div className="flex items-center gap-2 ml-4">
+                                <span>Trạng thái:</span>
+                                <Select
+                                    value={status}
+                                    onChange={setStatus}
+                                    size="small"
+                                    options={[
+                                        { label: "Bản nháp", value: "DRAFT" },
+                                        { label: "Đã ban hành", value: "PUBLISHED" },
+                                        { label: "Ngừng áp dụng", value: "ARCHIVED" },
+                                    ]}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
                 {!editMode ? (

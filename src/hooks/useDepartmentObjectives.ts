@@ -64,6 +64,10 @@ export const useCreateDepartmentObjectiveMutation = () => {
                 queryKey: ["department-objectives"],
                 exact: false,
             });
+            queryClient.invalidateQueries({
+                queryKey: ["department-mission-summary"],
+                exact: false,
+            });
         },
 
         onError: (error: any) => {
@@ -96,6 +100,10 @@ export const useDeleteDepartmentObjectiveMutation = () => {
 
             queryClient.invalidateQueries({
                 queryKey: ["department-objectives"],
+                exact: false,
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["department-mission-summary"],
                 exact: false,
             });
         },
