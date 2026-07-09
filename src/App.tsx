@@ -122,7 +122,9 @@ export default function App() {
           path: "department-profiles",
           element: (
             <ProtectedRoute>
-              <DepartmentProfilePage />
+              <Access permission={ALL_PERMISSIONS.DASHBOARD.GET_DEPARTMENT_COMPLETENESS}>
+                <DepartmentProfilePage />
+              </Access>
             </ProtectedRoute>
           ),
         },

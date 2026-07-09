@@ -45,10 +45,16 @@ const DossierTemplateDrawer = ({
     open,
     companies,
     onClose,
+    canCreate = false,
+    canUpdate = false,
+    canToggleActive = false,
 }: {
     open: boolean;
     companies: ICompany[];
     onClose: () => void;
+    canCreate?: boolean;
+    canUpdate?: boolean;
+    canToggleActive?: boolean;
 }) => {
     const [form] = Form.useForm<TemplateFormValues>();
     const [rows, setRows] = useState<IAccountingDossierCategory[]>([]);
@@ -172,17 +178,19 @@ const DossierTemplateDrawer = ({
             width: 130,
             render: (_, record) => (
                 <Space size={4}>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
-                    <Button
-                        size="small"
-                        onClick={async () => {
-                            if (!record.id) return;
-                            await callToggleAccountingDossierCategoryActive(record.id, !record.active);
-                            await loadData();
-                        }}
-                    >
-                        {record.active ? "Ngưng" : "Bật"}
-                    </Button>
+                    {canUpdate && <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />}
+                    {canToggleActive && (
+                        <Button
+                            size="small"
+                            onClick={async () => {
+                                if (!record.id) return;
+                                await callToggleAccountingDossierCategoryActive(record.id, !record.active);
+                                await loadData();
+                            }}
+                        >
+                            {record.active ? "Ngưng" : "Bật"}
+                        </Button>
+                    )}
                 </Space>
             ),
         },
@@ -194,7 +202,7 @@ const DossierTemplateDrawer = ({
             open={open}
             onClose={onClose}
             width={getModalWidth(900)}
-            extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Tạo mẫu</Button>}
+            extra={canCreate ? <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Tạo mẫu</Button> : null}
         >
             <Table<IAccountingDossierCategory>
                 rowKey={(record) => String(record.id)}

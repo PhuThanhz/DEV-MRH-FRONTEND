@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DeptPageNav from "@/components/common/navigation/DeptPageNav";
 import { useDeptNavPages } from "@/hooks/useDeptNavPages";
@@ -9,6 +9,7 @@ import DepartmentMissionDetail from "./components/DepartmentMissionDetail";
 
 const DepartmentObjectivesPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { departmentId } = useParams();
     const [searchParams] = useSearchParams();
     const idNumber = departmentId ? Number(departmentId) : undefined;
@@ -24,7 +25,13 @@ const DepartmentObjectivesPage = () => {
 
             <LotusDetailDrawer
                 open
-                onClose={() => navigate(PATHS.ADMIN.DEPARTMENT)}
+                onClose={() => {
+                    if (location.state?.from) {
+                        navigate(location.state.from);
+                    } else {
+                        navigate(PATHS.ADMIN.DEPARTMENT);
+                    }
+                }}
                 keyboard={false}
                 destroyOnClose={false}
             >

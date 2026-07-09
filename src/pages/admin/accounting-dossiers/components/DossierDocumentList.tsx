@@ -81,6 +81,9 @@ const REVIEW_STATUS_OPTIONS = [
 interface Props {
     dossier: IAccountingDossier;
     editable: boolean;
+    canCreate?: boolean;
+    canUpdate?: boolean;
+    canDelete?: boolean;
     reviewable?: boolean;
     variant?: "table" | "compact";
 }
@@ -114,7 +117,15 @@ const getFileDisplayName = (value?: string) => {
 const buildDocumentFileUrl = (fileName: string) =>
     `/api/v1/files/public?folder=documents&fileName=${encodeURIComponent(fileName)}`;
 
-const DossierDocumentList: React.FC<Props> = ({ dossier, editable, reviewable = false, variant = "table" }) => {
+const DossierDocumentList: React.FC<Props> = ({
+    dossier,
+    editable,
+    canCreate,
+    canUpdate,
+    canDelete,
+    reviewable = false,
+    variant = "table",
+}) => {
     const [documentForm] = Form.useForm<DocumentFormValues>();
     const [reviewForm] = Form.useForm<ReviewFormValues>();
     const editingFileUrl = Form.useWatch("fileUrl", documentForm);
@@ -137,6 +148,9 @@ const DossierDocumentList: React.FC<Props> = ({ dossier, editable, reviewable = 
     const [bulkCheckNote, setBulkCheckNote] = useState<string>("");
 
     const [editingCheckNotes, setEditingCheckNotes] = useState<Record<number, string>>({});
+    const canCreateDocument = editable && (canCreate ?? editable);
+    const canUpdateDocument = editable && (canUpdate ?? editable);
+    const canDeleteDocument = editable && (canDelete ?? editable);
 
     const handleInlineCheck = (docId: number, checkStatus: string, currentNote: string) => {
         checkMutation.mutate({
@@ -377,27 +391,31 @@ const DossierDocumentList: React.FC<Props> = ({ dossier, editable, reviewable = 
 
     const renderDocumentActions = (record: IAccountingDossierDocument) => (
         <Space size={4} wrap>
-            {editable && (
+            {(canUpdateDocument || canDeleteDocument) && (
                 <>
-                    <Tooltip title="Sửa">
-                        <Button
-                            size="small"
-                            type="text"
-                            icon={<EditOutlined />}
-                            onClick={() => handleOpenEdit(record)}
-                        />
-                    </Tooltip>
-                    <Popconfirm
-                        title="Xoá chứng từ con này?"
-                        okText="Xoá"
-                        cancelText="Hủy"
-                        okButtonProps={{ danger: true }}
-                        onConfirm={() => record.id && handleDelete(record.id)}
-                    >
-                        <Tooltip title="Xoá">
-                            <Button danger size="small" type="text" icon={<DeleteOutlined />} />
+                    {canUpdateDocument && (
+                        <Tooltip title="Sửa">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => handleOpenEdit(record)}
+                            />
                         </Tooltip>
-                    </Popconfirm>
+                    )}
+                    {canDeleteDocument && (
+                        <Popconfirm
+                            title="Xoá chứng từ con này?"
+                            okText="Xoá"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                            onConfirm={() => record.id && handleDelete(record.id)}
+                        >
+                            <Tooltip title="Xoá">
+                                <Button danger size="small" type="text" icon={<DeleteOutlined />} />
+                            </Tooltip>
+                        </Popconfirm>
+                    )}
                 </>
             )}
         </Space>
@@ -650,7 +668,7 @@ const DossierDocumentList: React.FC<Props> = ({ dossier, editable, reviewable = 
                 <Text strong style={{ color: "#0f172a", fontSize: 14 }}>
                     Danh sách chứng từ con <Tag color={docs.length === 0 ? "default" : "blue"} style={{ marginLeft: 6, borderRadius: 9999, fontWeight: 700 }}>{docs.length}</Tag>
                 </Text>
-                {editable && (
+                {canCreateDocument && (
                     <Button
                         type="primary"
                         size="small"
@@ -737,7 +755,7 @@ const DossierDocumentList: React.FC<Props> = ({ dossier, editable, reviewable = 
                                                 {doc.accountingCategory?.categoryName || "Chưa phân loại"}
                                             </div>
                                         </div>
-                                        {editable && <div style={{ flexShrink: 0 }}>{renderDocumentActions(doc)}</div>}
+                                        {(canUpdateDocument || canDeleteDocument) && <div style={{ flexShrink: 0 }}>{renderDocumentActions(doc)}</div>}
                                     </div>
 
                                     {reviewable ? (

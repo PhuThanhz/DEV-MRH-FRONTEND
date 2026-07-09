@@ -1,33 +1,37 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import { Tag, Button, Tooltip, Skeleton } from "antd";
 import {
     EyeOutlined,
     CheckCircleFilled,
+    ArrowLeftOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
+import Breadcrumb from "@/components/common/navigation/Breadcrumb";
 
 import type { IDepartmentCompleteness } from "@/types/backend";
 import { useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
 import ViewDepartmentCompleteness from "./view.departmentcompleteness";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import {
+    getScoreStyle,
+    BADGE_BASE_STYLE,
+    CRITERIA_MAP,
+    PRIORITIZED_KEYS,
+} from "./departmentProfileCriteria";
 
-/* ─────────────────────────────────────────────────────────────
-   Constants
-───────────────────────────────────────────────────────────── */
-const CRITERIA: { key: keyof IDepartmentCompleteness; label: string }[] = [
-    { key: "jobTitleMap", label: "Chức danh" },
-    { key: "careerPath", label: "Lộ trình" },
-    { key: "salaryGrade", label: "Bậc lương" },
-    { key: "objectives", label: "Mục tiêu" },
-    { key: "departmentProcedure", label: "Quy trình" },
-    { key: "orgChart", label: "Sơ đồ TC" },
-    { key: "permissions", label: "Phân quyền" },
-];
+/* ────────────────────────────────────────────── */
+const CRITERIA = PRIORITIZED_KEYS.map(key => ({
+    key,
+    label: CRITERIA_MAP[key].label
+}));
 
 type ScoreFilterValue = "all" | "full" | "partial" | "empty";
 
@@ -37,23 +41,14 @@ type ScoreFilterValue = "all" | "full" | "partial" | "empty";
 
 /** Badge điểm tròn */
 const ScoreBadge = ({ score }: { score: number }) => {
-    const style =
-        score === 7
-            ? { background: "#f6ffed", color: "#389e0d", border: "1px solid #b7eb8f" }
-            : score >= 4
-                ? { background: "#fffbe6", color: "#d48806", border: "1px solid #ffe58f" }
-                : { background: "#fff1f0", color: "#cf1322", border: "1px solid #ffccc7" };
+    const style = getScoreStyle(score);
     return (
         <Tag
             style={{
-                ...style,
-                fontWeight: 700,
-                borderRadius: 20,
-                padding: "0 10px",
-                fontSize: 12,
-                margin: 0,
-                lineHeight: "22px",
-                whiteSpace: "nowrap",
+                ...BADGE_BASE_STYLE,
+                background: style.bg,
+                color: style.color,
+                border: `1px solid ${style.border}`,
             }}
         >
             {score}/7
@@ -64,11 +59,7 @@ const ScoreBadge = ({ score }: { score: number }) => {
 /** Progress bar + badge gộp lại */
 const ScoreCell = ({ record }: { record: IDepartmentCompleteness }) => {
     const pct = Math.round((record.score / 7) * 100);
-    const barColor =
-        record.score === 7 ? "#52c41a"
-            : record.score === 0 ? "#e8e8e8"
-                : record.score < 4 ? "#faad14"
-                    : "#1677ff";
+    const style = getScoreStyle(record.score);
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
             <div
@@ -86,7 +77,7 @@ const ScoreCell = ({ record }: { record: IDepartmentCompleteness }) => {
                     style={{
                         width: `${pct}%`,
                         height: "100%",
-                        background: barColor,
+                        background: style.barColor,
                         borderRadius: 99,
                         transition: "width .4s",
                     }}
@@ -99,7 +90,7 @@ const ScoreCell = ({ record }: { record: IDepartmentCompleteness }) => {
 
 /** Cột hạng mục thiếu */
 const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
-    const missing = CRITERIA.filter((c) => !record[c.key]);
+    const missing = PRIORITIZED_KEYS.filter((key) => !record[key]);
 
     if (missing.length === 0) {
         return (
@@ -112,59 +103,57 @@ const MissingTagsCell = ({ record }: { record: IDepartmentCompleteness }) => {
         );
     }
 
+    const MAX_VISIBLE = 3;
+    const visible = missing.slice(0, MAX_VISIBLE);
+    const hidden = missing.slice(MAX_VISIBLE);
+
+    const tagStyle: React.CSSProperties = {
+        margin: 0,
+        fontSize: 11,
+        fontWeight: 500,
+        borderRadius: 6,
+        padding: "1px 8px",
+        lineHeight: "20px",
+        background: "#fff5f5",
+        color: "#e04858",
+        border: "1px solid #ffd6d6",
+    };
+
     return (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {CRITERIA.map((c) => {
-                const done = !!record[c.key];
-                return (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {visible.map((key) => (
+                <Tag key={String(key)} style={tagStyle}>
+                    {CRITERIA_MAP[key].label}
+                </Tag>
+            ))}
+            {hidden.length > 0 && (
+                <Tooltip
+                    title={
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            {hidden.map((key) => (
+                                <span key={String(key)}>• {CRITERIA_MAP[key].label}</span>
+                            ))}
+                        </div>
+                    }
+                >
                     <Tag
-                        key={String(c.key)}
                         style={{
-                            margin: 0,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            borderRadius: 4,
-                            padding: "1px 7px",
-                            lineHeight: "18px",
-                            background: done ? "#f6ffed" : "#fff1f0",
-                            color: done ? "#389e0d" : "#cf1322",
-                            border: `1px solid ${done ? "#b7eb8f" : "#ffccc7"}`,
+                            ...tagStyle,
+                            background: "#fafafa",
+                            color: "#8c8c8c",
+                            border: "1px solid #e8e8e8",
+                            cursor: "default",
                         }}
                     >
-                        {c.label}
+                        +{hidden.length}
                     </Tag>
-                );
-            })}
+                </Tooltip>
+            )}
         </div>
     );
 };
 
-/** Cột mức ưu tiên */
-const PriorityCell = ({ score }: { score: number }) => {
-    if (score === 7)
-        return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#f6ffed", color: "#389e0d", border: "1px solid #b7eb8f", margin: 0, whiteSpace: "nowrap" }}>
-                Đủ hồ sơ
-            </Tag>
-        );
-    if (score === 0)
-        return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#cf1322", border: "1px solid #ffccc7", margin: 0, whiteSpace: "nowrap" }}>
-                Khẩn
-            </Tag>
-        );
-    if (score < 4)
-        return (
-            <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fff1f0", color: "#d46b08", border: "1px solid #ffd591", margin: 0, whiteSpace: "nowrap" }}>
-                Cần bổ sung
-            </Tag>
-        );
-    return (
-        <Tag style={{ borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#fffbe6", color: "#d48806", border: "1px solid #ffe58f", margin: 0, whiteSpace: "nowrap" }}>
-            Bổ sung thêm
-        </Tag>
-    );
-};
+
 
 const Ico = ({ d, size = 20 }: { d: string; size?: number }) => (
     <svg
@@ -275,17 +264,49 @@ const StatCard = ({
 ───────────────────────────────────────────────────────────── */
 const DepartmentProfilePage = () => {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const tableRef = useRef<ActionType>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const { data: completeness, isLoading, refetch } = useDepartmentCompletenessQuery();
 
-    const [searchValue, setSearchValue] = useState("");
-    const [companyFilter, setCompanyFilter] = useState<string | null>(null);
-    const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>("all");
+    const [searchValue, setSearchValue] = useState(() => searchParams.get("search") || "");
+    const [companyFilter, setCompanyFilter] = useState<string | null>(() => searchParams.get("company"));
+    const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>(() => (searchParams.get("status") as ScoreFilterValue) || "all");
+    const [missingFilter, setMissingFilter] = useState<string | null>(() => searchParams.get("missing"));
     const [resetSignal, setResetSignal] = useState(0);
 
     const [openView, setOpenView] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IDepartmentCompleteness | null>(null);
+
+    // Sync query parameters on load
+    useEffect(() => {
+        if (completeness) {
+            const idParam = searchParams.get("departmentId");
+            if (idParam) {
+                const id = Number(idParam);
+                const rec = completeness.find((d) => d.departmentId === id);
+                if (rec) {
+                    setSelectedRecord(rec);
+                    setOpenView(true);
+                }
+            }
+        }
+    }, [completeness, searchParams]);
+
+    // Refetch data on mount
+    useEffect(() => {
+        refetch();
+    }, [refetch]);
+
+    const handleCloseView = () => {
+        setOpenView(false);
+        setSelectedRecord(null);
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("departmentId");
+        setSearchParams(newParams, { replace: true });
+        refetch();
+    };
 
     /* ── Danh sách công ty duy nhất từ data ── */
     const companyOptions = useMemo(() => {
@@ -322,8 +343,15 @@ const DepartmentProfilePage = () => {
         else if (scoreFilter === "partial") list = list.filter((d) => d.score > 0 && d.score < 7);
         else if (scoreFilter === "empty") list = list.filter((d) => d.score === 0);
 
+        if (missingFilter) {
+            list = list.filter((d) => !d[missingFilter as keyof IDepartmentCompleteness]);
+        }
+
+        // Default sorting: lowest score first (score asc)
+        list.sort((a, b) => a.score - b.score);
+
         return list;
-    }, [completeness, searchValue, companyFilter, scoreFilter]);
+    }, [completeness, searchValue, companyFilter, scoreFilter, missingFilter]);
 
     /* ── Stats (toàn bộ data) ── */
     const totalDept = completeness?.length ?? 0;
@@ -335,7 +363,9 @@ const DepartmentProfilePage = () => {
         setSearchValue("");
         setCompanyFilter(null);
         setScoreFilter("all");
+        setMissingFilter(null);
         setResetSignal((s) => s + 1);
+        setSearchParams(new URLSearchParams(), { replace: true });
         refetch();
     };
 
@@ -375,13 +405,7 @@ const DepartmentProfilePage = () => {
             width: 320,            // ← đặt width cố định tránh cột co quá hẹp
             render: (_, record) => <MissingTagsCell record={record} />,
         },
-        {
-            title: "Ưu tiên",
-            key: "priority",
-            align: "center",
-            width: 120,
-            render: (_, record) => <PriorityCell score={record.score} />,
-        },
+
         {
             title: "Điểm",
             dataIndex: "score",
@@ -394,20 +418,32 @@ const DepartmentProfilePage = () => {
             title: "Hành động",
             key: "action",
             align: "center",
-            width: 100,
+            width: isMobile ? 60 : 150,
             fixed: "right",        // ← sticky bên phải
-            render: (_, record) => (
-                <Tooltip title="Xem chi tiết hồ sơ">
-                    <Button
-                        type="text"
-                        icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                        onClick={() => {
-                            setSelectedRecord(record);
-                            setOpenView(true);
-                        }}
-                    />
-                </Tooltip>
-            ),
+            render: (_, record) => {
+                const labelText = "Xem chi tiết";
+                const tooltipText = "Xem chi tiết hồ sơ phòng ban";
+
+                const openDetail = () => {
+                    setSelectedRecord(record);
+                    setOpenView(true);
+                    const newParams = new URLSearchParams(searchParams);
+                    newParams.set("departmentId", String(record.departmentId));
+                    setSearchParams(newParams, { replace: true });
+                };
+
+                return (
+                    <Tooltip title={tooltipText}>
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            onClick={openDetail}
+                            aria-label={tooltipText}
+                        />
+                    </Tooltip>
+                );
+            },
         },
     ];
 
@@ -417,6 +453,42 @@ const DepartmentProfilePage = () => {
     return (
         <PageContainer
             title="Hồ sơ phòng ban"
+            extra={
+                <Button
+                    type="default"
+                    icon={<ArrowLeftOutlined style={{ transition: "transform 0.2s" }} className="back-btn-icon" />}
+                    onClick={() => navigate("/admin")}
+                    style={{
+                        fontWeight: 600,
+                        borderRadius: 20,
+                        border: "1px solid #e2e8f0",
+                        background: "#ffffff",
+                        color: "#475569",
+                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        height: 34,
+                        padding: "0 16px",
+                        transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "#f2547d";
+                        e.currentTarget.style.borderColor = "#f2547d";
+                        e.currentTarget.style.background = "#fff0f4";
+                        const icon = e.currentTarget.querySelector(".back-btn-icon") as HTMLElement;
+                        if (icon) icon.style.transform = "translateX(-3px)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "#475569";
+                        e.currentTarget.style.borderColor = "#e2e8f0";
+                        e.currentTarget.style.background = "#ffffff";
+                        const icon = e.currentTarget.querySelector(".back-btn-icon") as HTMLElement;
+                        if (icon) icon.style.transform = "translateX(0)";
+                    }}
+                >
+                    {!isMobile && "Quay lại Tổng quan"}
+                </Button>
+            }
             filter={
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
@@ -462,7 +534,14 @@ const DepartmentProfilePage = () => {
                         searchPlaceholder="Tìm tên phòng ban..."
                         showFilterButton={false}
                         showAddButton={false}
-                        onSearch={setSearchValue}
+                        searchValue={searchValue}
+                        onSearch={(val) => {
+                            setSearchValue(val);
+                            const newParams = new URLSearchParams(searchParams);
+                            if (val.trim()) newParams.set("search", val.trim());
+                            else newParams.delete("search");
+                            setSearchParams(newParams, { replace: true });
+                        }}
                         onReset={handleReset}
                         extraButtons={
                             <AdvancedFilterSelect
@@ -484,10 +563,35 @@ const DepartmentProfilePage = () => {
                                             { label: `Chưa có hồ sơ (${countEmpty})`, value: "empty", color: "red" },
                                         ],
                                     },
+                                    {
+                                        key: "missing",
+                                        label: "Hạng mục thiếu",
+                                        searchable: false,
+                                        options: [
+                                            { label: "Tất cả", value: "all" },
+                                            ...CRITERIA.map((c) => ({
+                                                label: c.label,
+                                                value: String(c.key),
+                                            })),
+                                        ],
+                                    },
                                 ]}
                                 onChange={(filters) => {
                                     setCompanyFilter(filters.company || null);
                                     setScoreFilter((filters.score as ScoreFilterValue) || "all");
+                                    setMissingFilter(filters.missing && filters.missing !== "all" ? filters.missing : null);
+                                    
+                                    const newParams = new URLSearchParams(searchParams);
+                                    if (filters.company) newParams.set("company", filters.company);
+                                    else newParams.delete("company");
+
+                                    if (filters.score && filters.score !== "all") newParams.set("status", filters.score);
+                                    else newParams.delete("status");
+
+                                    if (filters.missing && filters.missing !== "all") newParams.set("missing", filters.missing);
+                                    else newParams.delete("missing");
+
+                                    setSearchParams(newParams, { replace: true });
                                 }}
                             />
                         }
@@ -526,10 +630,7 @@ const DepartmentProfilePage = () => {
             {selectedRecord && (
                 <ViewDepartmentCompleteness
                     open={openView}
-                    onClose={() => {
-                        setOpenView(false);
-                        setSelectedRecord(null);
-                    }}
+                    onClose={handleCloseView}
                     record={selectedRecord}
                     criteria={CRITERIA}
                 />

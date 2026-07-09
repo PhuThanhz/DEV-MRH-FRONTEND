@@ -8,10 +8,13 @@ import {
     useRefreshExpiredAccountingDossierStorageMutation
 } from "@/hooks/useAccountingDossiers";
 import { FileProtectOutlined, ClockCircleOutlined, SyncOutlined, InboxOutlined } from "@ant-design/icons";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Title, Text } = Typography;
 
 const StorageDashboard = () => {
+    const canRefreshExpiredStorage = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.REFRESH_EXPIRED_STORAGE);
     const { data: summary, isLoading: isLoadingSummary, refetch: refetchSummary } = useAccountingDossierStorageSummaryQuery();
     const { data: pendingByRole, isLoading: isLoadingPending } = useAccountingDossierPendingByRoleQuery();
     const { data: byStatus, isLoading: isLoadingStatus } = useAccountingDossierReportByStatusQuery();
@@ -38,14 +41,16 @@ const StorageDashboard = () => {
         <div style={{ padding: "16px 0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <Title level={4} style={{ margin: 0 }}>Tổng quan lưu trữ</Title>
-                <Button
-                    type="primary"
-                    icon={<SyncOutlined />}
-                    onClick={handleRefresh}
-                    loading={refreshMutation.isPending}
-                >
-                    Cập nhật hết hạn
-                </Button>
+                {canRefreshExpiredStorage && (
+                    <Button
+                        type="primary"
+                        icon={<SyncOutlined />}
+                        onClick={handleRefresh}
+                        loading={refreshMutation.isPending}
+                    >
+                        Cập nhật hết hạn
+                    </Button>
+                )}
             </div>
 
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>

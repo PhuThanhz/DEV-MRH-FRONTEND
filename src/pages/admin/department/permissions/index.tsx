@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DeptPageNav from "@/components/common/navigation/DeptPageNav";
@@ -9,6 +9,7 @@ import PermissionViewModal from "./components/PermissionViewModal";
 
 const DepartmentPermissionPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { departmentId } = useParams<{ departmentId: string }>();
     const { data: department } = useDepartmentByIdQuery(Number(departmentId));
     const [searchParams] = useSearchParams();
@@ -21,7 +22,13 @@ const DepartmentPermissionPage = () => {
 
             <LotusDetailDrawer
                 open
-                onClose={() => navigate(PATHS.ADMIN.DEPARTMENT)}
+                onClose={() => {
+                    if (location.state?.from) {
+                        navigate(location.state.from);
+                    } else {
+                        navigate(PATHS.ADMIN.DEPARTMENT);
+                    }
+                }}
                 keyboard={false}
                 destroyOnClose={false}
             >

@@ -1,9 +1,115 @@
 import { useMemo } from "react";
-import { Skeleton } from "antd";
+import { Skeleton, Button, Tooltip } from "antd";
 import { Pie } from "@/components/common/chart/LazyChart";
 import { useNavigate } from "react-router-dom";
+import { TrophyOutlined, CheckCircleFilled } from "@ant-design/icons";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { useDashboardSummaryQuery, useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { getScoreStyle, PIE_COLORS, CRITERIA_MAP, BADGE_BASE_STYLE } from "./departmentProfileCriteria";
+
+/* ─────────────────────────── THEME PRESETS ─────────────────────────── */
+const THEME_PRESETS: Record<string, { primary: string; bg: string; gradient: string; shadow: string; icon: React.ReactNode }> = {
+    salaryGrade: {
+        primary: "#f2547d",
+        bg: "#fff0f4",
+        gradient: "linear-gradient(270deg, #ff85c0 0%, #f2547d 100%)",
+        shadow: "rgba(242, 84, 125, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+        )
+    },
+    departmentProcedure: {
+        primary: "#fa8c16",
+        bg: "#fff7e6",
+        gradient: "linear-gradient(270deg, #ffd591 0%, #fa8c16 100%)",
+        shadow: "rgba(250, 140, 22, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        )
+    },
+    permissions: {
+        primary: "#722ed1",
+        bg: "#f9f0ff",
+        gradient: "linear-gradient(270deg, #d3adf7 0%, #722ed1 100%)",
+        shadow: "rgba(114, 46, 209, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+        )
+    },
+    careerPath: {
+        primary: "#1890ff",
+        bg: "#e6f7ff",
+        gradient: "linear-gradient(270deg, #91d5ff 0%, #1890ff 100%)",
+        shadow: "rgba(24, 144, 255, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+        )
+    },
+    objectives: {
+        primary: "#13c2c2",
+        bg: "#e6fffb",
+        gradient: "linear-gradient(270deg, #87e8de 0%, #13c2c2 100%)",
+        shadow: "rgba(19, 194, 194, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+        )
+    },
+    orgChart: {
+        primary: "#eb2f96",
+        bg: "#fff0f6",
+        gradient: "linear-gradient(270deg, #ffadd2 0%, #eb2f96 100%)",
+        shadow: "rgba(235, 47, 150, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+        )
+    },
+    jobTitleMap: {
+        primary: "#2f54eb",
+        bg: "#f0f5ff",
+        gradient: "linear-gradient(270deg, #adc6ff 0%, #2f54eb 100%)",
+        shadow: "rgba(47, 84, 245, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 22 12 17 22 22 12 2"></polygon>
+            </svg>
+        )
+    },
+    default: {
+        primary: "#f2547d",
+        bg: "#fff0f4",
+        gradient: "linear-gradient(270deg, #ff85c0 0%, #f2547d 100%)",
+        shadow: "rgba(242, 84, 125, 0.15)",
+        icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+        )
+    }
+};
 
 /* ─────────────────────────── STYLES ─────────────────────────── */
 const S = `
@@ -139,6 +245,40 @@ const S = `
   .db-score-mid    { background: #fffbe6; color: #d48806; }
   .db-score-low    { background: #fff1f0; color: #cf1322; }
 
+  /* ── Missing-criteria bar list ── */
+  .db-mc-list { display: flex; flex-direction: column; gap: 12px; }
+  .db-mc-row {
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; border-radius: 8px; padding: 4px 6px;
+    transition: background .15s;
+  }
+  .db-mc-row:hover { background: #fafafa; }
+  .db-mc-label {
+    width: 128px; flex-shrink: 0; text-align: right;
+    font-size: 12px; font-weight: 500; color: #595959;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .db-mc-track {
+    flex: 1; min-width: 0; height: 22px;
+    background: #f5f5f5; border-radius: 6px; overflow: hidden;
+  }
+  .db-mc-bar {
+    height: 100%; border-radius: 6px;
+    transition: width .5s ease; min-width: 2px;
+  }
+  .db-mc-count {
+    flex-shrink: 0; width: 96px; font-size: 13px; font-weight: 700;
+    color: #262626; white-space: nowrap; text-align: right;
+  }
+  .db-mc-unit { font-weight: 500; color: #8c8c8c; font-size: 11px; }
+
+  @media (max-width: 600px) {
+    .db-mc-label { width: 92px; font-size: 11px; }
+    .db-mc-count { width: 82px; font-size: 12px; }
+    .db-mc-unit { font-size: 10px; }
+    .db-mc-track { height: 18px; }
+  }
+
   /* ── View-all footer ── */
   .db-view-all {
     display: flex; align-items: center; justify-content: center;
@@ -225,16 +365,30 @@ const ACCENT_COLORS = ["#f2547d", "#1677ff", "#52c41a", "#faad14"];
 
 /* ─────────────────────────── SUB COMPONENTS ─────────────────────────── */
 const ScoreBadge = ({ score }: { score: number }) => {
-    const cls =
-        score === 7 ? "db-score-badge db-score-full"
-            : score >= 4 ? "db-score-badge db-score-mid"
-                : "db-score-badge db-score-low";
-    return <span className={cls}>{score}/7</span>;
+    const style = getScoreStyle(score);
+    return (
+        <span
+            style={{
+                ...BADGE_BASE_STYLE,
+                background: style.bg,
+                color: style.color,
+                border: `1px solid ${style.border}`,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 44,
+            }}
+        >
+            {score}/7
+        </span>
+    );
 };
 
 /* ─────────────────────────── MAIN PAGE ─────────────────────────── */
 const DashboardPage = () => {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
+    const canViewProfiles = useAccess(ALL_PERMISSIONS.DASHBOARD.GET_DEPARTMENT_COMPLETENESS);
     const { data, isLoading } = useDashboardSummaryQuery();
     const { data: completeness, isLoading: isLoadingComplete } = useDepartmentCompletenessQuery();
 
@@ -261,10 +415,53 @@ const DashboardPage = () => {
         const partial = completeness.filter(d => d.score > 0 && d.score < 7).length;
         const empty = completeness.filter(d => d.score === 0).length;
         return [
-            { name: "Hoàn chỉnh (7/7)", value: full, color: "#52c41a" },
-            { name: "Đang bổ sung", value: partial, color: "#faad14" },
-            { name: "Chưa có hồ sơ", value: empty, color: "#ff4d4f" },
+            { name: "Hoàn chỉnh (7/7)", value: full, color: PIE_COLORS["Hoàn chỉnh (7/7)"] },
+            { name: "Đang bổ sung", value: partial, color: PIE_COLORS["Đang bổ sung"] },
+            { name: "Chưa có hồ sơ", value: empty, color: PIE_COLORS["Chưa có hồ sơ"] },
         ].filter(d => d.value > 0);
+    }, [completeness]);
+
+    /* Missing Criteria Stats */
+    const missingCriteriaStats = useMemo(() => {
+        if (!completeness) return [];
+        
+        const stats = {
+            orgChart: 0,
+            jobTitleMap: 0,
+            objectives: 0,
+            departmentProcedure: 0,
+            permissions: 0,
+            careerPath: 0,
+            salaryGrade: 0,
+        };
+
+        completeness.forEach(dept => {
+            if (!dept.orgChart) stats.orgChart++;
+            if (!dept.jobTitleMap) stats.jobTitleMap++;
+            if (!dept.objectives) stats.objectives++;
+            if (!dept.departmentProcedure) stats.departmentProcedure++;
+            if (!dept.permissions) stats.permissions++;
+            if (!dept.careerPath) stats.careerPath++;
+            if (!dept.salaryGrade) stats.salaryGrade++;
+        });
+
+        const keys: (keyof typeof stats)[] = [
+            "orgChart",
+            "jobTitleMap",
+            "objectives",
+            "departmentProcedure",
+            "permissions",
+            "careerPath",
+            "salaryGrade",
+        ];
+
+        return keys
+            .map(key => ({
+                key,
+                label: CRITERIA_MAP[key].label,
+                count: stats[key],
+            }))
+            .sort((a, b) => b.count - a.count);
     }, [completeness]);
 
     /* KPI – hồ sơ trend text + class */
@@ -308,7 +505,7 @@ const DashboardPage = () => {
             icon: "M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z",
             sub: hoSoTrend,
             subCls: hoSoTrendCls,
-            onClick: () => navigate("/admin/department-profiles"),
+            onClick: canViewProfiles ? () => navigate("/admin/department-profiles") : undefined,
         },
     ];
 
@@ -322,10 +519,18 @@ const DashboardPage = () => {
         legend: false as const,
         label: false as const,
         scale: {
-            color: { range: pieData.map(d => d.color) },
+            color: {
+                domain: Object.keys(PIE_COLORS),
+                range: Object.values(PIE_COLORS),
+            },
         },
         tooltip: {
-            items: [{ channel: "y" as const, name: "Phòng ban" }],
+            items: [
+                (d: any) => ({
+                    name: d.name,
+                    value: `${d.value} phòng ban`,
+                })
+            ]
         },
         annotations: [
             {
@@ -348,6 +553,8 @@ const DashboardPage = () => {
             },
         ],
     }), [pieData, totalDept]);
+
+    const maxMissing = missingCriteriaStats[0]?.count ?? 0;
 
     /* ── Render ── */
     return (
@@ -399,9 +606,13 @@ const DashboardPage = () => {
                 }
             </div>
 
-            {/* BOTTOM ROW */}
-            <div className="db-sec">Tình trạng hồ sơ phòng ban</div>
-            <div className="db-bottom" data-guide-id="dashboard-bottom-row">
+            {/* BOTTOM ROW HEADER */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div className="db-sec" style={{ marginBottom: 0 }}>Tình trạng hồ sơ phòng ban</div>
+            </div>
+            
+            {/* Top row of bottom section: Donut Chart & Top 5 list */}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1.5fr", gap: 14, marginBottom: 14 }}>
 
                 {/* Pie card */}
                 <div className="db-card">
@@ -446,31 +657,58 @@ const DashboardPage = () => {
                         {isLoadingComplete ? (
                             <Skeleton active paragraph={{ rows: 5 }} />
                         ) : top5Missing.length === 0 ? (
-                            <div style={{ textAlign: "center", padding: "32px 0", color: "#52c41a", fontSize: 13, fontWeight: 600 }}>
-                                🎉 Tất cả phòng ban đã hoàn thiện hồ sơ
+                            <div style={{ textAlign: "center", padding: "32px 0", color: "#52c41a", fontSize: 13, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                                <TrophyOutlined style={{ fontSize: 24, color: "#faad14" }} />
+                                Tất cả phòng ban đã hoàn thiện hồ sơ
                             </div>
                         ) : (
-                            <div className="db-top-list">
+                            <div className="db-top-list" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 {top5Missing.map((dept, idx) => {
                                     const pct = Math.round((dept.score / 7) * 100);
-                                    const barColor =
-                                        dept.score === 0 ? "#ff4d4f"
-                                            : dept.score < 4 ? "#faad14"
-                                                : "#1677ff";
+                                    const style = getScoreStyle(dept.score);
+                                    const missingItems = 7 - dept.score;
                                     return (
-                                        <div key={dept.departmentId} className="db-top-row">
+                                        <div
+                                            key={dept.departmentId}
+                                            className="db-top-row"
+                                            onClick={() => navigate(`/admin/department-profiles?departmentId=${dept.departmentId}`)}
+                                            style={{
+                                                cursor: "pointer",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "8px",
+                                                borderRadius: "8px",
+                                                transition: "background 0.2s"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "#fff0f4";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "transparent";
+                                            }}
+                                        >
                                             <span className={`db-top-rank${dept.score <= 2 ? " warn" : ""}`}>
                                                 {idx + 1}
                                             </span>
-                                            <div className="db-top-info">
-                                                <div className="db-top-name">{dept.departmentName}</div>
-                                                <div className="db-top-company">{dept.companyName}</div>
+                                            <div className="db-top-info" style={{ flex: 1, minWidth: 0, margin: "0 10px" }}>
+                                                <div className="db-top-name" style={{ fontWeight: 600, fontSize: 13, color: "#262626", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {dept.departmentName}
+                                                </div>
+                                                <div className="db-top-company" style={{ fontSize: 11, color: "#bfbfbf", marginTop: 2 }}>
+                                                    {dept.companyName}
+                                                </div>
                                             </div>
-                                            <div className="db-top-right">
+                                            <div className="db-top-right" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                {!isMobile && (
+                                                    <span style={{ fontSize: 11, color: "#8c8c8c" }}>
+                                                        Thiếu {missingItems} mục
+                                                    </span>
+                                                )}
                                                 <div className="db-top-bar-wrap">
                                                     <div
                                                         className="db-top-bar"
-                                                        style={{ width: `${pct}%`, background: barColor }}
+                                                        style={{ width: `${pct}%`, background: style.barColor }}
                                                     />
                                                 </div>
                                                 <ScoreBadge score={dept.score} />
@@ -490,6 +728,63 @@ const DashboardPage = () => {
                             Xem tất cả {missingCount} phòng ban còn thiếu <ArrowRight />
                         </div>
                     )}
+                </div>
+
+            </div>
+
+            {/* Bottom row of bottom section: Missing Criteria Stats Card (spanning full width) */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+
+                {/* Missing Criteria Stats Card */}
+                <div className="db-card">
+                    <div className="db-card-head">
+                        <span className="db-card-title">Hạng mục thiếu nhiều nhất</span>
+                        <span className="db-card-badge">Toàn hệ thống</span>
+                    </div>
+                    <div className="db-card-body">
+                        {isLoadingComplete ? (
+                            <Skeleton active paragraph={{ rows: 5 }} />
+                        ) : missingCriteriaStats.length === 0 || totalDept === 0 ? (
+                            <div style={{ textAlign: "center", padding: "32px 0", color: "#bfbfbf", fontSize: 13 }}>
+                                Chưa có dữ liệu
+                            </div>
+                        ) : maxMissing === 0 ? (
+                            <div style={{ textAlign: "center", padding: "32px 0", color: "#52c41a", fontSize: 13, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                                <CheckCircleFilled style={{ fontSize: 24, color: "#52c41a" }} />
+                                Không có hạng mục nào bị thiếu
+                            </div>
+                        ) : (
+                            <div className="db-mc-list">
+                                {missingCriteriaStats.map(item => {
+                                    const pct = maxMissing > 0 ? Math.round((item.count / maxMissing) * 100) : 0;
+                                    const ratio = totalDept > 0 ? item.count / totalDept : 0;
+                                    const barColor =
+                                        ratio >= 0.75 ? "#ff4d4f"
+                                            : ratio >= 0.4 ? "#faad14"
+                                                : "#1677ff";
+                                    return (
+                                        <div
+                                            key={item.key}
+                                            className="db-mc-row"
+                                            onClick={() => navigate(`/admin/department-profiles?missing=${item.key}`)}
+                                        >
+                                            <span className="db-mc-label">{item.label}</span>
+                                            <div className="db-mc-track">
+                                                <div
+                                                    className="db-mc-bar"
+                                                    style={{ width: `${pct}%`, background: barColor }}
+                                                />
+                                            </div>
+                                            <span className="db-mc-count">
+                                                {item.count}
+                                                <span className="db-mc-unit"> phòng ban</span>
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
             </div>

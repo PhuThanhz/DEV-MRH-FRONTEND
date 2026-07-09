@@ -33,6 +33,7 @@ interface SearchFilterProps {
     guideSearchId?: string;
     guideAddId?: string;
     extraButtons?: React.ReactNode;
+    searchValue?: string;
 }
 
 const BTN_H = 40;
@@ -55,11 +56,17 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     guideSearchId,
     guideAddId,
     extraButtons,
+    searchValue: externalSearchValue = "",
 }) => {
     const [open, setOpen] = useState(false);
     const [form] = Form.useForm();
-    const [searchValue, setSearchValue] = useState("");
+    const [searchValue, setSearchValue] = useState(externalSearchValue);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Sync external value changes
+    useEffect(() => {
+        setSearchValue(externalSearchValue);
+    }, [externalSearchValue]);
 
     // Cleanup timer on unmount
     useEffect(() => {

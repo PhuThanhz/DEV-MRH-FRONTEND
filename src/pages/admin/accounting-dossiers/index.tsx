@@ -193,6 +193,18 @@ const AccountingDossierPage = () => {
         checkDoc: useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CHECK_DOCUMENT),
         rejectSync: useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.SYNC_TEMPLATE_REJECT),
     };
+    const canViewDossierDetail = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_BY_ID);
+    const canUpdateDossier = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.UPDATE);
+    const canDeleteDossier = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.DELETE);
+    const canSubmitDossier = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.SUBMIT);
+    const canViewDossierLogs = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_LOGS);
+    const canCreateDossierCategory = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE_CATEGORY);
+    const canUpdateDossierCategory = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.UPDATE_CATEGORY);
+    const canToggleDossierCategoryActive = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.TOGGLE_CATEGORY_ACTIVE);
+    const canCreateDossierDocument = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE_DOCUMENT);
+    const canUpdateDossierDocument = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.UPDATE_DOCUMENT);
+    const canDeleteDossierDocument = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.DELETE_DOCUMENT);
+    const canBulkApproveDossiers = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.BULK_APPROVE);
 
     // Có tham gia luồng duyệt: có bất kỳ quyền duyệt/kiểm tra nào → hiện tab "Chờ tôi duyệt".
     const isApproverRole = isSuperAdmin || perms.approve || perms.reject || perms.terminate || perms.checkDoc || perms.returnResponse;
@@ -215,7 +227,7 @@ const AccountingDossierPage = () => {
     const query = useMemo(
         () => {
             const filters: string[] = [];
-            
+
             if (viewMode === "MY_TASKS" && myTasksTab === "CREATED_BY_ME") {
                 filters.push(`creatorId:${user.id}`);
             }
@@ -287,7 +299,7 @@ const AccountingDossierPage = () => {
     const returnResponseMutation = useHandleReturnResponseAccountingDossierMutation();
     const archiveMutation = useArchiveAccountingDossierMutation();
     const rejectSyncMutation = useRejectAccountingDossierTemplateSyncMutation();
-    
+
     const { data: currentDossier } = useAccountingDossierByIdQuery(viewDossier?.id);
     const routeDossierId = Number(searchParams.get("dossierId") || "");
     const { data: routeDossier } = useAccountingDossierByIdQuery(routeDossierId || undefined);
@@ -533,11 +545,13 @@ const AccountingDossierPage = () => {
             width: 140,
             render: (_, record) => {
                 const isCreator = user?.id === record.creatorId;
-                const canEdit = editableStatuses.includes(record.status) && isCreator;
-                const canRequestReturn = returnRequestableStatuses.includes(record.status) && isCreator;
+                const canEdit = editableStatuses.includes(record.status) && isCreator && canUpdateDossier;
+                const canDelete = editableStatuses.includes(record.status) && isCreator && canDeleteDossier;
+                const canSubmit = editableStatuses.includes(record.status) && isCreator && canSubmitDossier;
+                const canRequestReturn = returnRequestableStatuses.includes(record.status) && isCreator && perms.requestReturn;
 
-                const canApproveQuick = isPendingMeMode && ["SUBMITTED", "IN_REVIEW"].includes(record.status);
-                const canRejectQuick = isPendingMeMode && ["SUBMITTED", "IN_REVIEW"].includes(record.status);
+                const canApproveQuick = isPendingMeMode && perms.approve && ["SUBMITTED", "IN_REVIEW"].includes(record.status);
+                const canRejectQuick = isPendingMeMode && perms.reject && ["SUBMITTED", "IN_REVIEW"].includes(record.status);
                 const canTerminateQuick = isPendingMeMode && (perms.terminate || isSuperAdmin) && ["SUBMITTED", "IN_REVIEW"].includes(record.status);
                 const canArchiveQuick = record.status === "APPROVED" && (perms.archive || isSuperAdmin);
 
@@ -582,7 +596,7 @@ const AccountingDossierPage = () => {
                         }
                     });
                 }
-                if (canEdit) {
+                if (canSubmit) {
                     menuItems.push({
                         key: "submit",
                         label: "Chuyển chứng từ",
@@ -597,6 +611,8 @@ const AccountingDossierPage = () => {
                             }
                         }
                     });
+                }
+                if (canEdit) {
                     menuItems.push({
                         key: "edit",
                         label: "Chỉnh sửa",
@@ -604,11 +620,13 @@ const AccountingDossierPage = () => {
                     });
                 }
 
-                menuItems.push({
-                    key: "logs",
-                    label: "Nhật ký lịch sử",
-                    onClick: () => setLogDossier(record)
-                });
+                if (canViewDossierLogs) {
+                    menuItems.push({
+                        key: "logs",
+                        label: "Nhật ký lịch sử",
+                        onClick: () => setLogDossier(record)
+                    });
+                }
 
                 if (canTerminateQuick) {
                     menuItems.push({
@@ -627,7 +645,7 @@ const AccountingDossierPage = () => {
                     });
                 }
 
-                if (canEdit) {
+                if (canDelete) {
                     menuItems.push({
                         key: "delete",
                         label: "Xóa cứng",
@@ -647,15 +665,17 @@ const AccountingDossierPage = () => {
 
                 return (
                     <Space size="small">
-                        <Tooltip title="Xem chi tiết">
-                            <Button
-                                data-guide-id="accounting-dossier-detail-button"
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                                onClick={() => setViewDossier(record)}
-                            />
-                        </Tooltip>
+                        {canViewDossierDetail && (
+                            <Tooltip title="Xem chi tiết">
+                                <Button
+                                    data-guide-id="accounting-dossier-detail-button"
+                                    type="text"
+                                    size="small"
+                                    icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                    onClick={() => setViewDossier(record)}
+                                />
+                            </Tooltip>
+                        )}
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
                                 <Button
@@ -697,7 +717,7 @@ const AccountingDossierPage = () => {
                 guideSearchId="accounting-dossier-search-input"
                 guideAddId="accounting-dossier-add-button"
                 extraButtons={
-                    <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CREATE} hideChildren>
+                    <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_CATEGORIES} hideChildren>
                         <Button
                             style={{ height: 40, borderRadius: 10, fontSize: 14 }}
                             onClick={() => setTemplateDrawerOpen(true)}
@@ -804,8 +824,8 @@ const AccountingDossierPage = () => {
                                 setViewMode("MY_TASKS");
                                 setPage(1);
                             }}
-                            style={{ 
-                                fontWeight: 600, 
+                            style={{
+                                fontWeight: 600,
                                 borderRadius: 6,
                                 background: viewMode === "MY_TASKS" ? "#E8356D" : "#ffffff",
                                 color: viewMode === "MY_TASKS" ? "#ffffff" : "#636366",
@@ -820,8 +840,8 @@ const AccountingDossierPage = () => {
                                 setViewMode("ALL_DOSSIERS");
                                 setPage(1);
                             }}
-                            style={{ 
-                                fontWeight: 600, 
+                            style={{
+                                fontWeight: 600,
                                 borderRadius: 6,
                                 background: viewMode === "ALL_DOSSIERS" ? "#E8356D" : "#ffffff",
                                 color: viewMode === "ALL_DOSSIERS" ? "#ffffff" : "#636366",
@@ -869,7 +889,7 @@ const AccountingDossierPage = () => {
                     />
                 </div>
             )}
-            {selectedRowKeys.length > 0 && (
+            {selectedRowKeys.length > 0 && canBulkApproveDossiers && (
                 <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{ color: "#555" }}>
                         Đã chọn <strong>{selectedRowKeys.length}</strong> bộ chứng từ
@@ -903,13 +923,13 @@ const AccountingDossierPage = () => {
                 dataSource={rows}
                 loading={isFetching || deleteMutation.isPending}
                 scroll={{ x: 1550 }}
-                rowSelection={{
+                rowSelection={canBulkApproveDossiers ? {
                     selectedRowKeys,
                     onChange: (keys) => setSelectedRowKeys(keys),
                     getCheckboxProps: (record) => ({
                         disabled: record.status !== "SUBMITTED" && record.status !== "IN_REVIEW",
                     }),
-                }}
+                } : undefined}
                 pagination={{
                     current: data?.meta?.page || page,
                     pageSize: data?.meta?.pageSize || pageSize,
@@ -937,6 +957,9 @@ const AccountingDossierPage = () => {
                 open={templateDrawerOpen}
                 companies={companies}
                 onClose={() => setTemplateDrawerOpen(false)}
+                canCreate={canCreateDossierCategory}
+                canUpdate={canUpdateDossierCategory}
+                canToggleActive={canToggleDossierCategoryActive}
             />
 
             <Modal
@@ -1169,7 +1192,10 @@ const AccountingDossierPage = () => {
                                         <div style={{ background: "#fafafa", borderRadius: 8, padding: 12, border: "1px solid #f0f0f0" }}>
                                             <DossierDocumentList
                                                 dossier={activeDossier}
-                                                editable={editableStatuses.includes(activeDossier.status)}
+                                                editable={editableStatuses.includes(activeDossier.status) && ctx.isCreator}
+                                                canCreate={canCreateDossierDocument}
+                                                canUpdate={canUpdateDossierDocument}
+                                                canDelete={canDeleteDossierDocument}
                                                 reviewable={canReviewChildDocuments}
                                                 variant="compact"
                                             />

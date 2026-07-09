@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useDepartmentByIdQuery } from "@/hooks/useDepartments";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import OrgChartFlow from "@/pages/admin/company/org-chart/OrgChartFlow";
@@ -11,6 +11,7 @@ const DepartmentOrgChartPage = () => {
     const { data: department } = useDepartmentByIdQuery(Number(departmentId));
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const id = Number(departmentId);
     const departmentName = searchParams.get("departmentName") || department?.name || "";
@@ -41,7 +42,13 @@ const DepartmentOrgChartPage = () => {
                 ownerType="DEPARTMENT"
                 ownerId={id}
                 chartTitle={`Sơ đồ tổ chức${departmentName ? ` — ${departmentName}` : ""}`}
-                onClose={() => navigate("/admin/departments")}
+                onClose={() => {
+                    if (location.state?.from) {
+                        navigate(location.state.from);
+                    } else {
+                        navigate("/admin/departments");
+                    }
+                }}
             />
             <DeptPageNav pages={deptNavPages} /> {/* ← thêm pages prop */}
         </PageContainer>
