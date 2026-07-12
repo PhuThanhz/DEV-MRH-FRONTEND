@@ -787,6 +787,7 @@ const AccountingDocumentPage = () => {
             <SearchFilter
                 searchPlaceholder="Mã hồ sơ, nội dung, người tải..."
                 showAddButton={false}
+                showFilterButton={false}
                 showResetButton={true}
                 activeFilterCount={activeFilterCount}
                 onSearch={(val) => {
@@ -795,22 +796,23 @@ const AccountingDocumentPage = () => {
                 }}
                 onReset={resetFilters}
                 extraButtons={
-                    <Space size={8} wrap>
-                        <Button
-                            icon={<FilterOutlined />}
-                            type={filtersOpen ? "primary" : "default"}
-                            onClick={() => setFiltersOpen((open) => !open)}
-                            style={{ height: 40, borderRadius: 10 }}
-                        >
-                            Bộ lọc
-                        </Button>
-                        <Tag color="blue" style={{ margin: 0, padding: "8px 12px", borderRadius: 8, height: 40, display: "flex", alignItems: "center" }}>
-                            Chứng từ được tạo trong bộ chứng từ
-                        </Tag>
-                    </Space>
+                    <Tag color="blue" style={{ margin: 0, padding: "8px 12px", borderRadius: 8, height: 40, display: "flex", alignItems: "center" }}>
+                        Chứng từ được tạo trong bộ chứng từ
+                    </Tag>
                 }
                 guideSearchId="accounting-doc-search-input"
             />
+
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+                <Button
+                    icon={<FilterOutlined />}
+                    type={filtersOpen ? "primary" : "default"}
+                    onClick={() => setFiltersOpen((open) => !open)}
+                    style={{ height: 40, borderRadius: 10, display: "flex", alignItems: "center" }}
+                >
+                    Bộ lọc
+                </Button>
+            </div>
 
             {filtersOpen && (
                 <div

@@ -43,6 +43,8 @@ export const PATHS = {
         ACCOUNTING_DOCUMENTS: "/admin/accounting-documents",
         ACCOUNTING_DOSSIERS: "/admin/accounting-dossiers",
         ACCOUNTING_DOCUMENT_CATEGORY: "/admin/accounting-document-categories",
+        ACCOUNTING_WORKFLOW_TEMPLATES: "/admin/accounting-workflow-templates",
+        ACCOUNTING_DELEGATIONS: "/admin/accounting-delegations",
 
         // EVALUATION (HQCV)
         EVALUATION_TEMPLATES: "/admin/evaluation/templates",

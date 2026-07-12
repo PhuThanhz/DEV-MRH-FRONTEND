@@ -2009,20 +2009,20 @@ export const callRejectAccountingDossierTemplateSync = (id: number, note?: strin
 export const callRefreshExpiredAccountingDossierStorage = () =>
     axios.post<IBackendRes<number>>(`/api/v1/accounting-dossiers/storage/refresh-expired`);
 
-export const callFetchAccountingDossierStorageSummary = () =>
-    axios.get<IBackendRes<IAccountingDossierStorageSummary>>(`/api/v1/accounting-dossiers/dashboard/summary`);
+export const callFetchAccountingDossierStorageSummary = (companyId?: number) =>
+    axios.get<IBackendRes<IAccountingDossierStorageSummary>>(`/api/v1/accounting-dossiers/dashboard/summary${companyId ? `?companyId=${companyId}` : ""}`);
 
-export const callFetchAccountingDossierPendingByRole = () =>
-    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/dashboard/pending-by-role`);
+export const callFetchAccountingDossierPendingByRole = (companyId?: number) =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/dashboard/pending-by-role${companyId ? `?companyId=${companyId}` : ""}`);
 
-export const callFetchAccountingDossierReportByStatus = () =>
-    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-status`);
+export const callFetchAccountingDossierReportByStatus = (companyId?: number) =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-status${companyId ? `?companyId=${companyId}` : ""}`);
 
-export const callFetchAccountingDossierReportByDepartment = () =>
-    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-department`);
+export const callFetchAccountingDossierReportByDepartment = (companyId?: number) =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-department${companyId ? `?companyId=${companyId}` : ""}`);
 
-export const callFetchAccountingDossierReportByCategory = () =>
-    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-category`);
+export const callFetchAccountingDossierReportByCategory = (companyId?: number) =>
+    axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/reports/by-category${companyId ? `?companyId=${companyId}` : ""}`);
 
 export const callFetchAccountingDossierApprovalSteps = (id: number) =>
     axios.get<IBackendRes<IAccountingDossierApprovalStep[]>>(`/api/v1/accounting-dossiers/${id}/approval-steps`);
@@ -2538,3 +2538,49 @@ export const callDeleteAccountingDocumentCategory = (id: number) => {
         `/api/v1/accounting-document-categories/${id}`
     );
 };
+
+// --- Accounting Approval Workflow (Phase 2-5) ---
+export const callFetchWorkflowTemplates = () =>
+    axios.get<IBackendRes<any[]>>(`/api/v1/accounting-approval-workflows`);
+
+export const callCreateWorkflowTemplate = (data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows`, data);
+
+export const callUpdateWorkflowTemplateDraft = (id: number, data: any) =>
+    axios.put<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/${id}/draft`, data);
+
+export const callValidateWorkflowTemplate = (id: number) =>
+    axios.post<IBackendRes<string[]>>(`/api/v1/accounting-approval-workflows/${id}/validate`);
+
+export const callPublishWorkflowTemplate = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/${id}/publish`);
+
+export const callDeactivateWorkflowTemplate = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/${id}/deactivate`);
+
+export const callReactivateWorkflowTemplate = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/${id}/reactivate`);
+
+export const callCopyWorkflowTemplateToDraft = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/${id}/copy`);
+
+export const callPreviewWorkflow = (dossierId: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-workflows/dossiers/${dossierId}/preview`);
+
+export const callFetchDelegations = (query: string) =>
+    axios.get<IBackendRes<IModelPaginate<any>>>(`/api/v1/accounting-approval-delegations?${query}`);
+
+export const callCreateDelegation = (data: any) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-delegations`, data);
+
+export const callActivateDelegation = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-delegations/${id}/activate`);
+
+export const callRevokeDelegation = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-delegations/${id}/revoke`);
+
+export const callClaimAccountingDossier = (id: number) =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-dossiers/${id}/claim`);
+
+export const callScanSlaOverdue = () =>
+    axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-sla/scan-overdue`);

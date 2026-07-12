@@ -1,7 +1,7 @@
 import { Button, Form, Input, message, notification } from "antd";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { KeyOutlined, LockOutlined } from "@ant-design/icons";
+import { KeyOutlined, LockOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { callConfirmResetPassword } from "config/api";
 
 const ConfirmResetPassword = () => {
@@ -70,7 +70,6 @@ const ConfirmResetPassword = () => {
             <img
               src="/logo/LOGOFINAL.webp"
               alt="LOTUS HRM"
-              style={{ width: "100%", height: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }}
             />
           </div>
         </div>
@@ -110,14 +109,17 @@ const ConfirmResetPassword = () => {
 
           
           <div className="form-heading">
+            <div className={`auth-flow-icon ${mode}`} aria-hidden="true">
+              {mode === "activate" ? <SafetyCertificateOutlined /> : <KeyOutlined />}
+            </div>
             <h2 className="form-title">{mode === "activate" ? "Kích hoạt tài khoản" : "Đặt lại mật khẩu"}</h2>
             <p className="form-sub">Vui lòng kiểm tra email <b>{email}</b> và nhập mã xác nhận.</p>
           </div>
 
           {/* Cảnh báo hết hạn */}
           {isExpired && (
-            <div style={{ marginBottom: 20, padding: 12, background: 'rgba(255,200,200,0.2)', borderRadius: 10, border: '1px solid #ff4d4f' }}>
-              <span style={{ color: '#ef4444', fontWeight: 600, fontSize: 13 }}>
+            <div className="code-expired">
+              <span>
                 Mã xác nhận đã hết hạn! Vui lòng yêu cầu mã mới.
               </span>
             </div>
@@ -178,9 +180,9 @@ const ConfirmResetPassword = () => {
               />
             </Form.Item>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, fontSize: 13 }}>
-              <span style={{ color: '#6b7280' }}>Hiệu lực:</span>
-              <span style={{ fontWeight: 600, color: isExpired ? '#ef4444' : '#ec4899' }}>
+            <div className="code-validity">
+              <span>Hiệu lực mã</span>
+              <span className={isExpired ? "expired" : ""}>
                 {minutes}:{seconds}
               </span>
             </div>
@@ -227,7 +229,7 @@ const ConfirmResetPassword = () => {
 
         /* ── LEFT ── */
         .login-left {
-          flex: 1.08; position: relative;
+          flex: 1; position: relative;
           background: transparent;
           display: flex; align-items: center; justify-content: flex-start;
           overflow: hidden;
@@ -238,8 +240,8 @@ const ConfirmResetPassword = () => {
         }
         .left-content {
           position: absolute; z-index: 10;
-          left: 59.4vh;
-          top: 52.5vh;
+          left: 50%;
+          top: 50%;
           transform: translate(-50%, -50%);
           display: flex; flex-direction: column;
           align-items: center; gap: 0;
@@ -250,11 +252,16 @@ const ConfirmResetPassword = () => {
           to   { opacity: 1; transform: translate(-50%, -50%); }
         }
         .logo-clean-container {
-          width: 21vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: grid;
+          place-items: center;
+          width: clamp(154px, 17vw, 236px);
+          aspect-ratio: 1;
+          padding: 13%;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 26px 55px rgba(92,15,46,.27), inset 0 0 0 12px #fce6ef;
         }
+        .logo-clean-container img { width: 100%; height: 100%; object-fit: contain; }
         .hrm-block { display: flex; align-items: flex-end; }
         .hrm-letter {
           font-family: 'Bebas Neue', sans-serif;
@@ -487,26 +494,18 @@ const ConfirmResetPassword = () => {
           }
           .mb-logo-clean {
             position: relative;
-            width: 125px;
-            height: 125px;
+            width: 132px;
+            height: 132px;
             border-radius: 50%;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px;
-            box-shadow: 0 12px 24px rgba(157, 23, 77, 0.15);
+            padding: 13%;
+            box-shadow: 0 26px 55px rgba(92,15,46,.27), inset 0 0 0 10px #fce6ef;
             border: none;
           }
-          .mb-logo-clean::before {
-            content: "";
-            position: absolute;
-            inset: -8px;
-            border-radius: 50%;
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            background: rgba(255, 255, 255, 0.15);
-            pointer-events: none;
-          }
+          .mb-logo-clean::before { display: none; }
           .mb-logo-clean img {
             width: 100%;
             height: auto;
@@ -572,6 +571,173 @@ const ConfirmResetPassword = () => {
           .mb-logo-circ   { width: 120px; height: 120px; padding: 11px; }
           .form-container { width: calc(100% - 24px); padding: 22px 16px 28px; border-radius: 22px; margin-top: -30px; }
           .form-title     { font-size: 29px; }
+        }
+
+        /* Shared auth-flow sizing: keeps activation and password recovery aligned. */
+        .auth-flow-icon {
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 16px;
+          border-radius: 12px;
+          color: #be185d;
+          background: #fce7f3;
+          font-size: 18px;
+        }
+        .auth-flow-icon.activate { color: #9d174d; background: #fdf2f8; }
+        .code-expired {
+          margin-bottom: 20px;
+          padding: 12px;
+          border: 1px solid #fca5a5;
+          border-radius: 10px;
+          color: #b91c1c;
+          background: #fff1f2;
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.45;
+        }
+        .code-validity {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 24px;
+          color: #6b7280;
+          font-size: 13px;
+        }
+        .code-validity > span:last-child { color: #db2777; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .code-validity > span:last-child.expired { color: #dc2626; }
+        .form-container { margin-block: clamp(24px, 5vh, 56px); }
+
+        @media (max-width: 1024px) {
+          .mobile-banner { height: clamp(208px, 28vw, 272px); }
+          .form-container {
+            width: min(560px, calc(100% - 32px));
+            margin: -30px auto 32px;
+            padding: clamp(26px, 4vw, 34px) clamp(22px, 4vw, 32px) 32px;
+          }
+          .form-title { font-size: clamp(30px, 4vw, 34px); }
+          .form-sub { max-width: 46ch; }
+        }
+
+        @media (max-width: 640px) {
+          .mobile-banner { height: 206px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+          .mb-logo-clean { width: 104px; height: 104px; padding: 13px; }
+          .form-container { width: calc(100% - 24px); margin: -24px auto 24px; }
+          .auth-flow-icon { width: 34px; height: 34px; margin-bottom: 14px; border-radius: 10px; font-size: 16px; }
+          .form-heading { margin-bottom: 22px; }
+          .form-title { font-size: clamp(27px, 8vw, 31px); }
+          .code-validity { margin-bottom: 20px; }
+          .form-footer { margin-top: 24px; }
+        }
+
+        @media (max-width: 360px) {
+          .mobile-banner { height: 184px; }
+          .form-container { width: calc(100% - 16px); padding: 22px 16px 26px; }
+          .back-link { padding-inline: 14px; font-size: 13px; }
+        }
+
+        /* Match the login screen: no image backdrop on recovery/activation flows. */
+        .login-root {
+          background: #f8f7f5;
+        }
+        .login-left {
+          background:
+            radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.08) 0%, transparent 45%),
+            radial-gradient(circle at 90% 90%, rgba(220, 62, 124, 0.2) 0%, transparent 50%),
+            linear-gradient(135deg, #dc3e7c 0%, #ad285b 50%, #801440 100%);
+        }
+        .login-right {
+          background-color: #fff8fb;
+          background-image: radial-gradient(rgba(220, 62, 124, .08) .7px, transparent .7px);
+          background-size: 11px 11px;
+        }
+        .form-container {
+          background: rgba(255, 255, 255, .94);
+          border-color: #f1dce5;
+          box-shadow: 0 24px 60px rgba(141, 32, 76, .12);
+        }
+
+        @media (max-width: 1024px) {
+          .login-right {
+            background-color: #fff8fb;
+            background-image: radial-gradient(rgba(220, 62, 124, .08) .7px, transparent .7px);
+          }
+          .mobile-banner {
+            background:
+              radial-gradient(circle at 10% 10%, rgba(255, 255, 255, .08) 0%, transparent 45%),
+              linear-gradient(135deg, #dc3e7c 0%, #ad285b 52%, #801440 100%);
+          }
+        }
+
+        /* Use the same form language and responsive breakpoint as the login page. */
+        .form-container {
+          max-width: 414px;
+          padding: 46px 42px 38px;
+          border-radius: 22px;
+        }
+        .form-container::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 42px;
+          width: 58px;
+          height: 4px;
+          border-radius: 0 0 4px 4px;
+          background: #dc3e7c;
+        }
+        .form-brand, .auth-flow-icon { display: none; }
+        .form-heading { margin-bottom: 32px; }
+        .form-title {
+          font-family: Arial, "Helvetica Neue", sans-serif;
+          font-size: clamp(32px, 3vw, 39px);
+          font-weight: 600;
+          line-height: 1.05;
+          letter-spacing: -.04em;
+          color: #352530;
+        }
+        .form-sub { margin-top: 9px; color: #93838b; font-size: 13px; line-height: 1.5; }
+        .f-label { color: #504a50; font-size: 12px; font-weight: 700; }
+        .login-input {
+          height: 52px !important;
+          padding-inline: 15px !important;
+          border: 1px solid #eee3e8 !important;
+          border-radius: 10px !important;
+          background: #fffafd !important;
+          box-shadow: none !important;
+        }
+        .login-input:hover { border-color: #eab1c7 !important; }
+        .submit-btn {
+          height: 52px !important;
+          border-radius: 10px !important;
+          background: #dc3e7c !important;
+          box-shadow: 0 14px 24px rgba(174,40,91,.2) !important;
+        }
+        .submit-btn:hover { background: #ad285b !important; transform: translateY(-2px) !important; }
+        .back-row { margin-top: 22px; }
+        .back-link { padding: 0; border-radius: 0; color: #ad285b !important; background: transparent; font-size: 13px; }
+        .form-footer { color: #b2abb0; font-size: 11px; margin-top: 32px; }
+
+        @media (min-width: 851px) and (max-width: 1024px) {
+          .login-root { flex-direction: row; overflow: hidden; }
+          .login-left { display: flex; }
+          .login-right { padding: clamp(32px, 6vw, 64px); align-items: center; justify-content: center; }
+          .mobile-banner { display: none; }
+          .form-container { margin: 0; }
+        }
+
+        @media (max-width: 850px) {
+          .mobile-banner { height: 290px; border-radius: 0 0 48px 48px; }
+          .form-container { width: min(395px, calc(100% - 40px)); margin: -70px auto 32px; padding: 38px 28px 30px; border-radius: 28px; }
+          .form-container::before { display: none; }
+          .form-title { font-size: 32px; }
+        }
+
+        @media (max-width: 480px) {
+          .mobile-banner { height: 250px; border-radius: 0 0 40px 40px; }
+          .form-container { width: calc(100% - 32px); margin-top: -60px; padding: 32px 22px 26px; border-radius: 24px; }
+          .form-title { font-size: 28px; }
         }
       `}</style>
     </div>

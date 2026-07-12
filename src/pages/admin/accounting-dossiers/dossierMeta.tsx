@@ -59,6 +59,7 @@ export const auditActionMeta: Record<string, { label: string; tone: string; icon
     BULK_APPROVE_DOSSIER: { label: "Duyệt hàng loạt", tone: "#52c41a", icon: <CheckCircleOutlined /> },
     BULK_REJECT_DOSSIER: { label: "Từ chối hàng loạt", tone: "#f5222d", icon: <CloseCircleOutlined /> },
     BULK_CHECK_DOCUMENTS: { label: "Kiểm tra chứng từ hàng loạt", tone: "#1677ff", icon: <FileTextOutlined /> },
+    REASSIGN_DIRECTOR: { label: "Emergency Reassign Giám đốc", tone: "#eb2f96", icon: <ReloadOutlined /> },
 };
 
 export const targetTypeLabel: Record<string, string> = {
@@ -89,6 +90,7 @@ export const getApproverTypeLabel = (type?: string) => {
     if (type === "DEPARTMENT_MANAGER") return "Trưởng bộ phận";
     if (type === "ACCOUNTANT") return "Kế toán";
     if (type === "CHIEF_ACCOUNTANT") return "Kế toán trưởng";
+    if (type === "DIRECTOR") return "Giám đốc";
     return type || "Người duyệt";
 };
 
@@ -128,6 +130,10 @@ export const getApproverOptions = (users: IUser[], approverType: SubmitApprovalS
     }
     if (approverType === "CHIEF_ACCOUNTANT") {
         filtered = activeUsers.filter((item) => userHasRoleKeyword(item, ["CHIEF", "KETOAN_TRUONG", "KE_TOAN_TRUONG"]));
+        return filtered.length > 0 ? filtered : activeUsers;
+    }
+    if (approverType === "DIRECTOR") {
+        filtered = activeUsers.filter((item) => userHasRoleKeyword(item, ["DIRECTOR", "GIAMDOC", "GIAM_DOC"]));
         return filtered.length > 0 ? filtered : activeUsers;
     }
     return activeUsers;

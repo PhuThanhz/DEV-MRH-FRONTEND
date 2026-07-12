@@ -24,6 +24,21 @@ import {
     callFetchAccountingDossierReportByDepartment,
     callFetchAccountingDossierReportByCategory,
     callRejectAccountingDossierTemplateSync,
+    callPreviewWorkflow,
+    callClaimAccountingDossier,
+    callScanSlaOverdue,
+    callFetchWorkflowTemplates,
+    callCreateWorkflowTemplate,
+    callUpdateWorkflowTemplateDraft,
+    callValidateWorkflowTemplate,
+    callPublishWorkflowTemplate,
+    callDeactivateWorkflowTemplate,
+    callReactivateWorkflowTemplate,
+    callCopyWorkflowTemplateToDraft,
+    callFetchDelegations,
+    callCreateDelegation,
+    callActivateDelegation,
+    callRevokeDelegation,
 } from "@/config/api";
 import type {
     IAccountingDossier,
@@ -101,7 +116,7 @@ export const useCreateAccountingDossierMutation = () => {
             return res;
         },
         onSuccess: (res) => {
-            notify.created(res?.message || "Tạo bộ chứng từ thành công");
+            notify.success(res?.message || "Tạo bộ chứng từ thành công");
             queryClient.invalidateQueries({ queryKey: [ACCOUNTING_DOSSIERS_KEY], exact: false });
         },
         onError: (error: any) => {
@@ -380,51 +395,51 @@ export const useRefreshExpiredAccountingDossierStorageMutation = () => {
     });
 };
 
-export const useAccountingDossierStorageSummaryQuery = () => {
+export const useAccountingDossierStorageSummaryQuery = (companyId?: number) => {
     return useQuery({
-        queryKey: ["accounting-dossier-storage-summary"],
+        queryKey: ["accounting-dossier-storage-summary", companyId],
         queryFn: async () => {
-            const res = await callFetchAccountingDossierStorageSummary();
+            const res = await callFetchAccountingDossierStorageSummary(companyId);
             return res?.data as IAccountingDossierStorageSummary;
         },
     });
 };
 
-export const useAccountingDossierPendingByRoleQuery = () => {
+export const useAccountingDossierPendingByRoleQuery = (companyId?: number) => {
     return useQuery({
-        queryKey: ["accounting-dossier-pending-by-role"],
+        queryKey: ["accounting-dossier-pending-by-role", companyId],
         queryFn: async () => {
-            const res = await callFetchAccountingDossierPendingByRole();
+            const res = await callFetchAccountingDossierPendingByRole(companyId);
             return (res?.data ?? []) as IAccountingDossierReportRow[];
         },
     });
 };
 
-export const useAccountingDossierReportByStatusQuery = () => {
+export const useAccountingDossierReportByStatusQuery = (companyId?: number) => {
     return useQuery({
-        queryKey: ["accounting-dossier-report-by-status"],
+        queryKey: ["accounting-dossier-report-by-status", companyId],
         queryFn: async () => {
-            const res = await callFetchAccountingDossierReportByStatus();
+            const res = await callFetchAccountingDossierReportByStatus(companyId);
             return (res?.data ?? []) as IAccountingDossierReportRow[];
         },
     });
 };
 
-export const useAccountingDossierReportByDepartmentQuery = () => {
+export const useAccountingDossierReportByDepartmentQuery = (companyId?: number) => {
     return useQuery({
-        queryKey: ["accounting-dossier-report-by-department"],
+        queryKey: ["accounting-dossier-report-by-department", companyId],
         queryFn: async () => {
-            const res = await callFetchAccountingDossierReportByDepartment();
+            const res = await callFetchAccountingDossierReportByDepartment(companyId);
             return (res?.data ?? []) as IAccountingDossierReportRow[];
         },
     });
 };
 
-export const useAccountingDossierReportByCategoryQuery = () => {
+export const useAccountingDossierReportByCategoryQuery = (companyId?: number) => {
     return useQuery({
-        queryKey: ["accounting-dossier-report-by-category"],
+        queryKey: ["accounting-dossier-report-by-category", companyId],
         queryFn: async () => {
-            const res = await callFetchAccountingDossierReportByCategory();
+            const res = await callFetchAccountingDossierReportByCategory(companyId);
             return (res?.data ?? []) as IAccountingDossierReportRow[];
         },
     });
@@ -446,6 +461,254 @@ export const useRejectAccountingDossierTemplateSyncMutation = () => {
         },
         onError: (error: any) => {
             notify.error(error?.message || "Lỗi khi từ chối đồng bộ mẫu");
+        },
+    });
+};
+
+// --- Accounting Approval Workflow Hooks (Phase 2-5) ---
+export const usePreviewWorkflowQuery = (dossierId: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["accounting-dossier-preview", dossierId],
+        queryFn: async () => {
+            const res = await callPreviewWorkflow(dossierId);
+            return res?.data;
+        },
+        enabled: enabled && !!dossierId,
+    });
+};
+
+export const useClaimAccountingDossierMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callClaimAccountingDossier(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể nhận xử lý");
+            }
+            return res;
+        },
+        onSuccess: (res, id) => {
+            notify.success(res?.message || "Nhận xử lý bộ chứng từ thành công");
+            queryClient.invalidateQueries({ queryKey: [ACCOUNTING_DOSSIERS_KEY], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier", id] });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-approval-steps", id] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Lỗi khi nhận xử lý bộ chứng từ");
+        },
+    });
+};
+
+export const useFetchWorkflowTemplatesQuery = () => {
+    return useQuery({
+        queryKey: ["accounting-workflow-templates"],
+        queryFn: async () => {
+            const res = await callFetchWorkflowTemplates();
+            return res?.data || [];
+        },
+    });
+};
+
+const getWorkflowMutationError = (error: any, fallback: string) => {
+    const message = error?.message;
+    const rawMessage = Array.isArray(message)
+        ? message.filter(Boolean).join(" · ")
+        : typeof message === "string" ? message.trim() : "";
+
+    if (rawMessage.includes("WORKFLOW_AMBIGUOUS")) {
+        return rawMessage
+            .replace(/\s*\(WORKFLOW_AMBIGUOUS\)\s*/g, "")
+            .replace(/\s*\[?WORKFLOW_AMBIGUOUS\]?\s*/g, "");
+    }
+    return rawMessage || fallback;
+};
+
+export const useCreateWorkflowTemplateMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (data: any) => {
+            const res = await callCreateWorkflowTemplate(data);
+            if (!res?.data) throw new Error(res?.message || "Không thể tạo mẫu luồng duyệt");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Tạo mẫu luồng duyệt thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(getWorkflowMutationError(error, "Lỗi khi tạo mẫu luồng duyệt"));
+        },
+    });
+};
+
+export const useUpdateWorkflowTemplateDraftMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: any }) => {
+            const res = await callUpdateWorkflowTemplateDraft(id, data);
+            if (!res?.data) throw new Error(res?.message || "Không thể cập nhật nháp");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Cập nhật bản nháp thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(getWorkflowMutationError(error, "Lỗi khi cập nhật bản nháp"));
+        },
+    });
+};
+
+export const usePublishWorkflowTemplateMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callPublishWorkflowTemplate(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể kích hoạt");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Kích hoạt mẫu luồng duyệt thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(getWorkflowMutationError(error, "Lỗi khi kích hoạt mẫu luồng duyệt"));
+        },
+    });
+};
+
+export const useDeactivateWorkflowTemplateMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callDeactivateWorkflowTemplate(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể ngưng hiệu lực");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Ngưng hiệu lực mẫu luồng duyệt thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Lỗi khi ngưng hiệu lực mẫu luồng duyệt");
+        },
+    });
+};
+
+export const useReactivateWorkflowTemplateMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callReactivateWorkflowTemplate(id);
+            if (!res?.data) throw new Error(res?.message || "Không thể kích hoạt lại luồng duyệt");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Kích hoạt lại luồng duyệt thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(getWorkflowMutationError(error, "Lỗi khi kích hoạt lại luồng duyệt"));
+        },
+    });
+};
+
+export const useCopyWorkflowTemplateToDraftMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callCopyWorkflowTemplateToDraft(id);
+            if (!res?.data) throw new Error(res?.message || "Không thể sao chép luồng duyệt");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Đã tạo bản nháp từ luồng duyệt");
+            queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(getWorkflowMutationError(error, "Lỗi khi sao chép luồng duyệt"));
+        },
+    });
+};
+
+export const useFetchDelegationsQuery = (query: string) => {
+    return useQuery({
+        queryKey: ["accounting-approval-delegations", query],
+        queryFn: async () => {
+            const res = await callFetchDelegations(query);
+            return res?.data || { result: [], meta: { page: 1, pageSize: 10, pages: 0, total: 0 } };
+        },
+    });
+};
+
+export const useCreateDelegationMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (data: any) => {
+            const res = await callCreateDelegation(data);
+            if (!res?.data) throw new Error(res?.message || "Không thể tạo ủy quyền");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Tạo ủy quyền thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Lỗi khi tạo ủy quyền");
+        },
+    });
+};
+
+export const useActivateDelegationMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callActivateDelegation(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể kích hoạt ủy quyền");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Kích hoạt ủy quyền thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Lỗi khi kích hoạt ủy quyền");
+        },
+    });
+};
+
+export const useRevokeDelegationMutation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callRevokeDelegation(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể thu hồi ủy quyền");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.success(res?.message || "Thu hồi ủy quyền thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.message || "Lỗi khi thu hồi ủy quyền");
         },
     });
 };

@@ -20,6 +20,8 @@ import {
     Upload,
     message,
     Dropdown,
+    Alert,
+    Spin,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -91,6 +93,8 @@ import {
     useBulkCheckDossierDocumentsMutation,
     useRejectAccountingDossierTemplateSyncMutation,
     useArchiveAccountingDossierMutation,
+    usePreviewWorkflowQuery,
+    useClaimAccountingDossierMutation,
 } from "@/hooks/useAccountingDossiers";
 import type {
     AccountingDossierCategoryMode,
@@ -205,6 +209,7 @@ const AccountingDossierPage = () => {
     const canUpdateDossierDocument = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.UPDATE_DOCUMENT);
     const canDeleteDossierDocument = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.DELETE_DOCUMENT);
     const canBulkApproveDossiers = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.BULK_APPROVE);
+    const canClaimDossier = useAccess(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.CLAIM);
 
     // Có tham gia luồng duyệt: có bất kỳ quyền duyệt/kiểm tra nào → hiện tab "Chờ tôi duyệt".
     const isApproverRole = isSuperAdmin || perms.approve || perms.reject || perms.terminate || perms.checkDoc || perms.returnResponse;
@@ -227,9 +232,10 @@ const AccountingDossierPage = () => {
     const query = useMemo(
         () => {
             const filters: string[] = [];
+            const queryParams: string[] = [];
 
-            if (viewMode === "MY_TASKS" && myTasksTab === "CREATED_BY_ME") {
-                filters.push(`creatorId:${user.id}`);
+            if (viewMode === "MY_TASKS" && myTasksTab === "CREATED_BY_ME" && user.id) {
+                queryParams.push(`creatorId=${encodeURIComponent(user.id)}`);
             }
 
             if (viewMode === "ALL_DOSSIERS" || (viewMode === "MY_TASKS" && myTasksTab === "CREATED_BY_ME")) {
@@ -253,7 +259,8 @@ const AccountingDossierPage = () => {
                 filters.push(`createdAt<='${createdRange[1].endOf("day").toISOString()}'`);
             }
             const filterQuery = filters.length > 0 ? `&filter=${filters.join(" and ")}` : "";
-            let queryStr = `page=${page}&size=${pageSize}&sort=createdAt,desc${filterQuery}`;
+            const extraQuery = queryParams.length > 0 ? `&${queryParams.join("&")}` : "";
+            let queryStr = `page=${page}&size=${pageSize}&sort=createdAt,desc${filterQuery}${extraQuery}`;
             if (storageStatusFilter) queryStr += `&storageStatus=${storageStatusFilter}`;
             if (departmentFilter) queryStr += `&departmentId=${departmentFilter}`;
             if (retentionDateFilter) {
@@ -301,6 +308,7 @@ const AccountingDossierPage = () => {
     const rejectSyncMutation = useRejectAccountingDossierTemplateSyncMutation();
 
     const { data: currentDossier } = useAccountingDossierByIdQuery(viewDossier?.id);
+    const { data: editingDossierDetail } = useAccountingDossierByIdQuery(editingDossier?.id);
     const routeDossierId = Number(searchParams.get("dossierId") || "");
     const { data: routeDossier } = useAccountingDossierByIdQuery(routeDossierId || undefined);
     const bulkApproveMutation = useBulkApproveAccountingDossiersMutation();
@@ -368,6 +376,42 @@ const AccountingDossierPage = () => {
     const [submitDossierId, setSubmitDossierId] = useState<number | null>(null);
     const [customSteps, setCustomSteps] = useState<SubmitApprovalStep[]>([]);
     const [usersList, setUsersList] = useState<IUser[]>([]);
+
+    const claimMutation = useClaimAccountingDossierMutation();
+
+    const { data: previewData, isFetching: loadingPreview } = usePreviewWorkflowQuery(
+        submitDossierId ?? 0,
+        submitDossierId !== null
+    );
+
+    useEffect(() => {
+        if (previewData && previewData.steps) {
+            setCustomSteps(
+                previewData.steps.map((step: any) => ({
+                    stepKey: step.stepKey,
+                    stepOrder: step.stepOrder,
+                    stepName: step.stepName,
+                    approverType: step.approverStrategy === "REQUESTER_MANAGER" || step.stepKey === "REQUESTER_MANAGER" || step.stepKey === "DEPARTMENT_MANAGER"
+                        ? "DEPARTMENT_MANAGER"
+                        : step.approverStrategy === "COMPANY_DIRECTOR" || step.stepKey === "DIRECTOR"
+                        ? "DIRECTOR"
+                        : step.stepKey === "ACCOUNTANT"
+                        ? "ACCOUNTANT"
+                        : step.stepKey === "CHIEF_ACCOUNTANT"
+                        ? "CHIEF_ACCOUNTANT"
+                        : step.approverStrategy === "USER_SELECTABLE"
+                        ? "USER_SELECTABLE"
+                        : step.approverStrategy,
+                    approverUserId: step.approverUserId || undefined,
+                    required: step.required,
+                    assigneeLabel: step.assigneeLabel,
+                    approverStrategy: step.approverStrategy
+                }))
+            );
+        } else {
+            setCustomSteps([]);
+        }
+    }, [previewData]);
 
     useEffect(() => {
         callFetchCompany("page=1&size=200&sort=name,asc")
@@ -603,11 +647,6 @@ const AccountingDossierPage = () => {
                         onClick: () => {
                             if (record.id) {
                                 setSubmitDossierId(record.id);
-                                setCustomSteps([
-                                    { stepOrder: 1, stepName: "Trưởng bộ phận duyệt", approverType: "DEPARTMENT_MANAGER", approverUserId: undefined },
-                                    { stepOrder: 2, stepName: "Kế toán kiểm tra", approverType: "ACCOUNTANT", approverUserId: undefined },
-                                    { stepOrder: 3, stepName: "Kế toán trưởng duyệt", approverType: "CHIEF_ACCOUNTANT", approverUserId: undefined }
-                                ]);
                             }
                         }
                     });
@@ -947,7 +986,7 @@ const AccountingDossierPage = () => {
             <AccountingDossierModal
                 open={modalOpen}
                 companies={companies}
-                initialValues={editingDossier}
+                initialValues={editingDossierDetail || editingDossier}
                 loading={createMutation.isPending || updateMutation.isPending}
                 onCancel={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
@@ -994,6 +1033,36 @@ const AccountingDossierPage = () => {
                     const ctx = getDossierViewerContext(user, activeDossier, approvalSteps, perms);
 
                     const footerButtons = [];
+
+                    const currentStep = approvalSteps.find((s) => s.status === "CURRENT");
+                    const canClaim = ["SUBMITTED", "IN_REVIEW"].includes(activeDossier.status) &&
+                        currentStep && !currentStep.approverUserId && (
+                            canClaimDossier && (ctx.isSuperAdmin ||
+                            (currentStep.approverType === "ACCOUNTANT" && userHasRoleKeyword(user as any, ["ACCOUNTANT", "KETOAN", "KE_TOAN"])) ||
+                            (currentStep.approverType === "CHIEF_ACCOUNTANT" && userHasRoleKeyword(user as any, ["CHIEF", "KETOAN_TRUONG", "KE_TOAN_TRUONG"])))
+                        );
+
+                    if (canClaim) {
+                        footerButtons.push(
+                            <Button
+                                key="claim"
+                                type="primary"
+                                onClick={() => {
+                                    Modal.confirm({
+                                        title: "Nhận xử lý bộ chứng từ",
+                                        content: "Bạn muốn nhận xử lý bước duyệt này cho tài khoản của bạn chứ?",
+                                        okText: "Nhận việc",
+                                        cancelText: "Hủy",
+                                        onOk: () => claimMutation.mutate(activeDossier.id!),
+                                    });
+                                }}
+                                loading={claimMutation.isPending}
+                                style={{ borderRadius: 3, fontSize: 13, background: "#52c41a", borderColor: "#52c41a" }}
+                            >
+                                Nhận việc (Claim)
+                            </Button>
+                        );
+                    }
 
                     footerButtons.push(
                         <Button key="close" onClick={() => setViewDossier(null)} style={{ borderRadius: 3, fontSize: 13 }}>
@@ -1111,8 +1180,10 @@ const AccountingDossierPage = () => {
                             : currentStep?.approverType === "ACCOUNTANT"
                                 ? "Bước hiện tại là Kế toán: kiểm tra từng chứng từ con, đánh dấu hợp lệ/cần bổ sung rồi phê duyệt."
                                 : currentStep?.approverType === "CHIEF_ACCOUNTANT"
-                                    ? "Bước hiện tại là Kế toán trưởng: duyệt cuối bộ hồ sơ sau khi kế toán đã kiểm tra chứng từ."
-                                    : undefined;
+                                    ? "Bước hiện tại là Kế toán trưởng: duyệt bước kiểm tra sau khi kế toán đã kiểm tra chứng từ."
+                                    : currentStep?.approverType === "DIRECTOR"
+                                        ? "Bước hiện tại là Giám đốc: duyệt cuối bộ hồ sơ để hoàn thành quy trình."
+                                        : undefined;
                         return (
                             <div style={{ display: "flex", flexDirection: "row", alignItems: "flex-start", padding: "16px 20px 18px 24px" }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1384,7 +1455,7 @@ const AccountingDossierPage = () => {
             </Modal>
 
             <Modal
-                title="Xác nhận gửi duyệt bộ chứng từ"
+                title="Gửi duyệt bộ chứng từ"
                 open={submitDossierId !== null}
                 onCancel={() => {
                     setSubmitDossierId(null);
@@ -1399,9 +1470,12 @@ const AccountingDossierPage = () => {
                         type="primary"
                         onClick={async () => {
                             if (submitDossierId) {
-                                const missingApprover = customSteps.some((step) => !step.approverUserId);
-                                if (missingApprover) {
-                                    message.warning("Vui lòng chọn đủ người duyệt trước khi gửi");
+                                const hasMissingRequiredApprover = customSteps.some((step) => {
+                                    const canBeClaimed = step.approverStrategy === 'COMPANY_ROLE' || step.approverType === 'ACCOUNTANT' || step.approverType === 'CHIEF_ACCOUNTANT';
+                                    return step.required && !step.approverUserId && !canBeClaimed;
+                                });
+                                if (hasMissingRequiredApprover) {
+                                    message.warning("Vui lòng chọn đủ người duyệt cho các bước bắt buộc");
                                     return;
                                 }
                                 await submitMutation.mutateAsync({ id: submitDossierId, customSteps });
@@ -1410,85 +1484,156 @@ const AccountingDossierPage = () => {
                             }
                         }}
                         loading={submitMutation.isPending}
-                        disabled={customSteps.length === 0 || customSteps.some((step) => !step.approverUserId)}
+                        disabled={
+                            loadingPreview ||
+                            !previewData ||
+                            !previewData.valid ||
+                            customSteps.length === 0 ||
+                            customSteps.some((step) => {
+                                const canBeClaimed = step.approverStrategy === 'COMPANY_ROLE' || step.approverType === 'ACCOUNTANT' || step.approverType === 'CHIEF_ACCOUNTANT';
+                                return step.required && !step.approverUserId && !canBeClaimed;
+                            })
+                        }
                     >
                         Xác nhận gửi duyệt
                     </Button>
                 ]}
-                width={720}
+                width={760}
             >
                 {(() => {
                     const dossierToSubmit = data?.result?.find((d) => d.id === submitDossierId);
                     const returnCount = dossierToSubmit?.returnCount || 0;
                     return (
-                        <div style={{ padding: "10px 0" }}>
+                        <div style={{ padding: "4px 0" }}>
                             {returnCount >= 2 && (
-                                <div style={{
-                                    border: "1px solid #ffe58f",
-                                    backgroundColor: "#fffbe6",
-                                    padding: "10px 14px",
-                                    borderRadius: 6,
-                                    color: "#d46b08",
-                                    fontSize: 13,
-                                    marginBottom: 16,
-                                    lineHeight: 1.45,
-                                }}>
-                                    <strong>Cảnh báo hoàn trả ({returnCount} lần):</strong> Bộ chứng từ này đã bị trả về {returnCount} lần. Theo quy định, nếu bị hoàn trả từ 3 lần trở đi, hệ thống sẽ tự động bắt buộc duyệt qua bước Trưởng bộ phận ở lần nộp tiếp theo để tăng cường chất lượng hồ sơ.
-                                </div>
+                                <Alert
+                                    type="warning"
+                                    showIcon
+                                    style={{ marginBottom: 14 }}
+                                    message={`Hồ sơ đã bị trả về ${returnCount} lần`}
+                                    description="Nếu tiếp tục bị trả về, hệ thống sẽ yêu cầu Trưởng bộ phận kiểm tra trước khi gửi lại."
+                                />
                             )}
-                            <p style={{ color: "#5f6673", marginBottom: 18, lineHeight: 1.6 }}>
-                                Chọn đúng người duyệt cho từng bước trước khi gửi. Hệ thống sẽ gửi bộ chứng từ tới đúng người được chọn và ghi nhận trong tiến trình phê duyệt.
-                            </p>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                {customSteps.map((step, index) => (
-                                    <div
-                                        key={index}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "flex-start",
-                                            gap: 12,
-                                            background: "#fafafa",
-                                            padding: "14px 16px",
-                                            borderRadius: 8,
-                                            border: "1px solid #e8e8e8"
-                                        }}
-                                    >
-                                        <div style={{ minWidth: 42 }}>
-                                            <Tag color="blue" style={{ margin: 0 }}>Bước {index + 1}</Tag>
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 600, fontSize: 15, color: "#1f2937" }}>
-                                                {step.stepName}
+                            {loadingPreview ? (
+                                <div style={{ padding: "40px 0", textAlign: "center" }}>
+                                    <Spin tip="Đang tải cấu trúc luồng duyệt..." />
+                                </div>
+                            ) : (
+                                <>
+                                    {previewData && (
+                                        <div style={{ marginBottom: 14 }}>
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+                                                <Tag color={previewData.source === "WORKFLOW_TEMPLATE_V2" ? "cyan" : "blue"} style={{ fontSize: 13, padding: "2px 8px", margin: 0 }}>
+                                                    {previewData.source === "WORKFLOW_TEMPLATE_V2" 
+                                                        ? `${previewData.templateName} · v${previewData.templateVersion}` 
+                                                        : "Luồng mặc định"}
+                                                </Tag>
+                                                <span style={{ color: "#6b7280", fontSize: 13 }}>{customSteps.length} bước duyệt</span>
                                             </div>
-                                            <div style={{ marginTop: 4, color: "#6b7280", fontSize: 13 }}>
-                                                {step.approverType === "DEPARTMENT_MANAGER" && "Chọn trưởng bộ phận/người quản lý sẽ duyệt bước đầu."}
-                                                {step.approverType === "ACCOUNTANT" && "Chọn kế toán viên phụ trách kiểm tra chứng từ con."}
-                                                {step.approverType === "CHIEF_ACCOUNTANT" && "Chọn kế toán trưởng duyệt cuối."}
-                                            </div>
-                                            <Select
-                                                showSearch
-                                                allowClear
-                                                placeholder="Chọn người duyệt"
-                                                value={step.approverUserId}
-                                                optionFilterProp="label"
-                                                style={{ width: "100%", marginTop: 10 }}
-                                                options={getApproverOptions(usersList, step.approverType).map((approver) => ({
-                                                    value: approver.id,
-                                                    label: getUserDisplayName(approver),
-                                                }))}
-                                                onChange={(value) => {
-                                                    setCustomSteps((prev) =>
-                                                        prev.map((item, stepIndex) =>
-                                                            stepIndex === index ? { ...item, approverUserId: value } : item
-                                                        )
-                                                    );
-                                                }}
-                                            />
+
+                                            {previewData.blockingErrors?.map((err: string, idx: number) => (
+                                                <Alert key={`err-${idx}`} message={err} type="error" showIcon style={{ marginBottom: 8 }} />
+                                            ))}
+                                            {previewData.warnings?.map((warn: string, idx: number) => (
+                                                <Alert key={`warn-${idx}`} message={warn} type="warning" showIcon style={{ marginBottom: 8 }} />
+                                            ))}
                                         </div>
+                                    )}
+
+                                    <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 12 }}>
+                                        Kiểm tra luồng duyệt trước khi gửi. Bước “vào hàng đợi” không cần chọn người cụ thể.
                                     </div>
-                                ))}
-                            </div>
+
+                                    <div style={{ display: "grid", gap: 8 }}>
+                                        {customSteps.map((step, index) => {
+                                            const isResolved = !!previewData?.steps?.[index]?.approverUserId;
+                                            const canBeClaimed = step.approverStrategy === 'COMPANY_ROLE' || step.approverType === 'ACCOUNTANT' || step.approverType === 'CHIEF_ACCOUNTANT';
+                                            const needsManualPick = step.required && !step.approverUserId && !canBeClaimed;
+                                            const statusColor = isResolved ? "#16a34a" : canBeClaimed ? "#2563eb" : needsManualPick ? "#dc2626" : "#6b7280";
+                                            const statusText = isResolved
+                                                ? "Đã chỉ định"
+                                                : canBeClaimed
+                                                ? "Vào hàng đợi"
+                                                : needsManualPick
+                                                ? "Cần chọn người"
+                                                : "Tùy chọn";
+                                            
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    style={{
+                                                        display: "grid",
+                                                        gridTemplateColumns: "38px minmax(0, 1fr) 170px",
+                                                        alignItems: "center",
+                                                        gap: 12,
+                                                        background: "#fff",
+                                                        padding: "10px 12px",
+                                                        borderRadius: 8,
+                                                        border: needsManualPick ? "1px solid #fecaca" : "1px solid #e5e7eb"
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        width: 30,
+                                                        height: 30,
+                                                        borderRadius: 8,
+                                                        background: "#f3f6fb",
+                                                        color: "#1f2937",
+                                                        display: "grid",
+                                                        placeItems: "center",
+                                                        fontWeight: 700
+                                                    }}>
+                                                        {index + 1}
+                                                    </div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                            <span style={{ fontWeight: 600, fontSize: 15, color: "#1f2937" }}>
+                                                                {step.stepName}
+                                                            </span>
+                                                            {step.slaMinutes && (
+                                                                <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>{step.slaMinutes / 60}h</Tag>
+                                                            )}
+                                                            <span style={{ color: statusColor, fontSize: 12, fontWeight: 650 }}>{statusText}</span>
+                                                        </div>
+                                                        <div style={{ marginTop: 3, color: "#6b7280", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {isResolved
+                                                                ? step.assigneeLabel
+                                                                : canBeClaimed
+                                                                ? "Người có quyền sẽ nhận xử lý sau khi gửi"
+                                                                : step.approverStrategy === "USER_SELECTABLE"
+                                                                ? "Người lập chọn người duyệt cho bước này trước khi gửi"
+                                                                : "Chọn người duyệt cho bước này"}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        {!isResolved && (
+                                                                <Select
+                                                                    showSearch
+                                                                    allowClear
+                                                                    placeholder={canBeClaimed ? "Không bắt buộc" : "Chọn người"}
+                                                                    value={step.approverUserId}
+                                                                    optionFilterProp="label"
+                                                                    style={{ width: "100%" }}
+                                                                    options={getApproverOptions(usersList, step.approverType).map((approver) => ({
+                                                                        value: approver.id,
+                                                                        label: getUserDisplayName(approver),
+                                                                    }))}
+                                                                    onChange={(value) => {
+                                                                        setCustomSteps((prev) =>
+                                                                            prev.map((item, stepIndex) =>
+                                                                                stepIndex === index ? { ...item, approverUserId: value } : item
+                                                                            )
+                                                                        );
+                                                                    }}
+                                                                />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     );
                 })()}

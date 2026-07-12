@@ -10,6 +10,7 @@ import { PATHS } from '@/constants/paths';
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import Loading from "@/components/common/loading/loading";
+import RouteErrorFallback from "@/components/share/route-error";
 
 const LoginPage = lazy(() => import("pages/auth/login"));
 const ForgotPassword = lazy(() => import("pages/auth/ForgotPassword"));
@@ -54,6 +55,8 @@ const DossierQrDetail = lazy(() => import("@/pages/admin/accounting-dossiers/Dos
 const AccountingReportsPage = lazy(() => import("@/pages/admin/accounting-reports"));
 const AccountingDocumentPage = lazy(() => import("@/pages/admin/accounting"));
 const AccountingDocumentCategoryPage = lazy(() => import("@/pages/admin/accounting-document-category"));
+const WorkflowTemplatesPage = lazy(() => import("@/pages/admin/accounting-workflows"));
+const DelegationsPage = lazy(() => import("@/pages/admin/accounting-delegations"));
 const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/EvaluationProcessPage"));
 const TemplatePage = lazy(() => import("@/pages/admin/evaluation/templates/TemplatePage"));
 const TemplateDetailPage = lazy(() => import("@/pages/admin/evaluation/templates/TemplateDetailPage"));
@@ -88,7 +91,7 @@ export default function App() {
           <LayoutClient />
         </LayoutApp>
       ),
-      errorElement: <NotFound />,
+      errorElement: <RouteErrorFallback />,
       children: [
         { index: true, element: <HomePage /> },
       ],
@@ -100,6 +103,7 @@ export default function App() {
           <LayoutAdmin />
         </LayoutApp>
       ),
+      errorElement: <RouteErrorFallback />,
       children: [
         {
           index: true,
@@ -416,6 +420,26 @@ export default function App() {
           ),
         },
         {
+          path: PATHS.ADMIN.ACCOUNTING_WORKFLOW_TEMPLATES,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_WORKFLOWS.VIEW}>
+                <WorkflowTemplatesPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.ACCOUNTING_DELEGATIONS,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE}>
+                <DelegationsPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
           path: "/admin/accounting-reports",
           element: (
             <ProtectedRoute>
@@ -558,11 +582,13 @@ export default function App() {
           </ProtectedRoute>
         </LayoutApp>
       ),
+      errorElement: <RouteErrorFallback />,
     },
-    { path: PATHS.LOGIN, element: <LoginPage /> },
-    { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword /> },
-    { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword /> },
-    { path: "/public/view/:token", element: <PublicProcedureView /> },
+    { path: PATHS.LOGIN, element: <LoginPage />, errorElement: <RouteErrorFallback /> },
+    { path: PATHS.FORGOT_PASSWORD, element: <ForgotPassword />, errorElement: <RouteErrorFallback /> },
+    { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword />, errorElement: <RouteErrorFallback /> },
+    { path: "/public/view/:token", element: <PublicProcedureView />, errorElement: <RouteErrorFallback /> },
+    { path: "*", element: <NotFound /> },
   ]);
 
   return (

@@ -15,6 +15,9 @@ interface UserSelectFieldProps {
     label?: string;
     accentColor?: string;
     emptyText?: string;
+    maxSelect?: number;
+    rules?: any[];
+    disabled?: boolean;
 }
 
 interface UserOption {
@@ -88,6 +91,9 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
     label = "Người được xem",
     accentColor = "#ef4444",
     emptyText = "Nhấn để chọn người được xem...",
+    maxSelect,
+    rules,
+    disabled = false,
 }) => {
     const form = Form.useFormInstance();
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -176,7 +182,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
 
     return (
         <>
-            <Form.Item name={name} hidden />
+            <Form.Item name={name} hidden rules={rules} />
 
             <Form.Item
                 label={
@@ -207,19 +213,19 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 style={{ marginBottom: 0 }}
             >
                 <div
-                    onClick={() => (isCrossCompany || companyId) && !loadingMap && handleOpen()}
+                    onClick={() => (isCrossCompany || companyId) && !loadingMap && !disabled && handleOpen()}
                     style={{
                         display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6,
                         minHeight: 40, maxHeight: 96, overflowY: "auto",
                         padding: "6px 10px",
                         border: "1px solid #e5e7eb", borderRadius: 8,
-                        cursor: (isCrossCompany || companyId) && !loadingMap ? "pointer" : "not-allowed",
-                        background: (isCrossCompany || companyId) ? "#fff" : "#f9fafb",
+                        cursor: disabled ? "not-allowed" : ((isCrossCompany || companyId) && !loadingMap ? "pointer" : "not-allowed"),
+                        background: disabled ? "#f5f5f5" : ((isCrossCompany || companyId) ? "#fff" : "#f9fafb"),
                         transition: "border-color 0.15s",
                         opacity: loadingMap ? 0.6 : 1,
                     }}
                     onMouseEnter={(e) => {
-                        if ((isCrossCompany || companyId) && !loadingMap)
+                        if ((isCrossCompany || companyId) && !loadingMap && !disabled)
                             (e.currentTarget as HTMLElement).style.borderColor = "#3b82f6";
                     }}
                     onMouseLeave={(e) => {
@@ -298,6 +304,7 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
                 // ✅ Truyền userMap xuống để picker không phải load lại
                 cachedUsers={userMap}
                 isCrossCompany={isCrossCompany}
+                maxSelect={maxSelect}
             />
         </>
     );

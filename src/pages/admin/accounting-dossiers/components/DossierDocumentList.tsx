@@ -257,79 +257,6 @@ const DossierDocumentList: React.FC<Props> = ({
         setReviewModalOpen(true);
     };
 
-    const showDuplicateConfirm = (payload: any, isUpdate: boolean, errorMessage: string) => {
-        let reason = "";
-        Modal.confirm({
-            title: "Cảnh báo trùng hóa đơn",
-            content: (
-                <div>
-                    <p style={{ color: "#eab308", fontWeight: 500, margin: "4px 0" }}>
-                        Số hóa đơn đã tồn tại trên hệ thống.
-                    </p>
-                    <p style={{ fontSize: 13, color: "#4b5563", margin: "4px 0 8px 0" }}>
-                        {errorMessage}
-                    </p>
-                    <div style={{ marginTop: 12 }}>
-                        <span style={{ color: "#ef4444" }}>* </span>
-                        <span>Vui lòng nhập lý do ghi đè (bắt buộc):</span>
-                        <Input.TextArea
-                            rows={3}
-                            style={{ marginTop: 6 }}
-                            placeholder="Ví dụ: Thanh toán đợt 2, hóa đơn điều chỉnh..."
-                            onChange={(e) => {
-                                reason = e.target.value;
-                            }}
-                        />
-                    </div>
-                </div>
-            ),
-            okText: "Vẫn lưu",
-            cancelText: "Hủy",
-            onOk: () => {
-                if (!reason.trim()) {
-                    message.error("Vui lòng nhập lý do ghi đè");
-                    return Promise.reject("Reason is empty");
-                }
-                const finalPayload = {
-                    ...payload,
-                    confirmDuplicate: true,
-                    duplicateReason: reason.trim(),
-                };
-                return new Promise((resolve, reject) => {
-                    if (isUpdate && editingDoc?.id) {
-                        updateMutation.mutate(
-                            { dossierId: dossier.id!, docId: editingDoc.id, data: finalPayload },
-                            {
-                                onSuccess: () => {
-                                    setModalOpen(false);
-                                    resolve(null);
-                                },
-                                onError: (err: any) => {
-                                    message.error(err?.message || "Lỗi khi cập nhật");
-                                    reject(err);
-                                },
-                            }
-                        );
-                    } else {
-                        addMutation.mutate(
-                            { dossierId: dossier.id!, data: finalPayload },
-                            {
-                                onSuccess: () => {
-                                    setModalOpen(false);
-                                    resolve(null);
-                                },
-                                onError: (err: any) => {
-                                    message.error(err?.message || "Lỗi khi thêm");
-                                    reject(err);
-                                },
-                            }
-                        );
-                    }
-                });
-            },
-        });
-    };
-
     const handleSubmitDocument = async () => {
         const values = await documentForm.validateFields();
         if (!dossier.id) return;
@@ -345,7 +272,11 @@ const DossierDocumentList: React.FC<Props> = ({
                     onSuccess: () => setModalOpen(false),
                     onError: (error: any) => {
                         if (error?.error === "DUPLICATE_INVOICE_WARNING") {
-                            showDuplicateConfirm(payload, true, error?.message || "Hóa đơn bị trùng khớp.");
+                            Modal.error({
+                                title: "Trùng lặp hóa đơn",
+                                content: error?.message || "Số hóa đơn đã tồn tại trên hệ thống. Không được phép lưu trùng lặp hóa đơn.",
+                                okText: "Đã hiểu",
+                            });
                         } else {
                             message.error(error?.message || "Lỗi khi cập nhật chứng từ con");
                         }
@@ -361,7 +292,11 @@ const DossierDocumentList: React.FC<Props> = ({
                 onSuccess: () => setModalOpen(false),
                 onError: (error: any) => {
                     if (error?.error === "DUPLICATE_INVOICE_WARNING") {
-                        showDuplicateConfirm(payload, false, error?.message || "Hóa đơn bị trùng khớp.");
+                        Modal.error({
+                            title: "Trùng lặp hóa đơn",
+                            content: error?.message || "Số hóa đơn đã tồn tại trên hệ thống. Không được phép lưu trùng lặp hóa đơn.",
+                            okText: "Đã hiểu",
+                        });
                     } else {
                         message.error(error?.message || "Lỗi khi thêm chứng từ con");
                     }

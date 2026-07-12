@@ -33,10 +33,15 @@ export type DossierFormValues = {
 };
 
 export type SubmitApprovalStep = {
+    stepKey?: string;
     stepOrder: number;
     stepName: string;
-    approverType: "DEPARTMENT_MANAGER" | "ACCOUNTANT" | "CHIEF_ACCOUNTANT";
+    approverType: "DEPARTMENT_MANAGER" | "ACCOUNTANT" | "CHIEF_ACCOUNTANT" | "DIRECTOR" | "CUSTOM" | "USER_SELECTABLE";
     approverUserId?: string;
+    approverStrategy?: string;
+    required?: boolean;
+    slaMinutes?: number;
+    assigneeLabel?: string;
 };
 
 export type TemplateFormValues = {

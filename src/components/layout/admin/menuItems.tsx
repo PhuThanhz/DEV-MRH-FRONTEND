@@ -272,6 +272,22 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                                 },
                             ]
                             : []),
+                        ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_WORKFLOWS.VIEW)
+                            ? [
+                                {
+                                    label: <Link to="/admin/accounting-workflow-templates">Cấu hình luồng duyệt</Link>,
+                                    key: "/admin/accounting-workflow-templates",
+                                },
+                            ]
+                            : []),
+                        ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE)
+                            ? [
+                                {
+                                    label: <Link to="/admin/accounting-delegations">Ủy quyền phê duyệt</Link>,
+                                    key: "/admin/accounting-delegations",
+                                },
+                            ]
+                            : []),
                         ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE)
                             ? [
                                 {

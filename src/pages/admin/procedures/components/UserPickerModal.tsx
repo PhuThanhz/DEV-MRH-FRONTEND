@@ -30,6 +30,7 @@ interface UserPickerModalProps {
     onChange: (ids: string[]) => void;
     cachedUsers?: Map<string, UserOption>;
     isCrossCompany?: boolean;
+    maxSelect?: number;
 }
 
 const PAGE_SIZE = 10;
@@ -100,6 +101,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     onChange,
     cachedUsers, // ← nhận prop nhưng trước đây không dùng → fix ở đây
     isCrossCompany,
+    maxSelect,
 }) => {
     const [search, setSearch] = useState("");
     const [allUsers, setAllUsers] = useState<UserOption[]>([]);
@@ -306,6 +308,10 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     const displayedTotalPages = isCrossCompany ? totalPages : Math.ceil(filtered.length / PAGE_SIZE);
 
     const toggle = (id: string) => {
+        if (maxSelect === 1) {
+            setLocalSelected((prev) => prev.includes(id) ? [] : [id]);
+            return;
+        }
         setLocalSelected((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         );
@@ -473,20 +479,22 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     {/* Select-all bar */}
                     {!loading && paginated.length > 0 && (
                         <div style={{
-                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            display: "flex", alignItems: "center", justifyContent: maxSelect === 1 ? "flex-end" : "space-between",
                             padding: "8px 16px",
                             background: "#f8fafc",
                             borderBottom: "1px solid #f1f5f9",
                         }}>
-                            <Checkbox
-                                checked={allPageSelected}
-                                indeterminate={somePageSelected}
-                                onChange={toggleAll}
-                            >
-                                <span style={{ fontSize: 12, color: "#475569", fontWeight: 500 }}>
-                                    Chọn tất cả trang này ({paginated.length})
-                                </span>
-                            </Checkbox>
+                            {maxSelect !== 1 && (
+                                <Checkbox
+                                    checked={allPageSelected}
+                                    indeterminate={somePageSelected}
+                                    onChange={toggleAll}
+                                >
+                                    <span style={{ fontSize: 12, color: "#475569", fontWeight: 500 }}>
+                                        Chọn tất cả trang này ({paginated.length})
+                                    </span>
+                                </Checkbox>
+                            )}
                             <span style={{
                                 fontSize: 11, color: "#94a3b8",
                                 background: "#e2e8f0", borderRadius: 99, padding: "2px 8px", fontWeight: 500,

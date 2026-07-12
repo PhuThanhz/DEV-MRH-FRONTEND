@@ -13,8 +13,9 @@ const RoleBaseRoute = ({ children }: any) => {
     const isAccountingRole = roleName.includes("ACCOUNTANT")
         || roleName.includes("KETOAN")
         || roleName.includes("KẾ TOÁN");
+    const isDirector = roleName.includes("DIRECTOR") || roleName.includes("GIAMDOC") || roleName.includes("GIAM_DOC");
 
-    if (!isAdmin && !isEmployee && !isDeptManager && !isAccountingRole) {
+    if (!isAdmin && !isEmployee && !isDeptManager && !isAccountingRole && !isDirector) {
         return <NotFound />;
     }
 
