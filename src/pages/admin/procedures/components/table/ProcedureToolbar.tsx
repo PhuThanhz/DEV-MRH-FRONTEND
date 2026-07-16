@@ -22,6 +22,7 @@ interface ProcedureToolbarProps {
     onSearch: (value: string) => void;
     onReset: () => void;
     onAddClick: () => void;
+    onAddPreload?: () => void;
     onPrintClick: () => void;
     onExitPrintMode: () => void;
     onFilterChange: (filters: Record<string, any>) => void;
@@ -38,6 +39,7 @@ const ProcedureToolbar = ({
     onSearch,
     onReset,
     onAddClick,
+    onAddPreload,
     onPrintClick,
     onExitPrintMode,
     onFilterChange,
@@ -131,6 +133,7 @@ const ProcedureToolbar = ({
                         onSearch={onSearch}
                         onReset={onReset}
                         onAddClick={onAddClick}
+                        onAddPreload={onAddPreload}
                         addPermission={permission.create}
                         guideSearchId={`${guideKey}-search-input`}
                         guideAddId={`${guideKey}-add-button`}

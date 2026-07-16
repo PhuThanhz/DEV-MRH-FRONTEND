@@ -1,6 +1,6 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useBlocker } from "react-router-dom";
 import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb, Collapse } from "antd";
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
@@ -21,6 +21,7 @@ import {
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
+import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -41,7 +42,15 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#be123c", bg: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", label: "Yếu" },
 };
 
-const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm`, value: v }));
+const SCORE_DESCRIPTIONS: Record<number, string> = {
+    1: "Yếu",
+    2: "Trung bình",
+    3: "Khá",
+    4: "Tốt",
+    5: "Xuất sắc"
+};
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm - ${SCORE_DESCRIPTIONS[v]}`, value: v }));
 
 const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" | "APPROVER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
@@ -51,6 +60,136 @@ const getComment = (comments: any[], type: string) =>
 
 const formatDateTime = (value?: string | null) =>
     value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "—";
+
+interface ICriteriaRowProps {
+    c: any;
+    cIdx: number;
+    hasSub: boolean;
+    isEditable: boolean;
+    empScore: number | null;
+    avgEmp: number | null;
+    isCompleted: boolean;
+    avgFinal: number | null;
+    finalScore: number | null;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const CriteriaRow = React.memo(({
+    c, cIdx, hasSub, isEditable, empScore, avgEmp, isCompleted, avgFinal, finalScore, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: ICriteriaRowProps) => {
+    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
+            <td style={{ ...tdB, color: "#111827" }}>
+                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
+                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
+            </td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
+            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                    {(c.weight * 100).toFixed(0)}%
+                </span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
+                ) : isEditable ? (
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
+                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                            className={empScore == null ? "unfilled-select" : ""}
+                            value={empScore ?? undefined} loading={savingScore === c.id}
+                            onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                    </Access>
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {hasSub ? (
+                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                ) : (
+                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                )}
+            </td>
+            {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: avgFinal != null ? "#111827" : "#e5e7eb" }}>{avgFinal != null ? avgFinal.toFixed(2) : "—"}</span>
+                ) : (
+                    finalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{finalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                )}
+            </td>}
+            {isCompleted && <td style={tdSc}>
+                {hasSub ? (
+                    avgFinal != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgFinal * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                ) : (
+                    finalScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(finalScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                )}
+            </td>}
+        </tr>
+    );
+});
+
+interface ISubCriteriaRowProps {
+    sub: any;
+    cIdx: number;
+    si: number;
+    isEditable: boolean;
+    subEmp: number | null;
+    subFinalScore: number | null;
+    isCompleted: boolean;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const SubCriteriaRow = React.memo(({
+    sub, cIdx, si, isEditable, subEmp, subFinalScore, isCompleted, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: ISubCriteriaRowProps) => {
+    const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+            <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
+                <div style={{ fontWeight: 500 }}>{sub.name}</div>
+                {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
+            </td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
+            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {isEditable ? (
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
+                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                            className={subEmp == null ? "unfilled-select" : ""}
+                            value={subEmp ?? undefined} loading={savingScore === sub.id}
+                            onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                    </Access>
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>
+            {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
+                {subFinalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{subFinalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>}
+            {isCompleted && <td style={tdSc}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>}
+        </tr>
+    );
+});
 
 const MyEvaluationDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -71,6 +210,16 @@ const MyEvaluationDetailPage = () => {
     const [selfReview, setSelfReview] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
+    const [isError, setIsError] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+
+    useBlocker(() => {
+        if (isDirty) {
+            const confirmed = window.confirm("Bạn có nhận xét chưa lưu. Bạn có chắc muốn rời khỏi trang?");
+            return !confirmed;
+        }
+        return false;
+    });
 
     const fetchRecord = useCallback(async () => {
         if (!id || isNaN(Number(id))) return;
@@ -91,7 +240,11 @@ const MyEvaluationDetailPage = () => {
                 setLocalScores(initScores);
             }
             if (histRes?.data) setHistory(histRes.data);
-        } catch { notify.error("Lỗi tải dữ liệu đánh giá"); }
+            setIsError(false);
+        } catch {
+            notify.error("Lỗi tải dữ liệu đánh giá");
+            setIsError(true);
+        }
         finally { setLoading(false); }
     }, [id]);
 
@@ -113,6 +266,7 @@ const MyEvaluationDetailPage = () => {
         setSavingComment(true);
         try {
             await callEmployeeSaveSelfReview(record.id, selfReview);
+            setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
@@ -123,6 +277,9 @@ const MyEvaluationDetailPage = () => {
         if (!record?.id) return;
         setSubmitting(true);
         try {
+            // Tự động lưu nhận xét tự đánh giá trước khi nộp
+            await callEmployeeSaveSelfReview(record.id, selfReview);
+            setIsDirty(false);
             await callEmployeeSubmitRecord(record.id);
             notify.success("Đã nộp bản đánh giá!");
             fetchRecord();
@@ -149,9 +306,21 @@ const MyEvaluationDetailPage = () => {
         }
     };
 
+    const handlePrintPDF = () => {
+        if (record) {
+            printEvaluationDetail(record);
+        }
+    };
+
     if (loading) return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Spin size="large" />
+        </div>
+    );
+    if (isError) return (
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
+            <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
         </div>
     );
     if (!record) return (
@@ -472,6 +641,13 @@ const MyEvaluationDetailPage = () => {
                             >
                                 Xuất Excel
                             </Button>
+                            <Button
+                                icon={<FileTextOutlined />}
+                                onClick={handlePrintPDF}
+                                style={{ borderRadius: 6, color: "#1d4ed8", borderColor: "#60a5fa", background: "#eff6ff" }}
+                            >
+                                Xuất PDF
+                            </Button>
                         </div>
                         {/* Nhân viên đánh giá */}
                         {record.employeeTotalScore != null && (
@@ -525,21 +701,56 @@ const MyEvaluationDetailPage = () => {
                 </div>
             )}
 
-            {!isReadonlyView && isCompleted && !hasConfirmed && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <TrophyOutlined style={{ fontSize: 24, color: "#f43f5e" }} />
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 2 }}>Kết quả đã được phê duyệt!</div>
-                        <div style={{ fontSize: 13, color: "#9ca3af" }}>Xem kết quả và nhấn xác nhận để hoàn tất.</div>
+            {!isReadonlyView && isCompleted && !hasConfirmed && (() => {
+                // T12: Tính số ngày còn lại trước khi auto-acknowledge (7 ngày từ approvedAt)
+                const approvedAt = record.approvedAt ? dayjs(record.approvedAt) : null;
+                const daysElapsed = approvedAt ? dayjs().diff(approvedAt, "day") : 0;
+                const daysRemaining = Math.max(0, 7 - daysElapsed);
+                const isUrgent = daysRemaining <= 2;
+                return (
+                    <div style={{
+                        background: isUrgent
+                            ? "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)"
+                            : "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
+                        border: `1px solid ${isUrgent ? "#fb923c" : "#fecdd3"}`,
+                        borderRadius: 12, padding: "16px 20px", marginBottom: 16,
+                        boxShadow: isUrgent ? "0 2px 12px rgba(251,146,60,0.15)" : "0 1px 4px rgba(0,0,0,0.03)"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                            <TrophyOutlined style={{ fontSize: 26, color: isUrgent ? "#ea580c" : "#f43f5e", flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, color: "#111827", fontSize: 15, marginBottom: 3 }}>
+                                    Kết quả đã được phê duyệt — cần xác nhận đã xem!
+                                </div>
+                                <div style={{ fontSize: 13, color: isUrgent ? "#c2410c" : "#6b7280", lineHeight: 1.5 }}>
+                                    {daysRemaining > 0 ? (
+                                        <>Vui lòng xem kết quả và nhấn "Xác nhận đã xem". Hệ thống sẽ tự xác nhận sau{" "}
+                                            <strong style={{ color: isUrgent ? "#ea580c" : "#f43f5e" }}>
+                                                {daysRemaining} ngày nữa
+                                            </strong> nếu bạn không phản hồi.</>
+                                    ) : (
+                                        <>Hệ thống sẽ tự động xác nhận trong hôm nay.</>
+                                    )}
+                                </div>
+                            </div>
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_CONFIRM} hideChildren>
+                                <Popconfirm title="Xác nhận đã xem kết quả?" onConfirm={handleConfirm} okText="Xác nhận" cancelText="Hủy">
+                                    <Button loading={confirming} icon={<CheckCircleOutlined />}
+                                        style={{
+                                            borderRadius: 8, fontWeight: 600, height: 38, flexShrink: 0,
+                                            background: isUrgent ? "#ea580c" : "#f43f5e",
+                                            border: "none", color: "#fff"
+                                        }}>
+                                        Xác nhận đã xem
+                                    </Button>
+                                </Popconfirm>
+                            </Access>
+
+                        </div>
                     </div>
-                    <Popconfirm title="Xác nhận đã xem kết quả?" onConfirm={handleConfirm} okText="Xác nhận" cancelText="Hủy">
-                        <Button loading={confirming} icon={<CheckCircleOutlined />}
-                            style={{ borderRadius: 8, fontWeight: 600, background: "#f43f5e", border: "none", color: "#fff", height: 38 }}>
-                            Xác nhận đã xem
-                        </Button>
-                    </Popconfirm>
-                </div>
-            )}
+                );
+            })()}
+
             {isCompleted && hasConfirmed && (
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
                     <CheckCircleOutlined style={{ color: "#f43f5e" }} />
@@ -760,55 +971,23 @@ const MyEvaluationDetailPage = () => {
                                     }
 
                                     rows.push(
-                                        <tr key={`c-${c.id}`} className="eval-row">
-                                            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-                                            <td style={{ ...tdB, color: "#111827" }}>
-                                                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
-                                                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
-                                            </td>
-                                            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-                                            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-                                            <td style={{ ...tdB, textAlign: "center" }}>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                    {(c.weight * 100).toFixed(0)}%
-                                                </span>
-                                            </td>
-                                            <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                {hasSub ? (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
-                                                ) : isEditable ? (
-                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                                                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                            className={empScore == null ? "unfilled-select" : ""}
-                                                            value={empScore ?? undefined} loading={savingScore === c.id}
-                                                            onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
-                                                    </Access>
-                                                ) : (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
-                                                )}
-                                            </td>
-                                            <td style={tdSc}>
-                                                {hasSub ? (
-                                                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                ) : (
-                                                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                )}
-                                            </td>
-                                            {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                {hasSub ? (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgFinal != null ? "#111827" : "#e5e7eb" }}>{avgFinal != null ? avgFinal.toFixed(2) : "—"}</span>
-                                                ) : (
-                                                    finalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{finalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                )}
-                                            </td>}
-                                            {isCompleted && <td style={tdSc}>
-                                                {hasSub ? (
-                                                    avgFinal != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgFinal * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                ) : (
-                                                    finalScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(finalScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                )}
-                                            </td>}
-                                        </tr>
+                                        <CriteriaRow
+                                            key={`c-${c.id}`}
+                                            c={c}
+                                            cIdx={cIdx}
+                                            hasSub={hasSub}
+                                            isEditable={isEditable}
+                                            empScore={empScore}
+                                            avgEmp={avgEmp}
+                                            isCompleted={isCompleted}
+                                            avgFinal={avgFinal}
+                                            finalScore={finalScore}
+                                            savingScore={savingScore}
+                                            handleSaveScore={handleSaveScore}
+                                            tdB={tdB}
+                                            tdLvl={tdLvl}
+                                            tdSc={tdSc}
+                                        />
                                     );
 
                                     if (hasSub) {
@@ -817,42 +996,23 @@ const MyEvaluationDetailPage = () => {
                                             const subMgr = getScore(record.scores, sub.id, "MANAGER");
                                             const subAppr = getScore(record.scores, sub.id, "APPROVER");
                                             const subFinalScore = subAppr ?? subMgr;
-                                            const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                             rows.push(
-                                                <tr key={`sub-${sub.id}`} className="eval-row">
-                                                    <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-                                                    <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
-                                                        <div style={{ fontWeight: 500 }}>{sub.name}</div>
-                                                        {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
-                                                    </td>
-                                                    <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-                                                    {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-                                                    <td style={{ ...tdB, textAlign: "center" }}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>
-                                                    <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                        {isEditable ? (
-                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                                                                <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                                    className={subEmp == null ? "unfilled-select" : ""}
-                                                                    value={subEmp ?? undefined} loading={savingScore === sub.id}
-                                                                    onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
-                                                            </Access>
-                                                        ) : (
-                                                            <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
-                                                        )}
-                                                    </td>
-                                                    <td style={tdSc}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>
-                                                    {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                        {subFinalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{subFinalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                                    </td>}
-                                                    {isCompleted && <td style={tdSc}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>}
-                                                </tr>
+                                                <SubCriteriaRow
+                                                    key={`sub-${sub.id}`}
+                                                    sub={sub}
+                                                    cIdx={cIdx}
+                                                    si={si}
+                                                    isEditable={isEditable}
+                                                    subEmp={subEmp}
+                                                    subFinalScore={subFinalScore}
+                                                    isCompleted={isCompleted}
+                                                    savingScore={savingScore}
+                                                    handleSaveScore={handleSaveScore}
+                                                    tdB={tdB}
+                                                    tdLvl={tdLvl}
+                                                    tdSc={tdSc}
+                                                />
                                             );
                                         });
                                     }
@@ -915,7 +1075,7 @@ const MyEvaluationDetailPage = () => {
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét của nhân viên</div>
                 {isEditable ? (
                     <div>
-                        <Input.TextArea rows={4} value={selfReview} onChange={e => setSelfReview(e.target.value)}
+                        <Input.TextArea rows={4} value={selfReview} onChange={e => { setSelfReview(e.target.value); setIsDirty(true); }}
                             placeholder="Chia sẻ thành tựu, khó khăn hoặc mong muốn của bạn trong kỳ làm việc vừa qua..."
                             style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>

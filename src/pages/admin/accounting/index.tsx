@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import {
     Badge,
     Button,
     Dropdown,
+    Descriptions,
     Empty,
     Form,
     Input,
@@ -68,6 +69,8 @@ import {
 import { useAllDossierDocumentsQuery } from "@/hooks/useDossierDocuments";
 import { useAccountingDossierByIdQuery } from "@/hooks/useAccountingDossiers";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import ViewDetailDocument from "../document/view.document";
+import DossierDocumentList from "../accounting-dossiers/components/DossierDocumentList";
 import {
     callFetchCompany,
     callExportAccountingDocuments,
@@ -77,9 +80,8 @@ import {
     callFetchFolderDocuments,
 } from "@/config/api";
 
-import ModalAccountingDoc from "./ModalAccountingDoc";
-import ViewDetailDocument from "../document/view.document";
-import DossierDocumentList from "../accounting-dossiers/components/DossierDocumentList";
+
+const ModalAccountingDoc = lazy(() => import("./ModalAccountingDoc"));
 
 const { Sider, Content } = Layout;
 const ACCOUNTING_DOC_CATEGORY_CODE = "ACCOUNTING_DOC";
@@ -132,16 +134,18 @@ const CHECK_STATUS_LABEL: Record<string, { color: string; label: string }> = {
     NOT_REQUIRED: { color: "blue", label: "Không yêu cầu" },
 };
 
-const buildDocumentFileUrl = (fileName: string) =>
+const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
+    APPROVED: { color: "success", label: "Đã duyệt" },
+    ARCHIVED: { color: "purple", label: "Đã lưu trữ" },
+};
+
+const buildDossierDocumentFileUrl = (fileName: string) =>
     `/api/v1/files/public?folder=documents&fileName=${encodeURIComponent(fileName)}`;
 
 const splitDossierFileUrls = (value?: string) =>
     value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
 
-const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
-    APPROVED: { color: "success", label: "Đã duyệt" },
-    ARCHIVED: { color: "purple", label: "Đã lưu trữ" },
-};
+const getFileName = (value: string) => value.split("?")[0].split("/").filter(Boolean).pop() || value;
 
 const AccountingDocumentPage = () => {
     const isCompact = useIsMobile(1180);
@@ -155,6 +159,7 @@ const AccountingDocumentPage = () => {
     const [dataInit, setDataInit] = useState<IDocument | null>(null);
     const [viewDossierId, setViewDossierId] = useState<number | undefined>();
     const [openDossierModal, setOpenDossierModal] = useState(false);
+    const [detailDossierDocument, setDetailDossierDocument] = useState<IAccountingDossierDocument | null>(null);
 
     const [searchValue, setSearchValue] = useState("");
     const [current, setCurrent] = useState(PAGINATION_CONFIG.DEFAULT_PAGE);
@@ -162,6 +167,7 @@ const AccountingDocumentPage = () => {
 
     const [companies, setCompanies] = useState<CompanyOption[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | undefined>();
+    const [dossierCodeFilter, setDossierCodeFilter] = useState("");
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | undefined>();
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
     const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR);
@@ -171,6 +177,31 @@ const AccountingDocumentPage = () => {
     const [selectedLockStatus, setSelectedLockStatus] = useState("ALL");
     const [selectedFolderId, setSelectedFolderId] = useState<number | undefined>();
     const [filtersOpen, setFiltersOpen] = useState(false);
+
+    const handleOpenDossierDocumentFile = async (fileName: string) => {
+        const fileUrl = buildDossierDocumentFileUrl(fileName);
+        const previewWindow = window.open("about:blank", "_blank");
+        if (!previewWindow) {
+            Modal.warning({
+                title: "Không thể mở tệp",
+                content: "Trình duyệt đang chặn cửa sổ xem tệp. Vui lòng cho phép pop-up và thử lại.",
+            });
+            return;
+        }
+
+        previewWindow.opener = null;
+        try {
+            const response = await fetch(fileUrl, { method: "HEAD" });
+            if (!response.ok) throw new Error("File not found");
+            previewWindow.location.replace(fileUrl);
+        } catch {
+            previewWindow.close();
+            Modal.warning({
+                title: "Không tìm thấy tệp đính kèm",
+                content: "Tệp của chứng từ này không còn tồn tại trên hệ thống hoặc đã bị di chuyển.",
+            });
+        }
+    };
 
     // Folder Modals
     const [isFolderModalVisible, setIsFolderModalVisible] = useState(false);
@@ -200,15 +231,12 @@ const AccountingDocumentPage = () => {
 
     const fetchCompanies = async () => {
         try {
-            const res = await callFetchCompany("page=1&size=100");
+            const res = await callFetchCompany("page=1&size=500&sort=name,asc");
             if (res?.data?.result) {
                 const companyOptions = res.data.result
                     .filter((company) => company.id != null)
                     .map((company) => ({ id: company.id as number, name: company.name }));
                 setCompanies(companyOptions);
-                if (companyOptions.length > 0) {
-                    setSelectedCompanyId(companyOptions[0].id);
-                }
             }
         } catch (error) {
             console.error("Không thể tải danh sách công ty:", error);
@@ -302,7 +330,7 @@ const AccountingDocumentPage = () => {
                 }
 
                 setReconcileUsers(users);
-                console.log("[Reconcile] Users loaded:", users.length, users);
+
             } catch (error: unknown) {
                 setReconcileUsers([]);
                 setReconcileUserNotice(
@@ -335,6 +363,17 @@ const AccountingDocumentPage = () => {
         return { start, end };
     }, [selectedMonth, selectedYear]);
 
+    const dossierDocumentFilters = [
+        "(dossier.status='APPROVED' or dossier.status='ARCHIVED')",
+        ...(selectedCompanyId ? [`dossier.company.id:${selectedCompanyId}`] : []),
+        ...(selectedDepartmentId ? [`dossier.department.id:${selectedDepartmentId}`] : []),
+        ...(selectedCategoryId ? [`accountingCategory.id:${selectedCategoryId}`] : []),
+        ...(selectedYear ? [
+            `createdAt>='${periodRange.start.toISOString()}'`,
+            `createdAt<='${periodRange.end.toISOString()}'`,
+        ] : []),
+    ];
+
     const dossierDocumentQueryParams = {
         current,
         pageSize,
@@ -343,7 +382,8 @@ const AccountingDocumentPage = () => {
         ...(selectedCategoryId && { "accountingCategory.id": selectedCategoryId }),
         ...(selectedYear && { "createdAt>=": periodRange.start.toISOString(), "createdAt<=": periodRange.end.toISOString() }),
         ...(selectedStatus !== "ALL" && { fileStatus: selectedStatus }),
-        dossierStatus: "APPROVED,ARCHIVED",
+        filter: dossierDocumentFilters.join(" and "),
+        ...(dossierCodeFilter.trim() && { dossierCode: dossierCodeFilter.trim() }),
         ...(searchValue.trim() && { keyword: searchValue.trim() }),
     };
     const dossierDocumentQueryStr = queryString.stringify(dossierDocumentQueryParams);
@@ -355,6 +395,7 @@ const AccountingDocumentPage = () => {
     const activeFilterCount = [
         selectedDepartmentId,
         selectedCategoryId,
+        dossierCodeFilter.trim(),
         selectedMonth,
         selectedStatus !== "ALL",
         selectedYear !== CURRENT_YEAR,
@@ -395,28 +436,28 @@ const AccountingDocumentPage = () => {
             ),
         },
         {
-            title: "Số hóa đơn / Mã lưu",
+            title: "Số tham chiếu",
             dataIndex: "invoiceNumber",
             width: 180,
             render: (_, entity) => (
-                <Space direction="vertical" size={2}>
-                    <span style={{ fontWeight: 600, color: "#1f2937" }}>
-                        {entity.invoiceNumber || "---"}
+                <div style={{ lineHeight: 1.35 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: "#334155" }}>
+                        {entity.invoiceNumber || entity.document?.documentCode || "---"}
                     </span>
-                    {entity.document?.documentCode && (
-                        <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                    {entity.invoiceNumber && entity.document?.documentCode && (
+                        <span style={{ display: "block", marginTop: 2, fontSize: 11, color: "#94a3b8" }}>
                             {entity.document.documentCode}
                         </span>
                     )}
-                </Space>
+                </div>
             )
         },
         {
-            title: "Nhà cung cấp",
+            title: "Đối tác",
             dataIndex: "partnerName",
             width: 180,
             render: (_, entity) => (
-                <span style={{ color: "#374151" }}>
+                <span style={{ color: "#475569", fontSize: 13 }}>
                     {entity.partnerName || "---"}
                 </span>
             )
@@ -425,9 +466,10 @@ const AccountingDocumentPage = () => {
             title: "Số tiền",
             dataIndex: "amount",
             width: 140,
+            align: "right",
             render: (_, entity) => (
-                <span style={{ fontWeight: 600, color: "#059669" }}>
-                    {entity.amount ? `${new Intl.NumberFormat('vi-VN').format(entity.amount)} ${entity.currency || 'VND'}` : "---"}
+                <span style={{ fontWeight: 700, color: "#059669", fontSize: 13, whiteSpace: "nowrap" }}>
+                    {entity.amount != null ? `${new Intl.NumberFormat('vi-VN').format(entity.amount)} ${entity.currency || 'VND'}` : "---"}
                 </span>
             )
         },
@@ -436,25 +478,25 @@ const AccountingDocumentPage = () => {
             dataIndex: "documentName",
             width: 360,
             render: (dom, entity) => (
-                <Space direction="vertical" size={3} style={{ maxWidth: 340 }}>
+                <div style={{ maxWidth: 340, lineHeight: 1.35 }}>
                     <span
                         title={entity.documentName}
                         style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
+                            display: "block",
                             overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                             fontWeight: 600,
+                            fontSize: 13,
                             color: "#111827",
-                            lineHeight: 1.35,
                         }}
                     >
                         {entity.documentName}
                     </span>
-                    <span style={{ color: "#6b7280", fontSize: 12 }}>
+                    <span style={{ display: "block", marginTop: 3, color: "#94a3b8", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {entity.dossierContent || "Bộ chứng từ chưa có nội dung"}
                     </span>
-                </Space>
+                </div>
             ),
         },
         {
@@ -521,12 +563,9 @@ const AccountingDocumentPage = () => {
             render: (_, entity) => {
                 const checkMeta = CHECK_STATUS_LABEL[entity.checkStatus || "PENDING"] || CHECK_STATUS_LABEL.PENDING;
                 return (
-                    <Space direction="vertical" size={4}>
-                        <Tag color={checkMeta.color} style={{ borderRadius: 6, margin: 0, fontWeight: 600 }}>
-                            {checkMeta.label}
-                        </Tag>
-                        {entity.dossierStatus && <Tag style={{ margin: 0 }}>{entity.dossierStatus}</Tag>}
-                    </Space>
+                    <Tag color={checkMeta.color} style={{ borderRadius: 6, margin: 0, fontWeight: 600 }}>
+                        {checkMeta.label}
+                    </Tag>
                 );
             },
         },
@@ -553,23 +592,12 @@ const AccountingDocumentPage = () => {
                         />
                     </Tooltip>
                     {canView && (
-                        <Tooltip title="Mở file/link đầu tiên của chứng từ con">
+                        <Tooltip title="Xem chi tiết chứng từ">
                             <Button
                                 type="text"
                                 size="small"
                                 icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                                onClick={() => {
-                                    const firstFile = splitDossierFileUrls(entity.fileUrl)[0];
-                                    const firstUrl = entity.externalLink || (firstFile ? buildDocumentFileUrl(firstFile) : undefined);
-                                    if (firstUrl) {
-                                        window.open(firstUrl, "_blank");
-                                    } else {
-                                        Modal.info({
-                                            title: "Chưa có file/link",
-                                            content: "Chứng từ con này đang nằm trong bộ hồ sơ nhưng chưa có file hoặc link đính kèm.",
-                                        });
-                                    }
-                                }}
+                                onClick={() => setDetailDossierDocument(entity)}
                             />
                         </Tooltip>
                     )}
@@ -674,19 +702,6 @@ const AccountingDocumentPage = () => {
         const sortedTree = sortNodes(folderTree);
         return buildTreeData(sortedTree);
     }, [folderTree]);
-    const resetFilters = () => {
-        setSearchValue("");
-        setSelectedDepartmentId(undefined);
-        setSelectedCategoryId(undefined);
-        setSelectedYear(CURRENT_YEAR);
-        setSelectedMonth(undefined);
-        setSelectedStatus("ALL");
-        setSelectedValidity("ALL");
-        setSelectedLockStatus("ALL");
-        setSelectedFolderId(undefined);
-        setCurrent(1);
-    };
-
     const handleSaveFolder = async () => {
         try {
             const values = await folderForm.validateFields();
@@ -785,16 +800,14 @@ const AccountingDocumentPage = () => {
     const filter = (
         <div className="flex w-full flex-col gap-3">
             <SearchFilter
-                searchPlaceholder="Mã hồ sơ, nội dung, người tải..."
+                searchPlaceholder="Tên chứng từ, số hóa đơn, đối tác, mã lưu..."
                 showAddButton={false}
                 showFilterButton={false}
-                showResetButton={true}
                 activeFilterCount={activeFilterCount}
                 onSearch={(val) => {
                     setSearchValue(val);
                     setCurrent(1);
                 }}
-                onReset={resetFilters}
                 extraButtons={
                     <Tag color="blue" style={{ margin: 0, padding: "8px 12px", borderRadius: 8, height: 40, display: "flex", alignItems: "center" }}>
                         Chứng từ được tạo trong bộ chứng từ
@@ -831,12 +844,28 @@ const AccountingDocumentPage = () => {
                 >
                     <div style={filterItemStyle}>
                         <Select
+                            showSearch
+                            optionFilterProp="label"
+                            popupMatchSelectWidth={420}
                             style={{ width: "100%", height: 40 }}
                             value={selectedCompanyId}
                             onChange={(value) => setSelectedCompanyId(value)}
-                            options={companies.map(c => ({ label: c.name, value: c.id }))}
+                            options={companies.map(c => ({ label: c.name, value: c.id, title: c.name }))}
                             placeholder="Lọc theo công ty"
                             suffixIcon={<BankOutlined />}
+                        />
+                    </div>
+                    <div style={filterItemStyle}>
+                        <Input
+                            allowClear
+                            value={dossierCodeFilter}
+                            onChange={(event) => {
+                                setDossierCodeFilter(event.target.value);
+                                setCurrent(1);
+                            }}
+                            placeholder="Tra cứu mã bộ (BCT-...)"
+                            prefix={<FileDoneOutlined style={{ color: "#9ca3af" }} />}
+                            style={{ height: 40 }}
                         />
                     </div>
                     <div style={filterItemStyle}>
@@ -983,32 +1012,57 @@ const AccountingDocumentPage = () => {
                             </Space>
                         </div>
 
-                        <DataTable
-                            rowKey="rowKey"
-                            loading={isLoadingDossierDocuments}
-                            columns={columns}
-                            dataSource={tableRows}
-                            pagination={{
-                                current,
-                                pageSize,
-                                total: selectedStatus === "ALL" ? totalRows : tableRows.length,
-                                showSizeChanger: true,
-                                onChange: (page, size) => {
-                                    setCurrent(page);
-                                    setPageSize(size);
-                                },
-                            }}
-                        />
+                        <div className="accounting-lookup-table">
+                            <style>{`
+                                .accounting-lookup-table .ant-pro-table .ant-table-thead > tr > th {
+                                    background: #f8fafc !important;
+                                    color: #64748b !important;
+                                    font-size: 12px !important;
+                                    font-weight: 700 !important;
+                                    padding: 10px 14px !important;
+                                    border-bottom: 1px solid #e9eef5 !important;
+                                }
+                                .accounting-lookup-table .ant-pro-table .ant-table-tbody > tr > td {
+                                    padding: 11px 14px !important;
+                                    border-bottom: 1px solid #eef2f6 !important;
+                                    vertical-align: middle !important;
+                                }
+                                .accounting-lookup-table .ant-pro-table .ant-table-tbody > tr:hover > td {
+                                    background: #fafcff !important;
+                                }
+                                .accounting-lookup-table .ant-pro-table .ant-table {
+                                    font-size: 13px;
+                                }
+                            `}</style>
+                            <DataTable
+                                rowKey="rowKey"
+                                loading={isLoadingDossierDocuments}
+                                columns={columns}
+                                dataSource={tableRows}
+                                pagination={{
+                                    current,
+                                    pageSize,
+                                    total: selectedStatus === "ALL" ? totalRows : tableRows.length,
+                                    showSizeChanger: true,
+                                    onChange: (page, size) => {
+                                        setCurrent(page);
+                                        setPageSize(size);
+                                    },
+                                }}
+                            />
+                        </div>
                     </Content>
                 </Layout>
 
             {openModal && (
-                <ModalAccountingDoc
-                    open={openModal}
-                    setOpen={setOpenModal}
-                    dataInit={dataInit}
-                    setDataInit={setDataInit}
-                />
+                <Suspense fallback={<Spin fullscreen tip="Đang tải biểu mẫu chứng từ..." />}>
+                    <ModalAccountingDoc
+                        open={openModal}
+                        setOpen={setOpenModal}
+                        dataInit={dataInit}
+                        setDataInit={setDataInit}
+                    />
+                </Suspense>
             )}
 
             <ViewDetailDocument
@@ -1019,12 +1073,85 @@ const AccountingDocumentPage = () => {
                 isAccounting={true}
             />
 
+            <Modal
+                title={detailDossierDocument ? `Chi tiết chứng từ: ${detailDossierDocument.documentName}` : "Chi tiết chứng từ"}
+                open={!!detailDossierDocument}
+                onCancel={() => setDetailDossierDocument(null)}
+                footer={<Button onClick={() => setDetailDossierDocument(null)}>Đóng</Button>}
+                width={getModalWidth(720)}
+                destroyOnHidden
+            >
+                {detailDossierDocument && (
+                    <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
+                        <Descriptions.Item label="Bộ chứng từ">
+                            <Button
+                                type="link"
+                                style={{ padding: 0 }}
+                                onClick={() => {
+                                    setDetailDossierDocument(null);
+                                    setViewDossierId(detailDossierDocument.dossierId);
+                                    setOpenDossierModal(true);
+                                }}
+                            >
+                                {detailDossierDocument.dossierCode || `BCT-${detailDossierDocument.dossierId}`}
+                            </Button>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Số tham chiếu">
+                            {detailDossierDocument.invoiceNumber || detailDossierDocument.document?.documentCode || "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Loại chứng từ">
+                            {detailDossierDocument.accountingCategory?.categoryName || "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Đối tác">
+                            {detailDossierDocument.partnerName || "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Số tiền">
+                            {detailDossierDocument.amount != null
+                                ? `${new Intl.NumberFormat("vi-VN").format(detailDossierDocument.amount)} ${detailDossierDocument.currency || "VND"}`
+                                : "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Nội dung hóa đơn">
+                            {detailDossierDocument.invoiceContent || "---"}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Trạng thái kiểm tra">
+                            {(() => {
+                                const meta = CHECK_STATUS_LABEL[detailDossierDocument.checkStatus || "PENDING"] || CHECK_STATUS_LABEL.PENDING;
+                                return <Tag color={meta.color}>{meta.label}</Tag>;
+                            })()}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Tệp đính kèm">
+                            <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                                {splitDossierFileUrls(detailDossierDocument.fileUrl).map((fileUrl, index) => (
+                                    <Space key={fileUrl} wrap>
+                                        <span>{getFileName(fileUrl)}</span>
+                                        <Button size="small" type="link" onClick={() => handleOpenDossierDocumentFile(fileUrl)}>
+                                            Xem tệp {index + 1}
+                                        </Button>
+                                    </Space>
+                                ))}
+                                {detailDossierDocument.externalLink && (
+                                    <Button
+                                        size="small"
+                                        type="link"
+                                        style={{ padding: 0, width: "fit-content" }}
+                                        onClick={() => window.open(detailDossierDocument.externalLink, "_blank", "noopener,noreferrer")}
+                                    >
+                                        Mở liên kết đính kèm
+                                    </Button>
+                                )}
+                                {!detailDossierDocument.fileUrl && !detailDossierDocument.externalLink && "Chưa có tệp hoặc liên kết đính kèm."}
+                            </Space>
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
+
             <Drawer
                 title="Đối soát chứng từ nhân viên"
                 open={reconcileOpen}
                 onClose={() => setReconcileOpen(false)}
                 width={getModalWidth(980)}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Space direction="vertical" size={16} style={{ width: "100%" }}>
                     <div
@@ -1222,7 +1349,7 @@ const AccountingDocumentPage = () => {
                 }}
                 footer={null}
                 width={getModalWidth(1000)}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Spin spinning={isFetchingViewDossier}>
                     {viewDossier ? (

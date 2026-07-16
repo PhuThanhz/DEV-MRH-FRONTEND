@@ -92,7 +92,7 @@ const ModalPromoteEmployee = ({ open, onClose, dataInit, onSuccess }: IProps) =>
                 modalProps={{
                     onCancel: onClose,
                     afterClose: () => form.resetFields(),
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     width: "min(560px, 95vw)",
                     maskClosable: false,
                     confirmLoading: isPending,

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Table, Tag, Button, Tooltip, Empty, Tabs, Input } from "antd";
+import { useState } from "react";
+import { Table, Tag, Button, Tooltip, Empty, Popconfirm } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
@@ -12,11 +12,12 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { SearchOutlined } from "@ant-design/icons";
-import { callFetchPendingApprovalRecords, callBatchApproveRecords, callFetchApprovalRecords } from "@/config/api";
+import { usePendingApprovalRecordsQuery, useApprovalRecordsQuery, useBatchApproveRecordsMutation } from "@/hooks/useEvaluations";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 type RecordStatus =
     | "NOT_STARTED"
@@ -31,7 +32,7 @@ const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: R
     EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
+    PENDING_APPROVAL: { text: "Chờ duyệt cấp trên", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
     COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
 };
 
@@ -48,50 +49,41 @@ interface IProps {
 }
 
 const PendingApprovalPage = ({ isTab }: IProps) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _isTab = isTab;
     const navigate = useNavigate();
-    const [records, setRecords] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("pending");
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-    const [batchApproving, setBatchApproving] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+    const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
-    const fetchRecords = async (tab: string) => {
-        setLoading(true);
-        try {
-            const res = tab === "pending"
-                ? await callFetchPendingApprovalRecords()
-                : await callFetchApprovalRecords();
-            if (res?.data) {
-                setRecords(res.data);
-            }
-        } catch {
-            notify.error("Lỗi tải danh sách bản đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const pendingQuery = usePendingApprovalRecordsQuery();
+    const approvalQuery = useApprovalRecordsQuery();
+    const batchApproveMutation = useBatchApproveRecordsMutation();
 
-    useEffect(() => {
-        fetchRecords(activeTab);
-    }, [activeTab]);
+    const records: any[] = activeTab === "pending" ? (pendingQuery.data || []) : (approvalQuery.data || []);
+    const loading = activeTab === "pending" ? pendingQuery.isLoading : approvalQuery.isLoading;
+    const batchApproving = batchApproveMutation.isPending;
 
     const handleBatchApprove = async () => {
         if (selectedRowKeys.length === 0) return;
-        setBatchApproving(true);
-        try {
-            await callBatchApproveRecords(selectedRowKeys as number[]);
-            notify.success(`Đã phê duyệt thành công ${selectedRowKeys.length} bản đánh giá`);
-            setSelectedRowKeys([]);
-            fetchRecords(activeTab);
-        } catch {
-            notify.error("Có lỗi xảy ra khi phê duyệt hàng loạt");
-        } finally {
-            setBatchApproving(false);
-        }
+        batchApproveMutation.mutate(selectedRowKeys as number[], {
+            onSuccess: (res: any) => {
+                const data = res?.data;
+                const successCount = data?.successIds?.length ?? selectedRowKeys.length;
+                const failedCount = data?.failedRecords?.length ?? 0;
+                
+                if (failedCount > 0) {
+                    notify.warning(`Duyệt cấp trên xong: Thành công ${successCount}, thất bại ${failedCount}.`);
+                } else {
+                    notify.success(`Đã duyệt cấp trên thành công ${successCount} bản đánh giá`);
+                }
+                setSelectedRowKeys([]);
+            },
+            onError: (err: any) => {
+                notify.error(err?.response?.data?.message || "Có lỗi xảy ra khi phê duyệt hàng loạt");
+            }
+        });
     };
 
     const columns = [
@@ -167,7 +159,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                             icon={<ClockCircleOutlined />}
                             style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
                         >
-                            Trễ hạn tự đánh giá
+                            Quá hạn tự đánh giá
                         </Tag>
                     );
                 }
@@ -179,7 +171,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                             icon={<ClockCircleOutlined />}
                             style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
                         >
-                            Trễ hạn chấm điểm
+                            Quá hạn chấm điểm
                         </Tag>
                     );
                 }
@@ -191,7 +183,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                             icon={<ClockCircleOutlined />}
                             style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
                         >
-                            Trễ hạn phê duyệt
+                            Quá hạn phê duyệt
                         </Tag>
                     );
                 }
@@ -309,7 +301,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         height: 28,
                     }}
                 >
-                    {record.status === "PENDING_APPROVAL" ? "Phê duyệt" : "Xem chi tiết"}
+                    {record.status === "PENDING_APPROVAL" ? "Duyệt cấp trên" : "Xem chi tiết"}
                 </Button>
             ),
         },
@@ -343,8 +335,27 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             if (rPeriodId !== advancedFilters.periodId) return false;
         }
 
+        if (advancedFilters.departmentId) {
+            if (r.employee?.departmentId !== advancedFilters.departmentId) return false;
+        }
+
+        if (advancedFilters.overdue === "overdue") {
+            const deadline = r.effectiveApprovalDeadline ?? r.approvalDeadlineOverride ?? r.period?.approvalDeadline;
+            const isPendingAction = r.status === "PENDING_APPROVAL";
+            const isOverdue = isPendingAction && deadline && dayjs().isAfter(dayjs(deadline));
+            if (!isOverdue) return false;
+        }
+
         return true;
     });
+
+    // Lọc theo card được chọn
+    const cardFilteredRecords = selectedCard ? filteredRecords.filter(r => {
+        if (selectedCard === "pending") return r.status === "PENDING_APPROVAL";
+        if (selectedCard === "returned") return r.status === "REVISION_NEEDED";
+        if (selectedCard === "completed") return r.status === "COMPLETED";
+        return true;
+    }) : filteredRecords;
 
     const content = (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -368,15 +379,52 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 .my-eval-table .ant-pagination {
                     margin: 16px 20px !important;
                 }
+                .evaluation-work-switch {
+                    padding: 14px 16px;
+                    border-bottom: 1px solid #eef2f7;
+                    background: #ffffff;
+                    display: flex;
+                    align-items: center;
+                }
+                .evaluation-work-switch__inner {
+                    display: inline-flex;
+                    gap: 4px;
+                    padding: 4px;
+                    border-radius: 12px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                }
+                .evaluation-work-switch__item {
+                    border: 0;
+                    background: transparent;
+                    color: #64748b;
+                    height: 34px;
+                    padding: 0 14px;
+                    border-radius: 9px;
+                    font-size: 13px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                }
+                .evaluation-work-switch__item:hover {
+                    color: #2563eb;
+                    background: #eff6ff;
+                }
+                .evaluation-work-switch__item--active {
+                    background: #ffffff;
+                    color: #2563eb;
+                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+                }
             `}</style>
 
             {/* Summary Cards */}
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
                 {[
                     {
-                        label: "Chờ duyệt",
+                        label: "Chờ duyệt cấp trên",
                         value: pending,
                         color: "#1677ff",
+                        key: "pending",
                         icon: (
                             <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <SyncOutlined style={{ fontSize: 20, color: "#1677ff" }} />
@@ -384,9 +432,10 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         ),
                     },
                     {
-                        label: "Bị trả lại",
+                        label: "Đã yêu cầu chỉnh sửa",
                         value: returned,
                         color: "#722ed1",
+                        key: "returned",
                         icon: (
                             <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <ClockCircleOutlined style={{ fontSize: 20, color: "#722ed1" }} />
@@ -397,6 +446,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         label: "Hoàn tất",
                         value: completed,
                         color: "#389e0d",
+                        key: "completed",
                         icon: (
                             <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <TrophyOutlined style={{ fontSize: 20, color: "#389e0d" }} />
@@ -406,15 +456,18 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 ].map(item => (
                     <div
                         key={item.label}
+                        onClick={() => setSelectedCard(prev => prev === item.key ? null : item.key)}
                         style={{
                             flex: 1, minWidth: 180,
-                            background: "#ffffff",
-                            border: "1px solid #e2e8f0",
+                            background: selectedCard === item.key ? "#f0f7ff" : "#ffffff",
+                            border: selectedCard === item.key ? `2px solid ${item.color}` : "1px solid #e2e8f0",
                             borderRadius: 8,
                             padding: "16px 20px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
                         }}
                     >
                         <div>
@@ -437,15 +490,25 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 border: "1px solid #e2e8f0",
                 overflow: "hidden",
             }}>
-                <Tabs
-                    activeKey={activeTab}
-                    onChange={setActiveTab}
-                    items={[
-                        { key: "pending", label: "Chờ phê duyệt" },
-                        { key: "history", label: "Đã xử lý (Lịch sử)" }
-                    ]}
-                    style={{ padding: "0 20px" }}
-                />
+                <div className="evaluation-work-switch" role="tablist" aria-label="Bộ lọc hồ sơ duyệt cấp trên">
+                    <div className="evaluation-work-switch__inner">
+                        {[
+                            { key: "pending", label: "Cần duyệt cấp trên" },
+                            { key: "history", label: "Lịch sử duyệt" },
+                        ].map(tab => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeTab === tab.key}
+                                className={`evaluation-work-switch__item${activeTab === tab.key ? " evaluation-work-switch__item--active" : ""}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
@@ -456,10 +519,10 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
-                                {activeTab === "pending" ? "Danh sách cần phê duyệt" : "Lịch sử phê duyệt"}
+                                {activeTab === "pending" ? "Hồ sơ chờ duyệt cấp trên" : "Hồ sơ đã duyệt cấp trên"}
                             </div>
                             <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
-                                {activeTab === "pending" ? "Các bản đánh giá đang đợi bạn duyệt" : "Tất cả các bản đánh giá bạn đã xử lý"}
+                                {activeTab === "pending" ? "Các bản đánh giá thuộc trách nhiệm của quản lý gián tiếp/cấp phê duyệt" : "Các bản đánh giá đã được duyệt hoặc yêu cầu chỉnh sửa"}
                             </div>
                         </div>
                     </div>
@@ -472,6 +535,28 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                                     options: Array.from(
                                         new Map(records.filter(r => r.period?.id).map(r => [r.period.id, { label: r.period.name || r.periodName, value: r.period.id }])).values()
                                     ),
+                                },
+                                {
+                                    key: "departmentId",
+                                    label: "Phòng ban",
+                                    options: Array.from(
+                                        new Map(
+                                            records
+                                                .filter(r => r.employee?.departmentId)
+                                                .map(r => [
+                                                    r.employee.departmentId,
+                                                    { label: r.employee.departmentName, value: r.employee.departmentId }
+                                                ])
+                                        ).values()
+                                    ),
+                                },
+                                {
+                                    key: "overdue",
+                                    label: "Quá hạn",
+                                    options: [
+                                        { label: "Tất cả", value: "" },
+                                        { label: "Chỉ quá hạn", value: "overdue" }
+                                    ]
                                 }
                             ]}
                             onChange={(filters) => setAdvancedFilters(filters)} 
@@ -492,9 +577,20 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         <span style={{ fontSize: 13, color: "#475569" }}>
                             Đã chọn <strong style={{ color: "#1677ff" }}>{selectedRowKeys.length}</strong> bản đánh giá
                         </span>
-                        <Button type="primary" loading={batchApproving} onClick={handleBatchApprove}>
-                            Phê duyệt hàng loạt
-                        </Button>
+                        <Access permission={ALL_PERMISSIONS.EVALUATION.BATCH_APPROVE_RECORDS} hideChildren>
+                            <Popconfirm
+                                title={`Duyệt hàng loạt ${selectedRowKeys.length} bản đánh giá?`}
+                                description="Tất cả các bản đánh giá được chọn sẽ được chuyển sang trạng thái Hoàn tất và gửi kết quả tới nhân viên."
+                                onConfirm={handleBatchApprove}
+                                okText="Duyệt"
+                                cancelText="Hủy"
+                                okButtonProps={{ loading: batchApproving }}
+                            >
+                                <Button type="primary" loading={batchApproving}>
+                                    Duyệt hàng loạt
+                                </Button>
+                            </Popconfirm>
+                        </Access>
                     </div>
                 )}<Table
                     rowSelection={activeTab === "pending" ? {
@@ -506,7 +602,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     } : undefined}
                     className="my-eval-table"
                     columns={columns}
-                    dataSource={filteredRecords}
+                    dataSource={cardFilteredRecords}
                     rowKey="id"
                     loading={loading}
                     pagination={{ pageSize: 10, size: "small" }}
@@ -516,7 +612,11 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         emptyText: (
                             <Empty
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="Chưa có bản đánh giá nào"
+                                description={
+                                    activeTab === "pending"
+                                        ? "Không có hồ sơ nào đang chờ duyệt cấp trên."
+                                        : "Chưa có lịch sử duyệt cấp trên."
+                                }
                                 style={{ margin: "40px 0" }}
                             />
                         )
@@ -526,7 +626,11 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
         </div>
     );
 
-    return isTab ? content : <PageContainer title="Danh sách cần phê duyệt (Quản lý gián tiếp)">{content}</PageContainer>;
+    return isTab ? content : (
+        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS}>
+            <PageContainer title="Danh sách cần phê duyệt (Quản lý gián tiếp)">{content}</PageContainer>
+        </Access>
+    );
 };
 
 export default PendingApprovalPage;

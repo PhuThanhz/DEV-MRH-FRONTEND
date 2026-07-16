@@ -136,7 +136,7 @@ const ModalCompany = ({
                 modalProps={{
                     onCancel: handleClose,
                     afterClose: handleClose,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     width: modalWidth,
                     centered: true,
                     maskClosable: false,

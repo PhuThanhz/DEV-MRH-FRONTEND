@@ -21,6 +21,8 @@ interface SearchFilterProps {
     onFilterApply?: (filters: Record<string, any>) => void;
     onReset?: () => void;
     onAddClick?: () => void;
+    /** Dùng để tải trước dữ liệu của form khi người dùng có ý định thêm mới. */
+    onAddPreload?: () => void;
     addLabel?: string | React.ReactNode;
     showAddButton?: boolean;
     showFilterButton?: boolean;
@@ -46,6 +48,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     onFilterApply,
     onReset,
     onAddClick,
+    onAddPreload,
     addLabel = "Thêm mới",
     showAddButton = true,
     showFilterButton = true,
@@ -143,10 +146,12 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                 transition: "all 0.2s ease",
             }}
             onMouseEnter={(e) => {
+                onAddPreload?.();
                 e.currentTarget.style.backgroundColor = "#ff4b97";
                 e.currentTarget.style.boxShadow = "0 4px 14px rgba(255, 95, 162, 0.5)";
                 e.currentTarget.style.transform = "translateY(-1px)";
             }}
+            onFocus={onAddPreload}
             onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = "#ff5fa2";
                 e.currentTarget.style.boxShadow = "0 2px 8px rgba(255, 95, 162, 0.35)";

@@ -11,6 +11,7 @@ import {
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import { useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
@@ -34,6 +35,8 @@ const toTitleCase = (str: string) => {
         .replace(/\bJsc\b/g, "JSC")
         .replace(/\bLtd\b/g, "LTD");
 };
+
+const PINK = "#e8637a";
 
 const TemplatePage = () => {
     const navigate = useNavigate();
@@ -85,7 +88,7 @@ const TemplatePage = () => {
         }
 
         const temp = queryString.stringify(q, { encode: false });
-        let sortBy = "sort=createdAt,desc";
+        let sortBy = "sort=id,desc";
         if (sort?.name) {
             sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
         }
@@ -107,7 +110,7 @@ const TemplatePage = () => {
             sorter: true,
             render: (val, record) => (
                 <Typography.Link 
-                    style={{ fontWeight: 500, fontSize: "14px", color: "#1677ff" }}
+                    style={{ fontWeight: 500, fontSize: "14px", color: "#262626" }}
                     onClick={() => navigate(`/admin/evaluation/templates/${record.id}`)}
                 >
                     {val}
@@ -134,18 +137,33 @@ const TemplatePage = () => {
         {
             title: "Công ty áp dụng",
             dataIndex: ["company", "name"],
-            width: 280,
+            width: 380,
             render: (_, record) => {
                 const compName = record.company?.name;
                 return compName ? (
-                    <Space size={6}>
-                        <BankOutlined style={{ color: "#8c8c8c", fontSize: 14 }} />
-                        <span style={{ fontWeight: 500, color: "#262626", fontSize: 13 }}>
-                            {toTitleCase(compName)}
-                        </span>
-                    </Space>
+                    <span style={{ fontWeight: 500, color: "#262626", fontSize: 13, whiteSpace: "nowrap" }}>
+                        {toTitleCase(compName)}
+                    </span>
                 ) : (
                     <span style={{ color: "#bfbfbf", fontStyle: "italic" }}>—</span>
+                );
+            },
+        },
+        {
+            title: "Ngày cập nhật",
+            dataIndex: "updatedAt",
+            width: 140,
+            align: "center",
+            render: (val, record) => {
+                const date = (typeof val === "string" || typeof val === "number" || val instanceof Date) ? val : record.createdAt;
+                if (!date || date === "null") return <span style={{ color: "#bfbfbf" }}>—</span>;
+                const d = dayjs(date);
+                if (!d.isValid()) return <span style={{ color: "#bfbfbf" }}>—</span>;
+                
+                return (
+                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
+                        {d.format("DD/MM/YYYY HH:mm")}
+                    </span>
                 );
             },
         },
@@ -155,7 +173,7 @@ const TemplatePage = () => {
             width: 150,
             align: "center",
             render: (val) => {
-                let border = "#e5e7eb", bg = "#f9fafb", color = "#9ca3af", text = "Bản nháp";
+                let border = "#cbd5e1", bg = "#f1f5f9", color = "#475569", text = "Bản nháp";
                 if (val === "ACTIVE") {
                     border = "#b7eb8f"; bg = "#f6ffed"; color = "#389e0d"; text = "Đang áp dụng";
                 } else if (val === "ARCHIVED") {
@@ -180,46 +198,70 @@ const TemplatePage = () => {
             width: 120,
             fixed: "right",
             render: (_, entity) => (
-                <Space size={12}>
-                    <Access
-                        permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
-                        hideChildren
-                    >
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                            title="Xem chi tiết"
-                            onClick={() => {
-                                navigate(`/admin/evaluation/templates/${entity.id}`);
-                            }}
-                        />
-                    </Access>
+                <Space size={8}>
+                    {entity.status !== "DRAFT" && (
+                        <Access
+                            permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
+                            hideChildren
+                        >
+                            <div
+                                onClick={() => navigate(`/admin/evaluation/templates/${entity.id}`)}
+                                style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
+                                    color: "#1677ff", transition: "all 0.2s", background: "transparent"
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#e6f4ff"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                title="Xem chi tiết"
+                            >
+                                <EyeOutlined style={{ fontSize: 15 }} />
+                            </div>
+                        </Access>
+                    )}
 
-                    <Access
-                        permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
-                        hideChildren
-                    >
-                        <SettingOutlined
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                            title="Cấu hình tiêu chí"
-                            onClick={() => {
-                                navigate(`/admin/evaluation/templates/${entity.id}`);
-                            }}
-                        />
-                    </Access>
+                    {entity.status === "DRAFT" && (
+                        <Access
+                            permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
+                            hideChildren
+                        >
+                            <div
+                                onClick={() => navigate(`/admin/evaluation/templates/${entity.id}`)}
+                                style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
+                                    color: PINK, transition: "all 0.2s", background: "transparent"
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fff0f2"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                title="Cấu hình tiêu chí"
+                            >
+                                <SettingOutlined style={{ fontSize: 15 }} />
+                            </div>
+                        </Access>
+                    )}
 
                     {entity.status === "DRAFT" && (
                         <Access
                             permission={ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE}
                             hideChildren
                         >
-                            <EditOutlined
-                                style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
-                                title="Chỉnh sửa thông tin"
+                            <div
                                 onClick={() => {
                                     setDataInit(entity);
                                     setOpenModal(true);
                                 }}
-                            />
+                                style={{ 
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
+                                    color: "#d97706", transition: "all 0.2s", background: "transparent"
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                title="Chỉnh sửa thông tin"
+                            >
+                                <EditOutlined style={{ fontSize: 15 }} />
+                            </div>
                         </Access>
                     )}
 
@@ -235,10 +277,18 @@ const TemplatePage = () => {
                                 okText="Đồng ý"
                                 cancelText="Hủy"
                             >
-                                <CheckCircleOutlined
-                                    style={{ fontSize: 18, color: "#389e0d", cursor: "pointer" }}
+                                <div
+                                    style={{ 
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        width: 30, height: 30, borderRadius: 6, cursor: "pointer",
+                                        color: "#16a34a", transition: "all 0.2s", background: "transparent"
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#dcfce7"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                                     title="Kích hoạt mẫu"
-                                />
+                                >
+                                    <CheckCircleOutlined style={{ fontSize: 15 }} />
+                                </div>
                             </Popconfirm>
                         </Access>
                     )}

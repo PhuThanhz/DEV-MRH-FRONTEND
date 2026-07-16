@@ -12,9 +12,10 @@ import { notify } from "@/components/common/notification/notify";
 // ======================================================
 // GET LIST
 // ======================================================
-export const useUsersQuery = (query: string) => {
+export const useUsersQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["users", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchUser(query);
             if (!res?.data) throw new Error("Không thể lấy danh sách người dùng");

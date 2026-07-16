@@ -172,7 +172,7 @@ const DrawerCompanySalaryGrade = ({
             <Drawer
                 open={open}
                 onClose={onClose}
-                destroyOnClose
+                destroyOnHidden
                 width={getModalWidth(850)}
                 title={
                     <Space direction="vertical" size={0}>

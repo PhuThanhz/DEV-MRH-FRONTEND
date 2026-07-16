@@ -58,7 +58,7 @@ const PermissionMatrixDrawer = ({ open, setOpen, contentId }: IProps) => {
             }
             onCancel={() => setOpen(false)}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             centered
             styles={{
                 body: {

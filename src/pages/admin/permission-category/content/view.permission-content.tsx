@@ -14,7 +14,7 @@ const ViewPermissionContent = ({ open, setOpen, dataInit }: IProps) => {
             width={500}
             title="Chi tiết nội dung quyền"
             onClose={() => setOpen(false)}
-            destroyOnClose
+            destroyOnHidden
         >
             {dataInit && (
                 <Descriptions column={1} bordered>

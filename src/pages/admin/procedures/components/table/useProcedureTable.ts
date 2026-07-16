@@ -77,9 +77,18 @@ export const useProcedureTable = ({ type, companyId, departmentId }: UseProcedur
     );
 
     // ── Queries ──
-    const companyQuery = useCompanyProceduresWithFilterQuery(type === "COMPANY" ? query : "");
-    const departmentQuery = useDepartmentProceduresWithFilterQuery(type === "DEPARTMENT" ? query : "");
-    const confidentialQuery = useConfidentialProceduresWithFilterQuery(type === "CONFIDENTIAL" ? query : "");
+    const companyQuery = useCompanyProceduresWithFilterQuery(
+        type === "COMPANY" ? query : "",
+        type === "COMPANY"
+    );
+    const departmentQuery = useDepartmentProceduresWithFilterQuery(
+        type === "DEPARTMENT" ? query : "",
+        type === "DEPARTMENT"
+    );
+    const confidentialQuery = useConfidentialProceduresWithFilterQuery(
+        type === "CONFIDENTIAL" ? query : "",
+        type === "CONFIDENTIAL"
+    );
 
     const { data, isFetching, refetch } =
         type === "COMPANY" ? companyQuery

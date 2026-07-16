@@ -50,8 +50,8 @@ export const PATHS = {
         EVALUATION_TEMPLATES: "/admin/evaluation/templates",
         EVALUATION_TEMPLATE_DETAIL: "/admin/evaluation/templates/:id",
         EVALUATION_PERIODS: "/admin/evaluation/periods",
+        EVALUATION_PERIOD_PROGRESS: "/admin/evaluation/periods/:periodId/progress",
         EVALUATION_RECORDS: "/admin/evaluation/records",
-
     },
     CLIENT: {
         ROOT: "/",

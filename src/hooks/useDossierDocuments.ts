@@ -19,6 +19,34 @@ import { notify } from "@/components/common/notification/notify";
 
 const DOSSIER_DOCS_KEY = "dossier-documents";
 const ALL_ACCOUNTING_DOSSIER_DOCS_KEY = "accounting-dossier-documents";
+const FALLBACK_DOCUMENT_FETCH_CONCURRENCY = 8;
+
+const sortByNewestDocument = (a: IAccountingDossierDocument, b: IAccountingDossierDocument) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (dateA !== dateB) return dateB - dateA;
+    return Number(b.id || 0) - Number(a.id || 0);
+};
+
+/** Giữ phương án dự phòng không tạo hàng trăm request cùng lúc khi endpoint tổng hợp lỗi. */
+const mapWithConcurrency = async <T, R>(
+    items: T[],
+    worker: (item: T) => Promise<R>,
+    limit = FALLBACK_DOCUMENT_FETCH_CONCURRENCY,
+): Promise<R[]> => {
+    const results = new Array<R>(items.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(limit, items.length);
+
+    await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (nextIndex < items.length) {
+            const index = nextIndex++;
+            results[index] = await worker(items[index]);
+        }
+    }));
+
+    return results;
+};
 
 export const useDossierDocumentsQuery = (dossierId?: number) => {
     return useQuery({
@@ -27,7 +55,7 @@ export const useDossierDocumentsQuery = (dossierId?: number) => {
         queryFn: async () => {
             if (!dossierId) return [];
             const res = await callFetchDossierDocuments(dossierId);
-            return (res?.data ?? []) as IAccountingDossierDocument[];
+            return [...((res?.data ?? []) as IAccountingDossierDocument[])].sort(sortByNewestDocument);
         },
     });
 };
@@ -52,7 +80,9 @@ const fetchDossierDocumentsFallback = async (query: string): Promise<IModelPagin
     const current = Number(params.get("current") || "1");
     const pageSize = Number(params.get("pageSize") || "10");
     const keyword = (params.get("keyword") || "").trim().toLowerCase();
+    const dossierCode = (params.get("dossierCode") || "").trim().toLowerCase();
     const fileStatus = (params.get("fileStatus") || "ALL").toUpperCase();
+    const filter = params.get("filter") || "";
     const companyId = Number(params.get("dossier.company.id") || "") || undefined;
     const departmentId = Number(params.get("dossier.department.id") || "") || undefined;
     const categoryId = Number(params.get("accountingCategory.id") || "") || undefined;
@@ -61,11 +91,15 @@ const fetchDossierDocumentsFallback = async (query: string): Promise<IModelPagin
 
     const dossierRes = await callFetchAccountingDossiers("current=1&pageSize=200");
     const dossiers = (dossierRes?.data?.result || []) as IAccountingDossier[];
-    const docGroups = await Promise.all(
-        dossiers
-            .filter((dossier) => !companyId || dossier.company?.id === companyId)
-            .filter((dossier) => !departmentId || dossier.department?.id === departmentId)
-            .map(async (dossier) => {
+    const onlyCompletedDossiers = filter.includes("dossier.status='APPROVED'") || filter.includes("dossier.status='ARCHIVED'");
+    const eligibleDossiers = dossiers
+        .filter((dossier) => !companyId || dossier.company?.id === companyId)
+        .filter((dossier) => !departmentId || dossier.department?.id === departmentId)
+        .filter((dossier) => !onlyCompletedDossiers || dossier.status === "APPROVED" || dossier.status === "ARCHIVED")
+        .filter((dossier) => !dossierCode || dossier.dossierCode?.toLowerCase().includes(dossierCode));
+    const docGroups = await mapWithConcurrency(
+        eligibleDossiers,
+        async (dossier) => {
                 if (!dossier.id) return [];
                 try {
                     const res = await callFetchDossierDocuments(dossier.id);
@@ -83,7 +117,7 @@ const fetchDossierDocumentsFallback = async (query: string): Promise<IModelPagin
                 } catch {
                     return [];
                 }
-            })
+        },
     );
 
     const allDocs = docGroups
@@ -113,6 +147,11 @@ const fetchDossierDocumentsFallback = async (query: string): Promise<IModelPagin
                 doc.createdBy,
                 doc.dossierCode,
                 doc.dossierContent,
+                doc.invoiceNumber,
+                doc.invoiceContent,
+                doc.partnerName,
+                doc.document?.documentCode,
+                doc.company?.name,
                 doc.department?.name,
                 doc.accountingCategory?.categoryName,
                 doc.accountingCategory?.categoryCode,
@@ -122,8 +161,9 @@ const fetchDossierDocumentsFallback = async (query: string): Promise<IModelPagin
                 .some((value) => String(value).toLowerCase().includes(keyword));
         });
 
+    const sortedDocs = allDocs.sort(sortByNewestDocument);
     const start = (current - 1) * pageSize;
-    const pageItems = allDocs.slice(start, start + pageSize);
+    const pageItems = sortedDocs.slice(start, start + pageSize);
     return {
         meta: {
             page: current,

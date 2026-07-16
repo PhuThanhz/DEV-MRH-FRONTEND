@@ -74,7 +74,7 @@ const SalaryRangePage = () => {
 
         if (!data || !Array.isArray(data)) return;
 
-        console.log("DATA:", data); // debug
+
 
         setLocalGroups(groupMatrix(data));
     }, [matrix, myMatrix, canViewMatrix]);

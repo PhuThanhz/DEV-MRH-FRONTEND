@@ -33,7 +33,7 @@ const ViewDepartmentCompleteness = ({ open, onClose, record, criteria }: Props) 
                     </div>
                 </div>
             }
-            destroyOnClose
+            destroyOnHidden
         >
             {/* Score summary */}
             <div

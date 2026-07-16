@@ -47,6 +47,7 @@ const AllJobDescriptionsTab = () => {
             onFilterChange={(filters) => setStatusFilter(filters.status ?? null)}
             onDateChange={setDateFilter}
             resetSignal={resetSignal}
+            showAdd={true}
             mode="ALL"
         />
     );

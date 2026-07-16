@@ -29,7 +29,7 @@ const ViewCompany = ({ open, onClose, companyId }: IProps) => {
             title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết công ty</span>}
             open={open}
             onCancel={onClose}
-            destroyOnClose
+            destroyOnHidden
             maskClosable={false}
             moduleClass="company"
             desktopWidth={600}

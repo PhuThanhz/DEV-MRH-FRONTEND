@@ -31,7 +31,7 @@ const ModalIssueJd = ({ open, record, loading, onConfirm, onCancel }: Props) => 
             onCancel={onCancel}
             width={460}
             centered
-            destroyOnClose
+            destroyOnHidden
             className="job-description-issue-modal"
         >
             <Space direction="vertical" size="middle" style={{ width: "100%", padding: "8px 0" }}>

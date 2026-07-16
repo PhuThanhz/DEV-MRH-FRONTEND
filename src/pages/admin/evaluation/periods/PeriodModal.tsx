@@ -1,10 +1,12 @@
 import { Modal, Form, Input, DatePicker, Tooltip, Button, Select } from "antd";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod, callFetchCompany } from "@/config/api";
+import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 import { getModalWidth } from "@/utils/responsive";
+import { fetchPeriodCompanyOptions, PERIOD_COMPANY_OPTIONS_QUERY_KEY } from "@/hooks/useEvaluationPeriodReferenceData";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
 import {
@@ -67,24 +69,12 @@ const PeriodModal = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, dataInit, setDataInit } = props;
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
-    const [companies, setCompanies] = useState<{ label: string; value: number }[]>([]);
-
-    useEffect(() => {
-        const loadOptions = async () => {
-            try {
-                const compRes = await callFetchCompany("page=1&size=200&sort=name,asc");
-                if (compRes?.data?.result) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setCompanies(compRes.data.result.map((c: any) => ({ label: c.name, value: c.id })));
-                }
-            } catch (error) {
-                console.error("Lỗi khi tải cấu hình công ty", error);
-            }
-        };
-        if (openModal) {
-            loadOptions();
-        }
-    }, [openModal]);
+    const { data: companies = [], isFetching: isFetchingCompanies } = useQuery({
+        queryKey: PERIOD_COMPANY_OPTIONS_QUERY_KEY,
+        queryFn: fetchPeriodCompanyOptions,
+        enabled: openModal,
+        staleTime: 5 * 60 * 1000,
+    });
 
     useEffect(() => {
         if (openModal) {
@@ -238,6 +228,7 @@ const PeriodModal = (props: IProps) => {
                             showSearch
                             optionFilterProp="label"
                             options={companies}
+                            loading={isFetchingCompanies}
                             style={{ borderRadius: 6, width: "100%" }}
                         />
                     </Form.Item>

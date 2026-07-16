@@ -1,34 +1,53 @@
 import { Button, Form, Input } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { callLogin } from "config/api";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { setUserLoginInfo } from "@/redux/slice/accountSlide";
 import { useAppSelector } from "@/redux/hooks";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { notify } from "@/components/common/notification/notify";
 
+const LOGIN_COOLDOWN_MS = 1200;
+const LOGIN_ERROR_COOLDOWN_MS = 3000;
+
 const LoginPage = () => {
   const [isSubmit, setIsSubmit] = useState(false);
+  const submitLockRef = useRef(false);
+  const cooldownUntilRef = useRef(0);
+  const unlockTimerRef = useRef<number | null>(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isAuthenticated = useAppSelector((state) => state.account.isAuthenticated);
   const location = useLocation();
   const callback = new URLSearchParams(location.search).get("callback");
+  const postLoginPath = callback?.startsWith("/") && !callback.startsWith("//")
+    ? callback
+    : "/admin";
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/admin", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) navigate(postLoginPath, { replace: true });
+  }, [isAuthenticated, navigate, postLoginPath]);
+
+  useEffect(() => () => {
+    if (unlockTimerRef.current !== null) {
+      window.clearTimeout(unlockTimerRef.current);
+    }
+  }, []);
 
   const onFinish = async (values: { username: string; password: string }) => {
+    const now = Date.now();
+    if (submitLockRef.current || now < cooldownUntilRef.current) return;
+
+    submitLockRef.current = true;
     setIsSubmit(true);
+
     try {
       const res = await callLogin(values.username, values.password);
       if (res?.data) {
         localStorage.setItem("access_token", res.data.access_token);
         dispatch(setUserLoginInfo(res.data.user));
         notify.created("Đăng nhập thành công");
-        navigate(callback && callback.startsWith("/") ? callback : "/", { replace: true });
       } else {
         notify.error("Đăng nhập thất bại");
       }
@@ -48,9 +67,19 @@ const LoginPage = () => {
           ? error.message[0]
           : error?.message || "Tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại.";
       }
+
+      const cooldownMs = status === undefined || status === null || status === 429 || status >= 500
+        ? LOGIN_ERROR_COOLDOWN_MS
+        : LOGIN_COOLDOWN_MS;
+      cooldownUntilRef.current = Date.now() + cooldownMs;
       notify.error(msg);
     } finally {
-      setIsSubmit(false);
+      const remainingCooldown = Math.max(0, cooldownUntilRef.current - Date.now());
+      unlockTimerRef.current = window.setTimeout(() => {
+        submitLockRef.current = false;
+        setIsSubmit(false);
+        unlockTimerRef.current = null;
+      }, remainingCooldown);
     }
   };
 
@@ -68,7 +97,7 @@ const LoginPage = () => {
             <p>Nhập thông tin tài khoản để tiếp tục</p>
           </header>
 
-          <Form layout="vertical" onFinish={onFinish} onFinishFailed={onFinishFailed} requiredMark={false}>
+          <Form layout="vertical" onFinish={onFinish} onFinishFailed={onFinishFailed} requiredMark={false} disabled={isSubmit}>
             <Form.Item
               label="Email"
               name="username"
@@ -103,7 +132,7 @@ const LoginPage = () => {
             </div>
 
             <Form.Item className="submit-item">
-              <Button type="primary" htmlType="submit" loading={isSubmit} block size="large">
+              <Button type="primary" htmlType="submit" loading={isSubmit} disabled={isSubmit} block size="large">
                 Đăng nhập
               </Button>
             </Form.Item>

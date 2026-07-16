@@ -5,7 +5,7 @@ import type {
 } from "@/types/backend";
 
 export const editableStatuses: AccountingDossierStatus[] = ["DRAFT", "RETURNED"];
-export const returnRequestableStatuses: AccountingDossierStatus[] = ["SUBMITTED", "IN_REVIEW", "RETURN_REQUESTED"];
+export const returnRequestableStatuses: AccountingDossierStatus[] = ["SUBMITTED", "IN_REVIEW"];
 
 export interface DossierPerms {
     approve: boolean;
@@ -72,7 +72,7 @@ export const getDossierViewerContext = (
 
     const canApprove = inReview && isCurrentApprover && perms.approve;
     const canReject = inReview && isCurrentApprover && perms.reject;
-    const canRequestReturn = ["SUBMITTED", "IN_REVIEW", "RETURN_REQUESTED"].includes(status) && (isCreator || isSuperAdmin) && perms.requestReturn;
+    const canRequestReturn = ["SUBMITTED", "IN_REVIEW"].includes(status) && (isCreator || isSuperAdmin) && perms.requestReturn;
     const canReturnResponse = status === "RETURN_REQUESTED" && (isCurrentApprover || isSuperAdmin) && perms.returnResponse;
     const canTerminate = ["SUBMITTED", "IN_REVIEW", "RETURN_REQUESTED"].includes(status) && perms.terminate;
     const canArchive = status === "APPROVED" && perms.archive;

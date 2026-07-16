@@ -82,7 +82,7 @@ const PermissionPage = () => {
             }
         }
 
-        if (!sortBy) temp += `&sort=updatedAt,desc`;
+        if (!sortBy) temp += `&sort=${PAGINATION_CONFIG.DEFAULT_SORT}`;
         else temp += `&${sortBy}`;
 
         return temp;
@@ -177,7 +177,7 @@ const PermissionPage = () => {
                     showFilterButton={false}
                     onSearch={(val) =>
                         setQuery(
-                            `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&filter=name~'${val}'`
+                            `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&filter=name~'${val}'&sort=${PAGINATION_CONFIG.DEFAULT_SORT}`
                         )
                     }
                     onReset={() => reloadTable()}

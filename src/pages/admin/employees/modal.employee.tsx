@@ -296,7 +296,7 @@ const ModalEmployee = ({
                 modalProps={{
                     onCancel: handleReset,
                     afterClose: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     width: modalWidth,
                     centered: true,
                     footer: null,

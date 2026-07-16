@@ -29,6 +29,12 @@ const CHECK_STATUS_TEXT: Record<string, string> = {
 
 const DossierCoverSheet: React.FC<DossierCoverSheetProps> = ({ dossier }) => {
     const { data: docs = [] } = useDossierDocumentsQuery(dossier.id);
+    const sortedDocs = React.useMemo(() => [...docs].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (dateA !== dateB) return dateB - dateA;
+        return Number(b.id || 0) - Number(a.id || 0);
+    }), [docs]);
 
     return (
         <>
@@ -146,7 +152,7 @@ const DossierCoverSheet: React.FC<DossierCoverSheetProps> = ({ dossier }) => {
                 {/* Child Documents Table */}
                 <div style={{ marginBottom: 40 }}>
                     <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px 0", color: "#374151", borderBottom: "1.5px solid #be185d", paddingBottom: 6 }}>
-                        DANH SÁCH CHỨNG TỪ CHI TIẾT ({docs.length} chứng từ)
+                        DANH SÁCH CHỨNG TỪ CHI TIẾT ({sortedDocs.length} chứng từ)
                     </h3>
                     <table>
                         <thead>
@@ -161,14 +167,14 @@ const DossierCoverSheet: React.FC<DossierCoverSheetProps> = ({ dossier }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {docs.length === 0 ? (
+                            {sortedDocs.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} style={{ textAlign: "center", color: "#9ca3af", fontStyle: "italic" }}>
                                         Chưa có chứng từ đính kèm
                                     </td>
                                 </tr>
                             ) : (
-                                docs.map((doc, idx) => (
+                                sortedDocs.map((doc, idx) => (
                                     <tr key={doc.id || idx}>
                                         <td style={{ textAlign: "center" }}>{idx + 1}</td>
                                         <td style={{ fontWeight: 600 }}>{doc.documentName}</td>

@@ -58,9 +58,10 @@ export const useJdFlowLogsQuery = (jdId?: number) => {
 
 /* ===================== JD FLOW INBOX ===================== */
 
-export const useJdFlowInboxQuery = () => {
+export const useJdFlowInboxQuery = (options?: { enabled?: boolean }) => {
     return useQuery<IJdInbox[]>({
         queryKey: ["jd-flow-inbox"],
+        enabled: options?.enabled ?? true,
         staleTime: 1000 * 30,
         refetchOnWindowFocus: false,
         queryFn: async (): Promise<IJdInbox[]> => {

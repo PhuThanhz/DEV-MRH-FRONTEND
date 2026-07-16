@@ -45,6 +45,7 @@ const RejectedJdTab = () => {
             resetSignal={resetSignal}
             hideStatusFilter={true}
             mode="ALL"
+            defaultSort="updatedAt,desc"
         />
     );
 };

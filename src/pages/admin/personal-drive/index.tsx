@@ -864,6 +864,35 @@ const PersonalDrivePage: React.FC = () => {
 
     const selectedFolderNode = selectedFolderId ? findFolderById(rawFolders, selectedFolderId) : null;
     const subfolders = selectedFolderNode?.children || [];
+    const breadcrumbItems = [
+        {
+            title: (
+                <Space size={4}>
+                    <HomeOutlined style={{ color: "#db2777", fontSize: 14 }} />
+                    <span style={{ color: "#64748b", fontWeight: 500 }}>Kho lưu trữ</span>
+                </Space>
+            ),
+        },
+        ...activeFolderPath.map((folder, idx) => {
+            const isLast = idx === activeFolderPath.length - 1;
+            return {
+                title: isLast ? (
+                    <span style={{ color: "#0f172a", fontWeight: 600 }}>{folder.folderName}</span>
+                ) : (
+                    <span
+                        className="breadcrumb-link"
+                        style={{ color: "#475569", cursor: "pointer", fontWeight: 500, transition: "color 0.2s" }}
+                        onClick={() => {
+                            setSelectedFolderId(folder.id);
+                            setExpandedKeys(prev => [...new Set([...prev, folder.id.toString()])]);
+                        }}
+                    >
+                        {folder.folderName}
+                    </span>
+                ),
+            };
+        }),
+    ];
 
     return (
         <PageContainer title="Kho lưu trữ tài liệu cá nhân">
@@ -1232,40 +1261,8 @@ const PersonalDrivePage: React.FC = () => {
                             <Breadcrumb
                                 className="drive-breadcrumb"
                                 separator={<span style={{ color: "#cbd5e1" }}>/</span>}
-                            >
-                                <Breadcrumb.Item>
-                                    <Space size={4}>
-                                        <HomeOutlined style={{ color: "#db2777", fontSize: 14 }} />
-                                        <span style={{ color: "#64748b", fontWeight: 500 }}>Kho lưu trữ</span>
-                                    </Space>
-                                </Breadcrumb.Item>
-                                {activeFolderPath.map((folder, idx) => {
-                                    const isLast = idx === activeFolderPath.length - 1;
-                                    return (
-                                        <Breadcrumb.Item key={idx}>
-                                            {isLast ? (
-                                                <span style={{ color: "#0f172a", fontWeight: 600 }}>{folder.folderName}</span>
-                                            ) : (
-                                                <span
-                                                    className="breadcrumb-link"
-                                                    style={{
-                                                        color: "#475569",
-                                                        cursor: "pointer",
-                                                        fontWeight: 500,
-                                                        transition: "color 0.2s"
-                                                    }}
-                                                    onClick={() => {
-                                                        setSelectedFolderId(folder.id);
-                                                        setExpandedKeys(prev => [...new Set([...prev, folder.id.toString()])]);
-                                                    }}
-                                                >
-                                                    {folder.folderName}
-                                                </span>
-                                            )}
-                                        </Breadcrumb.Item>
-                                    );
-                                })}
-                            </Breadcrumb>
+                                items={breadcrumbItems}
+                            />
 
                             {/* Files Table Section */}
                             <div className="drive-header-section">
@@ -1725,7 +1722,7 @@ const PersonalDrivePage: React.FC = () => {
                 width={420}
                 onClose={() => setDetailsDrawerOpen(false)}
                 open={detailsDrawerOpen}
-                destroyOnClose
+                destroyOnHidden
             >
                 {selectedDocDetails ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

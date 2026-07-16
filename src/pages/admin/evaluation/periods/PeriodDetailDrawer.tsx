@@ -1,5 +1,8 @@
 import { Modal, Table, Form, Select, Button, Popconfirm, Tag, Row, Col, Empty, Tooltip, DatePicker, Input, Checkbox } from "antd";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import useAccess from "@/hooks/useAccess";
+import { useAppSelector } from "@/redux/hooks";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
 import {
@@ -9,6 +12,8 @@ import {
     TeamOutlined,
     UserAddOutlined,
     CalendarOutlined,
+    InfoCircleOutlined,
+    WarningOutlined,
 } from "@ant-design/icons";
 import {
     callFetchTemplatesInPeriod,
@@ -21,6 +26,7 @@ import {
     callFetchCompany,
     callFetchDepartmentsByCompany,
     callExtendEvaluationRecordDeadline,
+    callReassignEvaluators,
 } from "@/config/api";
 import type { IEvaluationPeriod, IEvaluationTemplate } from "@/types/backend";
 import Access from '@/components/share/access';
@@ -67,20 +73,35 @@ interface IProps {
     open: boolean;
     onClose: () => void;
     period: IEvaluationPeriod | null;
+    readOnly?: boolean;
 }
 
 const PeriodDetailDrawer = (props: IProps) => {
-    const { open, onClose, period } = props;
+    const { open, onClose, period, readOnly = false } = props;
+    const isMobile = useIsMobile();
+    const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
+    const isSuperAdmin = roleName === "SUPER_ADMIN";
+    const canExtendDeadline = useAccess(ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE);
+    const canReassignEvaluator = useAccess(ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR);
+    const canCancelEmployee = useAccess(ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE);
 
     // Form instances
     const [templateForm] = Form.useForm();
     const [employeeForm] = Form.useForm();
     const [extendForm] = Form.useForm();
+    const selectedEmployeeIds = Form.useWatch("employeeId", employeeForm);
 
     // Data states
     const [extendModalOpen, setExtendModalOpen] = useState(false);
     const [selectedEmployeeForExtend, setSelectedEmployeeForExtend] = useState<any>(null);
     const [extending, setExtending] = useState(false);
+
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+    const [reassignForm] = Form.useForm();
+    const [reassignModalOpen, setReassignModalOpen] = useState(false);
+    const [selectedEmployeeForReassign, setSelectedEmployeeForReassign] = useState<any>(null);
+    const [reassigning, setReassigning] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [linkedTemplates, setLinkedTemplates] = useState<any[]>([]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,30 +116,24 @@ const PeriodDetailDrawer = (props: IProps) => {
     const [departments, setDepartments] = useState<any[]>([]);
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+    const referenceDataPeriodIdRef = useRef<number | null>(null);
 
     // Loading states
     const [, setLoadingTemplates] = useState(false);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [submittingTemplate, setSubmittingTemplate] = useState(false);
     const [submittingEmployee, setSubmittingEmployee] = useState(false);
+    const [loadingAssignmentReferenceData, setLoadingAssignmentReferenceData] = useState(false);
 
     // Fetch initial templates & users on open
     useEffect(() => {
         if (open && period?.id) {
             fetchLinkedTemplates();
             fetchLinkedEmployees();
-            loadActiveTemplates();
-            loadAllUsers();
-            loadCompanies();
-
-            // Tự động gán bộ lọc theo công ty của kỳ đánh giá
-            if (period.company?.id) {
-                handleCompanyFilterChange(period.company.id);
-            } else {
-                setSelectedCompanyId(null);
-                setSelectedDepartmentId(null);
-                setDepartments([]);
-            }
+            referenceDataPeriodIdRef.current = null;
+            setSelectedCompanyId(period.company?.id ?? null);
+            setSelectedDepartmentId(null);
+            setDepartments([]);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, period]);
@@ -150,8 +165,10 @@ const PeriodDetailDrawer = (props: IProps) => {
         }
     };
 
-    const filteredUsers = allUsers.filter(u => {
-        if (selectedCompanyId) {
+    const filteredUsers = useMemo(() => allUsers.filter(u => {
+        // Khi kỳ đã có công ty, API người dùng đã lọc theo companyId; không cần
+        // tải thêm danh sách công ty và so sánh chuỗi ở phía trình duyệt.
+        if (selectedCompanyId && !period?.company?.id) {
             const comp = companies.find(c => c.id === selectedCompanyId);
             if (!comp) return false;
             if (!u.companyName || u.companyName.trim().toLowerCase() !== comp.name.trim().toLowerCase()) {
@@ -166,7 +183,27 @@ const PeriodDetailDrawer = (props: IProps) => {
             }
         }
         return true;
-    });
+    }), [allUsers, selectedCompanyId, selectedDepartmentId, period?.company?.id, companies, departments]);
+    const selectedEmployeeIdSet = useMemo(() => new Set(
+        (Array.isArray(selectedEmployeeIds) ? selectedEmployeeIds : [selectedEmployeeIds]).filter(Boolean)
+    ), [selectedEmployeeIds]);
+    const eligibleDirectManagers = useMemo(() => filteredUsers.filter((user) =>
+        user.active !== false && !!user.directManagerId && !selectedEmployeeIdSet.has(user.id)
+    ), [filteredUsers, selectedEmployeeIdSet]);
+    const employeeOptions = useMemo(() => filteredUsers
+        .filter(user => user.active !== false)
+        .map(user => {
+            const jobInfo = [user.jobTitle, user.positionLevel].filter(Boolean).join(" - ");
+            const deptOrComp = [user.departmentName, user.companyName].filter(Boolean).join(" - ");
+            const detail = [jobInfo, deptOrComp].filter(Boolean).join(" | ");
+            return { label: user.name, value: user.id, searchValue: `${user.name} ${detail}`, rawUser: user };
+        }), [filteredUsers]);
+    const directManagerOptions = useMemo(() => eligibleDirectManagers.map(user => {
+        const jobInfo = [user.jobTitle, user.positionLevel].filter(Boolean).join(" - ");
+        const deptOrComp = [user.departmentName, user.companyName].filter(Boolean).join(" - ");
+        const detail = [jobInfo, deptOrComp].filter(Boolean).join(" | ");
+        return { label: user.name, value: user.id, searchValue: `${user.name} ${detail}`, rawUser: user };
+    }), [eligibleDirectManagers]);
 
     const handleEmployeeChange = (employeeId: string) => {
         const emp = allUsers.find(u => u.id === employeeId);
@@ -209,6 +246,7 @@ const PeriodDetailDrawer = (props: IProps) => {
     const fetchLinkedEmployees = async () => {
         if (!period?.id) return;
         setLoadingEmployees(true);
+        setSelectedRowKeys([]); // Reset selected rows on reload
         try {
             const res = await callFetchEmployeesInPeriod(period.id);
             if (res?.data) {
@@ -248,6 +286,24 @@ const PeriodDetailDrawer = (props: IProps) => {
         }
     };
 
+    const loadAssignmentReferenceData = async () => {
+        if (!period?.id || period.status !== "DRAFT" || referenceDataPeriodIdRef.current === period.id) return;
+
+        referenceDataPeriodIdRef.current = period.id;
+        setLoadingAssignmentReferenceData(true);
+        try {
+            await Promise.all([
+                loadActiveTemplates(),
+                loadAllUsers(),
+                period.company?.id
+                    ? handleCompanyFilterChange(period.company.id)
+                    : loadCompanies(),
+            ]);
+        } finally {
+            setLoadingAssignmentReferenceData(false);
+        }
+    };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleAddTemplate = async (values: any) => {
         if (!period?.id) return;
@@ -271,22 +327,33 @@ const PeriodDetailDrawer = (props: IProps) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleAddEmployee = async (values: any) => {
         if (!period?.id || !selectedTemplateId) return;
+        const employeeIds: string[] = Array.isArray(values.employeeId) ? values.employeeId : [values.employeeId];
+        if (employeeIds.length === 0) return;
         setSubmittingEmployee(true);
         try {
-            const payload = {
-                employeeId: values.employeeId,
-                directManagerId: values.directManagerId,
-                templateId: selectedTemplateId,
-            };
-            const res = await callAddEmployeeToPeriod(period.id, payload);
-            if (res?.data) {
-                notify.success("Thêm nhân viên vào kỳ thành công");
+            let successCount = 0;
+            const failed: string[] = [];
+            for (const empId of employeeIds) {
+                try {
+                    await callAddEmployeeToPeriod(period.id, {
+                        employeeId: empId,
+                        directManagerId: values.directManagerId,
+                        templateId: selectedTemplateId,
+                    });
+                    successCount++;
+                } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                    const empName = allUsers.find(u => u.id === empId)?.name || empId;
+                    failed.push(`${empName}: ${error?.response?.data?.message || "lỗi"}`);
+                }
+            }
+            if (successCount > 0) {
+                notify.success(`Đã thêm ${successCount} nhân viên vào kỳ`);
                 employeeForm.resetFields(["employeeId", "directManagerId"]);
                 fetchLinkedEmployees();
             }
-        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            const msg = error?.response?.data?.message || "Lỗi thêm nhân viên";
-            notify.error(msg);
+            if (failed.length > 0) {
+                notify.warning(`${failed.length} nhân viên không thêm được: ${failed.join("; ")}`);
+            }
         } finally {
             setSubmittingEmployee(false);
         }
@@ -311,11 +378,16 @@ const PeriodDetailDrawer = (props: IProps) => {
     };
 
     const handleExtendDeadlineSubmit = async (values: any) => {
-        if (!selectedEmployeeForExtend?.recordId) return;
+        if (!selectedEmployeeForExtend) return;
+        const recordIds = selectedEmployeeForExtend.isBulk
+            ? selectedEmployeeForExtend.recordId
+            : [selectedEmployeeForExtend.recordId];
+
+        if (!recordIds || recordIds.length === 0) return;
         setExtending(true);
         try {
             const res = await callExtendEvaluationRecordDeadline({
-                recordIds: [selectedEmployeeForExtend.recordId],
+                recordIds,
                 phase: values.phase,
                 deadline: values.deadline.toISOString(),
                 reason: values.reason,
@@ -325,6 +397,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                 notify.success("Gia hạn thành công!");
                 setExtendModalOpen(false);
                 setSelectedEmployeeForExtend(null);
+                setSelectedRowKeys([]);
                 fetchLinkedEmployees();
             }
         } catch (error: any) {
@@ -332,6 +405,102 @@ const PeriodDetailDrawer = (props: IProps) => {
             notify.error(msg);
         } finally {
             setExtending(false);
+        }
+    };
+
+    const handleBulkExtend = () => {
+        const selectedRecords = employeesForSelectedTemplate.filter(e => selectedRowKeys.includes(e.id));
+        const recordIds = selectedRecords.map(e => e.recordId).filter(Boolean);
+        
+        if (recordIds.length === 0) {
+            notify.warning("Không tìm thấy mã bản ghi hợp lệ.");
+            return;
+        }
+
+        setSelectedEmployeeForExtend({
+            employee: { name: `${recordIds.length} nhân sự đã chọn` },
+            recordId: recordIds,
+            isBulk: true
+        });
+        extendForm.resetFields();
+        setExtendModalOpen(true);
+    };
+
+    const handleBulkCancel = async () => {
+        try {
+            const results = await Promise.allSettled(
+                selectedRowKeys.map(id => callCancelPeriodEmployee(Number(id)))
+            );
+            
+            const rejected = results.filter((r) => r.status === 'rejected');
+            if (rejected.length > 0) {
+                const errorMessages = rejected.map((r: any) => 
+                    r.reason?.response?.data?.message || r.reason?.message || "Lỗi không xác định"
+                );
+                const uniqueErrors = Array.from(new Set(errorMessages));
+                notify.error(`Hủy gán thất bại ${rejected.length}/${selectedRowKeys.length} nhân viên. Lỗi: ${uniqueErrors.join(", ")}`);
+            } else {
+                notify.success("Hủy gán hàng loạt thành công!");
+            }
+            
+            setSelectedRowKeys([]);
+            fetchLinkedEmployees();
+        } catch (error: any) {
+            notify.error("Có lỗi xảy ra khi hủy gán hàng loạt.");
+        }
+    };
+
+    const handleOpenReassignModal = (record: any) => {
+        setSelectedEmployeeForReassign(record);
+        reassignForm.resetFields();
+        setReassignModalOpen(true);
+    };
+
+    const handleBulkReassign = () => {
+        const selectedRecords = employeesForSelectedTemplate.filter(e => selectedRowKeys.includes(e.id));
+        const recordIds = selectedRecords.map(e => e.recordId).filter(Boolean);
+        
+        if (recordIds.length === 0) {
+            notify.warning("Không tìm thấy mã bản ghi hợp lệ.");
+            return;
+        }
+
+        setSelectedEmployeeForReassign({
+            employee: { name: `${recordIds.length} nhân sự đã chọn` },
+            recordId: recordIds,
+            isBulk: true
+        });
+        reassignForm.resetFields();
+        setReassignModalOpen(true);
+    };
+
+    const handleReassignSubmit = async (values: any) => {
+        if (!selectedEmployeeForReassign) return;
+        const recordIds = selectedEmployeeForReassign.isBulk
+            ? selectedEmployeeForReassign.recordId
+            : [selectedEmployeeForReassign.recordId];
+
+        if (!recordIds || recordIds.length === 0) return;
+        setReassigning(true);
+        try {
+            const res = await callReassignEvaluators({
+                recordIds,
+                evaluatorRole: values.evaluatorRole,
+                newEvaluatorUserId: values.newEvaluatorUserId,
+                reason: values.reason,
+            });
+            if (res?.data) {
+                notify.success("Điều chuyển thành công!");
+                setReassignModalOpen(false);
+                setSelectedEmployeeForReassign(null);
+                setSelectedRowKeys([]);
+                fetchLinkedEmployees();
+            }
+        } catch (error: any) {
+            const msg = error?.response?.data?.message || "Lỗi điều chuyển người chấm/duyệt";
+            notify.error(msg);
+        } finally {
+            setReassigning(false);
         }
     };
 
@@ -407,21 +576,32 @@ const PeriodDetailDrawer = (props: IProps) => {
                 ),
         },
         {
-            title: "Quản lý Trực tiếp",
+            title: "Quản lý trực tiếp",
             dataIndex: ["directManager", "name"],
             key: "directManagerName",
             width: 200,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            render: (val: string, record: any) =>
-                renderUserAvatar(
+            render: (val: string, record: any) => {
+                if (!record.directManager?.id) {
+                    return <Tag color="warning" style={{ margin: 0, borderRadius: 4, fontWeight: 600 }}>Chưa gán</Tag>;
+                }
+                return renderUserAvatar(
                     val || record.directManager?.username,
                     record.directManager?.email,
                     record.directManager?.jobTitle,
                     record.directManager?.positionLevel
-                ),
+                );
+            },
         },
         {
-            title: "Quản lý Gián tiếp (Tự động)",
+            title: (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    Quản lý gián tiếp
+                    <Tooltip title="Cấp quản lý tiếp theo trong luồng phê duyệt của nhân sự.">
+                        <InfoCircleOutlined style={{ color: "#94a3b8" }} />
+                    </Tooltip>
+                </span>
+            ),
             dataIndex: ["indirectManager", "name"],
             key: "indirectManagerName",
             width: 210,
@@ -439,7 +619,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                             padding: "1px 6px",
                             margin: 0
                         }}>
-                            Chưa gán
+                            Chưa xác định
                         </Tag>
                     );
                 }
@@ -534,7 +714,6 @@ const PeriodDetailDrawer = (props: IProps) => {
             width: 100,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             render: (_: any, record: any) => {
-                console.log("Action Column Row Data:", { record, period });
                 const isRecordActive = record?.status?.toUpperCase() === "ACTIVE";
                 const isPeriodClosed = period?.status?.toUpperCase() === "CLOSED";
                 if (!isRecordActive || isPeriodClosed) return null;
@@ -560,6 +739,29 @@ const PeriodDetailDrawer = (props: IProps) => {
                                     }}
                                     onClick={() => handleOpenExtendModal(record)}
                                     className="btn-extend-action"
+                                />
+                            </Access>
+                        )}
+
+                        {record.recordId && (
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR} hideChildren>
+                                <Button
+                                    type="text"
+                                    icon={<TeamOutlined style={{ fontSize: 13 }} />}
+                                    title="Điều chuyển người chấm/duyệt"
+                                    style={{ 
+                                        borderRadius: "6px", 
+                                        display: "inline-flex", 
+                                        alignItems: "center", 
+                                        justifyContent: "center",
+                                        width: "26px",
+                                        height: "26px",
+                                        background: "rgba(114, 46, 209, 0.04)",
+                                        border: "1px solid rgba(114, 46, 209, 0.08)",
+                                        color: "#722ed1",
+                                        transition: "all 0.2s"
+                                    }}
+                                    onClick={() => handleOpenReassignModal(record)}
                                 />
                             </Access>
                         )}
@@ -602,19 +804,29 @@ const PeriodDetailDrawer = (props: IProps) => {
     const employeesForSelectedTemplate = linkedEmployees.filter(
         emp => emp.template?.id === selectedTemplateId
     );
+    const activeEmployeesForTemplate = employeesForSelectedTemplate.filter(emp => emp.status === "ACTIVE");
+    const missingDirectManagerCount = activeEmployeesForTemplate.filter(emp => !emp.directManager?.id).length;
+    const missingIndirectManagerCount = activeEmployeesForTemplate.filter(emp => !emp.indirectManager?.id).length;
+    const canManageEmployeeActions = !readOnly && (isSuperAdmin || canExtendDeadline || canReassignEvaluator || canCancelEmployee);
+    const visibleEmployeeColumns = readOnly
+        ? employeeColumns.filter(column => column.key !== "action")
+        : employeeColumns;
 
     return (
     <>
         <Modal
             title={
-                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "10px" }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ display: "inline-flex", background: "#eff6ff", color: "#1d4ed8", padding: "4px", borderRadius: "6px" }}><TeamOutlined /></span>
-                        <span>Cấu hình Kỳ Đánh Giá:</span>
-                        <span style={{ color: "#1d4ed8" }}>{period?.name}</span>
+                <div className="period-config-title">
+                    <div className="period-config-title__icon"><TeamOutlined /></div>
+                    <div className="period-config-title__content">
+                        <div className="period-config-title__label">{readOnly ? "Chi tiết kỳ đánh giá" : "Thiết lập kỳ đánh giá"}</div>
+                        <div className="period-config-title__name">{period?.name}</div>
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 400, color: "#64748b", marginTop: 4, marginLeft: 34 }}>
-                        Quản lý các biểu mẫu và phân công nhân sự tương ứng cho kỳ đánh giá.
+                    <div className="period-config-title__meta">
+                        {period?.company?.name && <Tag style={{ margin: 0, borderRadius: 999, border: "none", background: "#f1f5f9", color: "#475569" }}>{period.company.name}</Tag>}
+                        <Tag color={period?.status === "DRAFT" ? "default" : period?.status === "ACTIVE" ? "processing" : "default"} style={{ margin: 0, borderRadius: 999 }}>
+                            {period?.status === "DRAFT" ? "Bản nháp" : period?.status === "ACTIVE" ? "Đang mở" : "Đã đóng"}
+                        </Tag>
                     </div>
                 </div>
             }
@@ -624,9 +836,53 @@ const PeriodDetailDrawer = (props: IProps) => {
             footer={null}
             centered
             maskClosable={false}
-            styles={{ body: { ...MODAL_BODY_SCROLL, padding: "4px 12px 12px 12px" } }}
+            className="period-config-modal"
+            styles={{ header: { marginBottom: 0, padding: 0 }, body: { ...MODAL_BODY_SCROLL, padding: 0 } }}
         >
             <style>{`
+                .period-config-modal .ant-modal-content {
+                    overflow: hidden;
+                    border-radius: 16px;
+                    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+                }
+                .period-config-modal .ant-modal-close {
+                    top: 18px;
+                    right: 18px;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    color: #64748b;
+                }
+                .period-config-modal .ant-modal-close:hover {
+                    color: #e11d72;
+                    background: #fff1f7;
+                }
+                .period-config-title {
+                    min-height: 80px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 18px 66px 18px 22px;
+                    border-bottom: 1px solid #e9eef5;
+                    background: #ffffff;
+                }
+                .period-config-title__icon {
+                    width: 38px;
+                    height: 38px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 12px;
+                    background: #fff1f7;
+                    color: #e11d72;
+                    font-size: 18px;
+                }
+                .period-config-title__content { min-width: 0; }
+                .period-config-title__label { color: #64748b; font-size: 12px; font-weight: 650; }
+                .period-config-title__name { margin-top: 2px; color: #172033; font-size: 18px; font-weight: 760; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .period-config-title__meta { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+                .period-config-sidebar { background: #fafbfc; }
+                .period-config-main { background: #ffffff; }
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
                     height: 6px;
@@ -646,8 +902,8 @@ const PeriodDetailDrawer = (props: IProps) => {
                 }
                 .template-card:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04) !important;
-                    border-color: #3b82f6 !important;
+                    box-shadow: 0 6px 14px -8px rgba(15, 23, 42, 0.35) !important;
+                    border-color: #f9a8d4 !important;
                 }
                 .ant-table {
                     border-radius: 8px !important;
@@ -680,17 +936,23 @@ const PeriodDetailDrawer = (props: IProps) => {
                     border-color: rgba(239, 68, 68, 0.2) !important;
                     color: #dc2626 !important;
                 }
+                @media (max-width: 767px) {
+                    .period-config-title { padding: 16px 54px 16px 16px; align-items: flex-start; }
+                    .period-config-title__meta { margin-left: 0; width: 100%; justify-content: flex-start; }
+                    .period-config-title { flex-wrap: wrap; }
+                    .period-config-title__name { white-space: normal; font-size: 16px; }
+                }
             `}</style>
-            <Row gutter={16} style={{ margin: 0 }}>
-                {/* CỘT TRÁI: DANH SÁCH BIỂU MẪU ĐÃ GÁN (width: 33%) */}
-                <Col span={8} style={{ borderRight: "1px solid #e2e8f0", padding: "0 12px 8px 4px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <Row gutter={0} style={{ margin: 0 }}>
+                {/* CỘT TRÁI: DANH SÁCH BIỂU MẪU ĐÃ GÁN (width: 33% trên desktop) */}
+                <Col xs={24} lg={8} className="period-config-sidebar" style={{ borderRight: isMobile ? "none" : "1px solid #e9eef5", borderBottom: isMobile ? "1px solid #e9eef5" : "none", padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div>
                         <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                             <BookOutlined style={{ color: "#3b82f6", fontSize: "13px" }} />
                             <span>BIỂU MẪU ĐÃ GÁN ({linkedTemplates.length})</span>
                         </div>
 
-                        {period?.status === "DRAFT" ? (
+                        {!readOnly && period?.status === "DRAFT" ? (
                             <Form 
                                 form={templateForm} 
                                 layout="vertical" 
@@ -714,6 +976,8 @@ const PeriodDetailDrawer = (props: IProps) => {
                                         placeholder="Chọn Mẫu đánh giá..."
                                         optionFilterProp="label"
                                         options={activeTemplates.map(t => ({ label: t.name, value: t.id }))}
+                                        loading={loadingAssignmentReferenceData}
+                                        onFocus={() => { void loadAssignmentReferenceData(); }}
                                         styles={{ popup: { root: { borderRadius: 8 } } }}
                                         size="small"
                                     />
@@ -756,7 +1020,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                 gap: "6px"
                             }}>
                                 <span style={{ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: "#b45309" }} />
-                                Kỳ đánh giá không còn ở trạng thái Bản nháp.
+                                Kỳ đã được kích hoạt. Không thể thay đổi biểu mẫu, nhưng vẫn có thể theo dõi và xử lý nhân sự theo quyền được cấp.
                             </div>
                         )}
 
@@ -784,21 +1048,21 @@ const PeriodDetailDrawer = (props: IProps) => {
                                         className="template-card"
                                         style={{
                                             padding: "10px 12px",
-                                            borderRadius: "8px",
-                                            border: isSelected ? "1px solid #3b82f6" : "1px solid rgba(226, 232, 240, 0.8)",
-                                            borderLeft: isSelected ? "4px solid #3b82f6" : "1px solid rgba(226, 232, 240, 0.8)",
-                                            background: isSelected ? "#f8fafc" : "#ffffff",
+                                            borderRadius: "10px",
+                                            border: isSelected ? "1px solid #f9a8d4" : "1px solid #e5eaf1",
+                                            borderLeft: isSelected ? "3px solid #ec4899" : "1px solid #e5eaf1",
+                                            background: isSelected ? "#fff5fa" : "#ffffff",
                                             cursor: "pointer",
                                             position: "relative",
-                                            boxShadow: isSelected ? "0 4px 10px -2px rgba(59, 130, 246, 0.06)" : "0 1px 2px rgba(0,0,0,0.01)",
+                                            boxShadow: isSelected ? "0 5px 12px -10px rgba(236, 72, 153, 0.45)" : "none",
                                             overflow: "hidden"
                                         }}
                                     >
                                         <div style={{ display: "flex", gap: "6px", alignItems: "flex-start", marginBottom: "6px" }}>
-                                            <BookOutlined style={{ color: isSelected ? "#3b82f6" : "#64748b", fontSize: "13px", marginTop: "2px" }} />
+                                            <BookOutlined style={{ color: isSelected ? "#e11d72" : "#64748b", fontSize: "13px", marginTop: "2px" }} />
                                             <div style={{
                                                 fontWeight: 600,
-                                                color: isSelected ? "#1e3a8a" : "#1e293b",
+                                                color: isSelected ? "#9d174d" : "#1e293b",
                                                 fontSize: "12.5px",
                                                 lineHeight: "1.3",
                                                 flex: 1
@@ -821,7 +1085,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                             >
                                                 {isStaff ? "Nhân viên" : "Quản lý"}
                                             </Tag>
-                                            <span style={{ fontSize: "11px", color: isSelected ? "#2563eb" : "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                            <span style={{ fontSize: "11px", color: isSelected ? "#be185d" : "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "3px" }}>
                                                 <TeamOutlined style={{ fontSize: "11px" }} />
                                                 {empCount} nhân sự
                                             </span>
@@ -837,8 +1101,8 @@ const PeriodDetailDrawer = (props: IProps) => {
                     </div>
                 </Col>
 
-                {/* CỘT PHẢI: CHI TIẾT NHÂN SỰ & QUY TRÌNH GÁN (width: 67%) */}
-                <Col span={16} style={{ padding: "0 4px 8px 12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* CỘT PHẢI: CHI TIẾT NHÂN SỰ & QUY TRÌNH GÁN (width: 67% trên desktop) */}
+                <Col xs={24} lg={16} className="period-config-main" style={{ padding: isMobile ? "20px 16px" : "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
                     {!selectedTemplateId ? (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 450, height: "100%" }}>
                             <Empty description="Chọn biểu mẫu ở cột bên trái để thiết lập danh sách nhân sự" />
@@ -847,28 +1111,40 @@ const PeriodDetailDrawer = (props: IProps) => {
                         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                             {/* Header chi tiết */}
                             <div style={{
-                                background: "linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%)",
-                                border: "1px solid #bae6fd",
-                                padding: "8px 12px",
-                                borderRadius: "8px",
+                                borderBottom: "1px solid #e9eef5",
+                                padding: "0 0 14px",
                                 display: "flex",
-                                alignItems: "center",
+                                alignItems: "flex-start",
                                 gap: "10px",
-                                boxShadow: "0 2px 4px -1px rgba(0, 0, 0, 0.01)"
+                                boxShadow: "none"
                             }}>
-                                <BookOutlined style={{ color: "#0284c7", fontSize: "18px" }} />
-                                <div>
-                                    <div style={{ fontSize: "10px", fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                        Đang cấu hình nhân sự cho biểu mẫu
+                                <BookOutlined style={{ color: "#e11d72", fontSize: "18px", marginTop: 2 }} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.45px" }}>
+                                        Biểu mẫu đang chọn
                                     </div>
-                                    <div style={{ fontSize: "13px", fontWeight: 800, color: "#0c4a6e", marginTop: "2px" }}>
+                                    <div style={{ fontSize: "15px", fontWeight: 760, color: "#172033", marginTop: "2px" }}>
                                         {activeT?.template?.name}
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                                        <Tag style={{ margin: 0, borderRadius: 999, border: "none", background: "#f1f5f9", color: "#475569" }}>{activeEmployeesForTemplate.length} nhân sự đang tham gia</Tag>
+                                        {missingDirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingDirectManagerCount} thiếu quản lý trực tiếp</Tag>}
+                                        {missingIndirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingIndirectManagerCount} thiếu quản lý gián tiếp</Tag>}
                                     </div>
                                 </div>
                             </div>
 
+                            {(missingDirectManagerCount > 0 || missingIndirectManagerCount > 0) && (
+                                <div role="alert" style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px", background: "#fff7e6", border: "1px solid #ffd591", borderRadius: 8, color: "#ad4e00", fontSize: 12, lineHeight: 1.5 }}>
+                                    <WarningOutlined style={{ marginTop: 2 }} />
+                                    <span>
+                                        Một số nhân sự chưa đủ tuyến quản lý. Hãy bổ sung hoặc điều chuyển người chấm/duyệt trước khi đến bước xử lý tương ứng.
+                                    </span>
+                                </div>
+                            )}
+
                             {/* Form gán nhân sự (nếu là Draft) */}
-                            {period?.status === "DRAFT" && (
+                            {!readOnly && period?.status === "DRAFT" && (
                                 <div style={{
                                     background: "#ffffff",
                                     border: "1px solid rgba(226, 232, 240, 0.8)",
@@ -883,14 +1159,15 @@ const PeriodDetailDrawer = (props: IProps) => {
 
                                     <Form form={employeeForm} layout="vertical" onFinish={handleAddEmployee}>
                                         {/* Bộ lọc phòng ban/công ty */}
-                                        <Row gutter={12} style={{ marginBottom: 12, background: "rgba(248, 250, 252, 0.5)", padding: "8px 12px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
-                                            <Col span={12}>
+                                        <Row gutter={[12, 12]} style={{ marginBottom: 12, background: "rgba(248, 250, 252, 0.5)", padding: "8px 12px", borderRadius: "8px", border: "1px solid #f1f5f9" }}>
+                                            <Col xs={24} sm={12}>
                                                 <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Bộ lọc Công ty</div>
                                                 <Select
                                                     allowClear
                                                     placeholder="Bộ lọc Công ty"
                                                     value={selectedCompanyId}
                                                     onChange={handleCompanyFilterChange}
+                                                    onFocus={() => { void loadAssignmentReferenceData(); }}
                                                     options={companies.map(c => ({ label: c.name, value: c.id }))}
                                                     styles={{ popup: { root: { borderRadius: 8 } } }}
                                                     size="small"
@@ -898,13 +1175,14 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                     disabled={!!period?.company?.id}
                                                 />
                                             </Col>
-                                            <Col span={12}>
+                                            <Col xs={24} sm={12}>
                                                 <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Bộ lọc Phòng ban</div>
                                                 <Select
                                                     allowClear
                                                     placeholder="Bộ lọc Phòng ban"
                                                     value={selectedDepartmentId}
                                                     onChange={setSelectedDepartmentId}
+                                                    onFocus={() => { void loadAssignmentReferenceData(); }}
                                                     disabled={!selectedCompanyId}
                                                     options={departments.map(d => ({ label: d.name, value: d.id }))}
                                                     styles={{ popup: { root: { borderRadius: 8 } } }}
@@ -914,32 +1192,24 @@ const PeriodDetailDrawer = (props: IProps) => {
                                             </Col>
                                         </Row>
 
-                                        <Row gutter={12} style={{ marginBottom: 12 }}>
-                                            <Col span={12}>
+                                        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+                                            <Col xs={24} sm={12}>
                                                 <Form.Item
-                                                    label={<span style={{ fontWeight: 600, color: "#475569", fontSize: "11.5px" }}>Nhân viên tham gia</span>}
+                                                    label={<span style={{ fontWeight: 600, color: "#475569", fontSize: "11.5px" }}>Nhân viên tham gia (chọn nhiều)</span>}
                                                     name="employeeId"
                                                     rules={[{ required: true, message: "Chọn nhân viên!" }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
+                                                        mode="multiple"
                                                         showSearch
                                                         placeholder="Tìm kiếm nhân viên..."
                                                         optionFilterProp="searchValue"
-                                                        onChange={handleEmployeeChange}
-                                                        options={filteredUsers.map(u => {
-                                                            const jobInfo = [u.jobTitle, u.positionLevel].filter(Boolean).join(" - ");
-                                                            const deptOrComp = [u.departmentName, u.companyName].filter(Boolean).join(" - ");
-                                                            const detail = [jobInfo, deptOrComp].filter(Boolean).join(" | ");
-                                                            const searchValue = `${u.name} ${detail}`;
-                                                            return { 
-                                                                label: u.name, 
-                                                                value: u.id, 
-                                                                searchValue,
-                                                                rawUser: u
-                                                            };
-                                                        })}
+                                                        maxTagCount="responsive"
+                                                        options={employeeOptions}
                                                         optionRender={(option) => renderUserOption(option.data.rawUser)}
+                                                        loading={loadingAssignmentReferenceData}
+                                                        onFocus={() => { void loadAssignmentReferenceData(); }}
                                                         popupMatchSelectWidth={false}
                                                         styles={{ popup: { root: { borderRadius: 8, minWidth: 350 } } }}
                                                         size="small"
@@ -948,30 +1218,21 @@ const PeriodDetailDrawer = (props: IProps) => {
                                                 </Form.Item>
                                             </Col>
 
-                                            <Col span={12}>
+                                            <Col xs={24} sm={12}>
                                                 <Form.Item
-                                                    label={<span style={{ fontWeight: 600, color: "#475569", fontSize: "11.5px" }}>Quản lý Trực tiếp</span>}
+                                                    label={<span style={{ fontWeight: 600, color: "#475569", fontSize: "11.5px" }}>Quản lý trực tiếp</span>}
                                                     name="directManagerId"
                                                     rules={[{ required: true, message: "Chọn quản lý trực tiếp!" }]}
                                                     style={{ marginBottom: 0 }}
                                                 >
                                                     <Select
                                                         showSearch
-                                                        placeholder="Tìm quản lý trực tiếp..."
+                                                        placeholder="Chọn quản lý có cấp phê duyệt..."
                                                         optionFilterProp="searchValue"
-                                                        options={filteredUsers.map(u => {
-                                                            const jobInfo = [u.jobTitle, u.positionLevel].filter(Boolean).join(" - ");
-                                                            const deptOrComp = [u.departmentName, u.companyName].filter(Boolean).join(" - ");
-                                                            const detail = [jobInfo, deptOrComp].filter(Boolean).join(" | ");
-                                                            const searchValue = `${u.name} ${detail}`;
-                                                            return { 
-                                                                label: u.name, 
-                                                                value: u.id, 
-                                                                searchValue,
-                                                                rawUser: u
-                                                            };
-                                                        })}
+                                                        options={directManagerOptions}
                                                         optionRender={(option) => renderUserOption(option.data.rawUser)}
+                                                        loading={loadingAssignmentReferenceData}
+                                                        onFocus={() => { void loadAssignmentReferenceData(); }}
                                                         popupMatchSelectWidth={false}
                                                         styles={{ popup: { root: { borderRadius: 8, minWidth: 350 } } }}
                                                         size="small"
@@ -1008,9 +1269,75 @@ const PeriodDetailDrawer = (props: IProps) => {
                                 </div>
                             )}
 
+                            {!readOnly && selectedRowKeys.length > 0 && (
+                                <div style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    padding: "8px 16px",
+                                    background: "#e6f4ff",
+                                    border: "1px solid #91caff",
+                                    borderRadius: "6px",
+                                    marginBottom: "12px",
+                                }}>
+                                    <span style={{ fontSize: 13, fontWeight: 550, color: "#0958d9" }}>
+                                        Đang chọn {selectedRowKeys.length} nhân sự
+                                    </span>
+                                    <div style={{ display: "flex", gap: "8px" }}>
+                                        <Access permission={ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE} hideChildren>
+                                            <Button
+                                                type="primary"
+                                                size="small"
+                                                icon={<CalendarOutlined />}
+                                                onClick={handleBulkExtend}
+                                                style={{ borderRadius: "4px" }}
+                                            >
+                                                Gia hạn hàng loạt
+                                            </Button>
+                                        </Access>
+                                        <Access permission={ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR} hideChildren>
+                                            <Button
+                                                type="primary"
+                                                size="small"
+                                                icon={<TeamOutlined />}
+                                                onClick={handleBulkReassign}
+                                                style={{ borderRadius: "4px", backgroundColor: "#722ed1", borderColor: "#722ed1" }}
+                                            >
+                                                Điều chuyển hàng loạt
+                                            </Button>
+                                        </Access>
+                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE} hideChildren>
+                                            <Popconfirm
+                                                title={`Bạn có chắc chắn muốn hủy gán ${selectedRowKeys.length} nhân viên đã chọn khỏi kỳ đánh giá?`}
+                                                onConfirm={handleBulkCancel}
+                                                okText="Đồng ý"
+                                                cancelText="Hủy"
+                                            >
+                                                <Button
+                                                    danger
+                                                    type="primary"
+                                                    size="small"
+                                                    icon={<DeleteOutlined />}
+                                                    style={{ borderRadius: "4px" }}
+                                                >
+                                                    Hủy gán hàng loạt
+                                                </Button>
+                                            </Popconfirm>
+                                        </Access>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Bảng danh sách nhân sự */}
                             <Table
-                                columns={employeeColumns}
+                                rowSelection={canManageEmployeeActions ? {
+                                    selectedRowKeys,
+                                    onChange: (newSelectedRowKeys: React.Key[]) => setSelectedRowKeys(newSelectedRowKeys),
+                                    getCheckboxProps: (record: any) => ({
+                                        disabled: !record.recordId || record.status !== "ACTIVE" || period?.status === "CLOSED",
+                                    }),
+                                } : undefined}
+                                columns={visibleEmployeeColumns}
                                 dataSource={employeesForSelectedTemplate}
                                 rowKey="id"
                                 loading={loadingEmployees}
@@ -1099,6 +1426,72 @@ const PeriodDetailDrawer = (props: IProps) => {
                     </Button>
                     <Button type="primary" htmlType="submit" loading={extending}>
                         Gia hạn
+                    </Button>
+                </div>
+            </Form>
+        </Modal>
+
+        <Modal
+            title={
+                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "15px" }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+                        Điều chuyển người chấm/duyệt đánh giá
+                    </span>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                        Đối tượng: <strong style={{ color: "#722ed1" }}>{selectedEmployeeForReassign?.employee?.name || selectedEmployeeForReassign?.employee?.username}</strong>
+                    </div>
+                </div>
+            }
+            open={reassignModalOpen}
+            onCancel={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); }}
+            footer={null}
+            destroyOnHidden
+            centered
+            width={450}
+        >
+            <Form form={reassignForm} layout="vertical" onFinish={handleReassignSubmit}>
+                <Form.Item
+                    name="evaluatorRole"
+                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Vai trò điều chuyển</span>}
+                    rules={[{ required: true, message: "Vui lòng chọn vai trò điều chuyển!" }]}
+                    initialValue="DIRECT_MANAGER"
+                >
+                    <Select options={[
+                        { label: "Quản lý trực tiếp (DIRECT_MANAGER)", value: "DIRECT_MANAGER" },
+                        { label: "Quản lý gián tiếp / Người duyệt (INDIRECT_MANAGER)", value: "INDIRECT_MANAGER" },
+                    ]} />
+                </Form.Item>
+
+                <Form.Item
+                    name="newEvaluatorUserId"
+                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Người chấm/duyệt mới</span>}
+                    rules={[{ required: true, message: "Vui lòng chọn người chấm/duyệt mới!" }]}
+                >
+                    <Select
+                        showSearch
+                        placeholder="Chọn tài khoản người chấm..."
+                        optionFilterProp="label"
+                        options={allUsers.map(u => ({
+                            label: `${u.name || u.username} (${u.email})`,
+                            value: String(u.id),
+                        }))}
+                    />
+                </Form.Item>
+
+                <Form.Item
+                    name="reason"
+                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Lý do điều chuyển</span>}
+                    style={{ marginBottom: 20 }}
+                >
+                    <Input.TextArea rows={3} placeholder="Nhập lý do điều chuyển..." />
+                </Form.Item>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                    <Button onClick={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); }}>
+                        Hủy
+                    </Button>
+                    <Button type="primary" htmlType="submit" loading={reassigning}>
+                        Điều chuyển
                     </Button>
                 </div>
             </Form>

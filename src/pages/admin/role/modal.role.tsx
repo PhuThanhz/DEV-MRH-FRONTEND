@@ -82,7 +82,7 @@ const ModalRole = (props: IProps) => {
                 modalProps={{
                     onCancel: handleReset,
                     afterClose: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     width: 1200, // Dynamic responsive width is handled gracefully by our CSS media queries!
                     keyboard: false,
                     maskClosable: false,

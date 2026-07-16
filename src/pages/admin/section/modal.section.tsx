@@ -187,7 +187,7 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
                 open={openModal}
                 modalProps={{ className: "section-form-modal", 
                     onCancel: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     maskClosable: false,
                     okText: isEdit ? "Cập nhật" : "Tạo mới",
                     cancelText: "Hủy",

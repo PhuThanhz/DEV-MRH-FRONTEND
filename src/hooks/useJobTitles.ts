@@ -20,9 +20,10 @@ const getErrorMessage = (err: any) => {
     );
 };
 
-export const useJobTitlesQuery = (query: string) => {
+export const useJobTitlesQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["job-titles", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchJobTitle(query);
             const backend = res as IBackendRes<IModelPaginate<IJobTitle>>;

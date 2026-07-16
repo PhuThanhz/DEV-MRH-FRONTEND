@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react';
+import type { ReactNode } from "react";
+import { Result } from "antd";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { useAppDispatch } from '@/redux/hooks';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
 import ProtectedRoute from 'components/share/protected-route.ts';
 import { fetchAccount, setLogoutAction } from './redux/slice/accountSlide';
@@ -61,6 +63,7 @@ const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/Eval
 const TemplatePage = lazy(() => import("@/pages/admin/evaluation/templates/TemplatePage"));
 const TemplateDetailPage = lazy(() => import("@/pages/admin/evaluation/templates/TemplateDetailPage"));
 const PeriodPage = lazy(() => import("@/pages/admin/evaluation/periods/PeriodPage"));
+const PeriodProgressDashboard = lazy(() => import("@/pages/evaluation/process/PeriodProgressDashboard"));
 const MyEvaluationPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationPage"));
 const MyEvaluationDetailPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationDetailPage"));
 const PendingManagerEvaluationPage = lazy(() => import("@/pages/evaluation/manager/PendingManagerEvaluationPage"));
@@ -69,6 +72,38 @@ const PendingApprovalPage = lazy(() => import("@/pages/evaluation/approval/Pendi
 const ApprovalDetailPage = lazy(() => import("@/pages/evaluation/approval/ApprovalDetailPage"));
 const CompletedEvaluationsPage = lazy(() => import("@/pages/evaluation/summary/CompletedEvaluationsPage"));
 const LookupPortalPage = lazy(() => import("@/pages/accounting/LookupPortalPage"));
+
+type PermissionDef = { method: string; apiPath: string; module: string };
+
+const canAccessAny = (grantedPermissions: PermissionDef[] | undefined, permissions: PermissionDef[], roleName: string) => {
+  if (import.meta.env.VITE_ACL_ENABLE === "false") return true;
+  if (roleName === "SUPER_ADMIN") return true;
+  if (!grantedPermissions?.length) return false;
+
+  return permissions.some(permission =>
+    grantedPermissions.some(item =>
+      item.apiPath === permission.apiPath &&
+      item.method?.toUpperCase() === permission.method?.toUpperCase() &&
+      item.module === permission.module
+    )
+  );
+};
+
+const AccessAny = ({ permissions, children }: { permissions: PermissionDef[]; children: ReactNode }) => {
+  const grantedPermissions = useAppSelector(state => state.account.user.role.permissions);
+  const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
+  const allow = canAccessAny(grantedPermissions, permissions, roleName);
+
+  return allow ? (
+    <>{children}</>
+  ) : (
+    <Result
+      status="403"
+      title="Truy cập bị từ chối"
+      subTitle="Xin lỗi, bạn không có quyền hạn (permission) truy cập thông tin này"
+    />
+  );
+};
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -433,7 +468,7 @@ export default function App() {
           path: PATHS.ADMIN.ACCOUNTING_DELEGATIONS,
           element: (
             <ProtectedRoute>
-              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE}>
+              <Access permission={ALL_PERMISSIONS.ACCOUNTING_DELEGATIONS.VIEW}>
                 <DelegationsPage />
               </Access>
             </ProtectedRoute>
@@ -500,12 +535,33 @@ export default function App() {
             </ProtectedRoute>
           ),
         },
+        {
+          path: PATHS.ADMIN.EVALUATION_PERIOD_PROGRESS,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS}>
+                <PeriodProgressDashboard />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+
         // ✅ EVALUATION — PROCESS (Gộp 3 tab)
         {
           path: "evaluation/process",
           element: (
             <ProtectedRoute>
-              <EvaluationProcessPage />
+              <AccessAny
+                permissions={[
+                  ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS,
+                  ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS,
+                  ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS,
+                  ALL_PERMISSIONS.EVALUATION.GET_MANAGER_HISTORY,
+                  ALL_PERMISSIONS.EVALUATION.GET_APPROVAL_HISTORY,
+                ]}
+              >
+                <EvaluationProcessPage />
+              </AccessAny>
             </ProtectedRoute>
           ),
         },
@@ -514,7 +570,9 @@ export default function App() {
           path: "evaluation/my-records",
           element: (
             <ProtectedRoute>
-              <MyEvaluationPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS}>
+                <MyEvaluationPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -522,7 +580,9 @@ export default function App() {
           path: "evaluation/my-records/:id",
           element: (
             <ProtectedRoute>
-              <MyEvaluationDetailPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_BY_ID}>
+                <MyEvaluationDetailPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -531,7 +591,9 @@ export default function App() {
           path: "evaluation/manager/pending",
           element: (
             <ProtectedRoute>
-              <PendingManagerEvaluationPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS}>
+                <PendingManagerEvaluationPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -539,7 +601,9 @@ export default function App() {
           path: "evaluation/manager/records/:id",
           element: (
             <ProtectedRoute>
-              <ManagerEvaluationDetailPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_BY_ID}>
+                <ManagerEvaluationDetailPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -548,7 +612,9 @@ export default function App() {
           path: "evaluation/approval/pending",
           element: (
             <ProtectedRoute>
-              <PendingApprovalPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS}>
+                <PendingApprovalPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -556,7 +622,9 @@ export default function App() {
           path: "evaluation/approval/records/:id",
           element: (
             <ProtectedRoute>
-              <ApprovalDetailPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_BY_ID}>
+                <ApprovalDetailPage />
+              </Access>
             </ProtectedRoute>
           ),
         },
@@ -565,7 +633,9 @@ export default function App() {
           path: "evaluation/summary",
           element: (
             <ProtectedRoute>
-              <CompletedEvaluationsPage />
+              <Access permission={ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY}>
+                <CompletedEvaluationsPage />
+              </Access>
             </ProtectedRoute>
           ),
         },

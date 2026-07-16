@@ -43,7 +43,7 @@ export default defineConfig({
           utils: ['axios', 'dayjs', 'lodash-es', 'query-string'],
           qr: ['html5-qrcode'],
           orgchart: ['dagre'],
-          websocket: ['sockjs-client', '@stomp/stompjs'],
+          websocket: ['@stomp/stompjs'],
         },
       },
     },

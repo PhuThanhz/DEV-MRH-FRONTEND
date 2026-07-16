@@ -49,7 +49,11 @@ const SectionPage = () => {
 
     const { data, isFetching, refetch } = useSectionsQuery(query);
 
-    const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
+    const meta = data?.meta ?? {
+        page: PAGINATION_CONFIG.DEFAULT_PAGE,
+        pageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+        total: 0,
+    };
     const sections = data?.result ?? [];
 
     // ===================== PERMISSION CHECKS =====================
@@ -321,6 +325,7 @@ const SectionPage = () => {
                     };
                 }}
                 pagination={{
+                    defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
                     current: meta.page,
                     pageSize: meta.pageSize,
                     total: meta.total,
@@ -349,7 +354,7 @@ const SectionPage = () => {
                     onCancel={() => setOpenJobTitle(false)}
                     footer={null}
                     width="80vw"
-                    destroyOnClose
+                    destroyOnHidden
                 >
                     <SectionJobTitleTab
                         sectionId={dataInit.id}

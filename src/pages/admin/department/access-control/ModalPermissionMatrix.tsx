@@ -102,7 +102,7 @@ const ModalPermissionMatrix = ({
             title={`Phân quyền${departmentName ? ` — ${departmentName}` : ""}`}
             width={getModalWidth(1300)}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             styles={{ body: MODAL_BODY_SCROLL }}
         >
             <div className="grid grid-cols-3 gap-4">

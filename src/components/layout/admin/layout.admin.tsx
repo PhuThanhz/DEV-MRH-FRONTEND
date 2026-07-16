@@ -6,13 +6,13 @@ import HeaderAdmin from "./header.admin";
 import { useAppSelector } from "@/redux/hooks";
 import NotPermitted from "@/components/share/not-permitted";
 import Loading from "@/components/common/loading/loading";
-import LotusCharmAssistant from "@/components/common/navigation/LotusCharmAssistant";
 import { NotificationProvider } from "@/hooks/useNotifications";
-import CommandPalette from "@/components/common/navigation/CommandPalette";
 import { useTrackRecentQuickAccess } from "@/hooks/useQuickAccess";
 import { LotusGuideProvider } from "@/components/common/guide/LotusGuideProvider";
 
 const QrScannerModal = lazy(() => import("@/components/common/qr/QrScannerModal"));
+const LotusCharmAssistant = lazy(() => import("@/components/common/navigation/LotusCharmAssistant"));
+const CommandPalette = lazy(() => import("@/components/common/navigation/CommandPalette"));
 
 const { Content } = Layout;
 
@@ -23,6 +23,7 @@ const LayoutAdmin = () => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [openScanner, setOpenScanner] = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
+    const [showAssistant, setShowAssistant] = useState(false);
     useTrackRecentQuickAccess();
 
     const { isAuthenticated, isLoading, user } = useAppSelector(
@@ -57,6 +58,23 @@ const LayoutAdmin = () => {
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
+    }, []);
+
+    useEffect(() => {
+        const loadAssistant = () => setShowAssistant(true);
+        const idleCallback = window.requestIdleCallback?.(loadAssistant, { timeout: 1500 });
+        const timeoutId = idleCallback === undefined
+            ? window.setTimeout(loadAssistant, 700)
+            : undefined;
+
+        return () => {
+            if (idleCallback !== undefined) {
+                window.cancelIdleCallback?.(idleCallback);
+            }
+            if (timeoutId !== undefined) {
+                window.clearTimeout(timeoutId);
+            }
+        };
     }, []);
 
     if (isLoading) return <Loading />;
@@ -122,9 +140,16 @@ const LayoutAdmin = () => {
                         </Suspense>
                     )}
 
-                    {/* Global Assistant Mascot */}
-                    <LotusCharmAssistant />
-                    <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
+                    {showAssistant && (
+                        <Suspense fallback={null}>
+                            <LotusCharmAssistant />
+                        </Suspense>
+                    )}
+                    {commandOpen && (
+                        <Suspense fallback={null}>
+                            <CommandPalette open onClose={() => setCommandOpen(false)} />
+                        </Suspense>
+                    )}
                 </Layout>
             </LotusGuideProvider>
         </NotificationProvider>

@@ -143,7 +143,7 @@ const ModalSelectEmployee: React.FC<IProps> = ({ open, onClose, isAdmin, onSelec
             onCancel={onClose}
             width={getModalWidth(1000)}
             footer={null}
-            destroyOnClose
+            destroyOnHidden
             style={{ top: 40 }}
             styles={{ body: MODAL_BODY_SCROLL }}
         >

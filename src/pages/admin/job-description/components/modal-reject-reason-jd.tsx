@@ -45,7 +45,7 @@ const ModalRejectReasonJd = ({ open, record, onClose }: Props) => {
                     <span>Lý do từ chối</span>
                 </Space>
             }
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" size="middle" style={{ width: "100%", padding: "4px 0 8px" }}>
 

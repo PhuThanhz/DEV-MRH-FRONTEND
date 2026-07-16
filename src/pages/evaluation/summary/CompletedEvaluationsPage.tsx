@@ -27,6 +27,8 @@ import {
     callFetchSectionsByDepartment
 } from "@/config/api";
 import PageContainer from "@/components/common/data-table/PageContainer";
+import Access from "@/components/share/access";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 import dayjs from "dayjs";
 import { Pie, Column } from "@/components/common/chart/LazyChart";
 
@@ -236,6 +238,10 @@ const CompletedEvaluationsPage = () => {
     const [filterGrade, setFilterGrade] = useState<string | undefined>();
     const [periodSearch, setPeriodSearch] = useState("");
 
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(15);
+    const [total, setTotal] = useState(0);
+
     const handleCompanyChange = (companyId?: number) => {
         setSelectedCompany(companyId);
         setSelectedPeriod(undefined);
@@ -322,9 +328,19 @@ const CompletedEvaluationsPage = () => {
     const fetchSummary = async () => {
         setLoading(true);
         try {
-            const res = await callFetchCompletedSummary(selectedPeriod, selectedDepartment, selectedCompany, selectedSection);
+            const res = await callFetchCompletedSummary(
+                selectedPeriod,
+                selectedDepartment,
+                selectedCompany,
+                selectedSection,
+                page,
+                pageSize,
+                searchText,
+                filterGrade
+            );
             if (res?.data) {
-                setRecords(res.data);
+                setRecords(res.data.result || []);
+                setTotal(res.data.meta?.total || 0);
             }
         } catch {
             notify.error("Lỗi tải báo cáo tổng hợp");
@@ -368,12 +384,20 @@ const CompletedEvaluationsPage = () => {
     }, [selectedCompany]);
 
     useEffect(() => {
+        setPage(1);
+    }, [selectedPeriod, selectedCompany, selectedDepartment, selectedSection, filterGrade, searchText]);
+
+    useEffect(() => {
         if (selectedPeriod) {
-            fetchSummary();
+            const timer = setTimeout(() => {
+                fetchSummary();
+            }, 300);
+            return () => clearTimeout(timer);
         } else {
             setRecords([]);
+            setTotal(0);
         }
-    }, [selectedPeriod, selectedCompany, selectedDepartment, selectedSection]);
+    }, [selectedPeriod, selectedCompany, selectedDepartment, selectedSection, page, pageSize, filterGrade, searchText]);
 
     useEffect(() => {
         if (selectedDepartment) {
@@ -393,15 +417,10 @@ const CompletedEvaluationsPage = () => {
         return empName.toLowerCase().includes(keyword) || empEmail.toLowerCase().includes(keyword);
     }, [searchText]);
 
-    // FILTER LOGIC
+    // FILTER LOGIC (Server-side)
     const filteredRecords = useMemo(() => {
-        return records.filter(r => {
-            const nameMatch = matchesSearch(r);
-            const statusMatch = !filterStatus || r.status === filterStatus;
-            const gradeMatch = !filterGrade || r.finalGrade === filterGrade;
-            return nameMatch && statusMatch && gradeMatch;
-        });
-    }, [records, matchesSearch, filterStatus, filterGrade]);
+        return records;
+    }, [records]);
 
     const statusChartRecords = useMemo(() => {
         return records.filter(r => matchesSearch(r) && (!filterGrade || r.finalGrade === filterGrade));
@@ -411,16 +430,21 @@ const CompletedEvaluationsPage = () => {
         return records.filter(r => matchesSearch(r) && (!filterStatus || r.status === filterStatus));
     }, [records, matchesSearch, filterStatus]);
 
-    // KPI CALCULATIONS
-    const totalRecordsCount = filteredRecords.length;
-    const completedRecordsCount = filteredRecords.filter(r => r.status === 'COMPLETED').length;
-    const completionRate = totalRecordsCount > 0 ? ((completedRecordsCount / totalRecordsCount) * 100).toFixed(1) : "0.0";
+    // KPI CALCULATIONS (Server-side compatible)
+    // Endpoint chỉ trả record đã COMPLETED nên total = số bản hoàn tất; hiển thị số đếm thay vì % giả (luôn 100%).
+    const completedRecordsCount = total;
 
-    const completedWithScores = filteredRecords.filter(r => r.status === 'COMPLETED' && r.finalGrade);
-    const totalScoreSum = completedWithScores.reduce((sum, r) => sum + (r.approverTotalScore ?? r.managerTotalScore ?? 0), 0);
+    const completedWithScores = useMemo(() => {
+        return records.filter(r => r.finalGrade);
+    }, [records]);
+    const totalScoreSum = useMemo(() => {
+        return completedWithScores.reduce((sum, r) => sum + (r.approverTotalScore ?? r.managerTotalScore ?? 0), 0);
+    }, [completedWithScores]);
     const averageScore = completedWithScores.length > 0 ? (totalScoreSum / completedWithScores.length).toFixed(2) : "0.00";
 
-    const excellentCount = completedWithScores.filter(r => r.finalGrade === 'A').length;
+    const excellentCount = useMemo(() => {
+        return completedWithScores.filter(r => r.finalGrade === 'A').length;
+    }, [completedWithScores]);
     const excellentRate = completedWithScores.length > 0 ? ((excellentCount / completedWithScores.length) * 100).toFixed(1) : "0.0";
 
     // CHARTS DATA
@@ -1009,6 +1033,7 @@ const CompletedEvaluationsPage = () => {
     ];
 
     return (
+        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY}>
         <PageContainer title="Tổng hợp Kết quả đánh giá">
             <style>{`
                 .my-eval-table .ant-table-thead > tr > th {
@@ -1185,8 +1210,8 @@ const CompletedEvaluationsPage = () => {
                     <Card className="kpi-card kpi-completion" variant="borderless" styles={{ body: { padding: "20px 24px" } }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div>
-                                <span className="kpi-title">Tỷ lệ hoàn thành</span>
-                                <span className="kpi-value">{completionRate}%</span>
+                                <span className="kpi-title">Số bản hoàn tất</span>
+                                <span className="kpi-value">{completedRecordsCount}</span>
                             </div>
                             <div className="kpi-icon-wrapper">
                                 <CheckSquareOutlined />
@@ -1244,15 +1269,17 @@ const CompletedEvaluationsPage = () => {
                         <FilterOutlined style={{ color: "#722ed1", fontSize: 16 }} />
                         <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>Bộ lọc dữ liệu</span>
                     </div>
-                    <Dropdown menu={{ items: exportMenuItems }} trigger={["click"]} disabled={!filteredRecords.length}>
-                        <Button
-                            type="primary"
-                            icon={<FileExcelOutlined />}
-                            style={{ borderRadius: 8, fontWeight: 600 }}
-                        >
-                            Xuất Excel <DownOutlined />
-                        </Button>
-                    </Dropdown>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY} hideChildren>
+                        <Dropdown menu={{ items: exportMenuItems }} trigger={["click"]} disabled={!filteredRecords.length}>
+                            <Button
+                                type="primary"
+                                icon={<FileExcelOutlined />}
+                                style={{ borderRadius: 8, fontWeight: 600 }}
+                            >
+                                Xuất Excel <DownOutlined />
+                            </Button>
+                        </Dropdown>
+                    </Access>
                 </div>
                 <Row gutter={[24, 16]}>
                     <Col xs={24} md={8} lg={6}>
@@ -1493,13 +1520,25 @@ const CompletedEvaluationsPage = () => {
                     dataSource={filteredRecords}
                     rowKey="id"
                     loading={loading}
-                    pagination={{ pageSize: 15, showTotal: (total) => `Tổng số ${total} bản ghi` }}
+                    pagination={{
+                        current: page,
+                        pageSize: pageSize,
+                        total: total,
+                        showSizeChanger: true,
+                        pageSizeOptions: ["15", "30", "50", "100"],
+                        onChange: (p, s) => {
+                            setPage(p);
+                            setPageSize(s);
+                        },
+                        showTotal: (total) => `Tổng số ${total} bản ghi`
+                    }}
                     scroll={{ x: "max-content" }}
                     size="middle"
                     locale={{ emptyText: <Empty description="Không tìm thấy kết quả phù hợp" /> }}
                 />
             </div>
         </PageContainer>
+        </Access>
     );
 };
 

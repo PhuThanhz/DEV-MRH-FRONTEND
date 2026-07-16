@@ -1,21 +1,27 @@
-import React, { useMemo, useCallback } from "react";
-import { Button, Modal, Image } from "antd";
+import { lazy, Suspense, useMemo, useCallback } from "react";
+import { Button, Modal, Image, Spin } from "antd";
 import { DownloadOutlined, LockOutlined } from "@ant-design/icons";
 import { QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
 
 // ❌ bỏ import Access — không dùng nữa
 
 import DataTable from "@/components/common/data-table";
-import ModalProcedure from "../../modal.procedure";
-import ModalRevise from "../modal.revise";
 import ViewProcedure from "../../view.procedure";
-import ModalShareToken from "../ModalShareToken";
-import ModalPrintQR from "../ModalPrintQR";
 
 import { useProcedureTable } from "./useProcedureTable";
 import { buildProcedureColumns } from "./procedureColumns";
 import ProcedureToolbar from "./ProcedureToolbar";
 import type { IProcedure, ProcedureType } from "@/types/backend";
+
+// Các modal này có form, bảng lịch sử hoặc QR; không nên nằm trong bundle trang danh sách.
+const loadModalProcedure = () => import("../../modal.procedure");
+const loadModalRevise = () => import("../modal.revise");
+const loadModalShareToken = () => import("../ModalShareToken");
+const loadModalPrintQR = () => import("../ModalPrintQR");
+const ModalProcedure = lazy(loadModalProcedure);
+const ModalRevise = lazy(loadModalRevise);
+const ModalShareToken = lazy(loadModalShareToken);
+const ModalPrintQR = lazy(loadModalPrintQR);
 
 interface IProps {
     type: ProcedureType;
@@ -87,6 +93,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 onSearch={ctx.setSearchValue}
                 onReset={ctx.handleReset}
                 onAddClick={() => { ctx.setDataInit(null); ctx.setOpenModal(true); }}
+                onAddPreload={loadModalProcedure}
                 onPrintClick={ctx.handlePrintButtonClick}
                 onExitPrintMode={ctx.handleExitPrintMode}
                 onFilterChange={(filters) => {
@@ -130,21 +137,29 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
             />
 
             {/* ── Modals ── */}
-            <ModalProcedure
-                defaultType={type}
-                open={ctx.openModal}
-                onClose={() => ctx.setOpenModal(false)}
-                dataInit={ctx.dataInit}
-                refetch={ctx.refetch}
-                {...(companyId ? { fixedCompanyId: companyId } : {})}
-            />
-            <ModalRevise
-                type={type}
-                open={ctx.openRevise}
-                onClose={() => ctx.setOpenRevise(false)}
-                dataInit={ctx.dataInit}
-                refetch={ctx.refetch}
-            />
+            {ctx.openModal && (
+                <Suspense fallback={null}>
+                    <ModalProcedure
+                        defaultType={type}
+                        open={ctx.openModal}
+                        onClose={() => ctx.setOpenModal(false)}
+                        dataInit={ctx.dataInit}
+                        refetch={ctx.refetch}
+                        {...(companyId ? { fixedCompanyId: companyId } : {})}
+                    />
+                </Suspense>
+            )}
+            {ctx.openRevise && (
+                <Suspense fallback={null}>
+                    <ModalRevise
+                        type={type}
+                        open={ctx.openRevise}
+                        onClose={() => ctx.setOpenRevise(false)}
+                        dataInit={ctx.dataInit}
+                        refetch={ctx.refetch}
+                    />
+                </Suspense>
+            )}
             <ViewProcedure
                 type={type}
                 open={ctx.openView}
@@ -286,20 +301,28 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 )}
             </Modal>
 
-            <ModalShareToken
-                open={ctx.openShareModal}
-                onClose={() => ctx.setOpenShareModal(false)}
-                procedure={ctx.selectedProcedure}
-                procedureType={type}
-            />
-            <ModalPrintQR
-                open={ctx.openPrintModal}
-                onClose={() => {
-                    ctx.setOpenPrintModal(false);
-                    ctx.handleExitPrintMode();
-                }}
-                procedures={ctx.selectedRows}
-            />
+            {ctx.openShareModal && (
+                <Suspense fallback={<Spin fullscreen />}>
+                    <ModalShareToken
+                        open={ctx.openShareModal}
+                        onClose={() => ctx.setOpenShareModal(false)}
+                        procedure={ctx.selectedProcedure}
+                        procedureType={type}
+                    />
+                </Suspense>
+            )}
+            {ctx.openPrintModal && (
+                <Suspense fallback={<Spin fullscreen />}>
+                    <ModalPrintQR
+                        open={ctx.openPrintModal}
+                        onClose={() => {
+                            ctx.setOpenPrintModal(false);
+                            ctx.handleExitPrintMode();
+                        }}
+                        procedures={ctx.selectedRows}
+                    />
+                </Suspense>
+            )}
         </>
     );
 };

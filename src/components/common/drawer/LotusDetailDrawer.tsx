@@ -49,7 +49,7 @@ const LotusDetailDrawer = ({
                 },
                 body: { padding: 0, overflow: "visible", height: "100%" },
             }}
-            destroyOnClose={destroyOnClose}
+            destroyOnHidden={destroyOnClose}
         >
             <div className="relative h-full">
                 <DrawerCloseButton

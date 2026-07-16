@@ -1945,6 +1945,44 @@ export interface IEvaluationPeriod {
     };
 }
 
+export interface IPeriodProgress {
+    kpiProgress: {
+        totalRecords: number;
+        draftingCount: number;
+        draftingPercentage: number;
+        pendingManagerCount: number;
+        pendingManagerPercentage: number;
+        pendingApprovalCount: number;
+        pendingApprovalPercentage: number;
+        completedCount: number;
+        completedPercentage: number;
+        cancelledCount: number;
+        cancelledPercentage: number;
+        overdueCount: number;
+        overduePercentage: number;
+    };
+    departmentProgress: {
+        departmentId: number;
+        departmentName: string;
+        totalRecords: number;
+        draftingCount: number;
+        pendingManagerCount: number;
+        pendingApprovalCount: number;
+        completedCount: number;
+        cancelledCount: number;
+        overdueCount: number;
+    }[];
+    overdueRecords: {
+        recordId: number;
+        employeeName: string;
+        employeeEmail: string;
+        status: string;
+        statusLabel: string;
+        overdueDays: number;
+        deadline: string;
+    }[];
+}
+
 export interface IEvaluationRecord {
     id?: number;
     periodId: number;
@@ -1973,6 +2011,19 @@ export interface IEvaluationRecord {
     effectiveManagerDeadline?: string;
     effectiveApprovalDeadline?: string;
     period?: IEvaluationPeriod;
+}
+
+export interface IEvaluationDelegation {
+    id?: number;
+    delegatorId: string;
+    delegateeId: string;
+    startDate: string;
+    endDate: string;
+    note?: string;
+    active: boolean;
+    createdBy?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface IResEmployeeInfo {
@@ -2345,6 +2396,7 @@ export interface IAccountingDossierApprovalStep {
     stepName?: string;
     approverType: string;
     approverUserId?: string;
+    eligibleApproverIds?: string;
     approverName?: string;
     status: string;
     note?: string;
@@ -2357,4 +2409,21 @@ export interface IAccountingDossierBulkActionResult {
     dossierId?: number;
     documentId?: number;
     message?: string;
+}
+
+export interface IEvaluationHistory {
+    id: number;
+    fromStatus: string;
+    toStatus: string;
+    performedBy?: IResEmployeeInfo;
+    performedAt: string;
+    note?: string;
+}
+
+export interface IBatchApproveResponse {
+    successIds: number[];
+    failedRecords: {
+        recordId: number;
+        reason: string;
+    }[];
 }

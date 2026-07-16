@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
+import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge, Dropdown } from "antd";
 import { notify } from "@/components/common/notification/notify";
 import {
     EditOutlined,
-    SettingOutlined,
     CheckCircleOutlined,
     PoweroffOutlined,
     ClockCircleOutlined,
@@ -11,8 +11,16 @@ import {
     SyncOutlined,
     StopOutlined,
     WarningOutlined,
+    BarChartOutlined,
+    MoreOutlined,
+    EyeOutlined,
+    SettingOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import useAccess from "@/hooks/useAccess";
+import { useAppSelector } from "@/redux/hooks";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
+import type { MenuProps } from "antd";
 import queryString from "query-string";
 import dayjs from "dayjs";
 
@@ -32,6 +40,7 @@ import {
 } from "@/config/api";
 import PeriodModal from "./PeriodModal";
 import PeriodDetailDrawer from "./PeriodDetailDrawer";
+import { fetchPeriodCompanyOptions, PERIOD_COMPANY_OPTIONS_QUERY_KEY } from "@/hooks/useEvaluationPeriodReferenceData";
 
 const getDiffString = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
     const diffMs = to.diff(from);
@@ -109,15 +118,17 @@ const PhaseStep = ({ phase, activePhase, status }: { phase: "employee" | "manage
     const phaseOrder = { employee: 0, manager: 1, approval: 2 };
     const activeOrder = { none: -1, employee: 0, manager: 1, approval: 2, all_closed: 3 };
 
-    const isDone = status === "CLOSED" || activeOrder[activePhase] > phaseOrder[phase];
+    // Đây là lịch của kỳ, không phải trạng thái hoàn thành của từng nhân viên.
+    // Không hiển thị dấu "đã xong" chỉ dựa theo mốc thời gian để tránh hiểu sai nghiệp vụ.
+    const isPast = status === "CLOSED" || activeOrder[activePhase] > phaseOrder[phase];
     const isActive = activePhase === phase;
-    const isUpcoming = !isDone && !isActive;
+    const isUpcoming = !isPast && !isActive;
 
     let dotColor = "#d9d9d9";
     let textColor = "#bfbfbf";
     let fontWeight: "400" | "600" = "400";
 
-    if (isDone) { dotColor = "#8c8c8c"; textColor = "#8c8c8c"; }
+    if (isPast) { dotColor = "#94a3b8"; textColor = "#64748b"; }
     if (isActive) { dotColor = cfg.color; textColor = cfg.color; fontWeight = "600"; }
     if (isUpcoming && status === "DRAFT") { dotColor = "#d9d9d9"; textColor = "#bfbfbf"; }
 
@@ -241,23 +252,14 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
 const StatusTag = ({ record }: { record: IEvaluationPeriod }) => {
     const info = getPhaseInfo(record);
     
-    if (info.isOverdue && record.status === "ACTIVE") {
-        return (
-            <Tag color="error" style={{ borderRadius: 20, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
-                <Badge color="#ff4d4f" style={{ marginRight: 4 }} />
-                Quá hạn
-            </Tag>
-        );
-    }
-
     const config: Record<string, { color: string; text: string; dot: string }> = {
         DRAFT: { color: "default", text: "Bản nháp", dot: "#8c8c8c" },
-        ACTIVE: { color: "success", text: "Đang diễn ra", dot: "#52c41a" },
-        CLOSED: { color: "error", text: "Đã kết thúc", dot: "#ff4d4f" },
+        ACTIVE: { color: "processing", text: "Đang mở", dot: "#1677ff" },
+        CLOSED: { color: "default", text: "Đã đóng", dot: "#8c8c8c" },
     };
     const cfg = config[record.status] ?? config.DRAFT;
     return (
-        <Tag color={cfg.color} style={{ borderRadius: 20, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
+        <Tag color={cfg.color} style={{ borderRadius: 4, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
             <Badge color={cfg.dot} style={{ marginRight: 4 }} />
             {cfg.text}
         </Tag>
@@ -265,10 +267,20 @@ const StatusTag = ({ record }: { record: IEvaluationPeriod }) => {
 };
 
 const PeriodPage = () => {
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const [openModal, setOpenModal] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
     const [dataInit, setDataInit] = useState<IEvaluationPeriod | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<IEvaluationPeriod | null>(null);
+    const [drawerReadOnly, setDrawerReadOnly] = useState(true);
+    const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
+    const canAddTemplate = useAccess(ALL_PERMISSIONS.EVALUATION.ADD_TEMPLATE_TO_PERIOD);
+    const canAddEmployee = useAccess(ALL_PERMISSIONS.EVALUATION.ADD_EMPLOYEE_TO_PERIOD);
+    const canExtendDeadline = useAccess(ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE);
+    const canReassignEvaluator = useAccess(ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR);
+    const canCancelEmployee = useAccess(ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE);
+    const canManagePeriod = roleName === "SUPER_ADMIN" || canAddTemplate || canAddEmployee || canExtendDeadline || canReassignEvaluator || canCancelEmployee;
 
     const [searchValue, setSearchValue] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -334,12 +346,14 @@ const PeriodPage = () => {
             dataIndex: "name",
             render: (val, record) => (
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    <Typography.Link
-                        style={{ fontWeight: 600, fontSize: 14, color: "#1677ff" }}
-                        onClick={() => { setSelectedPeriod(record); setOpenDrawer(true); }}
+                    <Button
+                        type="link"
+                        style={{ width: "fit-content", height: "auto", padding: 0, fontWeight: 650, fontSize: 14, color: "#1e293b", textAlign: "left" }}
+                        onClick={() => { setSelectedPeriod(record); setDrawerReadOnly(true); setOpenDrawer(true); }}
+                        aria-label={`Xem chi tiết kỳ đánh giá ${val}`}
                     >
                         {val}
-                    </Typography.Link>
+                    </Button>
                     {record.description && (
                         <span style={{
                             fontSize: 12, color: "#8c8c8c",
@@ -353,13 +367,16 @@ const PeriodPage = () => {
         },
         {
             title: "Công ty",
-            dataIndex: ["company", "name"],
+            key: "company",
             width: 150,
-            render: (text) => (
-                <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
-                    {text || "—"}
-                </Typography.Text>
-            ),
+            render: (_, record: any) => {
+                const compName = record?.company?.name || record?.companyName || (typeof record?.company === 'string' ? record.company : "");
+                return (
+                    <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+                        {compName || "Chưa gán công ty"}
+                    </Typography.Text>
+                );
+            },
         },
         {
             title: "Trạng thái",
@@ -382,30 +399,44 @@ const PeriodPage = () => {
             render: (_, entity) => {
                 const isDraft = entity.status === "DRAFT";
                 const isActive = entity.status === "ACTIVE";
+                const menuItems: NonNullable<MenuProps["items"]> = [
+                    isDraft && {
+                        key: "edit",
+                        label: (
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD} hideChildren>
+                                <span>Chỉnh sửa kỳ</span>
+                            </Access>
+                        ),
+                        icon: <EditOutlined />,
+                        onClick: () => { setDataInit(entity); setOpenModal(true); },
+                    },
+                ].filter(Boolean) as NonNullable<MenuProps["items"]>;
                 return (
-                    <Space size={12}>
+                    <Space size={4}>
                         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
-                            <Tooltip title="Cấu hình biểu mẫu & nhân sự">
+                            <Tooltip title="Xem chi tiết kỳ đánh giá">
                                 <Button
                                     type="text"
-                                    icon={<SettingOutlined style={{ fontSize: 16 }} />}
+                                    size="small"
+                                    icon={<EyeOutlined style={{ fontSize: 16 }} />}
                                     style={{ color: "#1677ff" }}
-                                    onClick={() => { setSelectedPeriod(entity); setOpenDrawer(true); }}
+                                    onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(true); setOpenDrawer(true); }}
+                                    aria-label={`Xem chi tiết kỳ đánh giá ${entity.name}`}
                                 />
                             </Tooltip>
                         </Access>
 
-                        {isDraft && (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD} hideChildren>
-                                <Tooltip title="Chỉnh sửa">
-                                    <Button
-                                        type="text"
-                                        icon={<EditOutlined style={{ fontSize: 16 }} />}
-                                        style={{ color: "#fa8c16" }}
-                                        onClick={() => { setDataInit(entity); setOpenModal(true); }}
-                                    />
-                                </Tooltip>
-                            </Access>
+                        {canManagePeriod && (
+                            <Tooltip title="Quản trị nhân sự trong kỳ">
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<SettingOutlined style={{ fontSize: 16 }} />}
+                                    style={{ color: "#722ed1" }}
+                                    onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(false); setOpenDrawer(true); }}
+                                    aria-label={`Quản trị kỳ đánh giá ${entity.name}`}
+                                />
+                            </Tooltip>
                         )}
 
                         {isDraft && entity.id && (
@@ -418,12 +449,8 @@ const PeriodPage = () => {
                                     cancelText="Hủy"
                                     okButtonProps={{ type: "primary" }}
                                 >
-                                    <Tooltip title="Kích hoạt">
-                                        <Button
-                                            type="text"
-                                            icon={<CheckCircleOutlined style={{ fontSize: 16 }} />}
-                                            style={{ color: "#389e0d" }}
-                                        />
+                                    <Tooltip title="Kích hoạt kỳ">
+                                        <Button type="text" size="small" icon={<CheckCircleOutlined style={{ fontSize: 16 }} />} style={{ color: "#389e0d" }} />
                                     </Tooltip>
                                 </Popconfirm>
                             </Access>
@@ -440,11 +467,7 @@ const PeriodPage = () => {
                                     okButtonProps={{ danger: true }}
                                 >
                                     <Tooltip title="Đóng kỳ đánh giá">
-                                        <Button
-                                            type="text"
-                                            icon={<PoweroffOutlined style={{ fontSize: 16 }} />}
-                                            style={{ color: "#cf1322" }}
-                                        />
+                                        <Button type="text" size="small" icon={<PoweroffOutlined style={{ fontSize: 16 }} />} style={{ color: "#cf1322" }} />
                                     </Tooltip>
                                 </Popconfirm>
                             </Access>
@@ -452,8 +475,31 @@ const PeriodPage = () => {
 
                         {entity.status === "CLOSED" && (
                             <Tooltip title="Kỳ đánh giá đã kết thúc">
-                                <Button type="text" icon={<StopOutlined style={{ fontSize: 16 }} />} style={{ color: "#bfbfbf" }} disabled />
+                                <Button type="text" size="small" icon={<StopOutlined style={{ fontSize: 16 }} />} style={{ color: "#bfbfbf" }} disabled />
                             </Tooltip>
+                        )}
+
+                        {entity.status !== "DRAFT" && entity.id && (
+                            <Tooltip title="Xem tiến độ kỳ đánh giá">
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<BarChartOutlined style={{ fontSize: 16 }} />}
+                                    style={{ color: "#13c2c2" }}
+                                    onClick={() => navigate(`/admin/evaluation/periods/${entity.id}/progress`)}
+                                />
+                            </Tooltip>
+                        )}
+
+                        {menuItems.length > 0 && (
+                            <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<MoreOutlined style={{ fontSize: 18 }} />}
+                                    aria-label={`Thao tác khác cho kỳ đánh giá ${entity.name}`}
+                                />
+                            </Dropdown>
                         )}
                     </Space>
                 );
@@ -470,29 +516,35 @@ const PeriodPage = () => {
                         searchPlaceholder="Tìm theo tên kỳ đánh giá..."
                         addLabel="Thêm kỳ mới"
                         showFilterButton={false}
+                        showResetButton
+                        searchValue={searchValue}
+                        activeFilterCount={statusFilter ? 1 : 0}
                         onSearch={(val) => setSearchValue(val)}
                         onReset={() => { setSearchValue(""); setStatusFilter(null); }}
                         onAddClick={() => { setDataInit(null); setOpenModal(true); }}
+                        onAddPreload={() => {
+                            void queryClient.prefetchQuery({
+                                queryKey: PERIOD_COMPANY_OPTIONS_QUERY_KEY,
+                                queryFn: fetchPeriodCompanyOptions,
+                                staleTime: 5 * 60 * 1000,
+                            });
+                        }}
                         addPermission={ALL_PERMISSIONS.EVALUATION.CREATE_PERIOD}
                     />
-                    <div className="flex flex-wrap gap-3 items-center">
-                        <AdvancedFilterSelect
-                            fields={[
-                                {
-                                    key: "status",
-                                    label: "Trạng thái",
-                                    options: [
-                                        { label: "Bản nháp", value: "DRAFT", color: "default" },
-                                        { label: "Đang diễn ra", value: "ACTIVE", color: "green" },
-                                        { label: "Đã kết thúc", value: "CLOSED", color: "red" },
-                                    ],
-                                },
-                            ]}
-                            onChange={(filters) => {
-                                setStatusFilter(filters.status !== undefined ? filters.status : null);
-                            }}
-                        />
-                    </div>
+                    <AdvancedFilterSelect
+                        fields={[
+                            {
+                                key: "status",
+                                label: "Trạng thái kỳ",
+                                options: [
+                                    { label: "Bản nháp", value: "DRAFT", color: "default" },
+                                    { label: "Đang mở", value: "ACTIVE", color: "processing" },
+                                    { label: "Đã đóng", value: "CLOSED", color: "default" },
+                                ],
+                            },
+                        ]}
+                        onChange={(filters) => setStatusFilter(filters.status !== undefined ? filters.status : null)}
+                    />
                 </div>
             }
         >
@@ -524,7 +576,7 @@ const PeriodPage = () => {
                         showQuickJumper: true,
                         showTotal: (total, range) => (
                             <span style={{ fontSize: 13 }}>
-                                <b>{range[0]}–{range[1]}</b> trên{" "}
+                                <b>{range[0]}-{range[1]}</b> trên{" "}
                                 <b style={{ color: "#1677ff" }}>{total.toLocaleString()}</b> kỳ đánh giá
                             </span>
                         ),
@@ -543,8 +595,9 @@ const PeriodPage = () => {
 
             <PeriodDetailDrawer
                 open={openDrawer}
-                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); tableRef.current?.reload(); }}
+                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); setDrawerReadOnly(true); tableRef.current?.reload(); }}
                 period={selectedPeriod}
+                readOnly={drawerReadOnly}
             />
         </PageContainer>
     );

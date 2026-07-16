@@ -46,6 +46,7 @@ import {
 } from "@/hooks/useDossierDocuments";
 import { useBulkCheckDossierDocumentsMutation } from "@/hooks/useAccountingDossiers";
 import { callFetchAccountingDocumentCategoryActive, callUploadSingleFile } from "@/config/api";
+import FileSection from "../../procedures/components/file-section.procedure";
 
 const { Text } = Typography;
 
@@ -137,6 +138,12 @@ const DossierDocumentList: React.FC<Props> = ({
     const [loadingCats, setLoadingCats] = useState(false);
 
     const { data: docs = [], isFetching } = useDossierDocumentsQuery(dossier.id);
+    const sortedDocs = useMemo(() => [...docs].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (dateA !== dateB) return dateB - dateA;
+        return Number(b.id || 0) - Number(a.id || 0);
+    }), [docs]);
     const addMutation = useAddDossierDocumentMutation();
     const updateMutation = useUpdateDossierDocumentMutation();
     const deleteMutation = useDeleteDossierDocumentMutation();
@@ -557,28 +564,25 @@ const DossierDocumentList: React.FC<Props> = ({
                 }
                 .accounting-dossier-doc-compact {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                    gap: 16px;
-                    padding: 4px 24px 24px;
+                    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+                    gap: 12px;
+                    padding: 4px 18px 18px;
                 }
                 .accounting-dossier-doc-card {
-                    border: 1px solid #f1f5f9;
-                    border-radius: 16px;
+                    border: 1px solid #e8edf4;
+                    border-radius: 10px;
                     background: #fff;
-                    padding: 16px;
+                    padding: 12px 14px;
                     min-width: 0;
-                    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02), 0 1px 2px rgba(15, 23, 42, 0.01);
-                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    align-self: start;
                 }
                 .accounting-dossier-doc-card:hover {
-                    border-color: rgba(245, 49, 127, 0.25);
-                    background: #fff;
-                    transform: translateY(-2px) scale(1.01);
-                    box-shadow: 0 12px 24px -10px rgba(245, 49, 127, 0.1), 0 4px 12px rgba(0, 0, 0, 0.02);
+                    border-color: #d7e1ee;
+                    background: #fcfdff;
                 }
                 .accounting-dossier-doc-card-title {
                     color: #0f172a;
-                    font-size: 15px;
+                    font-size: 14px;
                     font-weight: 800;
                     line-height: 1.35;
                     word-break: break-word;
@@ -586,16 +590,15 @@ const DossierDocumentList: React.FC<Props> = ({
                 }
                 .accounting-dossier-doc-meta {
                     display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                    margin-top: 12px;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 9px;
+                    font-size: 12px;
+                    color: #64748b;
                 }
                 .accounting-dossier-doc-file {
-                    margin-top: 12px;
-                    border-radius: 12px;
-                    background: #f8fafc;
-                    border: 1px solid #f1f5f9;
-                    padding: 10px 12px;
+                    margin-top: 8px;
+                    padding: 0;
                     min-width: 0;
                 }
             `}</style>
@@ -678,7 +681,7 @@ const DossierDocumentList: React.FC<Props> = ({
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có chứng từ con nào" />
                         </div>
                     ) : (
-                        docs.map((doc) => {
+                        sortedDocs.map((doc) => {
                             const status = CHECK_STATUS_MAP[doc.checkStatus as string] ?? { color: "default", label: doc.checkStatus || "Chờ kiểm tra" };
                             const fileUrls = splitFileUrls(doc.fileUrl);
                             return (
@@ -767,46 +770,27 @@ const DossierDocumentList: React.FC<Props> = ({
                                         </div>
                                     ) : (
                                         <div className="accounting-dossier-doc-meta">
-                                            <Tag style={{ margin: 0, borderRadius: 9999, fontWeight: 700, fontSize: 11, background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#475569", padding: "2px 10px" }}>
-                                                {DOCUMENT_TYPE_OPTIONS.find((item) => item.value === doc.documentType)?.label ?? doc.documentType ?? "Khác"}
-                                            </Tag>
-                                            <Tag color={status.color} style={{ margin: 0, borderRadius: 9999, fontWeight: 800, fontSize: 11, padding: "2px 10px" }}>
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: status.color === "success" ? "#389e0d" : status.color === "warning" ? "#d48806" : status.color === "error" ? "#cf1322" : "#64748b", fontWeight: 650 }}>
+                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: status.color === "success" ? "#52c41a" : status.color === "warning" ? "#faad14" : status.color === "error" ? "#ff4d4f" : "#94a3b8" }} />
                                                 {status.label}
-                                            </Tag>
-                                            {doc.createdBy ? (
-                                                <Tag style={{ margin: 0, borderRadius: 9999, fontWeight: 600, fontSize: 11, background: "#f8fafc", border: "1px solid #f1f5f9", color: "#64748b", padding: "2px 10px" }}>
-                                                    Tạo bởi {doc.createdBy}
-                                                </Tag>
-                                            ) : null}
+                                            </span>
+                                            {fileUrls.length > 1 && <span>· {fileUrls.length} tệp đính kèm</span>}
                                         </div>
                                     )}
 
                                     {(fileUrls.length > 0 || doc.externalLink || doc.checkNote) && (
                                         <div className="accounting-dossier-doc-file">
                                             <Space direction="vertical" size={6} style={{ width: "100%" }}>
-                                                {fileUrls.map((url) => (
-                                                    <div key={url} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                                                        <PaperClipOutlined style={{ color: "#db2777", fontSize: 13, flexShrink: 0 }} />
-                                                        <Text ellipsis={{ tooltip: url }} style={{ flex: 1, color: "#334155", fontSize: 12, fontWeight: 500 }}>
-                                                            {getFileDisplayName(url)}
-                                                        </Text>
-                                                        <Tooltip title="Xem file">
-                                                            <Button
-                                                                size="small"
-                                                                type="text"
-                                                                icon={<EyeOutlined style={{ color: "#db2777" }} />}
-                                                                onClick={() => window.open(buildDocumentFileUrl(url), "_blank")}
-                                                                style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                            />
-                                                        </Tooltip>
-                                                    </div>
-                                                ))}
+                                                {fileUrls.length > 0 && <FileSection fileNames={fileUrls} folder="documents" variant="compact" />}
                                                 {doc.externalLink ? (
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                                                         <FileTextOutlined style={{ color: "#64748b", fontSize: 13, flexShrink: 0 }} />
-                                                        <Text type="secondary" ellipsis={{ tooltip: doc.externalLink }} style={{ fontSize: 12 }}>
-                                                            {doc.externalLink}
+                                                        <Text type="secondary" ellipsis={{ tooltip: doc.externalLink }} style={{ flex: 1, fontSize: 12 }}>
+                                                            Liên kết đính kèm
                                                         </Text>
+                                                        <Button size="small" onClick={() => window.open(doc.externalLink, "_blank", "noopener,noreferrer")} style={{ borderRadius: 6, fontWeight: 600 }}>
+                                                            Mở liên kết
+                                                        </Button>
                                                     </div>
                                                 ) : null}
                                                 {doc.checkNote ? (
@@ -829,7 +813,7 @@ const DossierDocumentList: React.FC<Props> = ({
                     className="accounting-dossier-doc-table"
                     loading={isFetching}
                     columns={columns}
-                    dataSource={docs}
+                    dataSource={sortedDocs}
                     pagination={false}
                     tableLayout="fixed"
                     scroll={{ x: 920 }}
@@ -849,7 +833,7 @@ const DossierDocumentList: React.FC<Props> = ({
                 onCancel={() => setModalOpen(false)}
                 onOk={handleSubmitDocument}
                 confirmLoading={addMutation.isPending || updateMutation.isPending}
-                destroyOnClose
+                destroyOnHidden
                 width={560}
             >
                 <Form
@@ -1006,7 +990,7 @@ const DossierDocumentList: React.FC<Props> = ({
                 onCancel={() => setReviewModalOpen(false)}
                 onOk={handleSubmitReview}
                 confirmLoading={checkMutation.isPending}
-                destroyOnClose
+                destroyOnHidden
                 width={600}
             >
                 <Form form={reviewForm} layout="vertical" className="mt-4">

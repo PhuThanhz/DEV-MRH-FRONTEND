@@ -17,6 +17,7 @@ import {
     IdcardOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { Badge } from "antd";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 
 interface Permission {
@@ -25,7 +26,7 @@ interface Permission {
     module?: string;
 }
 
-export const generateMenuItems = (permissions: Permission[] | undefined, roleName: string = "") => {
+export const generateMenuItems = (permissions: Permission[] | undefined, roleName: string = "", totalTasksCount: number = 0) => {
     const ACL_ENABLE = import.meta.env.VITE_ACL_ENABLE;
     const isAclDisabled = ACL_ENABLE === "false" || roleName.toUpperCase() === "SUPER_ADMIN";
 
@@ -86,24 +87,23 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
 
     const hasKeToanGroup =
         checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE) ||
-        checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE);
+        checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.ACCOUNTING_WORKFLOWS.VIEW) ||
+        checkPermission(ALL_PERMISSIONS.ACCOUNTING_DELEGATIONS.VIEW) ||
+        checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_DASHBOARD_SUMMARY);
 
     const hasEvaluationGroup =
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS) ||
-        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_RECORDS);
-
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_RECORDS) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_HISTORY) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_APPROVAL_HISTORY);
 
     const full = [
-        // ===================== TRANG CHỦ =====================
-        // {
-        //     label: <Link to="/admin/overview">Trang chủ</Link>,
-        //     key: "/admin/overview",
-        //     icon: <IdcardOutlined />,
-        // },
-
         // ===================== TỔNG QUAN =====================
         ...(checkPermission(ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY)
             ? [
@@ -116,7 +116,6 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
             : []),
 
         // ===================== TỔ CHỨC =====================
-        // Nhóm con: Công ty & Cấu trúc tổ chức
         ...(checkPermission(ALL_PERMISSIONS.COMPANIES.GET_PAGINATE) ||
             checkPermission(ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE) ||
             checkPermission(ALL_PERMISSIONS.SECTIONS.GET_PAGINATE) ||
@@ -280,7 +279,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                                 },
                             ]
                             : []),
-                        ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE)
+                        ...(checkPermission(ALL_PERMISSIONS.ACCOUNTING_DELEGATIONS.VIEW)
                             ? [
                                 {
                                     label: <Link to="/admin/accounting-delegations">Ủy quyền phê duyệt</Link>,
@@ -310,7 +309,6 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
             : []),
 
         // ===================== ĐÁNH GIÁ HQCV =====================
-
         ...(hasEvaluationGroup
             ? [
                 {
@@ -337,10 +335,26 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                             : []),
 
                         // Quy trình thực hiện đánh giá (Gộp 3 tab)
-                        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS) || checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_RECORDS)
+                        ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_RECORDS) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_HISTORY) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_APPROVAL_HISTORY)
                             ? [
                                 {
-                                    label: <Link to="/admin/evaluation/process">Tiến trình đánh giá</Link>,
+                                    label: (
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                                            <Link to="/admin/evaluation/process" style={{ flex: 1 }}>Tiến trình đánh giá</Link>
+                                            {totalTasksCount > 0 && (
+                                                <Badge
+                                                    count={totalTasksCount}
+                                                    size="small"
+                                                    style={{ backgroundColor: "#ff4d4f" }}
+                                                />
+                                            )}
+                                        </div>
+                                    ),
                                     key: "/admin/evaluation/process",
                                 },
                             ]

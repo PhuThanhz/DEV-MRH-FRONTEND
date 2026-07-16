@@ -51,7 +51,7 @@ const ModalCreateDepartmentSalaryGrade = ({
                     onClose();
                     form.resetFields();
                 }}
-                destroyOnClose
+                destroyOnHidden
                 centered
                 footer={[
                     <AppButton

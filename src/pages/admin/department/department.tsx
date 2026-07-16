@@ -461,7 +461,7 @@ const DepartmentPage = () => {
                     onCancel={() => setOpenJobTitle(false)}
                     footer={null}
                     width="80vw"
-                    destroyOnClose
+                    destroyOnHidden
                 >
                     <DepartmentJobTitleTab
                         departmentId={dataInit.id}

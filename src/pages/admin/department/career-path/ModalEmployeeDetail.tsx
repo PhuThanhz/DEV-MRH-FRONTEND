@@ -187,7 +187,7 @@ const ModalEmployeeDetail = ({ open, onClose, dataInit }: IProps) => {
                 mask: { backdropFilter: "blur(4px)", background: "rgba(0,0,0,0.35)" },
             }}
             centered={!isMobile}
-            destroyOnClose
+            destroyOnHidden
         >
             {!dataInit ? null : (
                 <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>

@@ -1,15 +1,17 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb } from "antd";
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
     FileTextOutlined, TrophyOutlined, FileExcelOutlined,
 } from "@ant-design/icons";
+import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import useAccess from "@/hooks/useAccess";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
+import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
 import { Radar, Column } from "@/components/common/chart/LazyChart";
@@ -41,13 +43,152 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#be123c", bg: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", label: "Yếu" },
 };
 
-const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm`, value: v }));
+const SCORE_DESCRIPTIONS: Record<number, string> = {
+    1: "Yếu",
+    2: "Trung bình",
+    3: "Khá",
+    4: "Tốt",
+    5: "Xuất sắc"
+};
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm - ${SCORE_DESCRIPTIONS[v]}`, value: v }));
+
+const TRAINING_GROUP_OPTIONS = [
+    { label: "Kiến thức sản phẩm", value: "PRODUCT_KNOWLEDGE" },
+    { label: "Chuyên môn", value: "EXPERTISE" },
+    { label: "Kỹ năng", value: "SKILLS" },
+    { label: "Ngoại ngữ", value: "LANGUAGE" },
+];
 
 const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
 
 const getComment = (comments: any[], type: string) =>
     comments?.find(c => c.commentType === type)?.content ?? "";
+
+interface IManagerCriteriaRowProps {
+    c: any;
+    cIdx: number;
+    hasSub: boolean;
+    isEditable: boolean;
+    empScore: number | null;
+    avgEmp: number | null;
+    mgrScore: number | null;
+    avgMgr: number | null;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const ManagerCriteriaRow = React.memo(({
+    c, cIdx, hasSub, isEditable, empScore, avgEmp, mgrScore, avgMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: IManagerCriteriaRowProps) => {
+    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
+            <td style={{ ...tdB, color: "#111827" }}>
+                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
+                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
+            </td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
+            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                    {(c.weight * 100).toFixed(0)}%
+                </span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {hasSub ? (
+                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                ) : (
+                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                )}
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
+                ) : isEditable ? (
+                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        className={mgrScore == null ? "unfilled-select" : ""}
+                        value={mgrScore ?? undefined} loading={savingScore === c.id}
+                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {hasSub ? (
+                    avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                ) : (
+                    mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
+                )}
+            </td>
+        </tr>
+    );
+});
+
+interface IManagerSubCriteriaRowProps {
+    sub: any;
+    cIdx: number;
+    si: number;
+    isEditable: boolean;
+    subEmp: number | null;
+    subMgr: number | null;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const ManagerSubCriteriaRow = React.memo(({
+    sub, cIdx, si, isEditable, subEmp, subMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: IManagerSubCriteriaRowProps) => {
+    const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+            <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
+                <div style={{ fontWeight: 500 }}>{sub.name}</div>
+                {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
+            </td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
+            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
+            </td>
+            <td style={tdSc}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {isEditable ? (
+                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        className={subMgr == null ? "unfilled-select" : ""}
+                        value={subMgr ?? undefined} loading={savingScore === sub.id}
+                        onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                <span style={{ color: "#e5e7eb" }}>—</span>
+            </td>
+        </tr>
+    );
+});
 
 const ManagerEvaluationDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -62,10 +203,27 @@ const ManagerEvaluationDetailPage = () => {
     const [managerFeedback, setManagerFeedback] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
+    const [isDirty, setIsDirty] = useState(false);
+    const [isError, setIsError] = useState(false);
+    const [savingPlan, setSavingPlan] = useState(false);
+    const [planForm, setPlanForm] = useState<{ trainingGroup?: string; content: string; requirements: string; solution: string; completionTimeline: string }>({ content: "", requirements: "", solution: "", completionTimeline: "" });
+
+    const canScore = useAccess(ALL_PERMISSIONS.EVALUATION.MANAGER_SCORE);
+    const canFeedback = useAccess(ALL_PERMISSIONS.EVALUATION.MANAGER_FEEDBACK);
+    const canSubmit = useAccess(ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT);
+
+    useBlocker(() => {
+        if (isDirty) {
+            const confirmed = window.confirm("Bạn có nhận xét chưa lưu. Bạn có chắc muốn rời khỏi trang?");
+            return !confirmed;
+        }
+        return false;
+    });
 
     const fetchRecord = useCallback(async () => {
         if (!id || isNaN(Number(id))) return;
         setLoading(true);
+        setIsError(false);
         try {
             const [recRes, histRes] = await Promise.all([
                 callFetchEvaluationRecordById(Number(id)),
@@ -73,8 +231,8 @@ const ManagerEvaluationDetailPage = () => {
             ]);
             if (recRes?.data) {
                 setRecord(recRes.data);
-                const commentSelf = recRes.data.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
-                if (commentSelf) setManagerFeedback(commentSelf.content);
+                const commentManager = recRes.data.comments?.find((c: any) => c.commentType === "MANAGER_FEEDBACK");
+                if (commentManager) setManagerFeedback(commentManager.content);
                 const initScores: Record<number, number> = {};
                 recRes.data.scores?.forEach((s: any) => {
                     if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
@@ -82,8 +240,12 @@ const ManagerEvaluationDetailPage = () => {
                 setLocalScores(initScores);
             }
             if (histRes?.data) setHistory(histRes.data);
-        } catch { notify.error("Lỗi tải dữ liệu đánh giá"); }
-        finally { setLoading(false); }
+        } catch {
+            setIsError(true);
+            notify.error("Lỗi tải dữ liệu đánh giá");
+        } finally {
+            setLoading(false);
+        }
     }, [id]);
 
     useEffect(() => { fetchRecord(); }, [fetchRecord]);
@@ -91,11 +253,14 @@ const ManagerEvaluationDetailPage = () => {
     const handleSaveScore = async (criteriaId: number, score: number) => {
         if (!record?.id) return;
         setSavingScore(criteriaId);
+        const originalScore = localScores[criteriaId];
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
             await callManagerSaveScore(record.id, criteriaId, score);
+            notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
+            setLocalScores(prev => ({ ...prev, [criteriaId]: originalScore }));
         } finally { setSavingScore(null); }
     };
 
@@ -104,6 +269,7 @@ const ManagerEvaluationDetailPage = () => {
         setSavingComment(true);
         try {
             await callManagerSaveFeedback(record.id, managerFeedback);
+            setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
@@ -114,6 +280,9 @@ const ManagerEvaluationDetailPage = () => {
         if (!record?.id) return;
         setSubmitting(true);
         try {
+            // Flush nhận xét trước khi nộp (tránh mất dữ liệu âm thầm)
+            await callManagerSaveFeedback(record.id, managerFeedback);
+            setIsDirty(false);
             await callManagerSubmitRecord(record.id);
             notify.success("Đã nộp phê duyệt!");
             fetchRecord();
@@ -121,15 +290,49 @@ const ManagerEvaluationDetailPage = () => {
             notify.error(err?.response?.data?.message || "Lỗi nộp bản đánh giá");
         } finally { setSubmitting(false); }
     };
+
+    const handleSavePlan = async () => {
+        if (!record?.id) return;
+        if (!planForm.trainingGroup) { notify.warning("Vui lòng chọn nhóm đào tạo"); return; }
+        if (!planForm.content.trim()) { notify.warning("Vui lòng nhập nội dung đào tạo"); return; }
+        setSavingPlan(true);
+        try {
+            await callSaveTrainingPlan(record.id, {
+                trainingGroup: planForm.trainingGroup,
+                content: planForm.content.trim(),
+                requirements: planForm.requirements.trim() || undefined,
+                solution: planForm.solution.trim() || undefined,
+                completionTimeline: planForm.completionTimeline.trim() || undefined,
+            });
+            notify.success("Đã thêm kế hoạch đào tạo");
+            setPlanForm({ content: "", requirements: "", solution: "", completionTimeline: "" });
+            fetchRecord();
+        } catch (err: any) {
+            notify.error(err?.response?.data?.message || "Lỗi lưu kế hoạch đào tạo");
+        } finally { setSavingPlan(false); }
+    };
+
     const handleExportExcel = () => {
         if (record) {
             exportDetailedEvaluation(record);
         }
     };
 
+    const handlePrintPDF = () => {
+        if (record) {
+            printEvaluationDetail(record);
+        }
+    };
+
     if (loading) return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Spin size="large" />
+        </div>
+    );
+    if (isError) return (
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
+            <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
         </div>
     );
     if (!record) return (
@@ -339,6 +542,13 @@ const ManagerEvaluationDetailPage = () => {
                             >
                                 Xuất Excel
                             </Button>
+                            <Button
+                                icon={<FileTextOutlined />}
+                                onClick={handlePrintPDF}
+                                style={{ borderRadius: 6, color: "#1d4ed8", borderColor: "#60a5fa", background: "#eff6ff" }}
+                            >
+                                Xuất PDF
+                            </Button>
                         </div>
                         {/* Nhân viên đánh giá */}
                         {record.employeeTotalScore != null && (
@@ -376,6 +586,17 @@ const ManagerEvaluationDetailPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* 3.6: Cảnh báo chênh lệch điểm Nhân viên vs Quản lý > 1.0 */}
+            {record.employeeTotalScore != null && record.managerTotalScore != null && Math.abs(record.employeeTotalScore - record.managerTotalScore) > 1.0 && (
+                <Alert
+                    message="Cảnh báo chênh lệch điểm số"
+                    description="Điểm đánh giá của bạn đang chênh lệch lớn (> 1.0 điểm) so với tự đánh giá của nhân viên. Vui lòng cân nhắc xem xét kỹ hoặc ghi nhận xét giải thích."
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16, borderRadius: 12 }}
+                />
+            )}
 
             {/* ─── PROGRESS ─── */}
             {isEditable && (
@@ -555,93 +776,44 @@ const ManagerEvaluationDetailPage = () => {
                                     }
 
                                     rows.push(
-                                        <tr key={`c-${c.id}`} className="eval-row">
-                                            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-                                            <td style={{ ...tdB, color: "#111827" }}>
-                                                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
-                                                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
-                                            </td>
-                                            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-                                            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-                                            <td style={{ ...tdB, textAlign: "center" }}>
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                    {(c.weight * 100).toFixed(0)}%
-                                                </span>
-                                            </td>
-                                            <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                {hasSub ? (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
-                                                ) : (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
-                                                )}
-                                            </td>
-                                            <td style={tdSc}>
-                                                {hasSub ? (
-                                                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                ) : (
-                                                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                )}
-                                            </td>
-                                            <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                {hasSub ? (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
-                                                ) : isEditable ? (
-                                                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                        className={mgrScore == null ? "unfilled-select" : ""}
-                                                        value={mgrScore ?? undefined} loading={savingScore === c.id}
-                                                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
-                                                ) : (
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
-                                                )}
-                                            </td>
-                                            <td style={tdSc}>
-                                                {hasSub ? (
-                                                    avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                ) : (
-                                                    mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                                                )}
-                                            </td>
-                                        </tr>
+                                        <ManagerCriteriaRow
+                                            key={`c-${c.id}`}
+                                            c={c}
+                                            cIdx={cIdx}
+                                            hasSub={hasSub}
+                                            isEditable={isEditable && canScore}
+                                            empScore={empScore}
+                                            avgEmp={avgEmp}
+                                            mgrScore={mgrScore}
+                                            avgMgr={avgMgr}
+                                            savingScore={savingScore}
+                                            handleSaveScore={handleSaveScore}
+                                            tdB={tdB}
+                                            tdLvl={tdLvl}
+                                            tdSc={tdSc}
+                                        />
                                     );
 
                                     if (hasSub) {
                                         c.subCriteria?.forEach((sub: any, si: number) => {
                                             const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
                                             const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                                            const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                             rows.push(
-                                                <tr key={`sub-${sub.id}`} className="eval-row">
-                                                    <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-                                                    <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
-                                                        <div style={{ fontWeight: 500 }}>{sub.name}</div>
-                                                        {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
-                                                    </td>
-                                                    <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-                                                    {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-                                                    <td style={{ ...tdB, textAlign: "center" }}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>
-                                                    <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                        <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
-                                                    </td>
-                                                    <td style={tdSc}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>
-                                                    <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                        {isEditable ? (
-                                                            <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                                className={subMgr == null ? "unfilled-select" : ""}
-                                                                value={subMgr ?? undefined} loading={savingScore === sub.id}
-                                                                onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
-                                                        ) : (
-                                                            <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
-                                                        )}
-                                                    </td>
-                                                    <td style={tdSc}>
-                                                        <span style={{ color: "#e5e7eb" }}>—</span>
-                                                    </td>
-                                                </tr>
+                                                <ManagerSubCriteriaRow
+                                                    key={`sub-${sub.id}`}
+                                                    sub={sub}
+                                                    cIdx={cIdx}
+                                                    si={si}
+                                                    isEditable={isEditable && canScore}
+                                                    subEmp={subEmp}
+                                                    subMgr={subMgr}
+                                                    savingScore={savingScore}
+                                                    handleSaveScore={handleSaveScore}
+                                                    tdB={tdB}
+                                                    tdLvl={tdLvl}
+                                                    tdSc={tdSc}
+                                                />
                                             );
                                         });
                                     }
@@ -701,11 +873,19 @@ const ManagerEvaluationDetailPage = () => {
 
             {/* ─── NHẬN XÉT TỰ ĐÁNH GIÁ ─── */}
             <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét của nhân viên</div>
-                {isEditable ? (
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét tự đánh giá của nhân viên</div>
+                <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: getComment(record.comments, "SELF_REVIEW") ? "#111827" : "#9ca3af", fontStyle: getComment(record.comments, "SELF_REVIEW") ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
+                    {getComment(record.comments, "SELF_REVIEW") || "Nhân viên chưa viết nhận xét tự đánh giá."}
+                </div>
+            </div>
+
+            {/* ─── NHẬN XÉT CỦA QUẢN LÝ ─── */}
+            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét / Phản hồi của Quản lý</div>
+                {isEditable && canFeedback ? (
                     <div>
-                        <Input.TextArea rows={4} value={managerFeedback} onChange={e => setManagerFeedback(e.target.value)}
-                            placeholder="Chia sẻ thành tựu, khó khăn hoặc mong muốn của bạn trong kỳ làm việc vừa qua..."
+                        <Input.TextArea rows={4} value={managerFeedback} onChange={e => { setManagerFeedback(e.target.value); setIsDirty(true); }}
+                            placeholder="Nhập nhận xét, phản hồi về hiệu quả công việc của nhân viên..."
                             style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
                             <Button onClick={handleSaveFeedback} loading={savingComment}
@@ -716,39 +896,79 @@ const ManagerEvaluationDetailPage = () => {
                     </div>
                 ) : (
                     <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: managerFeedback ? "#111827" : "#9ca3af", fontStyle: managerFeedback ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {managerFeedback || "Chưa có nhận xét nào."}
+                        {managerFeedback || "Quản lý chưa viết nhận xét."}
                     </div>
                 )}
             </div>
 
-            {/* ─── NHẬN XÉT QUẢN LÝ ─── */}
-            {record.comments?.some((c: any) => c.commentType === "MANAGER_FEEDBACK") && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Phản hồi từ Quản lý</div>
-                    <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: "#111827", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {getComment(record.comments, "MANAGER_FEEDBACK")}
-                    </div>
-                </div>
-            )}
-
             {/* ─── KẾ HOẠCH ĐÀO TẠO ─── */}
-            {record.trainingPlans?.length > 0 && (
+            {(record.trainingPlans?.length > 0 || (isEditable && canFeedback)) && (
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Kế hoạch đào tạo & Phát triển</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-                        {record.trainingPlans.map((plan: any) => (
-                            <div key={plan.id} style={{ background: "#f9fafb", borderRadius: 10, padding: "16px", border: "1px solid #f3f4f6", borderLeft: "3px solid #f43f5e" }}>
-                                <div style={{ fontWeight: 700, color: "#111827", fontSize: 14, marginBottom: 8 }}>{plan.content}</div>
-                                {plan.requirements && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Mục tiêu:</strong> {plan.requirements}</div>}
-                                {plan.solution && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Giải pháp:</strong> {plan.solution}</div>}
-                                {plan.completionTimeline && (
-                                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, background: "#f3f4f6", borderRadius: 5, padding: "3px 10px", fontSize: 12, fontWeight: 600, color: "#111827" }}>
-                                        <ClockCircleOutlined /> {plan.completionTimeline}
-                                    </div>
-                                )}
+                    {record.trainingPlans?.length > 0 && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: (isEditable && canFeedback) ? 16 : 0 }}>
+                            {record.trainingPlans.map((plan: any) => (
+                                <div key={plan.id} style={{ background: "#f9fafb", borderRadius: 10, padding: "16px", border: "1px solid #f3f4f6", borderLeft: "3px solid #f43f5e" }}>
+                                    <div style={{ fontWeight: 700, color: "#111827", fontSize: 14, marginBottom: 8 }}>{plan.content}</div>
+                                    {plan.requirements && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Mục tiêu:</strong> {plan.requirements}</div>}
+                                    {plan.solution && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Giải pháp:</strong> {plan.solution}</div>}
+                                    {plan.completionTimeline && (
+                                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, background: "#f3f4f6", borderRadius: 5, padding: "3px 10px", fontSize: 12, fontWeight: 600, color: "#111827" }}>
+                                            <ClockCircleOutlined /> {plan.completionTimeline}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {isEditable && canFeedback && (
+                        <div style={{ background: "#fafafa", borderRadius: 10, padding: "16px", border: "1px dashed #d9d9d9" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 12 }}>Thêm kế hoạch đào tạo</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
+                                <Select
+                                    placeholder="Nhóm đào tạo"
+                                    value={planForm.trainingGroup}
+                                    onChange={(val) => setPlanForm(prev => ({ ...prev, trainingGroup: val }))}
+                                    options={TRAINING_GROUP_OPTIONS}
+                                    style={{ width: "100%" }}
+                                />
+                                <Input
+                                    placeholder="Thời hạn hoàn thành (VD: Quý 3/2026)"
+                                    value={planForm.completionTimeline}
+                                    onChange={(e) => setPlanForm(prev => ({ ...prev, completionTimeline: e.target.value }))}
+                                />
                             </div>
-                        ))}
-                    </div>
+                            <Input
+                                placeholder="Nội dung đào tạo *"
+                                value={planForm.content}
+                                onChange={(e) => setPlanForm(prev => ({ ...prev, content: e.target.value }))}
+                                style={{ marginBottom: 12 }}
+                            />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
+                                <Input.TextArea
+                                    rows={2}
+                                    placeholder="Mục tiêu / Yêu cầu"
+                                    value={planForm.requirements}
+                                    onChange={(e) => setPlanForm(prev => ({ ...prev, requirements: e.target.value }))}
+                                    style={{ resize: "none" }}
+                                />
+                                <Input.TextArea
+                                    rows={2}
+                                    placeholder="Giải pháp"
+                                    value={planForm.solution}
+                                    onChange={(e) => setPlanForm(prev => ({ ...prev, solution: e.target.value }))}
+                                    style={{ resize: "none" }}
+                                />
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                                <Button type="primary" onClick={handleSavePlan} loading={savingPlan}
+                                    disabled={!planForm.trainingGroup || !planForm.content.trim()}
+                                    style={{ borderRadius: 8, fontWeight: 600 }}>
+                                    Thêm kế hoạch
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -781,24 +1001,26 @@ const ManagerEvaluationDetailPage = () => {
                         </div>
                     </div>
                     <div style={{ width: 1, height: 28, background: "#e5e7eb" }} />
-                    <Popconfirm
-                        title="Xác nhận nộp đánh giá?"
-                        description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
-                        onConfirm={progressPct === 100 ? handleSubmit : undefined}
-                        okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
-                        cancelText="Hủy"
-                        okButtonProps={{ disabled: progressPct < 100 }}
-                    >
-                        <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
-                            style={{
-                                borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
-                                background: progressPct === 100 ? "#f43f5e" : undefined,
-                                border: "none",
-                                boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
-                            }}>
-                            Nộp bản đánh giá
-                        </Button>
-                    </Popconfirm>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT} hideChildren>
+                        <Popconfirm
+                            title="Xác nhận nộp đánh giá?"
+                            description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
+                            onConfirm={progressPct === 100 ? handleSubmit : undefined}
+                            okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
+                            cancelText="Hủy"
+                            okButtonProps={{ disabled: progressPct < 100 }}
+                        >
+                            <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
+                                style={{
+                                    borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
+                                    background: progressPct === 100 ? "#f43f5e" : undefined,
+                                    border: "none",
+                                    boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
+                                }}>
+                                Nộp bản đánh giá
+                            </Button>
+                        </Popconfirm>
+                    </Access>
                 </div>
             )}
 

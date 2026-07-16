@@ -33,10 +33,7 @@ const DrawerSalaryGradePerformanceRating = ({
     }, [open, form]);
 
     const handleSubmit = (values: any) => {
-        console.log("SUBMIT PERFORMANCE RATING:", {
-            salaryGradeId,
-            ...values,
-        });
+
         onClose();
     };
 
@@ -46,7 +43,7 @@ const DrawerSalaryGradePerformanceRating = ({
             open={open}
             onClose={onClose}
             width="60vw"
-            destroyOnClose
+            destroyOnHidden
             footer={
                 <div style={{ textAlign: "right" }}>
                     <Button onClick={onClose}>Hủy</Button>

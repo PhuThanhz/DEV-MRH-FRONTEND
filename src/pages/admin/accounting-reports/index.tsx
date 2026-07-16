@@ -4,7 +4,7 @@ import StorageDashboard from "../accounting-dossiers/components/StorageDashboard
 
 const AccountingReportsPage: React.FC = () => {
     return (
-        <PageContainer title="Báo cáo & Thống kê">
+        <PageContainer title="Tổng quan chứng từ kế toán" contentClassName="px-4 sm:px-8 py-5">
             <StorageDashboard />
         </PageContainer>
     );

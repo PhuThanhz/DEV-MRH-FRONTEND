@@ -207,7 +207,7 @@ const DrawerAssignCompanyJobTitle = ({
                 title="Gán chức danh vào công ty"
                 open={open}
                 onClose={onClose}
-                width={getModalWidth(750)} destroyOnClose
+                width={getModalWidth(750)} destroyOnHidden
                 footer={
                     <div style={{ textAlign: "right" }}>
                         <Button onClick={onClose} disabled={assigning}>

@@ -27,6 +27,7 @@ const DataTable = <
     dateFormatter = "string",
     rowSelection,
     onChange,
+    sticky = { offsetHeader: 48 },
 }: ProTableProps<T, U, ValueType>) => {
     return (
         <ConfigProvider locale={vi_VN}>
@@ -55,7 +56,7 @@ const DataTable = <
                     rowSelection={rowSelection}
                     onChange={onChange}
                     tableLayout="auto"
-                    sticky={{ offsetHeader: 48 }} // giảm cho mobile
+                    sticky={sticky}
                     options={false}
                     size="small" // ✅ bảng gọn hơn → nhìn rộng hơn
                     style={{ width: "100%" }} // ✅ full width

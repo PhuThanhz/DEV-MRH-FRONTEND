@@ -914,7 +914,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     )}
                 </div>
             }
-            destroyOnClose
+            destroyOnHidden
         >
             {isEdit && loadingFullJd ? (
                 <div style={{

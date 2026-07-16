@@ -3,11 +3,13 @@ import type { UnifiedNotification } from "@/hooks/useNotifications";
 import { ALL_PERMISSIONS } from "./permissions";
 
 export const DOCUMENT_NOTIFICATION_MODULES = ["DOCUMENT", "DOCUMENTS", "ACCOUNTING_DOCUMENTS"];
+export const ACCOUNTING_DOSSIER_NOTIFICATION_MODULES = ["ACCOUNTING_DOSSIERS"];
 export const PROCEDURE_NOTIFICATION_MODULES = ["COMPANY_PROCEDURES", "CONFIDENTIAL_PROCEDURES"];
 export const KNOWN_NOTIFICATION_MODULES = [
     "JD_FLOW",
     "EVALUATION",
     "CAREER_PATHS",
+    ...ACCOUNTING_DOSSIER_NOTIFICATION_MODULES,
     ...PROCEDURE_NOTIFICATION_MODULES,
     ...DOCUMENT_NOTIFICATION_MODULES,
 ];
@@ -56,6 +58,22 @@ export const PENDING_ACTION_MODULES: NotificationModuleConfig[] = [
         requiredPermission: ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS,
         moduleKey: "EVALUATION",
         filterUnread: (items) => items.filter(i => !i.isRead && i.module === "EVALUATION").length
+    },
+    {
+        id: "accounting_dossiers",
+        label: "Duyệt chứng từ",
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l2 2 4-4" />
+                <path d="M20 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8l6 6" />
+                <path d="M14 4v6h6" />
+            </svg>
+        ),
+        color: "amber",
+        link: "/admin/accounting-dossiers?viewMode=PENDING_ME",
+        requiredPermission: ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_PAGINATE,
+        moduleKey: "ACCOUNTING_DOSSIERS",
+        filterUnread: (items) => items.filter(i => !i.isRead && ACCOUNTING_DOSSIER_NOTIFICATION_MODULES.includes(i.module || "")).length
     },
     {
         id: "procedures",

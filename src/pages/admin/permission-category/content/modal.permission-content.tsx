@@ -68,7 +68,7 @@ const ModalPermissionContent = ({
             confirmLoading={
                 createMutation.isPending || updateMutation.isPending
             }
-            destroyOnClose
+            destroyOnHidden
         >
             <Form form={form} layout="vertical">
                 <Form.Item

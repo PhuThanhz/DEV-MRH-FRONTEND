@@ -110,7 +110,7 @@ const ViewCareerPath = ({ open, onClose, dataInit, setDataInit }: IProps) => {
                 body: { padding: 0, borderRadius: 12, overflow: "hidden" },
                 content: { padding: 0, borderRadius: 12, overflow: "hidden" }
             }}
-            destroyOnClose
+            destroyOnHidden
         >
             {dataInit ? (
                 <div style={{ fontFamily: "'Outfit','Inter','Segoe UI',sans-serif", background: "#f5f6fa" }}>

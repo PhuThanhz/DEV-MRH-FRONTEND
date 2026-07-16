@@ -236,9 +236,10 @@ export const useProceduresByCompanyQuery = (
 };
 
 /* ===================== FETCH COMPANY WITH FILTER ===================== */
-export const useCompanyProceduresWithFilterQuery = (query: string) => {
+export const useCompanyProceduresWithFilterQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["procedures-company-filter", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchCompanyProceduresWithFilter(query);
             if (!res?.data) throw new Error("Không thể lấy danh sách quy trình công ty");
@@ -248,9 +249,10 @@ export const useCompanyProceduresWithFilterQuery = (query: string) => {
 };
 
 /* ===================== FETCH DEPARTMENT WITH FILTER ===================== */
-export const useDepartmentProceduresWithFilterQuery = (query: string) => {
+export const useDepartmentProceduresWithFilterQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["procedures-department-filter", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchDepartmentProceduresWithFilter(query);
             if (!res?.data) throw new Error("Không thể lấy danh sách quy trình phòng ban");
@@ -260,9 +262,10 @@ export const useDepartmentProceduresWithFilterQuery = (query: string) => {
 };
 
 /* ===================== FETCH CONFIDENTIAL WITH FILTER ===================== */
-export const useConfidentialProceduresWithFilterQuery = (query: string) => {
+export const useConfidentialProceduresWithFilterQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["procedures-confidential-filter", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchConfidentialProceduresWithFilter(query);
             if (!res?.data) throw new Error("Không thể lấy danh sách quy trình bảo mật");

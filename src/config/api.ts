@@ -38,7 +38,19 @@ import type { IResNotificationDTO,
     IDocumentAudit,
     IUserAdminScope,
     IReqUpsertUserAdminScopes,
-    IDepartmentMissionSummary
+    IDepartmentMissionSummary,
+    IEvaluationPeriod,
+    IPeriodProgress,
+    IEvaluationTemplate,
+    ITemplateSection,
+    ITemplateCriteria,
+    ITemplateCriteriaLevel,
+    IEvaluationRecord,
+    IResScoreDTO,
+    IResCommentDTO,
+    IResTrainingPlanDTO,
+    IEvaluationHistory,
+    IBatchApproveResponse
 } from '@/types/backend';
 
 import axios from 'config/axios-customize';
@@ -1988,8 +2000,8 @@ export const callFetchAccountingDossierCategoryActive = () =>
 export const callCreateAccountingDossierCategory = (data: IAccountingDossierCategoryRequest) =>
     axios.post<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories`, data);
 
-export const callApproveAccountingDossier = (id: number, note?: string) =>
-    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/approve`, { note });
+export const callApproveAccountingDossier = (id: number, note?: string, nextApproverUserId?: string) =>
+    axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/approve`, { note, nextApproverUserId });
 
 export const callRejectAccountingDossier = (id: number, note: string) =>
     axios.post<IBackendRes<IAccountingDossier>>(`/api/v1/accounting-dossiers/${id}/reject`, { note });
@@ -2011,6 +2023,9 @@ export const callRefreshExpiredAccountingDossierStorage = () =>
 
 export const callFetchAccountingDossierStorageSummary = (companyId?: number) =>
     axios.get<IBackendRes<IAccountingDossierStorageSummary>>(`/api/v1/accounting-dossiers/dashboard/summary${companyId ? `?companyId=${companyId}` : ""}`);
+
+export const callFetchAccountingDossierDashboardMetrics = (companyId?: number) =>
+    axios.get<IBackendRes<any>>(`/api/v1/accounting-dossiers/dashboard/metrics${companyId ? `?companyId=${companyId}` : ""}`);
 
 export const callFetchAccountingDossierPendingByRole = (companyId?: number) =>
     axios.get<IBackendRes<IAccountingDossierReportRow[]>>(`/api/v1/accounting-dossiers/dashboard/pending-by-role${companyId ? `?companyId=${companyId}` : ""}`);
@@ -2043,6 +2058,9 @@ export const callBulkCheckDossierDocuments = (dossierId: number, documentIds: nu
 
 export const callUpdateAccountingDossierCategory = (id: number, data: IAccountingDossierCategoryRequest) =>
     axios.put<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories/${id}`, data);
+
+export const callDeleteAccountingDossierCategory = (id: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/accounting-dossiers/categories/${id}`);
 
 export const callToggleAccountingDossierCategoryActive = (id: number, active: boolean) =>
     axios.put<IBackendRes<IAccountingDossierCategory>>(`/api/v1/accounting-dossiers/categories/${id}/active`, { active });
@@ -2288,71 +2306,74 @@ export const callFetchFolderDocuments = (folderId: number) => {
 
 // TEMPLATES
 export const callFetchEvaluationTemplates = (query: string) =>
-    axios.get<IBackendRes<IModelPaginate<any>>>(`/api/v1/evaluation/templates?${query}`);
+    axios.get<IBackendRes<IModelPaginate<IEvaluationTemplate>>>(`/api/v1/evaluation/templates?${query}`);
 
 export const callFetchActiveEvaluationTemplates = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/templates/active`);
+    axios.get<IBackendRes<IEvaluationTemplate[]>>(`/api/v1/evaluation/templates/active`);
 
 export const callFetchEvaluationTemplateById = (id: number) =>
-    axios.get<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}`);
+    axios.get<IBackendRes<IEvaluationTemplate>>(`/api/v1/evaluation/templates/${id}`);
 
 export const callCreateEvaluationTemplate = (data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/templates`, data);
+    axios.post<IBackendRes<IEvaluationTemplate>>(`/api/v1/evaluation/templates`, data);
 
 export const callUpdateEvaluationTemplate = (id: number, data: any) =>
-    axios.put<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}`, data);
+    axios.put<IBackendRes<IEvaluationTemplate>>(`/api/v1/evaluation/templates/${id}`, data);
 
 export const callPublishEvaluationTemplate = (id: number) =>
-    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}/publish`);
+    axios.patch<IBackendRes<IEvaluationTemplate>>(`/api/v1/evaluation/templates/${id}/publish`);
 
 export const callArchiveEvaluationTemplate = (id: number) =>
-    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/templates/${id}/archive`);
+    axios.patch<IBackendRes<IEvaluationTemplate>>(`/api/v1/evaluation/templates/${id}/archive`);
+
+export const callDeleteEvaluationTemplate = (id: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/evaluation/templates/${id}`);
 
 // SECTIONS
 export const callCreateTemplateSection = (templateId: number, data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/templates/${templateId}/sections`, data);
+    axios.post<IBackendRes<ITemplateSection>>(`/api/v1/evaluation/templates/${templateId}/sections`, data);
 
 export const callUpdateTemplateSection = (sectionId: number, data: any) =>
-    axios.put<IBackendRes<any>>(`/api/v1/evaluation/sections/${sectionId}`, data);
+    axios.put<IBackendRes<ITemplateSection>>(`/api/v1/evaluation/sections/${sectionId}`, data);
 
 export const callDeleteTemplateSection = (sectionId: number) =>
     axios.delete<IBackendRes<void>>(`/api/v1/evaluation/sections/${sectionId}`);
 
 export const callFetchTemplateSections = (templateId: number) =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/templates/${templateId}/sections`);
+    axios.get<IBackendRes<ITemplateSection[]>>(`/api/v1/evaluation/templates/${templateId}/sections`);
 
 // CRITERIA
 export const callCreateTemplateCriteria = (sectionId: number, data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/sections/${sectionId}/criteria`, data);
+    axios.post<IBackendRes<ITemplateCriteria>>(`/api/v1/evaluation/sections/${sectionId}/criteria`, data);
 
 export const callUpdateTemplateCriteria = (criteriaId: number, data: any) =>
-    axios.put<IBackendRes<any>>(`/api/v1/evaluation/criteria/${criteriaId}`, data);
+    axios.put<IBackendRes<ITemplateCriteria>>(`/api/v1/evaluation/criteria/${criteriaId}`, data);
 
 export const callDeleteTemplateCriteria = (criteriaId: number) =>
     axios.delete<IBackendRes<void>>(`/api/v1/evaluation/criteria/${criteriaId}`);
 
 // LEVELS
 export const callCreateCriteriaLevel = (criteriaId: number, data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`, data);
+    axios.post<IBackendRes<ITemplateCriteriaLevel>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`, data);
 
 export const callUpdateCriteriaLevel = (levelId: number, data: any) =>
-    axios.put<IBackendRes<any>>(`/api/v1/evaluation/levels/${levelId}`, data);
+    axios.put<IBackendRes<ITemplateCriteriaLevel>>(`/api/v1/evaluation/levels/${levelId}`, data);
 
 export const callFetchCriteriaLevels = (criteriaId: number) =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`);
+    axios.get<IBackendRes<ITemplateCriteriaLevel[]>>(`/api/v1/evaluation/criteria/${criteriaId}/levels`);
 
 // PERIODS
 export const callFetchEvaluationPeriods = (query: string) =>
-    axios.get<IBackendRes<IModelPaginate<any>>>(`/api/v1/evaluation/periods?${query}`);
+    axios.get<IBackendRes<IModelPaginate<IEvaluationPeriod>>>(`/api/v1/evaluation/periods?${query}`);
 
 export const callFetchEvaluationPeriodById = (id: number) =>
-    axios.get<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}`);
+    axios.get<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}`);
 
 export const callCreateEvaluationPeriod = (data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods`, data);
+    axios.post<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods`, data);
 
 export const callUpdateEvaluationPeriod = (id: number, data: any) =>
-    axios.put<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}`, data);
+    axios.put<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}`, data);
 
 export const callAddTemplateToPeriod = (periodId: number, templateId: number) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/templates`, { templateId });
@@ -2370,70 +2391,76 @@ export const callFetchEmployeesInPeriod = (periodId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/periods/${periodId}/employees`);
 
 export const callActivateEvaluationPeriod = (id: number) =>
-    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}/activate`);
+    axios.patch<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}/activate`);
 
 export const callCloseEvaluationPeriod = (id: number) =>
-    axios.patch<IBackendRes<any>>(`/api/v1/evaluation/periods/${id}/close`);
+    axios.patch<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}/close`);
+
+export const callFetchPeriodProgress = (periodId: number) =>
+    axios.get<IBackendRes<IPeriodProgress>>(`/api/v1/evaluation/periods/${periodId}/progress`);
+
+export const callFetchEvaluationGradeDistribution = (periodId: number) =>
+    axios.get<IBackendRes<[string | null, number][]>>(`/api/v1/evaluation/periods/${periodId}/grade-distribution`);
 
 // RECORDS
 export const callFetchEvaluationRecordById = (id: number) =>
-    axios.get<IBackendRes<any>>(`/api/v1/evaluation/records/${id}`);
+    axios.get<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${id}`);
 
 export const callFetchMyEvaluationRecords = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/my-records`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/my-records`);
 
 export const callFetchManagerRecordsByPeriod = (periodId: number) =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);
 
 export const callFetchManagerRecords = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/records`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/manager/records`);
 
 export const callFetchPendingManagerRecords = () => {
-    return axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/manager/pending`);
+    return axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/manager/pending`);
 };
 
 export const callFetchApprovalRecordsByPeriod = (periodId: number) =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/periods/${periodId}/records`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/approval/periods/${periodId}/records`);
 
 export const callFetchApprovalRecords = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/records`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/approval/records`);
 
 export const callFetchPendingApprovalRecords = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/approval/pending`);
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/approval/pending`);
 
 // WORKFLOW ACTIONS
 export const callEmployeeSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/employee-scores`, { criteriaId, score });
 
 export const callEmployeeSubmitRecord = (recordId: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-submit`);
+    axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/employee-submit`);
 
 export const callEmployeeSaveSelfReview = (recordId: number, content: string) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/self-review`, { content });
+    axios.post<IBackendRes<IResCommentDTO>>(`/api/v1/evaluation/records/${recordId}/self-review`, { content });
 
 export const callManagerSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/manager-scores`, { criteriaId, score });
 
 export const callManagerSubmitRecord = (recordId: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-submit`);
+    axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/manager-submit`);
 
 export const callManagerSaveFeedback = (recordId: number, content: string) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/manager-feedback`, { content });
+    axios.post<IBackendRes<IResCommentDTO>>(`/api/v1/evaluation/records/${recordId}/manager-feedback`, { content });
 
 export const callSaveTrainingPlan = (recordId: number, data: any) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/training-plans`, data);
+    axios.post<IBackendRes<IResTrainingPlanDTO>>(`/api/v1/evaluation/records/${recordId}/training-plans`, data);
 
 export const callApproverSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/approver-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/approver-scores`, { criteriaId, score });
 
-export const callApproveRecord = (recordId: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/approve`);
+export const callApproveRecord = (recordId: number, overrideReason?: string) =>
+    axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/approve`, overrideReason ? { overrideReason } : undefined);
 
 export const callRejectRecord = (recordId: number, reason: string) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/reject`, { reason });
+    axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/reject`, { reason });
 
 export const callBatchApproveRecords = (ids: number[]) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/batch-approve`, { recordIds: ids });
+    axios.post<IBackendRes<IBatchApproveResponse>>(`/api/v1/evaluation/records/batch-approve`, { recordIds: ids });
 
 export const callExtendEvaluationRecordDeadline = (data: {
     recordIds: number[];
@@ -2442,34 +2469,53 @@ export const callExtendEvaluationRecordDeadline = (data: {
     reason?: string;
     cascade?: boolean;
 }) =>
-    axios.patch<IBackendRes<any[]>>(`/api/v1/evaluation/records/deadline-extension`, data);
+    axios.patch<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/records/deadline-extension`, data);
 
-export const callFetchCompletedSummary = (periodId?: number, departmentId?: number, companyId?: number, sectionId?: number) => {
+export const callReassignEvaluators = (data: {
+    recordIds: number[];
+    evaluatorRole: "DIRECT_MANAGER" | "INDIRECT_MANAGER";
+    newEvaluatorUserId: string;
+    reason?: string;
+}) =>
+    axios.patch<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/records/reassign-evaluator`, data);
+
+export const callFetchCompletedSummary = (
+    periodId?: number,
+    departmentId?: number,
+    companyId?: number,
+    sectionId?: number,
+    page: number = 1,
+    size: number = 15,
+    searchText?: string,
+    filterGrade?: string
+) => {
     let url = `/api/v1/evaluation/summary/completed`;
     const params = new URLSearchParams();
     if (periodId) params.append("periodId", periodId.toString());
     if (departmentId) params.append("departmentId", departmentId.toString());
     if (companyId) params.append("companyId", companyId.toString());
     if (sectionId) params.append("sectionId", sectionId.toString());
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+    if (searchText) params.append("searchText", searchText);
+    if (filterGrade) params.append("filterGrade", filterGrade);
 
-    if (params.toString()) {
-        url += `?${params.toString()}`;
-    }
-    return axios.get<IBackendRes<any[]>>(url);
+    url += `?${params.toString()}`;
+    return axios.get<IBackendRes<IModelPaginate<IEvaluationRecord>>>(url);
 };
 
 export const callEmployeeConfirmRecord = (recordId: number) =>
-    axios.post<IBackendRes<any>>(`/api/v1/evaluation/records/${recordId}/employee-confirm`);
+    axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/employee-confirm`);
 
 export const callFetchRecordHistory = (recordId: number) =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/records/${recordId}/history`);
+    axios.get<IBackendRes<IEvaluationHistory[]>>(`/api/v1/evaluation/records/${recordId}/history`);
 
 // NOTIFICATIONS
 export const callFetchEvaluationNotifications = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/notifications`);
+    axios.get<IBackendRes<IResNotificationDTO[]>>(`/api/v1/notifications`);
 
 export const callFetchUnreadEvaluationNotifications = () =>
-    axios.get<IBackendRes<any[]>>(`/api/v1/notifications/unread`);
+    axios.get<IBackendRes<IResNotificationDTO[]>>(`/api/v1/notifications/unread`);
 
 export const callCountUnreadEvaluationNotifications = () =>
     axios.get<IBackendRes<any>>(`/api/v1/notifications/unread/count`);

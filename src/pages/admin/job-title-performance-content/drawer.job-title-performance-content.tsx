@@ -223,7 +223,7 @@ const DrawerJobTitlePerformanceContent = ({
                 open={open}
                 onClose={onClose}
                 width={getModalWidth(1000)}
-                destroyOnClose
+                destroyOnHidden
                 title={
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         <Title level={4} style={{ margin: 0 }}>
@@ -241,7 +241,7 @@ const DrawerJobTitlePerformanceContent = ({
                         searchPlaceholder="Tìm theo bậc lương..."
                         showFilterButton={false}
                         showResetButton
-                        onSearch={(val) => console.log("search", val)}
+                        onSearch={(val) => {}}
                         onReset={() => refetch()}
                         onAddClick={() => setOpenCreate(true)}
                         addLabel="Thêm tiêu chí"

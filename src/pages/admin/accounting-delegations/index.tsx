@@ -170,12 +170,11 @@ const DelegationsPage = () => {
 
     const renderUserCell = (userId: string, subLabel: string, record?: IDelegation, isDelegator?: boolean) => {
         const name = isDelegator ? record?.delegatorName : record?.delegateName;
-        const email = isDelegator ? record?.delegatorEmail : record?.delegateEmail;
         const u = users.find(item => String(item.id) === String(userId));
         return (
             <Space direction="vertical" size={1} style={{ lineHeight: 1.35 }}>
                 <span style={{ fontWeight: 650, color: "#172033" }}>{name || u?.name || u?.email || `User #${userId}`}</span>
-                <span style={{ color: "#7b8494", fontSize: 12 }}>{subLabel} {email || u?.email ? `(${email || u?.email})` : ""}</span>
+                <span style={{ color: "#7b8494", fontSize: 12 }}>{subLabel}</span>
             </Space>
         );
     };
@@ -365,7 +364,7 @@ const DelegationsPage = () => {
                 onCancel={() => setModalOpen(false)}
                 width={560}
                 centered
-                destroyOnClose
+                destroyOnHidden
                 footer={[
                     <Button key="cancel" onClick={() => setModalOpen(false)}>
                         Hủy

@@ -20,9 +20,10 @@ import { notify } from "@/components/common/notification/notify";
 /* =====================================================
    GET PAGINATED LIST
 ===================================================== */
-export const useDepartmentsQuery = (query: string) => {
+export const useDepartmentsQuery = (query: string, enabled = true) => {
     return useQuery<IModelPaginate<IDepartment>>({
         queryKey: ["departments", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchDepartment(query);
             const finalData = res?.data;

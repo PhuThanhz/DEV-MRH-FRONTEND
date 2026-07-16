@@ -1,10 +1,12 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, startTransition, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJdFlowInboxQuery } from "@/hooks/useJdFlow";
 import type { IJdInbox, IResNotificationDTO } from "@/types/backend";
 import { useWebSocket } from "./useWebSocket";
 import { callDeleteNotification, callFetchEvaluationNotifications, callReadEvaluationNotification, callReadAllEvaluationNotifications, callReadAllNotificationsByModule } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 export interface UnifiedNotification {
     id: string;
@@ -45,6 +47,56 @@ const EMPTY_NOTIFICATION_CONTEXT: NotificationContextValue = {
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 const STORAGE_KEY = "notifications_seen_map";
+const NOTIFICATION_SYNC_DELAY_MS = 1200;
+const QUERY_INVALIDATION_DELAY_MS = 350;
+
+const EVALUATION_QUERY_KEYS = [
+    ["evaluation-period"],
+    ["evaluation-periods"],
+    ["period-progress"],
+    ["evaluation-record"],
+    ["my-evaluation-records"],
+    ["manager-evaluation-records"],
+    ["pending-manager-evaluation-records"],
+    ["approval-evaluation-records"],
+    ["pending-approval-evaluation-records"],
+    ["evaluation-completed-summary"],
+] as const;
+
+const ACCOUNTING_DOSSIER_QUERY_KEYS = [
+    ["accounting-dossiers"],
+    ["accounting-dossiers-pending"],
+    ["accounting-dossier"],
+    ["accounting-dossier-approval-steps"],
+    ["accounting-dossier-logs"],
+    ["accounting-dossier-storage-summary"],
+    ["accounting-dossier-pending-by-role"],
+    ["accounting-dossier-report-by-status"],
+    ["accounting-dossier-report-by-department"],
+    ["accounting-dossier-report-by-category"],
+    ["accounting-approval-delegations"],
+] as const;
+
+const DOCUMENT_QUERY_KEYS = [
+    ["documents"],
+    ["documents-by-category"],
+    ["documents-by-department"],
+] as const;
+
+const scheduleIdleWork = (callback: () => void, timeout = 1200) => {
+    if (typeof window === "undefined") {
+        callback();
+        return () => undefined;
+    }
+
+    if (window.requestIdleCallback) {
+        const idleId = window.requestIdleCallback(callback, { timeout });
+        return () => window.cancelIdleCallback?.(idleId);
+    }
+
+    const timeoutId = window.setTimeout(callback, 0);
+    return () => window.clearTimeout(timeoutId);
+};
 
 const getSeenMap = (): Record<number, string> => {
     try {
@@ -77,6 +129,8 @@ export const mapAppNotificationToUnified = (item: IResNotificationDTO): UnifiedN
         title = "Thông báo Mô tả công việc";
     } else if (item.module === "DOCUMENT") {
         title = "Thông báo Văn bản";
+    } else if (item.module === "ACCOUNTING_DOSSIERS") {
+        title = "Thông báo Bộ chứng từ kế toán";
     } else if (item.module === "COMPANY_PROCEDURES") {
         title = "Thông báo Quy trình công ty";
     } else if (item.module === "DEPARTMENT_PROCEDURES") {
@@ -176,7 +230,8 @@ const playNotificationSound = async () => {
 
 const useNotificationsState = (): NotificationContextValue => {
     const queryClient = useQueryClient();
-    const { data: jdItems = [], isFetching: isJdFetching, refetch: refetchJd } = useJdFlowInboxQuery();
+    const canFetchJdInbox = useAccess(ALL_PERMISSIONS.JD_FLOW.FETCH_INBOX);
+    const { data: jdItems = [], isFetching: isJdFetching } = useJdFlowInboxQuery({ enabled: canFetchJdInbox });
     const [seenVersion, setSeenVersion] = useState(0);
     const seenMap = useMemo(() => getSeenMap(), [seenVersion]);
 
@@ -192,6 +247,20 @@ const useNotificationsState = (): NotificationContextValue => {
     };
 
     const [appNotifs, setAppNotifs] = useState<IResNotificationDTO[]>([]);
+    const notificationSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingInvalidationModules = useRef<Set<string>>(new Set());
+    const invalidationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const cancelIdleInvalidation = useRef<(() => void) | null>(null);
+
+    useEffect(() => () => {
+        if (notificationSyncTimer.current) {
+            clearTimeout(notificationSyncTimer.current);
+        }
+        if (invalidationTimer.current) {
+            clearTimeout(invalidationTimer.current);
+        }
+        cancelIdleInvalidation.current?.();
+    }, []);
 
     useEffect(() => {
         const fetchInitial = async () => {
@@ -209,16 +278,60 @@ const useNotificationsState = (): NotificationContextValue => {
         fetchInitial();
     }, []);
 
+    const scheduleQueryInvalidation = (module: string, documentId?: number) => {
+        pendingInvalidationModules.current.add(module);
+        if (documentId) {
+            pendingInvalidationModules.current.add(`DOCUMENT:${documentId}`);
+        }
+
+        if (invalidationTimer.current) {
+            clearTimeout(invalidationTimer.current);
+        }
+
+        invalidationTimer.current = setTimeout(() => {
+            invalidationTimer.current = null;
+            cancelIdleInvalidation.current?.();
+            cancelIdleInvalidation.current = scheduleIdleWork(() => {
+                cancelIdleInvalidation.current = null;
+                const modules = new Set(pendingInvalidationModules.current);
+                pendingInvalidationModules.current.clear();
+
+                if (modules.has("DOCUMENT")) {
+                    DOCUMENT_QUERY_KEYS.forEach((queryKey) => {
+                        queryClient.invalidateQueries({ queryKey, exact: false });
+                    });
+                    modules.forEach((key) => {
+                        if (!key.startsWith("DOCUMENT:")) return;
+                        const documentId = Number(key.slice("DOCUMENT:".length));
+                        if (!Number.isFinite(documentId)) return;
+                        queryClient.invalidateQueries({ queryKey: ["document", documentId] });
+                        queryClient.invalidateQueries({ queryKey: ["document-share-tokens", documentId] });
+                    });
+                }
+
+                if (modules.has("EVALUATION")) {
+                    EVALUATION_QUERY_KEYS.forEach((queryKey) => {
+                        queryClient.invalidateQueries({ queryKey, exact: false });
+                    });
+                }
+
+                if (modules.has("ACCOUNTING_DOSSIERS")) {
+                    ACCOUNTING_DOSSIER_QUERY_KEYS.forEach((queryKey) => {
+                        queryClient.invalidateQueries({ queryKey, exact: false });
+                    });
+                }
+
+                if (modules.has("JD_FLOW")) {
+                    queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
+                }
+            });
+        }, QUERY_INVALIDATION_DELAY_MS);
+    };
+
     useWebSocket((msg) => {
         const isDocumentRealtimeEvent = msg.module === "DOCUMENT" && !!msg.documentId && !msg.id;
         if (isDocumentRealtimeEvent) {
-            queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
-            queryClient.invalidateQueries({ queryKey: ["documents-by-category"], exact: false });
-            queryClient.invalidateQueries({ queryKey: ["documents-by-department"], exact: false });
-            if (msg.documentId) {
-                queryClient.invalidateQueries({ queryKey: ["document", msg.documentId] });
-                queryClient.invalidateQueries({ queryKey: ["document-share-tokens", msg.documentId] });
-            }
+            scheduleQueryInvalidation("DOCUMENT", msg.documentId);
             return;
         }
 
@@ -227,26 +340,34 @@ const useNotificationsState = (): NotificationContextValue => {
         }
         pushGroupedNotification(msg.content ?? "Bạn có thông báo mới");
 
-        setAppNotifs((prev) => {
-            if (!isNotificationDTO(msg)) return prev;
-            if (prev.some((n) => n.id === msg.id)) return prev;
-            return [msg, ...prev];
+        startTransition(() => {
+            setAppNotifs((prev) => {
+                if (!isNotificationDTO(msg)) return prev;
+                if (prev.some((n) => n.id === msg.id)) return prev;
+                return [msg, ...prev];
+            });
         });
 
-        setTimeout(() => {
+        if (notificationSyncTimer.current) {
+            clearTimeout(notificationSyncTimer.current);
+        }
+        notificationSyncTimer.current = setTimeout(() => {
+            notificationSyncTimer.current = null;
             callFetchEvaluationNotifications().then(res => {
                 const notifications = Array.isArray(res?.data)
                     ? res.data
                     : Array.isArray((res?.data as any)?.data)
                         ? (res.data as any).data
                         : [];
-                setAppNotifs(notifications);
+                startTransition(() => {
+                    setAppNotifs(notifications);
+                });
             }).catch((e) => {
                 console.error("Failed to sync notifications", e);
             });
-        }, 1000);
+        }, NOTIFICATION_SYNC_DELAY_MS);
 
-        queryClient.invalidateQueries({ queryKey: ["jd-flow-inbox"] });
+        scheduleQueryInvalidation(msg.module);
     });
 
     const unifiedItems = useMemo<UnifiedNotification[]>(() => {

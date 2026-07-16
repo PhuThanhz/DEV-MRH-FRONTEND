@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Table, Tag, Button, Tooltip, Empty, Input } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,9 +11,8 @@ import {
     TrophyOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { notify } from "@/components/common/notification/notify";
 import { SearchOutlined } from "@ant-design/icons";
-import { callFetchMyEvaluationRecords } from "@/config/api";
+import { useMyEvaluationRecordsQuery } from "@/hooks/useEvaluations";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import Access from "@/components/share/access";
@@ -67,32 +66,13 @@ interface IProps {
 }
 
 const MyEvaluationPage = ({ isTab }: IProps) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _isTab = isTab;
     const navigate = useNavigate();
-    const [records, setRecords] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
-    const fetchRecords = async () => {
-        setLoading(true);
-        try {
-            const res = await callFetchMyEvaluationRecords();
-            if (res?.data) {
-                setRecords(res.data);
-            }
-        } catch {
-            notify.error("Lỗi tải danh sách bản đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchRecords();
-    }, []);
+    const { data: records = [], isLoading: loading } = useMyEvaluationRecordsQuery();
 
     const columns = [
         {
@@ -279,7 +259,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
     ];
 
     const baseRecords = records.filter(r =>
-        (r.period?.name || r.periodName || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.period?.name || "").toLowerCase().includes(searchText.toLowerCase()) ||
         (r.template?.name || "").toLowerCase().includes(searchText.toLowerCase())
     );
 
@@ -338,9 +318,10 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
                 {[
                     {
-                        label: "Cần đánh giá",
+                        label: "Cần tự đánh giá",
                         value: pending,
                         color: "#1677ff",
+                        key: "EMPLOYEE_DRAFTING",
                         icon: (
                             <div style={{ background: "#e6f4ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <SyncOutlined style={{ fontSize: 20, color: "#1677ff" }} />
@@ -348,9 +329,10 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                         ),
                     },
                     {
-                        label: "Đang xử lý",
+                        label: "Đang chờ xử lý",
                         value: inProgress,
                         color: "#722ed1",
+                        key: "PROCESSING",
                         icon: (
                             <div style={{ background: "#f9f0ff", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <ClockCircleOutlined style={{ fontSize: 20, color: "#722ed1" }} />
@@ -361,6 +343,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                         label: "Hoàn tất",
                         value: completed,
                         color: "#389e0d",
+                        key: "COMPLETED",
                         icon: (
                             <div style={{ background: "#f6ffed", padding: "10px", borderRadius: "8px", display: "flex" }}>
                                 <TrophyOutlined style={{ fontSize: 20, color: "#389e0d" }} />
@@ -370,15 +353,18 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                 ].map(item => (
                     <div
                         key={item.label}
+                        onClick={() => setSelectedCard(prev => prev === item.key ? null : item.key)}
                         style={{
                             flex: 1, minWidth: 180,
-                            background: "#ffffff",
-                            border: "1px solid #e2e8f0",
+                            background: selectedCard === item.key ? "#f0f7ff" : "#ffffff",
+                            border: selectedCard === item.key ? `2px solid ${item.color}` : "1px solid #e2e8f0",
                             borderRadius: 8,
                             padding: "16px 20px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
                         }}
                     >
                         <div>
@@ -393,6 +379,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                     </div>
                 ))}
             </div>
+
 
             {/* Table */}
             <div style={{
@@ -411,16 +398,16 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
-                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Danh sách cần đánh giá" :
-                                 selectedCard === "PROCESSING" ? "Danh sách đang chờ kết quả" :
+                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Hồ sơ cần tự đánh giá" :
+                                 selectedCard === "PROCESSING" ? "Bản đánh giá đang chờ quản lý" :
                                  selectedCard === "COMPLETED" ? "Danh sách đã hoàn tất" :
-                                 "Danh sách bản đánh giá"}
+                                 "Hồ sơ đánh giá cá nhân"}
                             </div>
                             <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
-                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Các bản đánh giá bạn cần thực hiện ngay" :
-                                 selectedCard === "PROCESSING" ? "Các bản đánh giá đang được Quản lý/HR xử lý" :
+                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Các bản đánh giá thuộc trách nhiệm tự đánh giá của nhân sự" :
+                                 selectedCard === "PROCESSING" ? "Các bản đã nộp và đang chờ quản lý chấm/phê duyệt" :
                                  selectedCard === "COMPLETED" ? "Các bản đánh giá đã có kết quả chính thức" :
-                                 "Tất cả các bản đánh giá hiệu quả công việc của bạn"}
+                                 "Tất cả hồ sơ mà người dùng hiện tại là nhân sự được đánh giá"}
                             </div>
                         </div>
                     </div>
@@ -431,7 +418,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                                     key: "periodId",
                                     label: "Kỳ đánh giá",
                                     options: Array.from(
-                                        new Map(records.filter(r => r.period?.id).map(r => [r.period.id, { label: r.period.name || r.periodName, value: r.period.id }])).values()
+                                        new Map(records.filter(r => r.period?.id).map(r => [r.period!.id, { label: r.period!.name, value: r.period!.id }])).values()
                                     ),
                                 }
                             ]}
@@ -459,7 +446,12 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                         emptyText: (
                             <Empty
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description="Chưa có bản đánh giá nào"
+                                description={
+                                    selectedCard === "EMPLOYEE_DRAFTING" ? "Chưa có hồ sơ nào cần tự đánh giá." :
+                                    selectedCard === "PROCESSING" ? "Không có bản đánh giá nào đang chờ quản lý xử lý." :
+                                    selectedCard === "COMPLETED" ? "Chưa có bản đánh giá nào đã hoàn tất." :
+                                    "Chưa có bản đánh giá nào."
+                                }
                                 style={{ margin: "40px 0" }}
                             />
                         )
@@ -471,7 +463,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
 
     return (
         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS}>
-            {isTab ? content : <PageContainer title="Đánh giá của tôi">{content}</PageContainer>}
+            {isTab ? content : <PageContainer title="Đánh giá cá nhân">{content}</PageContainer>}
         </Access>
     );
 };

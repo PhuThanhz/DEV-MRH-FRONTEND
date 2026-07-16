@@ -1,11 +1,11 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb, Modal } from "antd";
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
-    FileTextOutlined, TrophyOutlined,
+    FileTextOutlined, TrophyOutlined, FileExcelOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
@@ -15,6 +15,11 @@ import {
     callFetchRecordHistory,
     callApproverSaveScore
 } from "@/config/api";
+import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
+import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
+import Access from "@/components/share/access";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -35,13 +40,149 @@ const GRADE_CONFIG: Record<string, { color: string; label: string }> = {
     E: { color: "#8c8c8c", label: "Yếu" },
 };
 
-const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm`, value: v }));
+const SCORE_DESCRIPTIONS: Record<number, string> = {
+    1: "Yếu",
+    2: "Trung bình",
+    3: "Khá",
+    4: "Tốt",
+    5: "Xuất sắc"
+};
+
+const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm - ${SCORE_DESCRIPTIONS[v]}`, value: v }));
 
 const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" | "APPROVER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
 
 const getComment = (comments: any[], type: string) =>
     comments?.find(c => c.commentType === type)?.content ?? "";
+
+interface IApproverCriteriaRowProps {
+    c: any;
+    cIdx: number;
+    hasSub: boolean;
+    isEditable: boolean;
+    empScore: number | null;
+    realMgrScore: number | null;
+    mgrScore: number | null;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const ApproverCriteriaRow = React.memo(({
+    c, cIdx, hasSub, isEditable, empScore, realMgrScore, mgrScore, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: IApproverCriteriaRowProps) => {
+    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
+            <td style={{ ...tdB, fontWeight: hasSub ? 700 : 500, color: "#111827" }}>{c.name}</td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
+            {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                    {(c.weight * 100).toFixed(0)}%
+                </span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {!hasSub && empScore != null
+                    ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span>
+                    : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: realMgrScore != null ? "#111827" : "#e5e7eb" }}>{realMgrScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {!hasSub && realMgrScore != null
+                    ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(realMgrScore * c.weight).toFixed(2)}</span>
+                    : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : isEditable ? (
+                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        className={mgrScore == null ? "unfilled-select" : ""}
+                        value={mgrScore ?? undefined} loading={savingScore === c.id}
+                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {!hasSub && mgrScore != null
+                    ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span>
+                    : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+        </tr>
+    );
+});
+
+interface IApproverSubCriteriaRowProps {
+    sub: any;
+    cIdx: number;
+    si: number;
+    isEditable: boolean;
+    subEmp: number | null;
+    subRealMgr: number | null;
+    subMgr: number | null;
+    savingScore: number | null;
+    handleSaveScore: (id: number, score: number) => void;
+    tdB: any;
+    tdLvl: any;
+    tdSc: any;
+}
+
+const ApproverSubCriteriaRow = React.memo(({
+    sub, cIdx, si, isEditable, subEmp, subRealMgr, subMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+}: IApproverSubCriteriaRowProps) => {
+    const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
+    return (
+        <tr className="eval-row">
+            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
+            <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>{sub.name}</td>
+            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
+            {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
+            <td style={{ ...tdB, textAlign: "center" }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                    {(sub.weight * 100).toFixed(0)}%
+                </span>
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
+            </td>
+            <td style={tdSc}>
+                {subEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(subEmp * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: subRealMgr != null ? "#111827" : "#e5e7eb" }}>{subRealMgr ?? "—"}</span>
+            </td>
+            <td style={tdSc}>
+                {subRealMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subRealMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+            <td style={{ ...tdSc, borderLeft: "none" }}>
+                {isEditable ? (
+                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        className={subMgr == null ? "unfilled-select" : ""}
+                        value={subMgr ?? undefined} loading={savingScore === sub.id}
+                        onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                ) : (
+                    <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
+                )}
+            </td>
+            <td style={tdSc}>
+                {subMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
+            </td>
+        </tr>
+    );
+});
 
 const ApprovalDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -56,10 +197,25 @@ const ApprovalDetailPage = () => {
     const [selfReview, setSelfReview] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
+    const [isError, setIsError] = useState(false);
+
+    // ── Quyền hạn (phải khai báo trước early return) ──────────────────
+    const canApprove = useAccess(ALL_PERMISSIONS.EVALUATION.APPROVE_RECORD);
+    const canReject  = useAccess(ALL_PERMISSIONS.EVALUATION.REJECT_RECORD);
+    const canScore   = useAccess(ALL_PERMISSIONS.EVALUATION.APPROVER_SCORE);
+
+    useBlocker(() => {
+        if (savingScore !== null) {
+            const confirmed = window.confirm("Đang lưu điểm đánh giá. Bạn có chắc muốn rời khỏi trang?");
+            return !confirmed;
+        }
+        return false;
+    });
 
     const fetchRecord = useCallback(async () => {
         if (!id || isNaN(Number(id))) return;
         setLoading(true);
+        setIsError(false);
         try {
             const [recRes, histRes] = await Promise.all([
                 callFetchEvaluationRecordById(Number(id)),
@@ -85,8 +241,12 @@ const ApprovalDetailPage = () => {
                 setLocalScores(initScores);
             }
             if (histRes?.data) setHistory(histRes.data);
-        } catch { notify.error("Lỗi tải dữ liệu đánh giá"); }
-        finally { setLoading(false); }
+        } catch {
+            setIsError(true);
+            notify.error("Lỗi tải dữ liệu đánh giá");
+        } finally {
+            setLoading(false);
+        }
     }, [id]);
 
     useEffect(() => { fetchRecord(); }, [fetchRecord]);
@@ -105,17 +265,45 @@ const ApprovalDetailPage = () => {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState("");
     const [approveModalOpen, setApproveModalOpen] = useState(false);
+    const [overrideReason, setOverrideReason] = useState("");
+
+    const hasScoreOverride = () => {
+        if (!record || !record.scores) return false;
+        const leafCriteriaList: any[] = [];
+        record.template?.sections?.forEach((sec: any) => {
+            sec.criteria?.forEach((c: any) => {
+                if (!c.subCriteria?.length) leafCriteriaList.push(c);
+                else c.subCriteria?.forEach((sub: any) => leafCriteriaList.push(sub));
+            });
+        });
+
+        for (const c of leafCriteriaList) {
+            const managerScoreObj = record.scores.find((s: any) => s.criteriaId === c.id && s.scoredBy === "MANAGER");
+            const managerScore = managerScoreObj ? managerScoreObj.score : undefined;
+            const currentScore = localScores[c.id];
+
+            if (currentScore !== undefined && managerScore !== undefined && currentScore !== managerScore) {
+                return true;
+            }
+        }
+        return false;
+    };
 
     const handleApproveClick = () => {
         setApproveModalOpen(true);
     };
 
     const handleApprove = async () => {
+        if (hasScoreOverride() && !overrideReason.trim()) {
+            notify.error("Vui lòng nhập lý do điều chỉnh điểm");
+            return;
+        }
         setSaving(true);
         try {
-            await callApproveRecord(Number(id));
+            await callApproveRecord(Number(id), hasScoreOverride() ? overrideReason : undefined);
             notify.success("Đã phê duyệt thành công!");
             setApproveModalOpen(false);
+            setOverrideReason("");
             fetchRecord();
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi khi phê duyệt");
@@ -142,10 +330,23 @@ const ApprovalDetailPage = () => {
         }
     };
 
-    
+    const handleExportExcel = () => {
+        if (record) exportDetailedEvaluation(record);
+    };
+
+    const handlePrintPDF = () => {
+        if (record) printEvaluationDetail(record);
+    };
+
     if (loading) return (
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Spin size="large" />
+        </div>
+    );
+    if (isError) return (
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
+            <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
         </div>
     );
     if (!record) return (
@@ -155,7 +356,7 @@ const ApprovalDetailPage = () => {
     );
 
     const isApprovable = record.status === "PENDING_APPROVAL";
-    const isEditable = isApprovable;
+    const isEditable = isApprovable && canApprove;
     const isCompleted = record.status === "COMPLETED";
     const hasConfirmed = isCompleted && !!record.completedAt;
     const statusCfg = STATUS_CONFIG[record.status as RecordStatus] ?? STATUS_CONFIG.NOT_STARTED;
@@ -170,6 +371,40 @@ const ApprovalDetailPage = () => {
     });
     const scoredCount = allLeafCriteria.filter(c => localScores[c.id] != null).length;
     const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0
+
+    const calculateDynamicApproverTotalAndGrade = () => {
+        let approverTotal = 0;
+        record?.template?.sections?.forEach((sec: any) => {
+            sec.criteria?.forEach((c: any) => {
+                const hasSub = c.subCriteria?.length > 0;
+                if (!hasSub) {
+                    const realMgrScore = getScore(record.scores, c.id, "MANAGER");
+                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "APPROVER") ?? realMgrScore;
+                    if (mgrScore != null) {
+                        approverTotal += mgrScore * c.weight;
+                    }
+                } else {
+                    c.subCriteria?.forEach((sub: any) => {
+                        const subRealMgr = getScore(record.scores, sub.id, "MANAGER");
+                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "APPROVER") ?? subRealMgr;
+                        if (subMgr != null) {
+                            approverTotal += subMgr * sub.weight;
+                        }
+                    });
+                }
+            });
+        });
+        
+        let grade = "E";
+        if (approverTotal > 4.5) grade = "A";
+        else if (approverTotal >= 4.0) grade = "B";
+        else if (approverTotal >= 3.5) grade = "C";
+        else if (approverTotal >= 3.0) grade = "D";
+        
+        return { score: approverTotal, grade };
+    };
+
+    const currentApproverResult = calculateDynamicApproverTotalAndGrade();
 
     const thS: React.CSSProperties = {
         padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
@@ -240,6 +475,22 @@ const ApprovalDetailPage = () => {
                         </div>
                     </div>
                     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <Button
+                                icon={<FileExcelOutlined />}
+                                onClick={handleExportExcel}
+                                style={{ borderRadius: 6, color: "#047857", borderColor: "#34d399", background: "#ecfdf5" }}
+                            >
+                                Xuất Excel
+                            </Button>
+                            <Button
+                                icon={<FileTextOutlined />}
+                                onClick={handlePrintPDF}
+                                style={{ borderRadius: 6, color: "#1d4ed8", borderColor: "#60a5fa", background: "#eff6ff" }}
+                            >
+                                Xuất PDF
+                            </Button>
+                        </div>
                         {gradeCfg && (
                             <div style={{ background: "#fff", border: `2px solid ${gradeCfg.color}`, borderRadius: 12, padding: "8px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
                                 <span style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Xếp loại</span>
@@ -268,6 +519,17 @@ const ApprovalDetailPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* 3.6: Cảnh báo chênh lệch điểm Nhân viên vs Quản lý > 1.0 */}
+            {record.employeeTotalScore != null && record.managerTotalScore != null && Math.abs(record.employeeTotalScore - record.managerTotalScore) > 1.0 && (
+                <Alert
+                    message="Cảnh báo chênh lệch điểm số"
+                    description="Điểm đánh giá của quản lý chênh lệch lớn (> 1.0 điểm) so với tự đánh giá của nhân viên. Vui lòng cân nhắc xem xét kỹ hoặc ghi nhận xét giải thích."
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16, borderRadius: 12 }}
+                />
+            )}
 
             {/* ─── PROGRESS ─── */}
             {isEditable && (
@@ -403,7 +665,6 @@ const ApprovalDetailPage = () => {
                                 const empScore = getScore(record.scores, c.id, "EMPLOYEE");
                                 const realMgrScore = getScore(record.scores, c.id, "MANAGER");
                                 const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "APPROVER") ?? realMgrScore;
-                                const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                 if (!hasSub) {
                                     if (empScore != null) empTotal += empScore * c.weight;
@@ -412,52 +673,21 @@ const ApprovalDetailPage = () => {
                                 }
 
                                 rows.push(
-                                    <tr key={`c-${c.id}`} className="eval-row">
-                                        <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-                                        <td style={{ ...tdB, fontWeight: hasSub ? 700 : 500, color: "#111827" }}>{c.name}</td>
-                                        <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-                                        {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-                                        <td style={{ ...tdB, textAlign: "center" }}>
-                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                {(c.weight * 100).toFixed(0)}%
-                                            </span>
-                                        </td>
-                                        <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
-                                            )}
-                                        </td>
-                                        <td style={tdSc}>
-                                            {!hasSub && empScore != null
-                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span>
-                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                        </td>
-                                        <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: realMgrScore != null ? "#111827" : "#e5e7eb" }}>{realMgrScore ?? "—"}</span>
-                                            )}
-                                        </td>
-                                        <td style={tdSc}>
-                                            {!hasSub && realMgrScore != null
-                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(realMgrScore * c.weight).toFixed(2)}</span>
-                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                        </td>
-                                        <td style={{ ...tdSc, borderLeft: "none" }}>
-                                            {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : isEditable ? (
-                                                <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                    className={mgrScore == null ? "unfilled-select" : ""}
-                                                    value={mgrScore ?? undefined} loading={savingScore === c.id}
-                                                    onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
-                                            ) : (
-                                                <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
-                                            )}
-                                        </td>
-                                        <td style={tdSc}>
-                                            {!hasSub && mgrScore != null
-                                                ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span>
-                                                : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                        </td>
-                                    </tr>
+                                    <ApproverCriteriaRow
+                                        key={`c-${c.id}`}
+                                        c={c}
+                                        cIdx={cIdx}
+                                        hasSub={hasSub}
+                                        isEditable={isEditable && canScore}
+                                        empScore={empScore}
+                                        realMgrScore={realMgrScore}
+                                        mgrScore={mgrScore}
+                                        savingScore={savingScore}
+                                        handleSaveScore={handleSaveScore}
+                                        tdB={tdB}
+                                        tdLvl={tdLvl}
+                                        tdSc={tdSc}
+                                    />
                                 );
 
                                 if (hasSub) {
@@ -465,48 +695,26 @@ const ApprovalDetailPage = () => {
                                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
                                         const subRealMgr = getScore(record.scores, sub.id, "MANAGER");
                                         const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "APPROVER") ?? subRealMgr;
-                                        const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
                                         if (subEmp != null) empTotal += subEmp * sub.weight;
                                         if (subRealMgr != null) realMgrTotal += subRealMgr * sub.weight;
                                         if (subMgr != null) mgrTotal += subMgr * sub.weight;
 
                                         rows.push(
-                                            <tr key={`sub-${sub.id}`} className="eval-row">
-                                                <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-                                                <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>{sub.name}</td>
-                                                <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-                                                {[1,2,3,4,5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-                                                <td style={{ ...tdB, textAlign: "center" }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                                                        {(sub.weight * 100).toFixed(0)}%
-                                                    </span>
-                                                </td>
-                                                <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
-                                                </td>
-                                                <td style={tdSc}>
-                                                    {subEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(subEmp * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                                </td>
-                                                <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                    <span style={{ fontSize: 18, fontWeight: 800, color: subRealMgr != null ? "#111827" : "#e5e7eb" }}>{subRealMgr ?? "—"}</span>
-                                                </td>
-                                                <td style={tdSc}>
-                                                    {subRealMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subRealMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                                </td>
-                                                <td style={{ ...tdSc, borderLeft: "none" }}>
-                                                    {isEditable ? (
-                                                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                                                            className={subMgr == null ? "unfilled-select" : ""}
-                                                            value={subMgr ?? undefined} loading={savingScore === sub.id}
-                                                            onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
-                                                    ) : (
-                                                        <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
-                                                    )}
-                                                </td>
-                                                <td style={tdSc}>
-                                                    {subMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
-                                                </td>
-                                            </tr>
+                                            <ApproverSubCriteriaRow
+                                                key={`sub-${sub.id}`}
+                                                sub={sub}
+                                                cIdx={cIdx}
+                                                si={si}
+                                                isEditable={isEditable && canScore}
+                                                subEmp={subEmp}
+                                                subRealMgr={subRealMgr}
+                                                subMgr={subMgr}
+                                                savingScore={savingScore}
+                                                handleSaveScore={handleSaveScore}
+                                                tdB={tdB}
+                                                tdLvl={tdLvl}
+                                                tdSc={tdSc}
+                                            />
                                         );
                                     });
                                 }
@@ -623,24 +831,35 @@ const ApprovalDetailPage = () => {
                     padding: "16px 40px", display: "flex", justifyContent: "flex-end", gap: 16,
                     boxShadow: "0 -4px 20px rgba(0,0,0,0.05)", zIndex: 100
                 }}>
-                    <Button
-                        size="large"
-                        danger
-                        style={{ borderRadius: 10, fontWeight: 700, minWidth: 140 }}
-                        onClick={() => setRejectModalOpen(true)}
-                    >
-                        Trả lại (Yêu cầu làm lại)
-                    </Button>
-                    <Button
-                        type="primary"
-                        size="large"
-                        icon={<CheckCircleOutlined />}
-                        loading={saving}
-                        onClick={handleApproveClick}
-                        style={{ background: "#10b981", borderColor: "#10b981", borderRadius: 10, fontWeight: 700, minWidth: 160 }}
-                    >
-                        Phê duyệt & Hoàn tất
-                    </Button>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.REJECT_RECORD} hideChildren>
+                        <Button
+                            size="large"
+                            danger
+                            style={{ borderRadius: 10, fontWeight: 700, minWidth: 140 }}
+                            onClick={() => setRejectModalOpen(true)}
+                        >
+                            Trả lại (Yêu cầu làm lại)
+                        </Button>
+                    </Access>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.APPROVE_RECORD} hideChildren>
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<CheckCircleOutlined />}
+                            loading={saving}
+                            onClick={handleApproveClick}
+                            disabled={progressPct < 100}
+                            style={{
+                                background: progressPct === 100 ? "#10b981" : undefined,
+                                borderColor: progressPct === 100 ? "#10b981" : undefined,
+                                borderRadius: 10,
+                                fontWeight: 700,
+                                minWidth: 160
+                            }}
+                        >
+                            Phê duyệt & Hoàn tất
+                        </Button>
+                    </Access>
                 </div>
             )}
 
@@ -674,6 +893,26 @@ const ApprovalDetailPage = () => {
                 cancelText="Hủy"
             >
                 <Alert message="Bạn có chắc chắn muốn phê duyệt bản đánh giá này? Kết quả sẽ được gửi cho nhân viên." type="info" showIcon style={{ marginBottom: 16 }} />
+                <div style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                    <div style={{ marginBottom: 6, fontSize: 14 }}>
+                        Tổng điểm phê duyệt: <strong style={{ fontSize: 16, color: "#15803d" }}>{currentApproverResult.score.toFixed(2)}</strong> / 5.00
+                    </div>
+                    <div style={{ fontSize: 14 }}>
+                        Xếp loại dự kiến: <strong style={{ fontSize: 16, color: GRADE_CONFIG[currentApproverResult.grade]?.color }}>{GRADE_CONFIG[currentApproverResult.grade]?.label} ({currentApproverResult.grade})</strong>
+                    </div>
+                </div>
+                {hasScoreOverride() && (
+                    <>
+                        <div style={{ marginBottom: 8, fontWeight: 600 }}>Lý do điều chỉnh điểm <span style={{ color: "red" }}>*</span></div>
+                        <Input.TextArea
+                            rows={4}
+                            value={overrideReason}
+                            onChange={(e) => setOverrideReason(e.target.value)}
+                            placeholder="Vui lòng nhập lý do giải trình khi điều chỉnh điểm số so với quản lý trực tiếp..."
+                            style={{ marginBottom: 8 }}
+                        />
+                    </>
+                )}
             </Modal>
 
             <style>{`

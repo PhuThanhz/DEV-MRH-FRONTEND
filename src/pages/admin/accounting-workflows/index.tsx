@@ -18,6 +18,7 @@ import { useDepartmentsQuery } from "@/hooks/useDepartments";
 import { useUsersQuery } from "@/hooks/useUsers";
 import { useJobTitlesQuery } from "@/hooks/useJobTitles";
 import { usePositionLevelsQuery } from "@/hooks/usePositionLevels";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
 import { 
     useFetchWorkflowTemplatesQuery,
     useCreateWorkflowTemplateMutation,
@@ -144,7 +145,9 @@ const WorkflowTemplatesPage = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<IWorkflowTemplate | null>(null);
     const [viewingRecord, setViewingRecord] = useState<IWorkflowTemplate | null>(null);
-    const [companies, setCompanies] = useState<any[]>([]);
+    const [referenceDataRequested, setReferenceDataRequested] = useState(false);
+    const { data: companiesData } = useCompaniesQuery("page=1&size=200&sort=name,asc");
+    const companies = companiesData?.result || [];
     const [dossierCategories, setDossierCategories] = useState<any[]>([]);
     const [activeWorkflowTab, setActiveWorkflowTab] = useState("general");
     const [activeStepIndex, setActiveStepIndex] = useState(0);
@@ -166,10 +169,12 @@ const WorkflowTemplatesPage = () => {
 
     // Fetch lists
     const { data: templates = [], isFetching, refetch } = useFetchWorkflowTemplatesQuery();
-    const { data: deptData } = useDepartmentsQuery("size=1000");
-    const { data: userData } = useUsersQuery("size=1000");
-    const { data: jobTitleData } = useJobTitlesQuery("size=1000");
-    const { data: positionLevelData } = usePositionLevelsQuery("size=1000");
+    // Chỉ lấy các danh mục lớn khi người dùng sắp thao tác với form hoặc xem cấu hình chi tiết.
+    const shouldLoadReferenceData = drawerOpen || !!viewingRecord || referenceDataRequested;
+    const { data: deptData } = useDepartmentsQuery("size=1000", shouldLoadReferenceData);
+    const { data: userData } = useUsersQuery("size=1000", shouldLoadReferenceData);
+    const { data: jobTitleData } = useJobTitlesQuery("size=1000", shouldLoadReferenceData);
+    const { data: positionLevelData } = usePositionLevelsQuery("size=1000", shouldLoadReferenceData);
 
     const departments = deptData?.result || [];
     const users = userData?.result || [];
@@ -184,17 +189,14 @@ const WorkflowTemplatesPage = () => {
     const reactivateMutation = useReactivateWorkflowTemplateMutation();
     const copyToDraftMutation = useCopyWorkflowTemplateToDraftMutation();
 
-    useEffect(() => {
-        callFetchCompany("page=1&size=200&sort=name,asc")
-            .then((res: any) => setCompanies(res?.data?.result || []))
-            .catch(() => setCompanies([]));
-    }, []);
+
 
     useEffect(() => {
+        if (!shouldLoadReferenceData) return;
         callFetchAccountingDossierCategories("page=1&size=1000")
             .then((res: any) => setDossierCategories(res?.data?.result || []))
             .catch(() => setDossierCategories([]));
-    }, []);
+    }, [shouldLoadReferenceData]);
 
     // Filter templates locally
     const filteredTemplates = useMemo(() => {
@@ -220,6 +222,7 @@ const WorkflowTemplatesPage = () => {
         .map(([companyId]) => companyId);
 
     const handleOpenCreate = () => {
+        setReferenceDataRequested(true);
         setEditingRecord(null);
         setActiveWorkflowTab("general");
         setActiveStepIndex(0);
@@ -241,6 +244,7 @@ const WorkflowTemplatesPage = () => {
     };
 
     const handleOpenEdit = (record: IWorkflowTemplate) => {
+        setReferenceDataRequested(true);
         setEditingRecord(record);
         setActiveWorkflowTab("general");
         setActiveStepIndex(0);
@@ -599,6 +603,7 @@ const WorkflowTemplatesPage = () => {
                             addLabel="Tạo luồng"
                             addPermission={ALL_PERMISSIONS.ACCOUNTING_WORKFLOWS.CREATE_DRAFT}
                             onAddClick={handleOpenCreate}
+                            onAddPreload={() => setReferenceDataRequested(true)}
                             onSearch={(val) => setSearchValue(val)}
                             onReset={() => {
                                 setSearchValue("");
@@ -1399,7 +1404,7 @@ const WorkflowTemplatesPage = () => {
                                                                  ? jobTitles.map((item: any) => ({ value: String(item.id), label: item.nameVi || item.nameEn }))
                                                                  : positionLevels.map((item: any) => ({ value: String(item.id), label: item.code }));
                                                              return (
-                                                                 <div style={{ display: "grid", gridTemplateColumns: "minmax(170px, .8fr) minmax(220px, 1.2fr) minmax(210px, 1fr)", gap: 12 }}>
+                                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                                                                      <Form.Item
                                                                          {...restField}
                                                                          name={[name, "positionReferenceType"]}
@@ -1436,7 +1441,7 @@ const WorkflowTemplatesPage = () => {
                                                                          name={[name, "positionResolverScope"]}
                                                                          label="Phạm vi tìm người"
                                                                          rules={[{ required: true, message: "Chọn phạm vi tìm người" }]}
-                                                                         style={{ marginBottom: 8 }}
+                                                                         style={{ marginBottom: 8, gridColumn: "span 2" }}
                                                                      >
                                                                          <Select
                                                                              placeholder="Chọn phạm vi"

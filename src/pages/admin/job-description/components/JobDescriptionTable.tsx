@@ -117,6 +117,7 @@ interface Props {
     resetSignal?: number;
     showAdd?: boolean;
     hideStatusFilter?: boolean;
+    defaultSort?: string;
 }
 
 const menuIconStyle: React.CSSProperties = {
@@ -138,6 +139,7 @@ const JobDescriptionTable = ({
     resetSignal,
     showAdd = false,
     hideStatusFilter = false,
+    defaultSort = "createdAt,desc",
 }: Props) => {
     const tableRef = useRef<ActionType | null>(null);
 
@@ -561,6 +563,7 @@ const JobDescriptionTable = ({
                     searchPlaceholder="Tìm theo mã JD..."
                     addLabel="Thêm JD"
                     showFilterButton={false}
+                    showAddButton={showAdd}
                     onSearch={onSearch ?? (() => { })}
                     onReset={onReset ?? (() => { })}
                     onAddClick={showAdd ? () => setOpenModal(true) : undefined}
@@ -611,7 +614,7 @@ const JobDescriptionTable = ({
                         ),
                     } : { pageSize: 20 }}
                     request={onQueryChange ? async (params) => {
-                        const q = `page=${params.current}&size=${params.pageSize}&sort=createdAt,desc`;
+                        const q = `page=${params.current}&size=${params.pageSize}&sort=${defaultSort}`;
                         onQueryChange(q);
                         return { data: records, success: true, total: meta?.total ?? 0 };
                     } : undefined}

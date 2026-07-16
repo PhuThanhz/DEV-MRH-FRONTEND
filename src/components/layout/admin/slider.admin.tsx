@@ -1,9 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout, Menu, Drawer, Button, Switch } from "antd";
+import type { MenuProps } from "antd";
 import { CloseOutlined, QrcodeOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
 import { generateMenuItems } from "./menuItems";
+import { useQuery } from "@tanstack/react-query";
+import useAccess from "@/hooks/useAccess";
+import { ALL_PERMISSIONS } from "@/config/permissions";
+import {
+    callFetchPendingManagerRecords,
+    callFetchPendingApprovalRecords,
+    callFetchMyEvaluationRecords
+} from "@/config/api";
 
 const { Sider } = Layout;
 
@@ -27,16 +36,62 @@ const SliderAdmin: React.FC<IProps> = ({
     const navigate = useNavigate();
     const permissions = useAppSelector((state) => state.account.user.role.permissions);
     const roleName = useAppSelector((state) => state.account.user.role?.name || "");
-    const [menuItems, setMenuItems] = useState<any[]>([]);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [showScannerButton, setShowScannerButton] = useState<boolean>(() => {
         const saved = localStorage.getItem("qr-scan-enabled");
         return saved !== null ? saved === "true" : false;
     });
 
-    useEffect(() => {
-        setMenuItems(generateMenuItems(permissions, roleName));
-    }, [permissions, roleName]);
+    const canViewMyEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS);
+    const canViewManagerEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS);
+    const canViewApproverEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS);
+
+    const pendingManagerQuery = useQuery({
+        queryKey: ["pending-manager-evaluation-records"],
+        queryFn: async () => {
+            const res = await callFetchPendingManagerRecords();
+            return res?.data || [];
+        },
+        select: (records: any[]) => records.length,
+        enabled: canViewManagerEval,
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const pendingApprovalQuery = useQuery({
+        queryKey: ["pending-approval-evaluation-records"],
+        queryFn: async () => {
+            const res = await callFetchPendingApprovalRecords();
+            return res?.data || [];
+        },
+        select: (records: any[]) => records.length,
+        enabled: canViewApproverEval,
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const myRecordsQuery = useQuery({
+        queryKey: ["my-evaluation-records"],
+        queryFn: async () => {
+            const res = await callFetchMyEvaluationRecords();
+            return res?.data || [];
+        },
+        select: (records: any[]) => records.filter(r => r.status === "EMPLOYEE_DRAFTING" || r.status === "REVISION_NEEDED").length,
+        enabled: canViewMyEval,
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const pendingManagerCount = pendingManagerQuery.data || 0;
+    const pendingApprovalCount = pendingApprovalQuery.data || 0;
+    const myPendingCount = myRecordsQuery.data || 0;
+
+    const totalTasksCount = pendingManagerCount + pendingApprovalCount + myPendingCount;
+
+    const menuItems = useMemo(
+        () => generateMenuItems(permissions, roleName, totalTasksCount),
+        [permissions, roleName, totalTasksCount]
+    );
 
     useEffect(() => {
         const handleResize = () => {
@@ -118,13 +173,15 @@ const SliderAdmin: React.FC<IProps> = ({
         </div>
     );
 
-    const filteredMenuItems = (collapsed
+    const filteredMenuItems: MenuProps["items"] = (collapsed
         ? menuItems.filter((item) => item.type !== "group")
         : menuItems
-    ).map((item) =>
-        item.key === "qr-scanner-toggle"
+    ).map((item) => {
+        const normalizedItem = item.type === "subgroup" ? { ...item, type: undefined } : item;
+
+        return normalizedItem.key === "qr-scanner-toggle"
             ? {
-                ...item,
+                ...normalizedItem,
                 label: (
                     <div style={{
                         display: "flex",
@@ -145,8 +202,8 @@ const SliderAdmin: React.FC<IProps> = ({
                     </div>
                 ),
             }
-            : item
-    );
+            : normalizedItem;
+    }) as MenuProps["items"];
 
     const MenuList = (
         <Menu

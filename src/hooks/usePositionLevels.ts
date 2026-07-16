@@ -11,9 +11,10 @@ import {
 import type { IBackendRes, IModelPaginate, IPositionLevel } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
-export const usePositionLevelsQuery = (query: string) => {
+export const usePositionLevelsQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["position-levels", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchPositionLevel(query);
             const backend = res as IBackendRes<IModelPaginate<IPositionLevel>>;

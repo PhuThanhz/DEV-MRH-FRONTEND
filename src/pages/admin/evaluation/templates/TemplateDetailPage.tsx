@@ -31,6 +31,14 @@ import {
     BookOutlined,
     OrderedListOutlined,
     TrophyOutlined,
+    UpOutlined,
+    UserOutlined,
+    ClockCircleOutlined,
+    DownOutlined,
+    LeftOutlined,
+    RightOutlined,
+    AlignLeftOutlined,
+    InfoCircleOutlined,
 } from "@ant-design/icons";
 import { getModalWidth } from "@/utils/responsive";
 import {
@@ -52,8 +60,8 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 
 const { Title, Text, Paragraph } = Typography;
 
-const PINK = "#1677ff";
-const PINK_HOVER = "#4096ff";
+const PINK = "#e8637a";
+const PINK_HOVER = "#db4f67";
 
 const TemplateDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -65,6 +73,14 @@ const TemplateDetailPage: React.FC = () => {
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
+    // ── UX Feature 5: Collapse panels ──────────────────────────────────
+    const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+    const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+
+    // ── UX Feature 4: Drag & drop state ───────────────────────────────
+    const [dragOverId, setDragOverId] = useState<number | null>(null);
+    const dragSrcIdRef = React.useRef<number | null>(null);
+
     // Modals state
     const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
     const [editingSection, setEditingSection] = useState<ITemplateSection | null>(null);
@@ -73,11 +89,89 @@ const TemplateDetailPage: React.FC = () => {
     const [isCriteriaModalOpen, setIsCriteriaModalOpen] = useState(false);
     const [editingCriteria, setEditingCriteria] = useState<ITemplateCriteria | null>(null);
     const [selectedParentCriteriaId, setSelectedParentCriteriaId] = useState<number | null>(null);
+    const [collapsedCriteriaIds, setCollapsedCriteriaIds] = useState<number[]>([]);
     const [criteriaForm] = Form.useForm();
 
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
     const [activeCriteria, setActiveCriteria] = useState<ITemplateCriteria | null>(null);
     const [levelsForm] = Form.useForm();
+
+    const toggleCriteriaCollapse = (critId: number) => {
+        setCollapsedCriteriaIds(prev =>
+            prev.includes(critId) ? prev.filter(id => id !== critId) : [...prev, critId]
+        );
+    };
+
+    // ── UX Feature 2: Auto-distribute section weights ──────────────────
+    const handleAutoDistribute = () => {
+        if (sections.length === 0) return;
+        const each = Math.floor(100 / sections.length);
+        const remainder = 100 - each * sections.length;
+        const updated = sections.map((sec, idx) => ({
+            ...sec,
+            weight: (each + (idx === 0 ? remainder : 0)) / 100,
+        }));
+        setSections(updated);
+        // Persist each section weight via API
+        updated.forEach(async (sec) => {
+            if (!sec.id) return;
+            try {
+                const { callUpdateTemplateSection } = await import("@/config/api");
+                await callUpdateTemplateSection(sec.id, {
+                    code: sec.code,
+                    name: sec.name,
+                    weight: sec.weight,
+                    displayOrder: sec.displayOrder,
+                });
+            } catch (_) {
+                // silent – loadData will reconcile
+            }
+        });
+        message.success("Đã phân bổ đều trọng số cho các phần!");
+        setTimeout(() => loadData(), 600);
+    };
+
+    // ── UX Feature 4: Drag & drop handlers ────────────────────────────
+    const handleDragStart = (e: React.DragEvent, secId: number) => {
+        dragSrcIdRef.current = secId;
+        e.dataTransfer.effectAllowed = "move";
+    };
+    const handleDragOver = (e: React.DragEvent, secId: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setDragOverId(secId);
+    };
+    const handleDragLeave = () => setDragOverId(null);
+    const handleDrop = async (e: React.DragEvent, targetId: number) => {
+        e.preventDefault();
+        setDragOverId(null);
+        const srcId = dragSrcIdRef.current;
+        if (!srcId || srcId === targetId) return;
+        const srcIdx = sections.findIndex(s => s.id === srcId);
+        const tgtIdx = sections.findIndex(s => s.id === targetId);
+        if (srcIdx < 0 || tgtIdx < 0) return;
+        const reordered = [...sections];
+        const [moved] = reordered.splice(srcIdx, 1);
+        reordered.splice(tgtIdx, 0, moved);
+        // Assign new displayOrder
+        const withOrder = reordered.map((s, i) => ({ ...s, displayOrder: i + 1 }));
+        setSections(withOrder);
+        // Persist new orders
+        withOrder.forEach(async (sec) => {
+            if (!sec.id) return;
+            try {
+                const { callUpdateTemplateSection } = await import("@/config/api");
+                await callUpdateTemplateSection(sec.id, {
+                    code: sec.code,
+                    name: sec.name,
+                    weight: sec.weight,
+                    displayOrder: sec.displayOrder,
+                });
+            } catch (_) {}
+        });
+        message.success("Đã sắp xếp lại thứ tự phần!");
+    };
+    const handleDragEnd = () => { setDragOverId(null); dragSrcIdRef.current = null; };
 
     const loadData = async () => {
         setLoading(true);
@@ -404,355 +498,708 @@ const TemplateDetailPage: React.FC = () => {
         ? Math.abs(sumCriteriaWeights - activeSection.weight) < 0.0001 
         : false;
 
+    // ── Derived status helpers ────────────────────────────────────────
+    const weightPct        = Math.round(sumSectionWeights * 100);
+    const weightStatus: "ok" | "over" | "under" =
+        isSectionsWeightValid ? "ok" : sumSectionWeights > 1 ? "over" : "under";
+    const weightBarColor =
+        weightStatus === "ok"    ? "linear-gradient(90deg,#10b981,#34d399)" :
+        weightStatus === "over"  ? "linear-gradient(90deg,#ef4444,#f97316)" :
+                                   "linear-gradient(135deg,#e8637a 0%,#f97daa 100%)";
+    const weightBorderColor =
+        weightStatus === "ok"   ? "#bbf7d0" :
+        weightStatus === "over" ? "#fecaca" : "rgba(232,99,122,.25)";
+    const weightChipBg    =
+        weightStatus === "ok"   ? { bg: "#dcfce7", color: "#15803d" } :
+        weightStatus === "over" ? { bg: "#fee2e2", color: "#b91c1c" } :
+                                  { bg: "#fff0f2", color: PINK };
+
     return (
         <Spin spinning={loading}>
-            <div style={{ padding: "24px", minHeight: "calc(100vh - 100px)", background: "#f8f9fa" }}>
-                {/* Header Section */}
-                <div style={{ marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Button 
-                            icon={<ArrowLeftOutlined />} 
-                            onClick={() => navigate("/admin/evaluation/templates")}
-                            style={{ borderRadius: 6 }}
-                        />
-                        <div>
-                            <Title level={4} style={{ margin: 0, fontWeight: 700 }}>
-                                Thiết lập tiêu chí: {template?.name}
-                            </Title>
-                            <div style={{ display: "flex", gap: "12px", marginTop: "4px", flexWrap: "wrap", alignItems: "center" }}>
-                                <Text type="secondary" style={{ fontSize: "13px" }}>
-                                    {template?.description || "Không có mô tả"}
-                                </Text>
-                                {(template?.createdBy || template?.createdAt) && (
-                                    <>
-                                        <span style={{ color: "#d9d9d9" }}>|</span>
-                                        <Text type="secondary" style={{ fontSize: "12px" }}>
-                                            Người tạo: <span style={{ fontWeight: 600, color: "#475569" }}>{template.createdBy || "—"}</span> 
-                                            {template.createdAt && ` (${dayjs(template.createdAt).format("DD/MM/YYYY HH:mm")})`}
-                                        </Text>
-                                    </>
-                                )}
-                                {(template?.updatedBy || template?.updatedAt) && (
-                                    <>
-                                        <span style={{ color: "#d9d9d9" }}>|</span>
-                                        <Text type="secondary" style={{ fontSize: "12px" }}>
-                                            Cập nhật cuối: <span style={{ fontWeight: 600, color: "#475569" }}>{template.updatedBy || "—"}</span> 
-                                            {template.updatedAt && ` (${dayjs(template.updatedAt).format("DD/MM/YYYY HH:mm")})`}
-                                        </Text>
-                                    </>
+            {/* ── Global scoped styles ── */}
+            <style>{`
+                .hrm-back-btn:hover { background: #f8fafc !important; border-color: #cbd5e1 !important; color: #374151 !important; }
+                .hrm-activate-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+                .hrm-sec-card:hover { border-color: rgba(232,99,122,.35) !important; box-shadow: 0 4px 16px rgba(232,99,122,.1) !important; }
+                .hrm-sec-card.active { border-color: ${PINK} !important; background: #fff5f7 !important; }
+                .hrm-sec-card.dragover { border-color: ${PINK} !important; border-style: dashed !important; background: #fff0f2 !important; transform: scale(1.01); }
+                .hrm-crit-card { transition: box-shadow 150ms ease; }
+                .hrm-crit-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.07) !important; }
+                .hrm-auto-btn:hover { background: #ffe4e9 !important; }
+                .hrm-section-pill:hover { border-color: rgba(232,99,122,.45) !important; color: ${PINK} !important; }
+                .hrm-panel-collapse-btn:hover { background: #f1f5f9 !important; }
+                .hrm-add-btn:hover { opacity: 0.88; }
+            `}</style>
+
+            <div style={{ padding: "24px", minHeight: "calc(100vh - 100px)", background: "#f1f5f9" }}>
+
+                {/* ══════════ HEADER ══════════ */}
+                <div style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 1px 6px rgba(0,0,0,.05)",
+                    marginBottom: 16,
+                    overflow: "hidden",
+                    position: "relative",
+                }}>
+                    {/* Left accent bar */}
+                    <div style={{
+                        position: "absolute", top: 0, left: 0, bottom: 0, width: 4,
+                        background: "linear-gradient(180deg,#e8637a,#f97daa)",
+                        borderRadius: "12px 0 0 12px",
+                    }} />
+
+                    <div style={{ padding: "18px 24px 14px 28px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>
+                            {/* Left: back + title */}
+                            <div style={{ display: "flex", gap: 12, flex: 1, minWidth: 0, alignItems: "flex-start" }}>
+                                <Tooltip title="Quay lại">
+                                    <button
+                                        className="hrm-back-btn"
+                                        onClick={() => navigate("/admin/evaluation/templates")}
+                                        style={{
+                                            width: 34, height: 34, borderRadius: 8,
+                                            border: "1px solid #e2e8f0",
+                                            background: "#f8fafc",
+                                            cursor: "pointer",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            flexShrink: 0, marginTop: 1,
+                                            transition: "all 150ms ease",
+                                            color: "#64748b",
+                                            fontSize: 16, fontWeight: 500,
+                                        }}
+                                    >
+                                        <ArrowLeftOutlined style={{ fontSize: 13 }} />
+                                    </button>
+                                </Tooltip>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, marginBottom: 3, letterSpacing: ".02em", textTransform: "uppercase" }}>
+                                        Mẫu đánh giá / Thiết lập tiêu chí
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                                        <span style={{ fontSize: 17, fontWeight: 800, color: "#0f172a", letterSpacing: "-.025em", lineHeight: 1.3 }}>
+                                            {template?.name ?? "—"}
+                                        </span>
+                                        <span style={{
+                                            padding: "2px 9px", borderRadius: 6,
+                                            fontSize: 11, fontWeight: 700, letterSpacing: ".03em",
+                                            background: template?.type === "STAFF" ? "#eff6ff" : "#f5f3ff",
+                                            color: template?.type === "STAFF" ? "#1d4ed8" : "#7c3aed",
+                                            border: `1px solid ${template?.type === "STAFF" ? "#bfdbfe" : "#ddd6fe"}`,
+                                        }}>
+                                            {template?.type === "STAFF" ? "Nhân viên" : "Quản lý"}
+                                        </span>
+                                        <span style={{
+                                            padding: "2px 9px", borderRadius: 6,
+                                            fontSize: 11, fontWeight: 700, letterSpacing: ".03em",
+                                            background: template?.status === "ACTIVE" ? "#dcfce7" : template?.status === "ARCHIVED" ? "#fee2e2" : "#f8fafc",
+                                            color: template?.status === "ACTIVE" ? "#15803d" : template?.status === "ARCHIVED" ? "#b91c1c" : "#64748b",
+                                            border: `1px solid ${template?.status === "ACTIVE" ? "#bbf7d0" : template?.status === "ARCHIVED" ? "#fecaca" : "#e2e8f0"}`,
+                                        }}>
+                                            {template?.status === "ACTIVE" ? "Đang áp dụng" : template?.status === "ARCHIVED" ? "Lưu trữ" : "Bản nháp"}
+                                        </span>
+                                    </div>
+                                    {template?.description && (
+                                        <p style={{ margin: 0, fontSize: 13, color: "#64748b", lineHeight: 1.55, maxWidth: 580 }}>
+                                            {template.description}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Right: Activate CTA */}
+                            {template?.status === "DRAFT" && (
+                                <Access permission={ALL_PERMISSIONS.EVALUATION.PUBLISH_TEMPLATE} hideChildren>
+                                    <Popconfirm
+                                        title="Kích hoạt mẫu đánh giá?"
+                                        description="Mẫu sau khi kích hoạt sẽ không thể chỉnh sửa cấu trúc nữa."
+                                        onConfirm={handlePublish}
+                                        okText="Đồng ý"
+                                        cancelText="Hủy"
+                                        placement="bottomRight"
+                                    >
+                                        <Button
+                                            type="primary"
+                                            icon={<CheckCircleOutlined />}
+                                            className="hrm-activate-btn"
+                                            disabled={!isSectionsWeightValid}
+                                            style={{
+                                                borderRadius: 8,
+                                                background: isSectionsWeightValid ? PINK : undefined,
+                                                borderColor: isSectionsWeightValid ? PINK : undefined,
+                                                fontWeight: 700, fontSize: 13,
+                                                height: 36,
+                                                boxShadow: isSectionsWeightValid ? `0 4px 14px rgba(232,99,122,.35)` : "none",
+                                                transition: "all 200ms ease",
+                                            }}
+                                        >
+                                            Kích hoạt mẫu
+                                        </Button>
+                                    </Popconfirm>
+                                </Access>
+                            )}
+                        </div>
+
+                        {/* Meta row */}
+                        <div style={{
+                            display: "flex", gap: 18, marginTop: 12,
+                            paddingTop: 10, borderTop: "1px solid #f1f5f9",
+                            fontSize: 12, color: "#94a3b8",
+                        }}>
+                            {(template?.createdBy || template?.createdAt) && (
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                    <UserOutlined style={{ fontSize: 11 }} />
+                                    <span style={{ color: "#64748b" }}>Tạo bởi</span>
+                                    <span style={{ color: "#334155", fontWeight: 600 }}>{template.createdBy}</span>
+                                    {template.createdAt && <span style={{ color: "#cbd5e1" }}>• {dayjs(template.createdAt).format("DD/MM/YYYY HH:mm")}</span>}
+                                </span>
+                            )}
+                            {(template?.updatedBy || template?.updatedAt) && (
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                    <ClockCircleOutlined style={{ fontSize: 11 }} />
+                                    <span style={{ color: "#64748b" }}>Cập nhật</span>
+                                    <span style={{ color: "#334155", fontWeight: 600 }}>{template.updatedBy}</span>
+                                    {template.updatedAt && <span style={{ color: "#cbd5e1" }}>• {dayjs(template.updatedAt).format("DD/MM/YYYY HH:mm")}</span>}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ══════════ WEIGHT STATS ROW (MINIMALIST) ══════════ */}
+                {sections.length > 0 && (
+                    <div style={{ marginBottom: 24, marginTop: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 12, flexWrap: "wrap", gap: 16 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                                <h3 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
+                                    Tổng trọng số
+                                </h3>
+                                <span style={{ fontSize: 28, fontWeight: 700, color: weightChipBg.color, lineHeight: 0.8, letterSpacing: "-0.02em" }}>
+                                    {weightPct}%
+                                </span>
+                            </div>
+                            
+                            {/* Section Pills */}
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                {sections.map(sec => (
+                                    <button key={sec.id}
+                                        onClick={() => sec.id && setSelectedSectionId(sec.id)}
+                                        style={{
+                                            fontSize: 13, fontWeight: 600, padding: "4px 16px", borderRadius: 999,
+                                            background: sec.id === selectedSectionId ? "#fff0f2" : "#ffffff",
+                                            color: sec.id === selectedSectionId ? "#e8637a" : "#64748b",
+                                            border: `1px solid ${sec.id === selectedSectionId ? "rgba(232,99,122,.3)" : "#e2e8f0"}`,
+                                            boxShadow: sec.id === selectedSectionId ? "0 2px 4px rgba(232,99,122,.05)" : "0 1px 2px rgba(0,0,0,.02)",
+                                            cursor: "pointer", transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+                                        }}
+                                    >
+                                        {sec.code} <span style={{ opacity: sec.id === selectedSectionId ? 0.9 : 0.6, marginLeft: 4, fontSize: 12 }}>{Math.round((sec.weight ?? 0) * 100)}%</span>
+                                    </button>
+                                ))}
+                                
+                                {/* Auto-distribute */}
+                                {template?.status === "DRAFT" && weightStatus !== "ok" && (
+                                    <Tooltip title="Tự động chia đều 100% cho tất cả phần">
+                                        <button onClick={handleAutoDistribute} style={{
+                                            fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 6,
+                                            background: "transparent", border: "1px dashed #cbd5e1", color: "#64748b", cursor: "pointer",
+                                            transition: "all 0.2s"
+                                        }}>
+                                            Chia đều
+                                        </button>
+                                    </Tooltip>
                                 )}
                             </div>
                         </div>
-                    </div>
-                    <Space>
-                        <Tag color={template?.type === "STAFF" ? "blue" : "purple"}>
-                            {template?.type === "STAFF" ? "Nhân viên" : "Quản lý"}
-                        </Tag>
-                        <Tag color={template?.status === "ACTIVE" ? "success" : template?.status === "ARCHIVED" ? "error" : "default"}>
-                            {template?.status === "ACTIVE" ? "Đang áp dụng" : template?.status === "ARCHIVED" ? "Lưu trữ" : "Bản nháp"}
-                        </Tag>
-                        {template?.status === "DRAFT" && (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.PUBLISH_TEMPLATE} hideChildren>
-                                <Popconfirm
-                                    title="Kích hoạt mẫu đánh giá?"
-                                    description="Lưu ý: Mẫu sau khi kích hoạt sẽ không thể chỉnh sửa cấu trúc nữa."
-                                    onConfirm={handlePublish}
-                                    okText="Đồng ý"
-                                    cancelText="Hủy"
-                                >
-                                    <Button 
-                                        type="primary" 
-                                        icon={<CheckCircleOutlined />} 
-                                        style={{ borderRadius: 6, background: "#389e0d", borderColor: "#389e0d" }}
-                                    >
-                                        Kích hoạt mẫu
-                                    </Button>
-                                </Popconfirm>
-                            </Access>
-                        )}
-                    </Space>
-                </div>
 
-                {/* Weights Alert Banner */}
-                {sections.length > 0 && !isSectionsWeightValid && (
-                    <Alert
-                        message={
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <WarningOutlined style={{ color: "#faad14" }} />
-                                <Text style={{ color: "#8a6d3b", fontWeight: 500 }}>
-                                    Cảnh báo: Tổng trọng số các Phần phải bằng 100%. Hiện tại: {(sumSectionWeights * 100).toFixed(0)}%
-                                </Text>
-                            </div>
-                        }
-                        type="warning"
-                        showIcon={false}
-                        style={{ marginBottom: "20px", borderRadius: 8, border: "1px solid #ffe58f", background: "#fffbe6" }}
-                    />
+                        {/* Ultra-thin Minimalist Progress Bar */}
+                        <div style={{ height: 4, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{
+                                height: "100%", width: `${Math.min(weightPct, 100)}%`,
+                                background: weightBarColor, borderRadius: 4,
+                                transition: "width 0.6s cubic-bezier(0.16, 1, 0.3, 1)"
+                            }} />
+                        </div>
+                    </div>
                 )}
 
-                <Row gutter={24}>
-                    {/* Left Panel: Sections List */}
-                    <Col xs={24} lg={8}>
-                        <Card 
-                            title={
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <span style={{ fontWeight: 600, fontSize: 15 }}>Các phần cấu trúc</span>
-                                    {template?.status === "DRAFT" && (
-                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_SECTION} hideChildren>
-                                            <Button 
-                                                type="primary" 
-                                                size="small" 
-                                                icon={<PlusOutlined />}
-                                                onClick={handleAddSectionClick}
-                                                style={{ 
-                                                    borderRadius: 6, 
-                                                    background: PINK, 
-                                                    borderColor: PINK 
-                                                }}
-                                            >
-                                                Thêm phần
-                                            </Button>
-                                        </Access>
-                                    )}
-                                </div>
-                            }
-                            styles={{ body: { padding: "12px" } }}
-                            style={{ borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}
-                        >
-                            {sections.length === 0 ? (
-                                <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-                                    Chưa có phần nào được thiết lập.
-                                </div>
-                            ) : (
-                                <Space direction="vertical" style={{ width: "100%" }} size={8}>
-                                    {sections.map((sec) => {
-                                        const isSelected = sec.id === selectedSectionId;
-                                        return (
-                                            <div
-                                                key={sec.id}
-                                                onClick={() => sec.id && setSelectedSectionId(sec.id)}
-                                                style={{
-                                                    padding: "12px 16px",
-                                                    borderRadius: 8,
-                                                    border: isSelected ? "1.5px solid #1677ff" : "1px solid #e5e7eb",
-                                                    background: isSelected ? "#e6f4ff" : "#fff",
-                                                    cursor: "pointer",
-                                                    transition: "all 0.2s ease",
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center",
-                                                }}
-                                            >
-                                                <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                                                    <span style={{ fontWeight: 600, color: isSelected ? "#0958d9" : "#111827" }}>
-                                                        Phần {sec.code}: {sec.name}
-                                                    </span>
-                                                    <span style={{ fontSize: 12, color: "#6b7280" }}>
-                                                        Trọng số: {(sec.weight * 100).toFixed(0)}% | Thứ tự: {sec.displayOrder}
-                                                    </span>
-                                                </div>
-                                                {template?.status === "DRAFT" && (
-                                                    <Space size={8} onClick={(e) => e.stopPropagation()}>
-                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_SECTION} hideChildren>
-                                                            <Button 
-                                                                size="small" 
-                                                                icon={<EditOutlined style={{ fontSize: 13 }} />}
-                                                                onClick={(e) => handleEditSectionClick(sec, e)}
-                                                                style={{ borderRadius: 4 }}
-                                                            />
-                                                        </Access>
-                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_SECTION} hideChildren>
-                                                            <Popconfirm
-                                                                title="Xác nhận xóa phần này cùng toàn bộ tiêu chí trực thuộc?"
-                                                                okText="Xóa"
-                                                                cancelText="Hủy"
-                                                                onConfirm={(e) => sec.id && handleDeleteSection(sec.id, e as any)}
-                                                            >
-                                                                <Button 
-                                                                    size="small" 
-                                                                    danger 
-                                                                    icon={<DeleteOutlined style={{ fontSize: 13 }} />}
-                                                                    style={{ borderRadius: 4 }}
-                                                                />
-                                                            </Popconfirm>
-                                                        </Access>
-                                                    </Space>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </Space>
-                            )}
-                        </Card>
-                    </Col>
-
-                    {/* Right Panel: Selected Section Criteria & Levels */}
-                    <Col xs={24} lg={16}>
-                        {selectedSectionId ? (
-                            <Card
-                                title={
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div>
-                                            <span style={{ fontWeight: 700, fontSize: 15 }}>
-                                                Tiêu chí trực thuộc (Phần {activeSection?.code})
-                                            </span>
-                                            {activeCriteriaList.length > 0 && (
-                                                <div style={{ display: "inline-flex", alignItems: "center", gap: 12, marginLeft: 16, verticalAlign: "middle" }}>
-                                                    <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
-                                                        Đã phân bổ: <strong style={{ color: "#0f172a" }}>{Math.round(sumCriteriaWeights * 100)}%</strong> trên {Math.round((activeSection?.weight ?? 0) * 100)}%
-                                                    </span>
-                                                    <Progress
-                                                        percent={Number(((sumCriteriaWeights / (activeSection?.weight ?? 1)) * 100).toFixed(0))}
-                                                        showInfo={false}
-                                                        strokeColor={isCriteriaWeightValid ? "#10b981" : (sumCriteriaWeights > (activeSection?.weight ?? 0) ? "#ef4444" : "#f59e0b")}
-                                                        style={{ width: 80, margin: 0 }}
-                                                        size={[80, 6]}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                <Row gutter={16}>
+                    {/* ══════════ LEFT PANEL: Section List ══════════ */}
+                    <Col xs={24} lg={leftPanelCollapsed ? { flex: "48px" } : (rightPanelCollapsed ? { flex: "auto" } : { span: 8 })}
+                        style={{ transition: "all 0.3s cubic-bezier(.4,0,.2,1)", minWidth: 0 }}
+                    >
+                        <div style={{
+                            background: leftPanelCollapsed ? "#fafafa" : "#fff",
+                            borderRadius: 12,
+                            border: "1px solid #e2e8f0",
+                            boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+                            overflow: "hidden",
+                            height: "100%",
+                        }}>
+                            {/* Panel header */}
+                            {!leftPanelCollapsed ? (
+                                <div style={{
+                                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                                    padding: "12px 16px",
+                                    borderBottom: "1px solid #f1f5f9",
+                                    background: "#fafafa",
+                                }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <div style={{
+                                            width: 3, height: 16, borderRadius: 2,
+                                            background: PINK,
+                                        }} />
+                                        <span style={{ fontWeight: 700, fontSize: 13, color: "#0f172a", letterSpacing: "-.01em" }}>Phần cấu trúc</span>
+                                        {sections.length > 0 && (
+                                            <span style={{
+                                                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                                width: 20, height: 20, borderRadius: 999,
+                                                background: "#f1f5f9", color: "#64748b",
+                                                fontSize: 11, fontWeight: 700,
+                                            }}>{sections.length}</span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                         {template?.status === "DRAFT" && (
-                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_CRITERIA} hideChildren>
+                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_SECTION} hideChildren>
                                                 <Button
                                                     type="primary"
+                                                    size="small"
                                                     icon={<PlusOutlined />}
-                                                    onClick={handleAddCriteriaClick}
+                                                    onClick={handleAddSectionClick}
+                                                    className="hrm-add-btn"
                                                     style={{
-                                                        borderRadius: 6,
-                                                        background: PINK,
-                                                        borderColor: PINK,
+                                                        borderRadius: 7, background: PINK, borderColor: PINK,
+                                                        fontWeight: 600, fontSize: 12, height: 30,
                                                     }}
                                                 >
-                                                    Thêm tiêu chí
+                                                    Thêm phần
                                                 </Button>
                                             </Access>
                                         )}
+                                        <Tooltip title="Thu gọn">
+                                            <button className="hrm-panel-collapse-btn"
+                                                onClick={() => setLeftPanelCollapsed(true)}
+                                                style={{
+                                                    width: 28, height: 28, borderRadius: 7,
+                                                    border: "1px solid #e2e8f0", background: "#fff",
+                                                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                                                    color: "#94a3b8", transition: "all 150ms ease",
+                                                }}
+                                            >
+                                                <LeftOutlined style={{ fontSize: 10 }} />
+                                            </button>
+                                        </Tooltip>
                                     </div>
-                                }
-                                style={{ borderRadius: 12, border: "1px solid #e5e7eb", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}
-                            >
-                                {activeCriteriaList.length === 0 ? (
-                                    <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
-                                        Chưa có tiêu chí nào cho phần này. Hãy nhấn "Thêm tiêu chí" để xây dựng cấu trúc.
+                                </div>
+                            ) : (
+                                <Tooltip title="Mở rộng panel phần" placement="right">
+                                    <div 
+                                        onClick={() => setLeftPanelCollapsed(false)}
+                                        style={{
+                                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+                                            height: "100%", minHeight: 400, cursor: "pointer", width: "100%",
+                                            paddingTop: 16, gap: 16
+                                        }}
+                                    >
+                                        <RightOutlined style={{ fontSize: 14, color: "#94a3b8" }} />
+                                        <div style={{ writingMode: "vertical-rl", fontWeight: 700, color: "#94a3b8", letterSpacing: 2, fontSize: 12 }}>
+                                            PHẦN CẤU TRÚC
+                                        </div>
+                                    </div>
+                                </Tooltip>
+                            )}
+
+                            {/* Section list */}
+                            {!leftPanelCollapsed && (
+                                <div style={{ padding: "10px 12px" }}>
+                                    {sections.length === 0 ? (
+                                        <div style={{
+                                            textAlign: "center", padding: "48px 0",
+                                            color: "#94a3b8", fontSize: 13,
+                                        }}>
+                                            <OrderedListOutlined style={{ fontSize: 28, marginBottom: 8, display: "block", color: "#cbd5e1" }} />
+                                            Chưa có phần nào. Nhấn "Thêm phần" để bắt đầu.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                            {sections.map((sec) => {
+                                                const isSelected = sec.id === selectedSectionId;
+                                                const isDragOver = dragOverId === sec.id;
+                                                const critCount = sec.criteria?.length ?? 0;
+                                                return (
+                                                    <div
+                                                        key={sec.id}
+                                                        className={`hrm-sec-card${isSelected ? " active" : ""}${isDragOver ? " dragover" : ""}`}
+                                                        draggable={template?.status === "DRAFT"}
+                                                        onDragStart={(e) => sec.id && handleDragStart(e, sec.id)}
+                                                        onDragOver={(e) => sec.id && handleDragOver(e, sec.id)}
+                                                        onDragLeave={handleDragLeave}
+                                                        onDrop={(e) => sec.id && handleDrop(e, sec.id)}
+                                                        onDragEnd={handleDragEnd}
+                                                        onClick={() => sec.id && setSelectedSectionId(sec.id)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: 0,
+                                                            borderRadius: 8,
+                                                            border: `1.5px solid ${isSelected ? PINK : "#e2e8f0"}`,
+                                                            background: isSelected ? "#fff5f7" : "#fff",
+                                                            cursor: template?.status === "DRAFT" ? "grab" : "pointer",
+                                                            transition: "all 150ms ease",
+                                                            overflow: "hidden",
+                                                        }}
+                                                    >
+                                                        {/* Active accent bar */}
+                                                        <div style={{
+                                                            width: 3, alignSelf: "stretch", flexShrink: 0,
+                                                            background: isSelected ? PINK : "transparent",
+                                                            transition: "background 150ms ease",
+                                                        }} />
+
+                                                        <div style={{ flex: 1, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                                                                {/* Drag handle */}
+                                                                {template?.status === "DRAFT" && (
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, opacity: 0.3, flexShrink: 0 }}>
+                                                                        {[0,1,2,3].map(i => (
+                                                                            <span key={i} style={{ width: 3, height: 3, borderRadius: "50%", background: "#475569", display: "block" }} />
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                                {/* Code badge */}
+                                                                <span style={{
+                                                                    width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+                                                                    background: isSelected ? PINK : "#f1f5f9",
+                                                                    color: isSelected ? "#fff" : "#475569",
+                                                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                                                    fontWeight: 800, fontSize: 13, transition: "all 150ms ease",
+                                                                }}>
+                                                                    {sec.code}
+                                                                </span>
+                                                                <div style={{ minWidth: 0 }}>
+                                                                    <div style={{
+                                                                        fontWeight: 600, fontSize: 13,
+                                                                        color: isSelected ? "#9a1932" : "#1e293b",
+                                                                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                                                    }}>
+                                                                        {sec.name}
+                                                                    </div>
+                                                                    <div style={{ fontSize: 11, color: "#94a3b8", display: "flex", gap: 8 }}>
+                                                                        <span style={{ fontWeight: 600, color: isSelected ? PINK : "#64748b" }}>{Math.round((sec.weight ?? 0) * 100)}%</span>
+                                                                        <span>·</span>
+                                                                        <span>{critCount} tiêu chí</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {template?.status === "DRAFT" && (
+                                                                <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_SECTION} hideChildren>
+                                                                        <Tooltip title="Chỉnh sửa">
+                                                                            <Button
+                                                                                size="small"
+                                                                                icon={<EditOutlined style={{ fontSize: 11 }} />}
+                                                                                onClick={(e) => handleEditSectionClick(sec, e)}
+                                                                                style={{ borderRadius: 6, width: 26, height: 26, border: "1px solid #e2e8f0", background: "#f8fafc" }}
+                                                                            />
+                                                                        </Tooltip>
+                                                                    </Access>
+                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_SECTION} hideChildren>
+                                                                        <Popconfirm
+                                                                            title="Xóa phần này cùng toàn bộ tiêu chí?"
+                                                                            okText="Xóa" cancelText="Hủy"
+                                                                            onConfirm={(e) => sec.id && handleDeleteSection(sec.id, e as any)}
+                                                                        >
+                                                                            <Button
+                                                                                size="small" danger
+                                                                                icon={<DeleteOutlined style={{ fontSize: 11 }} />}
+                                                                                style={{ borderRadius: 6, width: 26, height: 26 }}
+                                                                            />
+                                                                        </Popconfirm>
+                                                                    </Access>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </Col>
+
+                    {/* ══════════ RIGHT PANEL: Criteria ══════════ */}
+                    <Col xs={24} lg={leftPanelCollapsed ? { flex: "auto" } : (rightPanelCollapsed ? { flex: "48px" } : { span: 16 })}
+                        style={{ transition: "all 0.3s cubic-bezier(.4,0,.2,1)", minWidth: 0 }}
+                    >
+                        {selectedSectionId ? (
+                            <div style={{
+                                background: rightPanelCollapsed ? "#fafafa" : "#fff",
+                                borderRadius: 12,
+                                border: "1px solid #e2e8f0",
+                                boxShadow: "0 1px 4px rgba(0,0,0,.04)",
+                                overflow: "hidden",
+                                height: "100%",
+                            }}>
+                                {/* Right panel header */}
+                                {!rightPanelCollapsed ? (
+                                    <div style={{
+                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                        padding: "12px 20px",
+                                        borderBottom: "1px solid #f1f5f9",
+                                        background: "#fafafa",
+                                    }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", flex: 1 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <div style={{ width: 3, height: 16, borderRadius: 2, background: PINK }} />
+                                                <span style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>
+                                                    Tiêu chí — <span style={{ color: PINK }}>Phần {activeSection?.code}: {activeSection?.name}</span>
+                                                </span>
+                                            </div>
+                                            {activeCriteriaList.length > 0 && (
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                    <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                                                        {Math.round(sumCriteriaWeights * 100)}% / {Math.round((activeSection?.weight ?? 0) * 100)}%
+                                                    </span>
+                                                    <div style={{ width: 80, height: 5, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
+                                                        <div style={{
+                                                            height: "100%",
+                                                            width: `${Math.min(Number(((sumCriteriaWeights / (activeSection?.weight ?? 1)) * 100).toFixed(0)), 100)}%`,
+                                                            background: isCriteriaWeightValid ? "#10b981" : sumCriteriaWeights > (activeSection?.weight ?? 0) ? "#ef4444" : "#f59e0b",
+                                                            borderRadius: 999, transition: "width .4s ease",
+                                                        }} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                            {template?.status === "DRAFT" && (
+                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_CRITERIA} hideChildren>
+                                                    <Button
+                                                        type="primary"
+                                                        size="small"
+                                                        icon={<PlusOutlined />}
+                                                        onClick={handleAddCriteriaClick}
+                                                        className="hrm-add-btn"
+                                                        style={{
+                                                            borderRadius: 7, background: PINK, borderColor: PINK,
+                                                            fontWeight: 600, fontSize: 12, height: 30,
+                                                        }}
+                                                    >
+                                                        Thêm tiêu chí
+                                                    </Button>
+                                                </Access>
+                                            )}
+                                            <Tooltip title="Thu gọn">
+                                                <button className="hrm-panel-collapse-btn"
+                                                    onClick={() => setRightPanelCollapsed(true)}
+                                                    style={{
+                                                        width: 28, height: 28, borderRadius: 7,
+                                                        border: "1px solid #e2e8f0", background: "#fff",
+                                                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                                                        color: "#94a3b8", transition: "all 150ms ease",
+                                                    }}
+                                                >
+                                                    <RightOutlined style={{ fontSize: 10 }} />
+                                                </button>
+                                            </Tooltip>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <Space direction="vertical" style={{ width: "100%" }} size={16}>
+                                    <Tooltip title="Mở rộng panel tiêu chí" placement="left">
+                                        <div 
+                                            onClick={() => setRightPanelCollapsed(false)}
+                                            style={{
+                                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+                                                height: "100%", minHeight: 400, cursor: "pointer", width: "100%",
+                                                paddingTop: 16, gap: 16
+                                            }}
+                                        >
+                                            <LeftOutlined style={{ fontSize: 14, color: "#94a3b8" }} />
+                                            <div style={{ writingMode: "vertical-rl", fontWeight: 700, color: "#94a3b8", letterSpacing: 2, fontSize: 12 }}>
+                                                TIÊU CHÍ ĐÁNH GIÁ
+                                            </div>
+                                        </div>
+                                    </Tooltip>
+                                )}
+                                {rightPanelCollapsed ? null : activeCriteriaList.length === 0 ? (
+                                    <div style={{ textAlign: "center", padding: "72px 0", color: "#94a3b8", fontSize: 13 }}>
+                                        <BookOutlined style={{ fontSize: 32, display: "block", marginBottom: 10, color: "#cbd5e1" }} />
+                                        Chưa có tiêu chí nào. Nhấn "Thêm tiêu chí" để bắt đầu.
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
                                         {activeCriteriaList.map((crit: any, critIndex: number) => {
                                             const criteriaNo = critIndex + 1;
+                                            const lvlOk = !crit.subCriteria?.length && (crit.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5;
                                             return (
                                                 <div
                                                     key={crit.id}
+                                                    className="hrm-crit-card"
                                                     style={{
-                                                        background: "#ffffff",
+                                                        background: "#fff",
                                                         border: "1px solid #e2e8f0",
-                                                        borderRadius: 12,
-                                                        padding: "14px 16px",
-                                                        boxShadow: "0 1px 3px rgba(0,0,0,0.01), 0 1px 2px rgba(0,0,0,0.02)",
+                                                        borderRadius: 8,
+                                                        padding: "12px 16px",
                                                     }}
                                                 >
                                                 {/* Header Row */}
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 8 }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+                                                        {/* Number badge */}
                                                         <span style={{
-                                                            width: 32,
-                                                            height: 32,
-                                                            borderRadius: 8,
-                                                            background: "#e6f4ff",
-                                                            color: "#0958d9",
-                                                            border: "1px solid #91caff",
-                                                            display: "inline-flex",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            fontWeight: 800,
-                                                            fontSize: 15,
-                                                            flex: "0 0 auto",
+                                                            flexShrink: 0,
+                                                            color: "#0f172a",
+                                                            fontWeight: 800, fontSize: 16,
+                                                            fontFamily: "monospace",
                                                         }}>
-                                                            {criteriaNo}
+                                                            {criteriaNo < 10 ? `0${criteriaNo}` : criteriaNo}.
                                                         </span>
-                                                        <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>
+                                                        <div style={{ fontWeight: 600, fontSize: 15, color: "#0f172a" }}>
                                                             {crit.name}
-                                                        </span>
-                                                        <Tag style={{ borderRadius: 6, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#475569", fontWeight: 600, fontSize: 12, padding: "2px 8px" }}>
-                                                            Trọng số: {(crit.weight * 100).toFixed(0)}%
-                                                        </Tag>
-                                                        {crit.subCriteria?.length > 0 ? (
-                                                            <Tag color="blue" style={{ borderRadius: 6, fontWeight: 600 }}>
-                                                                {crit.subCriteria.length} mục con
-                                                            </Tag>
-                                                        ) : (
-                                                            <Tag color={(crit.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "success" : "warning"} style={{ borderRadius: 6, fontWeight: 600 }}>
-                                                                {(crit.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "Đủ mức điểm" : "Thiếu mức điểm"}
-                                                            </Tag>
-                                                        )}
+                                                        </div>
+                                                        {/* Inline Metadata */}
+                                                        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "#64748b", marginLeft: 4 }}>
+                                                            <span style={{ color: "#334155", fontWeight: 500 }}>
+                                                                Trọng số: {(crit.weight * 100).toFixed(0)}%
+                                                            </span>
+                                                            <span style={{ color: "#e2e8f0" }}>•</span>
+                                                            {crit.subCriteria?.length > 0 ? (
+                                                                <span>{crit.subCriteria.length} mục con</span>
+                                                            ) : (
+                                                                <span style={{ 
+                                                                    padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                                                                    background: lvlOk ? "#dcfce7" : "#ffedd5",
+                                                                    color: lvlOk ? "#16a34a" : "#ea580c"
+                                                                }}>
+                                                                    {lvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
 
-                                                    {template?.status === "DRAFT" && (
-                                                        <Space size={8}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                        {template?.status === "DRAFT" && (
+                                                            <Space size={8}>
                                                             {(!crit.subCriteria || crit.subCriteria.length === 0) && (
                                                                 <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
-                                                                    <Button
-                                                                        size="middle"
-                                                                        icon={<TrophyOutlined style={{ color: "#64748b" }} />}
+                                                                    <div
                                                                         onClick={() => handleConfigureLevels(crit)}
-                                                                        style={{
-                                                                            borderRadius: 8,
-                                                                            borderColor: "#cbd5e1",
-                                                                            background: "#ffffff",
-                                                                            color: "#334155",
-                                                                            fontWeight: 600,
-                                                                            fontSize: 13,
+                                                                        style={{ 
+                                                                            display: "flex", alignItems: "center", gap: 6,
+                                                                            padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+                                                                            background: "#ffffff", border: "1px solid #e2e8f0",
+                                                                            color: "#475569", fontWeight: 600, fontSize: 13,
+                                                                            transition: "all 0.2s"
                                                                         }}
+                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
                                                                     >
-                                                                        Mức điểm
-                                                                    </Button>
+                                                                        <TrophyOutlined />
+                                                                        <span>Mức điểm</span>
+                                                                    </div>
                                                                 </Access>
                                                             )}
                                                             <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_CRITERIA} hideChildren>
-                                                                <Button
-                                                                    size="middle"
-                                                                    icon={<PlusOutlined style={{ color: "#64748b" }} />}
+                                                                <div
                                                                     onClick={() => handleAddSubCriteriaClick(crit)}
-                                                                    style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff", color: "#334155", fontWeight: 600, fontSize: 13 }}
+                                                                    style={{ 
+                                                                        display: "flex", alignItems: "center", gap: 6,
+                                                                        padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+                                                                        background: "#ffffff", border: "1px solid #e2e8f0",
+                                                                        color: "#475569", fontWeight: 600, fontSize: 13,
+                                                                        transition: "all 0.2s"
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
                                                                 >
-                                                                    Mục con
-                                                                </Button>
+                                                                    <PlusOutlined />
+                                                                    <span>Mục con</span>
+                                                                </div>
                                                             </Access>
                                                             <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
-                                                                <Button
-                                                                    size="middle"
-                                                                    icon={<EditOutlined style={{ color: "#475569" }} />}
+                                                                <div
                                                                     onClick={() => handleEditCriteriaClick(crit)}
-                                                                    style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff" }}
-                                                                />
+                                                                    style={{ 
+                                                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                                                        width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                                                                        color: "#d97706", transition: "all 0.2s",
+                                                                        background: "transparent"
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                >
+                                                                    <EditOutlined style={{ fontSize: 14 }} />
+                                                                </div>
                                                             </Access>
                                                             <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
                                                                 <Popconfirm
-                                                                    title="Bạn chắc chắn muốn xóa tiêu chí này?"
+                                                                    title="Xóa tiêu chí?"
                                                                     okText="Xóa"
                                                                     cancelText="Hủy"
                                                                     onConfirm={() => crit.id && handleDeleteCriteria(crit.id)}
                                                                 >
-                                                                    <Button
-                                                                        size="middle"
-                                                                        icon={<DeleteOutlined style={{ color: "#ef4444" }} />}
-                                                                        style={{ borderRadius: 8, borderColor: "#cbd5e1", background: "#ffffff" }}
-                                                                    />
+                                                                    <div
+                                                                        style={{ 
+                                                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                                                            width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                                                                            color: "#ef4444", transition: "all 0.2s",
+                                                                            background: "transparent"
+                                                                        }}
+                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                    >
+                                                                        <DeleteOutlined style={{ fontSize: 14 }} />
+                                                                    </div>
                                                                 </Popconfirm>
                                                             </Access>
-                                                        </Space>
-                                                    )}
+                                                            </Space>
+                                                        )}
+                                                        {/* Collapse Toggle */}
+                                                        {crit.subCriteria?.length > 0 && (
+                                                            <div 
+                                                                onClick={() => toggleCriteriaCollapse(crit.id)}
+                                                                style={{ 
+                                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                                    width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                                                                    color: "#64748b", transition: "all 0.2s",
+                                                                    border: "1px solid transparent", background: "transparent"
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = "#f1f5f9";
+                                                                    e.currentTarget.style.color = "#0f172a";
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.background = "transparent";
+                                                                    e.currentTarget.style.color = "#64748b";
+                                                                }}
+                                                            >
+                                                                {collapsedCriteriaIds.includes(crit.id) ? <RightOutlined style={{ fontSize: 12 }} /> : <DownOutlined style={{ fontSize: 12 }} />}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
-                                                {/* Description and Method */}
                                                 {crit.description && (
-                                                    <div style={{ marginBottom: 12, color: "#475569", fontSize: 13, fontStyle: "italic" }}>
-                                                        {crit.description}
+                                                    <div style={{ marginTop: 12, color: "#475569", fontSize: 13, lineHeight: "1.5", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                                        <AlignLeftOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
+                                                        <span>{crit.description}</span>
                                                     </div>
                                                 )}
-                                                <div style={{ marginBottom: crit.subCriteria?.length ? 12 : 0, background: "#f8fafc", padding: "8px 12px", borderRadius: 8, border: "1px solid #f1f5f9" }}>
-                                                    <span style={{ fontWeight: 600, color: "#475569", fontSize: 13 }}>Phương pháp đo lường: </span>
-                                                    <span style={{ color: "#0f172a", fontSize: 13 }}>{crit.measurementMethod || "—"}</span>
-                                                </div>
+                                                
+                                                {crit.measurementMethod && (
+                                                    <div style={{ 
+                                                        marginTop: crit.description ? 6 : 12,
+                                                        marginBottom: crit.subCriteria?.length ? 8 : 0, 
+                                                        color: "#475569", fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", lineHeight: "1.5"
+                                                    }}>
+                                                        <InfoCircleOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
+                                                        <span>{crit.measurementMethod}</span>
+                                                    </div>
+                                                )}
 
                                                 {/* Levels Definition Panel */}
                                                 {false && (!crit.subCriteria || crit.subCriteria.length === 0) && (
@@ -843,66 +1290,87 @@ const TemplateDetailPage: React.FC = () => {
                                                 )}
                                                 
                                                 {/* Sub Criteria Render Loop */}
-                                                {crit.subCriteria && crit.subCriteria.length > 0 && (
-                                                    <div style={{ marginTop: 12, paddingLeft: 16, borderLeft: "2px solid #e2e8f0" }}>
-                                                        <Space direction="vertical" style={{ width: "100%" }} size={8}>
+                                                {crit.subCriteria && crit.subCriteria.length > 0 && !collapsedCriteriaIds.includes(crit.id) && (
+                                                    <div style={{ marginTop: 16, borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
+                                                        <div style={{ width: "100%" }}>
                                                             {crit.subCriteria.map((sub: any, subIndex: number) => {
                                                                 const subNo = `${criteriaNo}.${subIndex + 1}`;
+                                                                const isLast = subIndex === crit.subCriteria.length - 1;
+                                                                const subLvlOk = (sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5;
                                                                 return (
                                                                 <div
                                                                     key={sub.id}
                                                                     style={{
-                                                                        background: "#f8fafc",
-                                                                        border: "1px dashed #cbd5e1",
-                                                                        borderRadius: 10,
-                                                                        padding: "10px 12px",
+                                                                        background: "transparent",
+                                                                        borderBottom: isLast ? "none" : "1px solid #f8fafc",
+                                                                        padding: "12px 8px",
+                                                                        transition: "background 0.2s",
                                                                     }}
                                                                 >
-                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: sub.measurementMethod ? 8 : 0 }}>
-                                                                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0, paddingRight: 16 }}>
-                                                                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                                                                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: sub.measurementMethod ? 4 : 0 }}>
                                                                                 <span style={{
-                                                                                    minWidth: 42,
-                                                                                    height: 26,
-                                                                                    borderRadius: 7,
-                                                                                    background: "#fff",
-                                                                                    color: "#334155",
-                                                                                    border: "1px solid #cbd5e1",
-                                                                                    display: "inline-flex",
-                                                                                    alignItems: "center",
-                                                                                    justifyContent: "center",
                                                                                     fontWeight: 800,
-                                                                                    fontSize: 12,
+                                                                                    fontSize: 14,
+                                                                                    color: "#0f172a",
+                                                                                    minWidth: 28,
+                                                                                    fontFamily: "monospace",
                                                                                 }}>
                                                                                     {subNo}
                                                                                 </span>
-                                                                                <span style={{ fontWeight: 600, fontSize: 14, color: "#334155" }}>
+                                                                                <span style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}>
                                                                                     {sub.name}
                                                                                 </span>
-                                                                                <Tag color={(sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "success" : "warning"} style={{ borderRadius: 6, marginInlineEnd: 0 }}>
-                                                                                    {(sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5 ? "Đủ mức điểm" : "Thiếu mức điểm"}
-                                                                                </Tag>
+                                                                                <span style={{ 
+                                                                                    padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600, marginLeft: 4,
+                                                                                    background: subLvlOk ? "#dcfce7" : "#ffedd5",
+                                                                                    color: subLvlOk ? "#16a34a" : "#ea580c"
+                                                                                }}>
+                                                                                    {subLvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                                                </span>
                                                                             </div>
+                                                                            {sub.measurementMethod && (
+                                                                                <div style={{ fontSize: 13, color: "#64748b", paddingLeft: 38, marginTop: 4, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                                                                                    <InfoCircleOutlined style={{ marginTop: 2, fontSize: 12, opacity: 0.7 }} />
+                                                                                    <span>{sub.measurementMethod}</span>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
+                                                                        
                                                                         {template?.status === "DRAFT" && (
-                                                                                <Space size={8}>
-                                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
-                                                                                        <Button
-                                                                                            size="small"
-                                                                                            icon={<TrophyOutlined style={{ color: "#64748b" }} />}
-                                                                                            onClick={() => handleConfigureLevels(sub)}
-                                                                                            style={{ borderRadius: 6 }}
-                                                                                        >
-                                                                                            Mức điểm
-                                                                                        </Button>
-                                                                                    </Access>
-                                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
-                                                                                    <Button
-                                                                                        size="small"
-                                                                                        icon={<EditOutlined style={{ color: "#475569" }} />}
+                                                                            <div style={{ display: "flex", gap: 8, opacity: 0.8, transition: "opacity 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}>
+                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                                                    <div
+                                                                                        onClick={() => handleConfigureLevels(sub)}
+                                                                                        style={{ 
+                                                                                            display: "flex", alignItems: "center", gap: 6,
+                                                                                            padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                                                                            background: "#ffffff", border: "1px solid #e2e8f0",
+                                                                                            color: "#475569", fontWeight: 600, fontSize: 12,
+                                                                                            transition: "all 0.2s"
+                                                                                        }}
+                                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+                                                                                    >
+                                                                                        <TrophyOutlined style={{ fontSize: 13 }} />
+                                                                                        <span>Mức điểm</span>
+                                                                                    </div>
+                                                                                </Access>
+                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                                                    <div
                                                                                         onClick={() => handleEditCriteriaClick(sub, crit.id)}
-                                                                                        style={{ borderRadius: 6 }}
-                                                                                    />
+                                                                                        style={{ 
+                                                                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                            width: 26, height: 26, borderRadius: 6, cursor: "pointer",
+                                                                                            color: "#d97706", transition: "all 0.2s",
+                                                                                            background: "transparent"
+                                                                                        }}
+                                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+                                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                                    >
+                                                                                        <EditOutlined style={{ fontSize: 13 }} />
+                                                                                    </div>
                                                                                 </Access>
                                                                                 <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
                                                                                     <Popconfirm
@@ -911,52 +1379,33 @@ const TemplateDetailPage: React.FC = () => {
                                                                                         cancelText="Hủy"
                                                                                         onConfirm={() => sub.id && handleDeleteCriteria(sub.id)}
                                                                                     >
-                                                                                        <Button
-                                                                                            size="small"
-                                                                                            icon={<DeleteOutlined style={{ color: "#ef4444" }} />}
-                                                                                            style={{ borderRadius: 6 }}
-                                                                                        />
+                                                                                        <div
+                                                                                            style={{ 
+                                                                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                                width: 26, height: 26, borderRadius: 6, cursor: "pointer",
+                                                                                                color: "#ef4444", transition: "all 0.2s",
+                                                                                                background: "transparent"
+                                                                                            }}
+                                                                                            onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+                                                                                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                                        >
+                                                                                            <DeleteOutlined style={{ fontSize: 13 }} />
+                                                                                        </div>
                                                                                     </Popconfirm>
                                                                                 </Access>
-                                                                            </Space>
+                                                                            </div>
                                                                         )}
                                                                     </div>
-                                                                    {sub.measurementMethod && (
-                                                                        <div style={{ fontSize: 12, color: "#475569" }}>
-                                                                            Phương pháp đo lường: {sub.measurementMethod}
-                                                                        </div>
-                                                                    )}
-                                                                    
-                                                                    {/* Miniature Levels Preview */}
-                                                                    {false && (
-                                                                        sub.levels && sub.levels.length > 0 ? (
-                                                                            <div style={{ display: "flex", gap: 8 }}>
-                                                                                {[1, 2, 3, 4, 5].map((lvl) => {
-                                                                                    const lData = sub.levels?.find((l: any) => l.level === lvl);
-                                                                                    return (
-                                                                                        <div key={lvl} style={{ flex: 1, padding: "6px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6 }}>
-                                                                                            <div style={{ fontSize: 11, fontWeight: 600, color: lData?.description ? "#1e293b" : "#94a3b8" }}>Mức {lvl}</div>
-                                                                                            <div style={{ fontSize: 10, color: lData?.description ? "#475569" : "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                                                                {lData?.description || "Chưa có"}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div style={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>Chưa thiết lập mức điểm cho mục này.</div>
-                                                                        )
-                                                                    )}
                                                                 </div>
                                                             )})}
-                                                        </Space>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
                                         )})}
-                                    </Space>
+                                    </div>
                                 )}
-                            </Card>
+                            </div>
                         ) : (
                             <Card style={{ borderRadius: 12, border: "1px solid #e5e7eb" }}>
                                 <div style={{ textAlign: "center", padding: "100px 0", color: "#9ca3af" }}>
@@ -1113,11 +1562,17 @@ const TemplateDetailPage: React.FC = () => {
 
             {/* Modal Levels Form */}
             <Modal
-                title={`Cấu hình mô tả mức điểm: ${activeCriteria?.name}`}
+                title={
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <TrophyOutlined style={{ color: PINK }} />
+                        <span>Cấu hình mô tả mức điểm: <span style={{ color: "#0f172a" }}>{activeCriteria?.name}</span></span>
+                    </div>
+                }
                 open={isLevelsModalOpen}
                 onCancel={() => setIsLevelsModalOpen(false)}
                 footer={null}
-                width={getModalWidth(650)}
+                width={getModalWidth(900)}
+                style={{ top: 30 }}
                 destroyOnHidden
             >
                 <Form
@@ -1125,28 +1580,50 @@ const TemplateDetailPage: React.FC = () => {
                     layout="vertical"
                     onFinish={handleLevelsFormSubmit}
                 >
-                    {[1, 2, 3, 4, 5].map((lvl) => (
-                        <div key={lvl}>
-                            <Form.Item name={`levelId_${lvl}`} hidden>
-                                <Input />
-                            </Form.Item>
-                            <Form.Item
-                                name={`levelDescription_${lvl}`}
-                                label={`Mức điểm ${lvl}`}
-                                rules={[{ required: true, message: `Vui lòng nhập mô tả cho mức điểm ${lvl}` }]}
-                            >
-                                <Input.TextArea rows={2} placeholder={`Nhập mô tả cụ thể về chất lượng/năng lực đạt được mức điểm ${lvl}...`} />
-                            </Form.Item>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 16, paddingBottom: 16 }}>
+                        {[1, 2, 3, 4, 5].map((lvl) => (
+                            <div key={lvl} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                                <div style={{ 
+                                    width: 100, flexShrink: 0, 
+                                    display: "flex", alignItems: "center", gap: 8, 
+                                    fontWeight: 700, fontSize: 14, color: PINK,
+                                    paddingTop: 10
+                                }}>
+                                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: PINK }} />
+                                    Mức {lvl}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <Form.Item name={`levelId_${lvl}`} hidden>
+                                        <Input />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name={`levelDescription_${lvl}`}
+                                        rules={[{ required: true, message: `Vui lòng nhập mô tả` }]}
+                                        style={{ marginBottom: 0 }}
+                                    >
+                                        <Input.TextArea 
+                                            autoSize={{ minRows: 2, maxRows: 8 }} 
+                                            placeholder={`Mô tả chi tiết chất lượng, năng lực để đạt được mức điểm ${lvl}...`} 
+                                            style={{ background: "#f8fafc", borderRadius: 8, padding: 10, fontSize: 14 }} 
+                                        />
+                                    </Form.Item>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div style={{ padding: "16px", background: "#fff0f2", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 13, color: PINK, fontWeight: 500 }}>
+                            <InfoCircleOutlined style={{ marginRight: 6 }} />
+                            Viết mô tả rõ ràng để người đánh giá dễ dàng đối chiếu
                         </div>
-                    ))}
-                    <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
                         <Space>
-                            <Button onClick={() => setIsLevelsModalOpen(false)}>Hủy</Button>
-                            <Button type="primary" htmlType="submit" style={{ background: PINK, borderColor: PINK }}>
+                            <Button onClick={() => setIsLevelsModalOpen(false)} style={{ borderRadius: 6, fontWeight: 500 }}>Hủy</Button>
+                            <Button type="primary" htmlType="submit" style={{ background: PINK, borderColor: PINK, borderRadius: 6, fontWeight: 500 }}>
                                 Lưu cấu hình
                             </Button>
                         </Space>
-                    </Form.Item>
+                    </div>
                 </Form>
             </Modal>
             <style>{`

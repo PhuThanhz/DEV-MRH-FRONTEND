@@ -29,7 +29,7 @@ const ViewDetailPermission = (props: IProps) => {
             footer={null}
             width={isMobile ? "100%" : 700}
             maskClosable={false}
-            destroyOnClose
+            destroyOnHidden
             centered
         >
             {isFetching ? (

@@ -406,7 +406,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 modalProps={{
                     onCancel: handleReset,
                     afterClose: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     // WIDTH: full trên mobile, 680px trên desktop
                     width: modalWidth,
                     maskClosable: false,

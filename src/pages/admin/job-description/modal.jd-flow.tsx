@@ -355,7 +355,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 }
                 onCancel={onClose}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
                 width={580}
                 className="job-description-approval-modal"
                 styles={{ body: { paddingTop: 4, paddingBottom: 4 } }}

@@ -1,8 +1,24 @@
+import { lazy, Suspense } from "react";
 import { Navigate } from "react-router-dom";
+import { Skeleton } from "antd";
 import { useAppSelector } from "@/redux/hooks";
-import DashboardPage from "./dashboard/dashboard";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PATHS } from "@/constants/paths";
+
+// Dashboard có chart và nhiều phần thống kê; chỉ tải khi người dùng thực sự được vào trang này.
+const DashboardPage = lazy(() => import("./dashboard/dashboard"));
+
+const DashboardLoading = () => (
+    <div style={{ padding: 24 }}>
+        <Skeleton active paragraph={{ rows: 8 }} />
+    </div>
+);
+
+const DashboardView = () => (
+    <Suspense fallback={<DashboardLoading />}>
+        <DashboardPage />
+    </Suspense>
+);
 
 const DashboardOrWelcome = () => {
     const permissions = useAppSelector(
@@ -13,7 +29,7 @@ const DashboardOrWelcome = () => {
     );
 
     if (roleName === "SUPER_ADMIN" || import.meta.env.VITE_ACL_ENABLE === "false") {
-        return <DashboardPage />;
+        return <DashboardView />;
     }
 
     const hasPermission = (permission: { apiPath: string; method: string; module: string }) =>
@@ -29,7 +45,7 @@ const DashboardOrWelcome = () => {
     const hasAccountingDocuments = hasPermission(ALL_PERMISSIONS.ACCOUNTING_DOCUMENTS.GET_PAGINATE);
 
     if (hasDashboard) {
-        return <DashboardPage />;
+        return <DashboardView />;
     }
 
     if (hasAccountingDossiers) {

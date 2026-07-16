@@ -292,7 +292,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
             modalProps={{
                 onCancel: handleReset,
                 afterClose: handleReset,
-                destroyOnClose: true,
+                destroyOnHidden: true,
                 width: "min(960px, 96vw)",
                 maskClosable: false,
                 styles: {

@@ -355,7 +355,7 @@ const CompanyPage = () => {
                     onCancel={() => setOpenJobTitle(false)}
                     footer={null}
                     width="80vw"
-                    destroyOnClose
+                    destroyOnHidden
                 >
                     <CompanyJobTitleTab
                         companyId={dataInit.id}

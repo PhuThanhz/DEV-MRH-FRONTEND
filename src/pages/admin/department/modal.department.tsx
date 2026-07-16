@@ -179,7 +179,7 @@ const ModalDepartment = ({
                 modalProps={{
                     onCancel: handleReset,
                     afterClose: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     width: modalWidth,
                     centered: true,
                     maskClosable: false,

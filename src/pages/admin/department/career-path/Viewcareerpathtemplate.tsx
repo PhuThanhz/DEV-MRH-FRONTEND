@@ -321,7 +321,7 @@ const ViewCareerPathTemplate = ({ open, onClose, dataInit }: IProps) => {
             onCancel={onClose}
             footer={null}
             width={700}
-            destroyOnClose
+            destroyOnHidden
             styles={{
                 content: { padding: 0, borderRadius: 16, overflow: "hidden" },
                 mask: { backdropFilter: "blur(2px)" },

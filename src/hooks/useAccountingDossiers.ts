@@ -19,9 +19,11 @@ import {
     callArchiveAccountingDossier,
     callRefreshExpiredAccountingDossierStorage,
     callFetchAccountingDossierStorageSummary,
+    callFetchAccountingDossierDashboardMetrics,
     callFetchAccountingDossierPendingByRole,
     callFetchAccountingDossierReportByStatus,
     callFetchAccountingDossierReportByDepartment,
+    callFetchAccountingDossierCategoryActive,
     callFetchAccountingDossierReportByCategory,
     callRejectAccountingDossierTemplateSync,
     callPreviewWorkflow,
@@ -48,6 +50,7 @@ import type {
     IModelPaginate,
     IAccountingDossierStorageSummary,
     IAccountingDossierReportRow,
+    IAccountingDossierCategory,
 } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
@@ -211,8 +214,8 @@ export const useApproveAccountingDossierMutation = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, note }: { id: number; note?: string }) => {
-            const res = await callApproveAccountingDossier(id, note);
+        mutationFn: async ({ id, note, nextApproverUserId }: { id: number; note?: string; nextApproverUserId?: string }) => {
+            const res = await callApproveAccountingDossier(id, note, nextApproverUserId);
             if (!res?.data) throw new Error(res?.message || "Không thể phê duyệt bộ chứng từ");
             return res;
         },
@@ -445,6 +448,40 @@ export const useAccountingDossierReportByCategoryQuery = (companyId?: number) =>
     });
 };
 
+export const useAccountingDossierCategoryActiveQuery = () => {
+    return useQuery({
+        queryKey: ["accounting-dossier-categories-active"],
+        queryFn: async () => {
+            const res = await callFetchAccountingDossierCategoryActive();
+            if (!res?.data) {
+                throw new Error("Không thể lấy danh sách danh mục hoạt động");
+            }
+            return (res.data ?? []) as IAccountingDossierCategory[];
+        },
+    });
+};
+
+export interface IAccountingDossierDashboardMetrics {
+    summary: IAccountingDossierStorageSummary;
+    pendingByRole: IAccountingDossierReportRow[];
+    byStatus: IAccountingDossierReportRow[];
+    byDepartment: IAccountingDossierReportRow[];
+    categories: IAccountingDossierCategory[];
+}
+
+export const useAccountingDossierDashboardMetricsQuery = (companyId?: number) => {
+    return useQuery({
+        queryKey: ["accounting-dossier-dashboard-metrics", companyId],
+        queryFn: async () => {
+            const res = await callFetchAccountingDossierDashboardMetrics(companyId);
+            if (!res?.data) {
+                throw new Error("Không thể lấy dữ liệu tổng hợp Dashboard");
+            }
+            return res.data as IAccountingDossierDashboardMetrics;
+        },
+    });
+};
+
 export const useRejectAccountingDossierTemplateSyncMutation = () => {
     const queryClient = useQueryClient();
 
@@ -474,6 +511,10 @@ export const usePreviewWorkflowQuery = (dossierId: number, enabled = true) => {
             return res?.data;
         },
         enabled: enabled && !!dossierId,
+        retry: false,
+        staleTime: 0,
+        refetchOnMount: "always",
+        refetchOnWindowFocus: false,
     });
 };
 

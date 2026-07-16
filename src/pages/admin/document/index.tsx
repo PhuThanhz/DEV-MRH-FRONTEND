@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { App, Space, Tag, Popconfirm, Modal, Image, Button, Dropdown } from "antd";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { App, Space, Tag, Popconfirm, Modal, Image, Button, Dropdown, Spin } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
@@ -38,13 +38,15 @@ import {
 } from "@/hooks/useDocuments";
 import { callFetchDocumentById } from "@/config/api";
 import { useDocumentCategoriesActiveQuery } from "@/hooks/useDocumentCategories";
-
-import ModalDocument from "./modal.document";
 import ViewDetailDocument from "./view.document";
-import ModalDocumentShareToken from "./ModalDocumentShareToken";
-import ModalAddShortcut from "./ModalAddShortcut";
+
 import TabBar from "@/components/common/tabs/TabBar";
 import { getModalWidth } from "@/utils/responsive";
+
+// Các biểu mẫu này chỉ cần tải khi người dùng thực sự mở thao tác tương ứng.
+const ModalDocument = lazy(() => import("./modal.document"));
+const ModalDocumentShareToken = lazy(() => import("./ModalDocumentShareToken"));
+const ModalAddShortcut = lazy(() => import("./ModalAddShortcut"));
 
 type TabType = "ALL" | "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
 
@@ -582,12 +584,16 @@ const DocumentPage = () => {
                 />
             </Access>
 
-            <ModalDocument
-                openModal={openModal}
-                setOpenModal={setOpenModal}
-                dataInit={dataInit}
-                setDataInit={setDataInit}
-            />
+            {openModal && (
+                <Suspense fallback={<Spin fullscreen tip="Đang tải biểu mẫu văn bản..." />}>
+                    <ModalDocument
+                        openModal={openModal}
+                        setOpenModal={setOpenModal}
+                        dataInit={dataInit}
+                        setDataInit={setDataInit}
+                    />
+                </Suspense>
+            )}
 
             <ViewDetailDocument
                 open={openViewDetail}
@@ -720,17 +726,25 @@ const DocumentPage = () => {
                 )}
             </Modal>
 
-            <ModalDocumentShareToken
-                open={openShareModal}
-                onClose={() => setOpenShareModal(false)}
-                document={selectedDocument}
-            />
+            {openShareModal && (
+                <Suspense fallback={<Spin fullscreen tip="Đang tải chức năng chia sẻ..." />}>
+                    <ModalDocumentShareToken
+                        open={openShareModal}
+                        onClose={() => setOpenShareModal(false)}
+                        document={selectedDocument}
+                    />
+                </Suspense>
+            )}
 
-            <ModalAddShortcut
-                open={openAddShortcutModal}
-                onClose={() => setOpenAddShortcutModal(false)}
-                document={selectedDocument}
-            />
+            {openAddShortcutModal && (
+                <Suspense fallback={<Spin fullscreen tip="Đang tải chức năng phím tắt..." />}>
+                    <ModalAddShortcut
+                        open={openAddShortcutModal}
+                        onClose={() => setOpenAddShortcutModal(false)}
+                        document={selectedDocument}
+                    />
+                </Suspense>
+            )}
         </PageContainer>
     );
 };

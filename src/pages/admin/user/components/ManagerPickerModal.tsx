@@ -157,7 +157,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
                 </div>
             }
             centered
-            destroyOnClose
+            destroyOnHidden
             styles={{ body: MODAL_BODY_SCROLL }}
         >
             <Space direction="vertical" style={{ width: "100%", marginTop: 16 }} size="middle">

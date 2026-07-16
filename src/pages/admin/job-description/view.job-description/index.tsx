@@ -171,7 +171,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
     return (
         <Modal
             open={open}
-            zIndex={2600}
+            zIndex={1200}
             onCancel={handleClose}
             footer={null}
             width={modalWidth}
@@ -194,7 +194,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
                 },
             }}
             title={null}
-            destroyOnClose
+            destroyOnHidden
             getContainer={document.body}
         >
             {isLoading ? (

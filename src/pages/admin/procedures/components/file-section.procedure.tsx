@@ -27,12 +27,27 @@ export const buildFileUrl = (fileName?: string, folder = "procedures") => {
     return `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/public?fileName=${encodeURIComponent(resolvedName)}&folder=${encodeURIComponent(resolvedFolder)}`;
 };
 
+const getStoredFileName = (fileName?: string) => {
+    if (!fileName) return "";
+    if (!/^https?:\/\//i.test(fileName)) {
+        const cleanPath = fileName.split("?")[0];
+        return cleanPath.split("/").filter(Boolean).pop() || fileName;
+    }
+
+    try {
+        const url = new URL(fileName);
+        return url.searchParams.get("fileName") || url.pathname.split("/").pop() || fileName;
+    } catch {
+        return fileName;
+    }
+};
+
 export const getExt = (fileName?: string) =>
-    fileName?.split(".").pop()?.toLowerCase() ?? "";
+    getStoredFileName(fileName).split("?")[0].split(".").pop()?.toLowerCase() ?? "";
 
 export const decodeFileName = (fileName?: string): string => {
     if (!fileName) return "";
-    const name = fileName.replace(/^\d{10,}-/, "");
+    const name = getStoredFileName(fileName).replace(/^\d{10,}-/, "");
     const dotIdx = name.lastIndexOf(".");
     const ext = dotIdx !== -1 ? name.slice(dotIdx) : "";
     const base = dotIdx !== -1 ? name.slice(0, dotIdx) : name;
@@ -66,14 +81,20 @@ const getFileConfig = (ext: string): FileConfig =>
     };
 
 // ─── FileTile ─────────────────────────────────────────────────────────────────
-interface IFileTileProps { fileName: string; fileUrl: string; onPreview: (url: string, fileName: string) => void }
+interface IFileTileProps {
+    fileName: string;
+    fileUrl: string;
+    onPreview: (url: string, fileName: string) => void;
+    compact?: boolean;
+}
 
-const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
+const FileTile = ({ fileName, fileUrl, onPreview, compact = false }: IFileTileProps) => {
     const ext = getExt(fileName);
     const cfg = getFileConfig(ext);
     const prettyName = decodeFileName(fileName);
     const displayName = prettyName.length > 24 ? prettyName.slice(0, 21) + "…" : prettyName;
     const isPdf = ext === "pdf";
+    const isPreviewable = isPdf || compact;
 
     const handleDownload = async () => {
         try {
@@ -84,27 +105,45 @@ const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
     return (
         <Tooltip title={prettyName} placement="top">
             <div
-                onClick={() => isPdf && onPreview(fileUrl, fileName)}
-                style={{
-                    background: "#fafafa", borderRadius: 12, border: "0.5px solid #e8e8e8",
-                    padding: "14px 10px 10px", display: "flex", flexDirection: "column",
-                    alignItems: "center", gap: 7, cursor: isPdf ? "pointer" : "default",
-                    transition: "border-color .15s, background .15s", minWidth: 0,
+                role={isPreviewable ? "button" : undefined}
+                tabIndex={isPreviewable ? 0 : undefined}
+                aria-label={isPreviewable ? `Mở xem tệp ${prettyName}` : undefined}
+                onClick={() => isPreviewable && onPreview(fileUrl, fileName)}
+                onKeyDown={(event) => {
+                    if (isPreviewable && (event.key === "Enter" || event.key === " ")) {
+                        event.preventDefault();
+                        onPreview(fileUrl, fileName);
+                    }
                 }}
-                onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "#91caff"; el.style.background = "#f5faff"; if (isPdf) void loadPdfPreviewer(); }}
-                onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "#e8e8e8"; el.style.background = "#fafafa"; }}
+                style={{
+                    background: compact ? "#f8fafc" : "#fafafa",
+                    borderRadius: compact ? 8 : 12,
+                    border: `1px solid ${compact ? "#e2e8f0" : "#e8e8e8"}`,
+                    padding: compact ? "6px 8px" : "14px 10px 10px",
+                    display: "flex",
+                    flexDirection: compact ? "row" : "column",
+                    alignItems: "center",
+                    justifyContent: compact ? "flex-start" : "center",
+                    gap: compact ? 8 : 7,
+                    cursor: isPreviewable ? "pointer" : "default",
+                    minWidth: 0,
+                    minHeight: compact ? 44 : undefined,
+                    boxSizing: "border-box",
+                    alignSelf: "start",
+                }}
+                onMouseEnter={() => { if (isPdf) void loadPdfPreviewer(); }}
             >
-                <div style={{ width: 54, height: 62, borderRadius: 10, background: cfg.bg, border: `0.5px solid ${cfg.border}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 }}>
+                <div style={{ width: compact ? 30 : 54, height: compact ? 32 : 62, borderRadius: compact ? 7 : 10, background: cfg.bg, border: `0.5px solid ${cfg.border}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 }}>
                     {cfg.icon}
-                    <span style={{ position: "absolute", bottom: -2, right: -2, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: cfg.extBg, color: "#fff", letterSpacing: "0.05em", lineHeight: "14px" }}>
+                    <span style={{ position: "absolute", bottom: -2, right: -2, fontSize: compact ? 6 : 8, fontWeight: 700, padding: compact ? "0 3px" : "1px 5px", borderRadius: 4, background: cfg.extBg, color: "#fff", letterSpacing: "0.05em", lineHeight: compact ? "11px" : "14px" }}>
                         {cfg.extLabel}
                     </span>
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: "#333", textAlign: "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
+                <div style={{ fontSize: compact ? 12 : 11, fontWeight: compact ? 600 : 650, color: "#334155", textAlign: compact ? "left" : "center", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.35 }}>
                     {displayName}
                 </div>
-                {!isPdf && (
-                    <div style={{ display: "flex", gap: 6 }}>
+                {!isPdf && !compact && (
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                         <Button size="small" icon={<FileTextOutlined />} onClick={(e) => { e.stopPropagation(); onPreview(fileUrl, fileName); }} style={{ fontSize: 11, borderRadius: 6, height: 24 }}>Xem</Button>
                         <Button size="small" icon={<DownloadOutlined />} onClick={(e) => { e.stopPropagation(); handleDownload(); }} style={{ fontSize: 11, borderRadius: 6, height: 24 }}>Tải</Button>
                     </div>
@@ -115,9 +154,9 @@ const FileTile = ({ fileName, fileUrl, onPreview }: IFileTileProps) => {
 };
 // ─── FileSection ──────────────────────────────────────────────────────────────
 interface IPreviewState { url: string; ext: string; name: string }
-interface IFileSectionProps { fileNames?: string[]; folder?: string }
+interface IFileSectionProps { fileNames?: string[]; folder?: string; variant?: "default" | "compact" }
 
-const FileSection = ({ fileNames = [], folder = "procedures" }: IFileSectionProps) => {
+const FileSection = ({ fileNames = [], folder = "procedures", variant = "default" }: IFileSectionProps) => {
     const [preview, setPreview] = useState<IPreviewState | null>(null);
     const [iframeLoaded, setIframeLoaded] = useState(false);
     const isMobile = useIsMobile();
@@ -137,9 +176,9 @@ const FileSection = ({ fileNames = [], folder = "procedures" }: IFileSectionProp
 
     return (
         <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: variant === "compact" ? "repeat(auto-fill, minmax(180px, 260px))" : "repeat(auto-fill, minmax(130px, 1fr))", justifyContent: "start", alignItems: "start", gap: 8 }}>
                 {fileEntries.map((f) => (
-                    <FileTile key={f.name} fileName={f.name} fileUrl={f.url} onPreview={handlePreview} />
+                    <FileTile key={f.name} fileName={f.name} fileUrl={f.url} onPreview={handlePreview} compact={variant === "compact"} />
                 ))}
             </div>
 

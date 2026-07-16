@@ -187,7 +187,7 @@ const DrawerDepartmentSalaryGrade = ({
             <Drawer
                 open={open}
                 onClose={onClose}
-                destroyOnClose
+                destroyOnHidden
                 width={getModalWidth(850)}
                 title={
                     <Space direction="vertical" size={0}>
@@ -238,7 +238,7 @@ const DrawerDepartmentSalaryGrade = ({
                     form.resetFields();
                     setOpenModal(false);
                 }}
-                destroyOnClose
+                destroyOnHidden
                 centered
                 footer={[
                     <AppButton

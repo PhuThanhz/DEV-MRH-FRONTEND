@@ -81,7 +81,7 @@ const AccessLogTable = ({ open, onClose, token }: IProps) => {
             }
             width={getModalWidth(680)}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
             {token && (
                 <Flex gap={24} style={{

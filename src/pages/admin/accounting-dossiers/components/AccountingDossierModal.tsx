@@ -130,7 +130,7 @@ const AccountingDossierModal = ({
             title={initialValues?.id ? "Cập nhật bộ chứng từ" : "Tạo bộ chứng từ"}
             width={getModalWidth(900)}
             centered
-            destroyOnClose
+            destroyOnHidden
             onCancel={handleCancel}
             footer={[
                 <Button key="cancel" onClick={handleCancel}>

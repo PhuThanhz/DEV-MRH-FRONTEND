@@ -1,9 +1,8 @@
 import { memo, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Button, message, Tooltip, Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
-import { unstable_batchedUpdates } from "react-dom";
-import DrawerCloseButton from "@/components/common/drawer/DrawerCloseButton";
+import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined, EyeOutlined, EyeInvisibleOutlined, CloseOutlined } from "@ant-design/icons";
+import { createPortal, unstable_batchedUpdates } from "react-dom";
 
 import ReactFlow, {
     Background,
@@ -51,6 +50,7 @@ import ModalNode, { type AddNodeMode, type BulkNodeItem, type NodeKind, type Sma
 import OrgNodeCard, { type OrgNodeData } from "./OrgNodeCard";
 import SearchBar from "./SearchBar";
 import MiniPanel from "./MiniPanel";
+import DrawerCloseButton from "@/components/common/drawer/DrawerCloseButton";
 import type { IReqCreateNodeTree } from "@/types/backend";
 import { ORG_CHART_NODE_SIZE } from "./orgChartConstants";
 
@@ -304,6 +304,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView, setCenter } = useReactFlow();
     const { isMobile, isTablet, isSmallLaptop } = useBreakpoint();
+    const isNarrowViewport = isMobile || isTablet;
     const isCompactViewport = isMobile || isTablet || isSmallLaptop;
 
     const canEdit = useAccess(ALL_PERMISSIONS.ORG_NODES.UPDATE);
@@ -314,6 +315,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     const [jdRecord, setJdRecord] = useState<EnrichedJD | null>(null);
     const [jdOptions, setJdOptions] = useState<SmartJdOption[]>([]);
     const [jobTitleOptions, setJobTitleOptions] = useState<SmartJobTitleOption[]>([]);
+    const jobTitleOptionsOwnerKey = useRef<string | null>(null);
 
     // ⭐ View mode state — "compact" = Tổng quan, "full" = Chi tiết
     const [viewMode, setViewMode] = useState<"compact" | "full">("full");
@@ -534,6 +536,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     }, [viewMode, layoutDirection, compactLayoutNodeW, compactLayoutNodeH, layoutNodeW, layoutNodeH, scheduleFitView]);
 
     useEffect(() => {
+        if (!openModal || jdOptions.length > 0) return;
         callFetchJobDescriptions("filter=status='PUBLISHED'&page=1&pageSize=200")
             .then((res) => {
                 const list = (res.data as any)?.result ?? [];
@@ -543,9 +546,12 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     jobTitleName: jd.jobTitleName,
                 })));
             }).catch(() => { });
-    }, []);
+    }, [openModal, jdOptions.length]);
 
     useEffect(() => {
+        const ownerKey = `${ownerType}:${ownerId}`;
+        if (!openModal || (jobTitleOptionsOwnerKey.current === ownerKey && jobTitleOptions.length > 0)) return;
+        jobTitleOptionsOwnerKey.current = ownerKey;
         const assignedRequest = ownerType === "COMPANY"
             ? callFetchCompanyJobTitlesByCompany(ownerId)
             : callFetchCompanyJobTitlesOfDepartment(ownerId);
@@ -573,8 +579,11 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
 
                 setJobTitleOptions(options);
             })
-            .catch(() => setJobTitleOptions([]));
-    }, [ownerType, ownerId]);
+            .catch(() => {
+                jobTitleOptionsOwnerKey.current = null;
+                setJobTitleOptions([]);
+            });
+    }, [openModal, ownerType, ownerId, jobTitleOptions.length]);
 
     useEffect(() => {
         if (nodes.length === 0) return;
@@ -1018,7 +1027,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
 
     const chartName = (chartTitle ?? "").replace(/^Sơ đồ tổ chức\s*[-—]\s*/i, "").trim();
 
-    return (
+    const chartOverlay = (
         <>
             <style>{`
                 @keyframes slideUpOrgChart {
@@ -1039,7 +1048,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 }
             `}</style>
             <div style={{ 
-                position: "fixed", inset: 0, zIndex: 2499, 
+                position: "fixed", inset: 0, zIndex: 1099, 
                 background: "rgba(15, 23, 42, 0.45)", 
                 backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
                 animation: isClosing ? "fadeOutBackdrop 0.4s ease-in forwards" : "fadeInBackdrop 0.4s ease-out" 
@@ -1051,33 +1060,32 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     display: "flex",
                     flexDirection: "column",
                     position: "fixed",
-                    top: isMobile ? 8 : 16,
-                    bottom: isMobile ? 8 : 16,
-                    left: isMobile ? 40 : 48,
-                    right: isMobile ? 8 : 16,
-                    zIndex: 2500,
-                    overflow: "visible",
-                    animation: isClosing ? "slideDownOrgChart 0.4s cubic-bezier(0.4, 0, 1, 1) forwards" : "slideUpOrgChart 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
+                    top: isNarrowViewport ? 0 : 16,
+                    bottom: isNarrowViewport ? 0 : 16,
+                    left: isNarrowViewport ? 0 : 48,
+                    right: isNarrowViewport ? 0 : 16,
+                    zIndex: 1100,
+                overflow: "visible",
+                animation: isClosing ? "slideDownOrgChart 0.4s cubic-bezier(0.4, 0, 1, 1) forwards" : "slideUpOrgChart 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
             >
-                {/* ── Outer Close Button ── */}
                 {onClose && (
                     <DrawerCloseButton
                         onClick={handleCloseWithAnimation}
                         variant="bottom"
-                        size={isMobile ? "sm" : "md"}
-                        left={isMobile ? -36 : -44}
-                        top={isMobile ? 12 : 20}
+                        ariaLabel="Thoát sơ đồ"
+                        size="sm"
+                        left={-40}
+                        top={isNarrowViewport ? 16 : 20}
                     />
                 )}
-
                 {/* ── Inner Content Container ── */}
                 <div style={{
                     display: "flex",
                     flexDirection: "column",
                     flex: 1,
                     background: "#f8f9fb",
-                    borderRadius: isMobile ? 18 : 24,
+                    borderRadius: isNarrowViewport ? 0 : 24,
                     border: "1px solid rgba(226, 232, 240, 0.95)",
                     boxShadow: "0 26px 80px -28px rgba(15, 23, 42, 0.48), 0 8px 24px rgba(15, 23, 42, 0.10)",
                     overflow: "hidden",
@@ -1087,16 +1095,16 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             {/* ── Floating Toolbar ── */}
             <div style={{
                 position: "absolute",
-                top: isMobile ? 8 : 12,
-                left: isMobile ? 8 : 12,
-                right: isMobile ? 8 : 12,
+                top: isNarrowViewport ? 10 : 12,
+                left: isMobile ? 8 : isTablet ? 24 : 12,
+                right: isNarrowViewport ? 10 : 12,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: 0,
                 background: "transparent",
                 zIndex: 20,
-                flexWrap: isMobile ? "wrap" : "nowrap",
+                flexWrap: isNarrowViewport ? "wrap" : "nowrap",
                 gap: 12,
                 pointerEvents: "none",
             }}>
@@ -1116,8 +1124,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                             display: "flex",
                             alignItems: "center",
                             gap: 12,
-                            minHeight: isMobile ? 32 : 40,
-                            padding: isMobile ? "4px 12px" : "5px 16px",
+                            minHeight: isNarrowViewport ? 32 : 40,
+                            padding: isNarrowViewport ? "4px 12px" : "5px 16px",
                             background: "rgba(255, 255, 255, 0.95)",
                             border: "1px solid rgba(203, 213, 225, 0.75)",
                             borderRadius: 20,
@@ -1129,7 +1137,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
                                 <span style={{
                                     color: "#64748b",
-                                    fontSize: isMobile ? 8 : 9,
+                                    fontSize: isNarrowViewport ? 8 : 9,
                                     fontWeight: 600,
                                     lineHeight: "11px",
                                     textTransform: "uppercase",
@@ -1138,9 +1146,9 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                                 </span>
                                 <span style={{
                                     color: "#1e293b",
-                                    fontSize: isMobile ? 11 : 14,
+                                    fontSize: isNarrowViewport ? 11 : 14,
                                     fontWeight: 700,
-                                    lineHeight: isMobile ? "15px" : "19px",
+                                    lineHeight: isNarrowViewport ? "15px" : "19px",
                                     overflow: "hidden",
                                     display: "-webkit-box",
                                     WebkitBoxOrient: "vertical",
@@ -1216,7 +1224,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                         menu={settingMenu}
                         trigger={["click"]}
                         placement="bottomRight"
-                        overlayStyle={{ zIndex: 2600 }}
+                        overlayStyle={{ zIndex: 1200 }}
                         popupRender={(menu) => (
                             <div data-guide-id="org-chart-settings-dropdown">
                                 {menu}
@@ -1267,6 +1275,22 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                         )}
                     </Access>
                     </>
+                    )}
+                    {isMobile && onClose && (
+                        <Tooltip title="Thoát sơ đồ">
+                            <Button
+                                aria-label="Thoát sơ đồ"
+                                icon={<CloseOutlined />}
+                                onClick={handleCloseWithAnimation}
+                                size="small"
+                                style={{
+                                    borderColor: "#fda4af",
+                                    background: "#fff1f5",
+                                    color: "#e11d48",
+                                    fontWeight: 700,
+                                }}
+                            />
+                        </Tooltip>
                     )}
                 </div>
             </div>
@@ -1327,36 +1351,81 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     onClose={() => setSelectedNodeId(null)}
                 />
             </ReactFlow>
+            {nodes.length === 0 && (
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        padding: isNarrowViewport ? 20 : 32,
+                        pointerEvents: "none",
+                        zIndex: 3,
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "min(100%, 360px)",
+                            padding: isNarrowViewport ? "20px" : "28px",
+                            borderRadius: 18,
+                            border: "1px solid rgba(203, 213, 225, 0.9)",
+                            background: "rgba(255, 255, 255, 0.94)",
+                            boxShadow: "0 18px 48px rgba(15, 23, 42, 0.12)",
+                            textAlign: "center",
+                            pointerEvents: "auto",
+                        }}
+                    >
+                        <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+                            Chưa có vị trí trong sơ đồ
+                        </div>
+                        <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px" }}>
+                            Thêm vị trí đầu tiên để bắt đầu xây dựng cấu trúc tổ chức.
+                        </p>
+                        <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => handleOpenCreateRoot("position", "single")}
+                                style={{ background: "#e8637a", borderColor: "#e8637a", fontWeight: 600 }}
+                            >
+                                Thêm vị trí đầu tiên
+                            </Button>
+                        </Access>
+                    </div>
+                </div>
+            )}
             </div>
             </div> {/* ── End of Inner Content Container ── */}
 
-            <ModalNode
-                open={openModal} onClose={handleCloseModal}
-                onSubmit={handleSubmit}
-                onBulkSubmit={handleBulkSubmit}
-                nodes={nodes} jdOptions={jdOptions}
-                jobTitleOptions={jobTitleOptions}
-                initialValues={editingNode ? {
-                    title: editingNode.data.title as string,
-                    levelCode: editingNode.data.levelCode as string,
-                    holderName: (editingNode.data.holderName as string) ?? "",
-                    isGoal: (editingNode.data.isGoal as boolean) ?? false,
-                    jobDescriptionId: (editingNode.data.jobDescriptionId as number) ?? null,
-                    nodeKind: !editingNode.data.levelCode ? "department" : "position",
-                    parentId: (() => {
-                        const pe = edges.find((e) => e.target === editingNode.id);
-                        return pe ? Number(pe.source) : null;
-                    })(),
-                } : (prefilledParentId ? {
-                    title: "",
-                    levelCode: "",
-                    parentId: prefilledParentId,
-                    nodeKind: modalInitialNodeKind,
-                } : undefined)}
-                isEditing={!!editingNode}
-                initialMode={modalInitialMode}
-                initialNodeKind={modalInitialNodeKind}
-            />
+            {openModal && (
+                <ModalNode
+                    open={openModal} onClose={handleCloseModal}
+                    onSubmit={handleSubmit}
+                    onBulkSubmit={handleBulkSubmit}
+                    nodes={nodes} jdOptions={jdOptions}
+                    jobTitleOptions={jobTitleOptions}
+                    initialValues={editingNode ? {
+                        title: editingNode.data.title as string,
+                        levelCode: editingNode.data.levelCode as string,
+                        holderName: (editingNode.data.holderName as string) ?? "",
+                        isGoal: (editingNode.data.isGoal as boolean) ?? false,
+                        jobDescriptionId: (editingNode.data.jobDescriptionId as number) ?? null,
+                        nodeKind: !editingNode.data.levelCode ? "department" : "position",
+                        parentId: (() => {
+                            const pe = edges.find((e) => e.target === editingNode.id);
+                            return pe ? Number(pe.source) : null;
+                        })(),
+                    } : (prefilledParentId ? {
+                        title: "",
+                        levelCode: "",
+                        parentId: prefilledParentId,
+                        nodeKind: modalInitialNodeKind,
+                    } : undefined)}
+                    isEditing={!!editingNode}
+                    initialMode={modalInitialMode}
+                    initialNodeKind={modalInitialNodeKind}
+                />
+            )}
 
             <ViewJobDescription
                 open={jdOpen}
@@ -1366,6 +1435,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         </div>
         </>
     );
+
+    return createPortal(chartOverlay, document.body);
 };
 
 const OrgChartFlow = (props: Props) => (

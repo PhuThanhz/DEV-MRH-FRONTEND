@@ -1,4 +1,4 @@
-import { Modal, Form, Input, Select, Button } from 'antd';
+import { Modal, Form, Input, Select, Button, ConfigProvider } from 'antd';
 import { useState, useEffect } from 'react';
 import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate, callFetchCompany, callFetchCompanyJobTitlesByCompany } from '@/config/api';
 import type { IEvaluationTemplate } from '@/types/backend';
@@ -131,102 +131,184 @@ const TemplateModal = (props: IProps) => {
     };
 
     return (
-        <Modal
-            title={dataInit ? "Cập nhật Mẫu đánh giá" : "Tạo mới Mẫu đánh giá"}
-            open={openModal}
-            footer={[
-                <Button key="cancel" onClick={() => {
+        <ConfigProvider
+            theme={{
+                components: {
+                    Modal: {
+                        contentBg: "#ffffff",
+                        headerBg: "#ffffff",
+                        titleColor: "#0f172a",
+                        borderRadiusLG: 16,
+                        titleFontSize: 18,
+                    },
+                    Input: {
+                        controlHeight: 42,
+                        borderRadius: 8,
+                        colorBorder: "#cbd5e1",
+                        activeBorderColor: "#2563eb",
+                        hoverBorderColor: "#94a3b8",
+                        colorTextPlaceholder: "#94a3b8",
+                    },
+                    Select: {
+                        controlHeight: 42,
+                        borderRadius: 8,
+                        colorBorder: "#cbd5e1",
+                        activeBorderColor: "#2563eb",
+                        hoverBorderColor: "#94a3b8",
+                        colorTextPlaceholder: "#94a3b8",
+                    },
+                    Button: {
+                        controlHeight: 40,
+                        borderRadius: 8,
+                        fontWeight: 500,
+                        colorPrimary: "#e8637a",
+                        colorPrimaryHover: "#db4f67",
+                        colorPrimaryActive: "#c83e54",
+                    },
+                },
+            }}
+        >
+            <Modal
+                title={
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingBottom: 6 }}>
+                        <span style={{ 
+                            fontSize: "10px", 
+                            textTransform: "uppercase", 
+                            letterSpacing: "0.15em", 
+                            color: "#94a3b8", 
+                            fontWeight: 600 
+                        }}>
+                            {dataInit ? "Cấu hình dữ liệu" : "Khởi tạo dữ liệu"}
+                        </span>
+                        <span style={{ fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>
+                            {dataInit ? "Cập nhật Mẫu đánh giá" : "Tạo mới Mẫu đánh giá"}
+                        </span>
+                    </div>
+                }
+                open={openModal}
+                footer={[
+                    <Button 
+                        key="cancel" 
+                        onClick={() => {
+                            setOpenModal(false);
+                            if (setDataInit) setDataInit(null);
+                        }}
+                        style={{ 
+                            borderRadius: 8, 
+                            border: "1px solid #cbd5e1",
+                            color: "#475569",
+                            fontWeight: 500,
+                            height: 40
+                        }}
+                    >
+                        Hủy
+                    </Button>,
+                    <Access
+                        key="submit"
+                        permission={dataInit?.id ? ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE : ALL_PERMISSIONS.EVALUATION.CREATE_TEMPLATE}
+                        hideChildren
+                    >
+                        <Button 
+                            type="primary" 
+                            onClick={() => form.submit()} 
+                            loading={isSubmit}
+                            style={{
+                                borderRadius: 8,
+                                height: 40,
+                                fontWeight: 500,
+                                background: "#e8637a",
+                                border: "none",
+                                boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+                            }}
+                        >
+                            {dataInit?.id ? "Cập nhật" : "Tạo mới"}
+                        </Button>
+                    </Access>
+                ]}
+                onCancel={() => {
                     setOpenModal(false);
                     if (setDataInit) setDataInit(null);
-                }}>
-                    Hủy
-                </Button>,
-                <Access
-                    key="submit"
-                    permission={dataInit?.id ? ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE : ALL_PERMISSIONS.EVALUATION.CREATE_TEMPLATE}
-                    hideChildren
-                >
-                    <Button type="primary" onClick={() => form.submit()} loading={isSubmit}>
-                        {dataInit?.id ? "Cập nhật" : "Tạo mới"}
-                    </Button>
-                </Access>
-            ]}
-            onCancel={() => {
-                setOpenModal(false);
-                if (setDataInit) setDataInit(null);
-            }}
-            confirmLoading={isSubmit}
-            width={getModalWidth(600)}
-            destroyOnClose
-            maskClosable={false}
-        >
-            <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: 20 }}>
-                <Form.Item
-                    label="Tên mẫu đánh giá"
-                    name="name"
-                    rules={[
-                        { required: true, message: 'Vui lòng nhập tên!' },
-                        { max: 200, message: 'Tên mẫu đánh giá không vượt quá 200 ký tự!' }
-                    ]}
-                >
-                    <Input placeholder="VD: Đánh giá nhân viên thử việc" />
-                </Form.Item>
-
-                <Form.Item
-                    label="Công ty"
-                    name="companyId"
-                    rules={[{ required: true, message: 'Vui lòng chọn công ty!' }]}
-                >
-                    <Select
-                        placeholder="Chọn công ty áp dụng..."
-                        allowClear
-                        showSearch
-                        optionFilterProp="label"
-                        options={companies}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    label="Đối tượng áp dụng"
-                    name="type"
-                    rules={[{ required: true, message: 'Vui lòng chọn đối tượng!' }]}
-                >
-                    <Select
-                        placeholder="Chọn đối tượng áp dụng..."
-                        options={[
-                            { label: 'Nhân viên (STAFF)', value: 'STAFF' },
-                            { label: 'Quản lý (MANAGER)', value: 'MANAGER' },
+                }}
+                confirmLoading={isSubmit}
+                width={getModalWidth(600)}
+                destroyOnHidden
+                maskClosable={false}
+            >
+                <Form form={form} layout="vertical" onFinish={onFinish} style={{ marginTop: 20 }}>
+                    <Form.Item
+                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Tên mẫu đánh giá</span>}
+                        name="name"
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập tên!' },
+                            { max: 200, message: 'Tên mẫu đánh giá không vượt quá 200 ký tự!' }
                         ]}
-                    />
-                </Form.Item>
+                    >
+                        <Input placeholder="VD: Đánh giá nhân viên thử việc" />
+                    </Form.Item>
 
-                <Form.Item
-                    label={
-                        <span style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                            <span>Giới hạn Chức danh áp dụng (Tùy chọn)</span>
-                            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 'normal' }}>
-                                Vui lòng chọn Công ty trước. Để trống để áp dụng cho TẤT CẢ chức danh trong nhóm đối tượng trên.
+                    <Form.Item
+                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Công ty áp dụng</span>}
+                        name="companyId"
+                        rules={[{ required: true, message: 'Vui lòng chọn công ty!' }]}
+                    >
+                        <Select
+                            placeholder="Chọn công ty áp dụng..."
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={companies}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Đối tượng áp dụng</span>}
+                        name="type"
+                        rules={[{ required: true, message: 'Vui lòng chọn đối tượng!' }]}
+                    >
+                        <Select
+                            placeholder="Chọn đối tượng áp dụng..."
+                            options={[
+                                { label: 'Nhân viên', value: 'STAFF' },
+                                { label: 'Quản lý', value: 'MANAGER' },
+                            ]}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label={
+                            <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+                                <span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Chức danh áp dụng (Tùy chọn)</span>
+                                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', lineHeight: '1.4' }}>
+                                    {!watchCompanyId 
+                                        ? "Vui lòng chọn Công ty trước để tải danh sách chức danh" 
+                                        : "Để trống để áp dụng cho TẤT CẢ chức danh trong nhóm đối tượng trên."
+                                    }
+                                </span>
                             </span>
-                        </span>
-                    }
-                    name="targetJobTitles"
-                >
-                    <Select
-                        mode="multiple"
-                        placeholder={watchCompanyId ? "Chọn chức danh cụ thể..." : "Hãy chọn công ty trước..."}
-                        allowClear
-                        showSearch
-                        optionFilterProp="label"
-                        options={jobTitles}
-                        disabled={!watchCompanyId}
-                    />
-                </Form.Item>
+                        }
+                        name="targetJobTitles"
+                    >
+                        <Select
+                            mode="multiple"
+                            placeholder={watchCompanyId ? "Chọn chức danh cụ thể..." : "Hãy chọn công ty trước..."}
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={jobTitles}
+                            disabled={!watchCompanyId}
+                        />
+                    </Form.Item>
 
-                <Form.Item label="Mô tả" name="description" style={{ marginBottom: 0 }}>
-                    <Input.TextArea rows={3} placeholder="Mô tả ngắn gọn về mẫu..." />
-                </Form.Item>
-            </Form>
-        </Modal>
+                    <Form.Item 
+                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Mô tả chi tiết</span>} 
+                        name="description" 
+                        style={{ marginBottom: 0 }}
+                    >
+                        <Input.TextArea rows={3} placeholder="Mô tả ngắn gọn về mẫu..." style={{ borderRadius: 8 }} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </ConfigProvider>
     );
 };
 

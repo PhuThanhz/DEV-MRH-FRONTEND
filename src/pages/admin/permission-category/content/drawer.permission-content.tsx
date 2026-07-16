@@ -170,7 +170,7 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                 width={getModalWidth(900)}
                 open={open}
                 onClose={() => setOpen(false)}
-                destroyOnClose
+                destroyOnHidden
                 styles={{ body: { padding: "16px 24px" } }}
             >
                 <div style={{ marginBottom: 16, textAlign: "right" }}>

@@ -194,7 +194,7 @@ const DrawerAssignSectionJobTitle = ({
             placement="right"
             width="45vw"
             onClose={onClose}
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" style={{ width: "100%" }}>
                 <Input.Search

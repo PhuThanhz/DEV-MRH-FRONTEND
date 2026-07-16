@@ -188,7 +188,7 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
                     form.resetFields();
                     setSteps([{ careerPathId: undefined }]);
                 },
-                destroyOnClose: true,
+                destroyOnHidden: true,
                 // Responsive: desktop 780px, mobile 95vw
                 width: "min(780px, 95vw)",
                 maskClosable: false,

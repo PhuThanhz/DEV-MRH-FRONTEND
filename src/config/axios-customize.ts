@@ -1,6 +1,6 @@
 import type { IBackendRes } from "@/types/backend";
-import axios from "axios";
-import { Mutex } from "async-mutex";
+import axios, { AxiosError } from "axios";
+import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { notification } from "antd";
 
 interface AccessTokenResponse {
@@ -11,10 +11,115 @@ interface AccessTokenResponse {
 const instance = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL as string,
     withCredentials: true,
+    timeout: 30000,
 });
 
-const mutex = new Mutex();
-const NO_RETRY_HEADER = "x-no-retry";
+const TOKEN_UPDATED_EVENT = "hrm:access-token-updated";
+const MAX_CONCURRENT_API_REQUESTS = 8;
+const GATEWAY_FAILURE_THRESHOLD = 3;
+const GATEWAY_FAILURE_WINDOW_MS = 10_000;
+const GATEWAY_COOLDOWN_MS = 15_000;
+const GATEWAY_ERROR_STATUSES = new Set([502, 503, 504]);
+let refreshPromise: Promise<string | null> | null = null;
+let logoutInProgress = false;
+let activeRequestCount = 0;
+let gatewayUnavailableUntil = 0;
+let recentGatewayFailures: number[] = [];
+const requestQueue: Array<() => void> = [];
+const inFlightGetRequests = new Map<string, Promise<AxiosResponse>>();
+
+interface LimitedRequestConfig extends InternalAxiosRequestConfig {
+    __requestSlotAcquired?: boolean;
+    __authRetryAttempted?: boolean;
+}
+
+const defaultAdapter = axios.getAdapter(instance.defaults.adapter);
+instance.defaults.adapter = async (config) => {
+    const method = config.method?.toLowerCase();
+    const canCoalesce = method === "get"
+        && !config.signal
+        && !config.cancelToken
+        && !config.onDownloadProgress;
+
+    if (!canCoalesce) {
+        return defaultAdapter(config);
+    }
+
+    const authorization = config.headers?.get?.("Authorization") ?? "";
+    const requestKey = [
+        axios.getUri(config),
+        authorization,
+        config.responseType ?? "json",
+    ].join("|");
+
+    let request = inFlightGetRequests.get(requestKey);
+    const ownsRequest = !request;
+
+    if (!request) {
+        request = defaultAdapter(config);
+        inFlightGetRequests.set(requestKey, request);
+    }
+
+    try {
+        const response = await request;
+        return { ...response, config };
+    } finally {
+        if (ownsRequest && inFlightGetRequests.get(requestKey) === request) {
+            inFlightGetRequests.delete(requestKey);
+        }
+    }
+};
+
+const isGatewayCircuitOpen = () => Date.now() < gatewayUnavailableUntil;
+
+const createGatewayCircuitError = (config: InternalAxiosRequestConfig) =>
+    new AxiosError(
+        "Máy chủ đang tạm quá tải. Vui lòng thử lại sau ít giây.",
+        "ERR_GATEWAY_COOLDOWN",
+        config
+    );
+
+const recordGatewayFailure = () => {
+    const now = Date.now();
+    recentGatewayFailures = recentGatewayFailures.filter(
+        (timestamp) => now - timestamp <= GATEWAY_FAILURE_WINDOW_MS
+    );
+    recentGatewayFailures.push(now);
+
+    if (recentGatewayFailures.length >= GATEWAY_FAILURE_THRESHOLD) {
+        gatewayUnavailableUntil = now + GATEWAY_COOLDOWN_MS;
+        recentGatewayFailures = [];
+    }
+};
+
+const recordGatewaySuccess = () => {
+    recentGatewayFailures = [];
+    if (!isGatewayCircuitOpen()) {
+        gatewayUnavailableUntil = 0;
+    }
+};
+
+const acquireRequestSlot = () => new Promise<void>((resolve) => {
+    const grant = () => {
+        activeRequestCount += 1;
+        resolve();
+    };
+
+    if (activeRequestCount < MAX_CONCURRENT_API_REQUESTS) {
+        grant();
+        return;
+    }
+
+    requestQueue.push(grant);
+});
+
+const releaseRequestSlot = (config?: LimitedRequestConfig) => {
+    if (!config?.__requestSlotAcquired) return;
+
+    config.__requestSlotAcquired = false;
+    activeRequestCount = Math.max(0, activeRequestCount - 1);
+    requestQueue.shift()?.();
+};
 
 
 const isAuthEndpoint = (url?: string) => {
@@ -25,34 +130,66 @@ const isAuthEndpoint = (url?: string) => {
     );
 };
 
-const handleRefreshToken = async (): Promise<string | null> => {
-    return mutex.runExclusive(async () => {
-        try {
-            const res = await instance.post<IBackendRes<AccessTokenResponse>>(
-                "/api/v1/auth/refresh",
-                null, // body rỗng
-                {
-                    headers: {
-                        [NO_RETRY_HEADER]: "true",
-                    },
-                }
-            );
+const requestRefreshToken = async (): Promise<string | null> => {
+    try {
+        const res = await instance.post<IBackendRes<AccessTokenResponse>>(
+            "/api/v1/auth/refresh",
+            null
+        );
 
-            return res?.data?.access_token ?? null;
-        } catch {
-            return null;
-        }
-    });
+        return res?.data?.access_token ?? null;
+    } catch {
+        return null;
+    }
+};
+
+const isRefreshEndpoint = (url?: string) =>
+    !!url?.includes("/api/v1/auth/refresh");
+
+const handleRefreshToken = async (): Promise<string | null> => {
+    if (!refreshPromise) {
+        refreshPromise = requestRefreshToken().finally(() => {
+            refreshPromise = null;
+        });
+    }
+
+    return refreshPromise;
+};
+
+const redirectToLoginOnce = async () => {
+    if (logoutInProgress) return;
+    logoutInProgress = true;
+
+    const { store } = await import("@/redux/store");
+    const { setLogoutAction } = await import("@/redux/slice/accountSlide");
+
+    store.dispatch(setLogoutAction());
+    localStorage.removeItem("access_token");
+
+    if (!window.location.pathname.startsWith("/login")) {
+        window.location.replace("/login");
+    }
 };
 
 
-instance.interceptors.request.use((config) => {
+instance.interceptors.request.use(async (config: LimitedRequestConfig) => {
+    if (isGatewayCircuitOpen() && !isRefreshEndpoint(config.url)) {
+        throw createGatewayCircuitError(config);
+    }
+
+    await acquireRequestSlot();
+    config.__requestSlotAcquired = true;
+
+    if (isGatewayCircuitOpen() && !isRefreshEndpoint(config.url)) {
+        releaseRequestSlot(config);
+        throw createGatewayCircuitError(config);
+    }
+
     const accessToken = localStorage.getItem("access_token");
 
     if (
         accessToken &&
-        !isAuthEndpoint(config.url) &&
-        !config.headers?.[NO_RETRY_HEADER]
+        !isAuthEndpoint(config.url)
     ) {
         config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -66,6 +203,9 @@ instance.interceptors.request.use((config) => {
 
 instance.interceptors.response.use(
     (res) => {
+        releaseRequestSlot(res.config as LimitedRequestConfig);
+        recordGatewaySuccess();
+
         // download file
         if (res.config.responseType === "blob") {
             return res;
@@ -73,31 +213,39 @@ instance.interceptors.response.use(
         return res.data;
     },
     async (error) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config as LimitedRequestConfig | undefined;
+        releaseRequestSlot(originalRequest);
+
+        if (GATEWAY_ERROR_STATUSES.has(error.response?.status)) {
+            recordGatewayFailure();
+        }
 
         if (
             originalRequest &&
             error.response?.status === 401 &&
             !isAuthEndpoint(originalRequest.url) &&
-            !originalRequest.headers?.[NO_RETRY_HEADER]
+            !originalRequest.__authRetryAttempted
         ) {
-            const newAccessToken = await handleRefreshToken();
+            originalRequest.headers = originalRequest.headers ?? {};
+            originalRequest.__authRetryAttempted = true;
 
-            originalRequest.headers[NO_RETRY_HEADER] = "true";
+            const newAccessToken = await handleRefreshToken();
 
             if (newAccessToken) {
                 localStorage.setItem("access_token", newAccessToken);
+                window.dispatchEvent(new Event(TOKEN_UPDATED_EVENT));
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return instance.request(originalRequest);
             } else {
                 // Refresh token fail -> Bắt buộc logout
-                const { store } = await import("@/redux/store");
-                const { setLogoutAction } = await import("@/redux/slice/accountSlide");
-                store.dispatch(setLogoutAction());
-                localStorage.removeItem("access_token");
-                window.location.href = '/login';
+                await redirectToLoginOnce();
                 return Promise.reject(error);
             }
+        }
+
+        if (originalRequest?.__authRetryAttempted && error.response?.status === 401) {
+            await redirectToLoginOnce();
+            return Promise.reject(error);
         }
 
 
@@ -106,14 +254,7 @@ instance.interceptors.response.use(
             originalRequest &&
             originalRequest.url?.includes("/api/v1/auth/refresh")
         ) {
-            // 1. Xóa sạch mọi token lưu trong localStorage và reset Redux
-            const { store } = await import("@/redux/store");
-            const { setLogoutAction } = await import("@/redux/slice/accountSlide");
-            store.dispatch(setLogoutAction());
-            localStorage.removeItem("access_token");
-
-            // 2. Ép người dùng văng thẳng về trang Đăng nhập
-            window.location.href = '/login';
+            await redirectToLoginOnce();
 
             return Promise.reject(error?.response?.data ?? error);
         }

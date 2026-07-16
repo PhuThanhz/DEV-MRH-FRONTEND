@@ -57,7 +57,7 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
             onCancel={handleCancel}
             width={480}
             centered
-            destroyOnClose
+            destroyOnHidden
             className="job-description-reject-modal"
         >
             <Space direction="vertical" size="middle" style={{ width: "100%", padding: "8px 0" }}>

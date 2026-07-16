@@ -548,7 +548,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                     </div>
                 </div>
                 {!editMode ? (
-                    <Space>
+                    <Space wrap size={[8, 8]} className="max-w-full">
                         {showHistoryAction && (
                             <>
                                 <Button

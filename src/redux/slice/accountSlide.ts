@@ -45,6 +45,7 @@ export interface IUser {
 interface IState {
     isAuthenticated: boolean;
     isLoading: boolean;
+    accountRequestStatus: "idle" | "pending" | "succeeded" | "failed";
     isRefreshToken: boolean;
     errorRefreshToken: string;
     user: IUser;
@@ -54,7 +55,11 @@ interface IState {
 /* =========================================
    FETCH ACCOUNT
 ========================================= */
-export const fetchAccount = createAsyncThunk<IGetAccount, void>(
+export const fetchAccount = createAsyncThunk<
+    IGetAccount,
+    void,
+    { state: { account: IState } }
+>(
     "account/fetchAccount",
     async (_, { rejectWithValue }) => {
         try {
@@ -64,6 +69,12 @@ export const fetchAccount = createAsyncThunk<IGetAccount, void>(
         } catch {
             return rejectWithValue("Fetch account failed");
         }
+    },
+    {
+        condition: (_, { getState }) => {
+            const account = getState().account;
+            return account.accountRequestStatus !== "pending" && !account.isAuthenticated;
+        },
     }
 );
 
@@ -73,6 +84,7 @@ export const fetchAccount = createAsyncThunk<IGetAccount, void>(
 const initialState: IState = {
     isAuthenticated: false,
     isLoading: true,
+    accountRequestStatus: "idle",
     isRefreshToken: false,
     errorRefreshToken: "",
     user: {
@@ -117,6 +129,7 @@ export const accountSlice = createSlice({
         setUserLoginInfo: (state, action: PayloadAction<IUser>) => {
             state.isAuthenticated = true;
             state.isLoading = false;
+            state.accountRequestStatus = "succeeded";
             state.user = action.payload;
         },
 
@@ -142,6 +155,7 @@ export const accountSlice = createSlice({
             localStorage.removeItem("access_token");
             state.isAuthenticated = false;
             state.isLoading = false;
+            state.accountRequestStatus = "idle";
             state.user = {
                 id: undefined,
                 email: "",
@@ -167,10 +181,12 @@ export const accountSlice = createSlice({
             .addCase(fetchAccount.pending, (state) => {
                 state.isAuthenticated = false;
                 state.isLoading = true;
+                state.accountRequestStatus = "pending";
             })
             .addCase(fetchAccount.fulfilled, (state, action) => {
                 state.isAuthenticated = true;
                 state.isLoading = false;
+                state.accountRequestStatus = "succeeded";
 
                 const u = action.payload.user;
 
@@ -191,6 +207,7 @@ export const accountSlice = createSlice({
             .addCase(fetchAccount.rejected, (state) => {
                 state.isAuthenticated = false;
                 state.isLoading = false;
+                state.accountRequestStatus = "failed";
             });
     },
 });

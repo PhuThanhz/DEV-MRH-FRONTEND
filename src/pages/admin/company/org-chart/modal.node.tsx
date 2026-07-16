@@ -1214,7 +1214,7 @@ const ModalNode = ({
             className="org-node-form-modal"
             title={null}
             open={open}
-            zIndex={2600}
+            zIndex={1200}
             onCancel={() => { form.resetFields(); onClose(); }}
             onOk={handleOk}
             okText={okLabel}

@@ -155,7 +155,7 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
                 modalProps={{
                     onCancel: handleReset,
                     afterClose: handleReset,
-                    destroyOnClose: true,
+                    destroyOnHidden: true,
                     maskClosable: false,
                     confirmLoading: isCreating || isUpdating,
                     width: modalWidth,
