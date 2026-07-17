@@ -51,6 +51,36 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                 matchApiPath(perm.apiPath, item.apiPath)
         ) || isAclDisabled;
 
+    const renderMenuBadge = (count: number) => count > 0 ? (
+        <Badge
+            count={count}
+            size="small"
+            overflowCount={99}
+            style={{
+                minWidth: 18,
+                height: 18,
+                lineHeight: "18px",
+                backgroundColor: "#ef3f7b",
+                boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.9)",
+                fontSize: 10,
+                fontWeight: 700,
+            }}
+        />
+    ) : null;
+
+    const renderMenuLabelWithBadge = (label: React.ReactNode, count: number, path?: string) => (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 8 }}>
+            {path ? (
+                <Link to={path} style={{ flex: 1, minWidth: 0 }}>
+                    {label}
+                </Link>
+            ) : (
+                <span style={{ flex: 1, minWidth: 0 }}>{label}</span>
+            )}
+            {renderMenuBadge(count)}
+        </div>
+    );
+
     // ── pre-check từng nhóm ──
     const hasUserGroup =
         checkPermission(ALL_PERMISSIONS.USERS.GET_PAGINATE) ||
@@ -96,6 +126,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY) ||
+        checkPermission(ALL_PERMISSIONS.EVALUATION.GET_ALL_RECORDS) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_RECORDS) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS) ||
@@ -313,7 +344,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
             ? [
                 {
                     type: "subgroup",
-                    label: "Nghiệp vụ đánh giá",
+                    label: renderMenuLabelWithBadge("Nghiệp vụ đánh giá", totalTasksCount),
                     icon: <FileDoneOutlined />,
                     children: [
                         ...(checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES)
@@ -340,20 +371,14 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                             checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS) ||
                             checkPermission(ALL_PERMISSIONS.EVALUATION.GET_MANAGER_HISTORY) ||
                             checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS) ||
-                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_APPROVAL_HISTORY)
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_APPROVAL_HISTORY) ||
+                            checkPermission(ALL_PERMISSIONS.EVALUATION.GET_ALL_RECORDS)
                             ? [
                                 {
-                                    label: (
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                                            <Link to="/admin/evaluation/process" style={{ flex: 1 }}>Tiến trình đánh giá</Link>
-                                            {totalTasksCount > 0 && (
-                                                <Badge
-                                                    count={totalTasksCount}
-                                                    size="small"
-                                                    style={{ backgroundColor: "#ff4d4f" }}
-                                                />
-                                            )}
-                                        </div>
+                                    label: renderMenuLabelWithBadge(
+                                        "Tiến trình đánh giá",
+                                        totalTasksCount,
+                                        "/admin/evaluation/process"
                                     ),
                                     key: "/admin/evaluation/process",
                                 },

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge, Dropdown } from "antd";
 import { notify } from "@/components/common/notification/notify";
@@ -16,7 +17,6 @@ import {
     EyeOutlined,
     SettingOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
 import useAccess from "@/hooks/useAccess";
 import { useAppSelector } from "@/redux/hooks";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
+import ActionButton from "@/components/common/ui/ActionButton";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 
@@ -40,6 +41,7 @@ import {
 } from "@/config/api";
 import PeriodModal from "./PeriodModal";
 import PeriodDetailDrawer from "./PeriodDetailDrawer";
+import PeriodProgressDrawer from "./PeriodProgressDrawer";
 import { fetchPeriodCompanyOptions, PERIOD_COMPANY_OPTIONS_QUERY_KEY } from "@/hooks/useEvaluationPeriodReferenceData";
 
 const getDiffString = (from: dayjs.Dayjs, to: dayjs.Dayjs) => {
@@ -113,7 +115,7 @@ const PHASE_CONFIG = {
     approval: { label: "Lãnh đạo duyệt", color: "#722ed1", bg: "#f9f0ff", border: "#d3adf7" },
 };
 
-const PhaseStep = ({ phase, activePhase, status }: { phase: "employee" | "manager" | "approval"; activePhase: PhaseType; status: string }) => {
+const PhaseStep = React.memo(({ phase, activePhase, status }: { phase: "employee" | "manager" | "approval"; activePhase: PhaseType; status: string }) => {
     const cfg = PHASE_CONFIG[phase];
     const phaseOrder = { employee: 0, manager: 1, approval: 2 };
     const activeOrder = { none: -1, employee: 0, manager: 1, approval: 2, all_closed: 3 };
@@ -145,15 +147,15 @@ const PhaseStep = ({ phase, activePhase, status }: { phase: "employee" | "manage
             </span>
         </div>
     );
-};
+});
 
 const renderTimelineCell = (record: IEvaluationPeriod) => {
     const info = getPhaseInfo(record);
 
     const badgeConfig: Record<BadgeType, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
         draft: { color: "#8c8c8c", bg: "#fafafa", border: "#d9d9d9", icon: <ClockCircleOutlined /> },
-        active: { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f", icon: <SyncOutlined spin /> },
-        intime: { color: "#1677ff", bg: "#e6f4ff", border: "#91caff", icon: <SyncOutlined spin /> },
+        active: { color: "#389e0d", bg: "#f6ffed", border: "#b7eb8f", icon: <SyncOutlined /> },
+        intime: { color: "#1677ff", bg: "#e6f4ff", border: "#91caff", icon: <SyncOutlined /> },
         upcoming: { color: "#d46b08", bg: "#fff7e6", border: "#ffd591", icon: <ClockCircleOutlined /> },
         closed: { color: "#595959", bg: "#f5f5f5", border: "#d9d9d9", icon: <CheckOutlined /> },
         overdue: { color: "#cf1322", bg: "#fff1f0", border: "#ffa39e", icon: <WarningOutlined /> },
@@ -249,31 +251,48 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
     );
 };
 
-const StatusTag = ({ record }: { record: IEvaluationPeriod }) => {
-    const info = getPhaseInfo(record);
-    
-    const config: Record<string, { color: string; text: string; dot: string }> = {
-        DRAFT: { color: "default", text: "Bản nháp", dot: "#8c8c8c" },
-        ACTIVE: { color: "processing", text: "Đang mở", dot: "#1677ff" },
-        CLOSED: { color: "default", text: "Đã đóng", dot: "#8c8c8c" },
-    };
-    const cfg = config[record.status] ?? config.DRAFT;
+const STATUS_TAG_CONFIG: Record<string, { color: string; text: string; dot: string }> = {
+    DRAFT: { color: "default", text: "Bản nháp", dot: "#8c8c8c" },
+    ACTIVE: { color: "processing", text: "Đang mở", dot: "#1677ff" },
+    CLOSED: { color: "default", text: "Đã đóng", dot: "#8c8c8c" },
+};
+
+const StatusTag = React.memo(({ record }: { record: IEvaluationPeriod }) => {
+    const cfg = STATUS_TAG_CONFIG[record.status] ?? STATUS_TAG_CONFIG.DRAFT;
     return (
         <Tag color={cfg.color} style={{ borderRadius: 4, fontWeight: 500, fontSize: 12, padding: "1px 10px" }}>
             <Badge color={cfg.dot} style={{ marginRight: 4 }} />
             {cfg.text}
         </Tag>
     );
-};
+});
 
 const PeriodPage = () => {
     const queryClient = useQueryClient();
-    const navigate = useNavigate();
     const [openModal, setOpenModal] = useState(false);
     const [openDrawer, setOpenDrawer] = useState(false);
     const [dataInit, setDataInit] = useState<IEvaluationPeriod | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<IEvaluationPeriod | null>(null);
     const [drawerReadOnly, setDrawerReadOnly] = useState(true);
+    const [progressPeriodId, setProgressPeriodId] = useState<number | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const progressPeriodIdParam = searchParams.get("progressPeriodId");
+
+    useEffect(() => {
+        if (progressPeriodIdParam) {
+            setProgressPeriodId(Number(progressPeriodIdParam));
+        }
+    }, [progressPeriodIdParam]);
+
+    const handleCloseProgressDrawer = useCallback(() => {
+        setProgressPeriodId(null);
+        if (searchParams.has("progressPeriodId")) {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete("progressPeriodId");
+            setSearchParams(newParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
+
     const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
     const canAddTemplate = useAccess(ALL_PERMISSIONS.EVALUATION.ADD_TEMPLATE_TO_PERIOD);
     const canAddEmployee = useAccess(ALL_PERMISSIONS.EVALUATION.ADD_EMPLOYEE_TO_PERIOD);
@@ -306,7 +325,7 @@ const PeriodPage = () => {
         return `${temp}&${sortBy}`;
     };
 
-    const handleActivate = async (id: number) => {
+    const handleActivate = useCallback(async (id: number) => {
         try {
             const res = await callActivateEvaluationPeriod(id);
             if (res?.data) {
@@ -316,9 +335,9 @@ const PeriodPage = () => {
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi kích hoạt kỳ đánh giá");
         }
-    };
+    }, []);
 
-    const handleClose = async (id: number) => {
+    const handleClose = useCallback(async (id: number) => {
         try {
             const res = await callCloseEvaluationPeriod(id);
             if (res?.data) {
@@ -328,9 +347,19 @@ const PeriodPage = () => {
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Lỗi đóng kỳ đánh giá");
         }
-    };
+    }, []);
 
-    const columns: ProColumns<IEvaluationPeriod>[] = [
+    const handlePeriodDrawerClose = useCallback(() => {
+        const shouldReload = !drawerReadOnly;
+        setOpenDrawer(false);
+        setSelectedPeriod(null);
+        setDrawerReadOnly(true);
+        if (shouldReload) {
+            window.setTimeout(() => tableRef.current?.reload(), 220);
+        }
+    }, [drawerReadOnly]);
+
+    const columns: ProColumns<IEvaluationPeriod>[] = useMemo(() => [
         {
             title: "STT",
             key: "index",
@@ -414,29 +443,23 @@ const PeriodPage = () => {
                 return (
                     <Space size={4}>
                         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
-                            <Tooltip title="Xem chi tiết kỳ đánh giá">
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<EyeOutlined style={{ fontSize: 16 }} />}
-                                    style={{ color: "#1677ff" }}
-                                    onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(true); setOpenDrawer(true); }}
-                                    aria-label={`Xem chi tiết kỳ đánh giá ${entity.name}`}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết kỳ đánh giá"
+                                icon={<EyeOutlined style={{ fontSize: 16 }} />}
+                                onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(true); setOpenDrawer(true); }}
+                                aria-label={`Xem chi tiết kỳ đánh giá ${entity.name}`}
+                            />
                         </Access>
 
                         {canManagePeriod && (
-                            <Tooltip title="Quản trị nhân sự trong kỳ">
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<SettingOutlined style={{ fontSize: 16 }} />}
-                                    style={{ color: "#722ed1" }}
-                                    onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(false); setOpenDrawer(true); }}
-                                    aria-label={`Quản trị kỳ đánh giá ${entity.name}`}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="settings"
+                                tooltip="Quản trị nhân sự trong kỳ"
+                                icon={<SettingOutlined style={{ fontSize: 16 }} />}
+                                onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(false); setOpenDrawer(true); }}
+                                aria-label={`Quản trị kỳ đánh giá ${entity.name}`}
+                            />
                         )}
 
                         {isDraft && entity.id && (
@@ -449,9 +472,7 @@ const PeriodPage = () => {
                                     cancelText="Hủy"
                                     okButtonProps={{ type: "primary" }}
                                 >
-                                    <Tooltip title="Kích hoạt kỳ">
-                                        <Button type="text" size="small" icon={<CheckCircleOutlined style={{ fontSize: 16 }} />} style={{ color: "#389e0d" }} />
-                                    </Tooltip>
+                                    <ActionButton variant="success" tooltip="Kích hoạt kỳ" icon={<CheckCircleOutlined style={{ fontSize: 16 }} />} />
                                 </Popconfirm>
                             </Access>
                         )}
@@ -466,36 +487,28 @@ const PeriodPage = () => {
                                     cancelText="Hủy"
                                     okButtonProps={{ danger: true }}
                                 >
-                                    <Tooltip title="Đóng kỳ đánh giá">
-                                        <Button type="text" size="small" icon={<PoweroffOutlined style={{ fontSize: 16 }} />} style={{ color: "#cf1322" }} />
-                                    </Tooltip>
+                                    <ActionButton variant="danger" tooltip="Đóng kỳ đánh giá" icon={<PoweroffOutlined style={{ fontSize: 16 }} />} />
                                 </Popconfirm>
                             </Access>
                         )}
 
                         {entity.status === "CLOSED" && (
-                            <Tooltip title="Kỳ đánh giá đã kết thúc">
-                                <Button type="text" size="small" icon={<StopOutlined style={{ fontSize: 16 }} />} style={{ color: "#bfbfbf" }} disabled />
-                            </Tooltip>
+                            <ActionButton tooltip="Kỳ đánh giá đã kết thúc" icon={<StopOutlined style={{ fontSize: 16 }} />} disabled />
                         )}
 
                         {entity.status !== "DRAFT" && entity.id && (
-                            <Tooltip title="Xem tiến độ kỳ đánh giá">
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<BarChartOutlined style={{ fontSize: 16 }} />}
-                                    style={{ color: "#13c2c2" }}
-                                    onClick={() => navigate(`/admin/evaluation/periods/${entity.id}/progress`)}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="progress"
+                                tooltip="Xem tiến độ kỳ đánh giá"
+                                icon={<BarChartOutlined style={{ fontSize: 16 }} />}
+                                onClick={() => setProgressPeriodId(entity.id!)}
+                                aria-label={`Xem tiến độ kỳ đánh giá ${entity.name}`}
+                            />
                         )}
 
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
-                                <Button
-                                    type="text"
-                                    size="small"
+                                <ActionButton
                                     icon={<MoreOutlined style={{ fontSize: 18 }} />}
                                     aria-label={`Thao tác khác cho kỳ đánh giá ${entity.name}`}
                                 />
@@ -505,7 +518,7 @@ const PeriodPage = () => {
                 );
             },
         },
-    ];
+    ], [canManagePeriod, handleActivate, handleClose]);
 
     return (
         <PageContainer
@@ -585,19 +598,29 @@ const PeriodPage = () => {
                 />
             </Access>
 
-            <PeriodModal
-                openModal={openModal}
-                setOpenModal={setOpenModal}
-                dataInit={dataInit}
-                setDataInit={setDataInit}
-                reloadTable={() => tableRef.current?.reload()}
-            />
+            {openModal && (
+                <PeriodModal
+                    openModal={openModal}
+                    setOpenModal={setOpenModal}
+                    dataInit={dataInit}
+                    setDataInit={setDataInit}
+                    reloadTable={() => tableRef.current?.reload()}
+                />
+            )}
 
-            <PeriodDetailDrawer
-                open={openDrawer}
-                onClose={() => { setOpenDrawer(false); setSelectedPeriod(null); setDrawerReadOnly(true); tableRef.current?.reload(); }}
-                period={selectedPeriod}
-                readOnly={drawerReadOnly}
+            {openDrawer && selectedPeriod && (
+                <PeriodDetailDrawer
+                    open={openDrawer}
+                    onClose={handlePeriodDrawerClose}
+                    period={selectedPeriod}
+                    readOnly={drawerReadOnly}
+                />
+            )}
+
+            <PeriodProgressDrawer
+                open={progressPeriodId !== null}
+                periodId={progressPeriodId ?? undefined}
+                onClose={handleCloseProgressDrawer}
             />
         </PageContainer>
     );

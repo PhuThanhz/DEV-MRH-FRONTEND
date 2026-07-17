@@ -266,13 +266,21 @@ const StorageDashboard = () => {
             }
             
             const filterQuery = filters.length > 0 ? `&filter=${filters.join(" and ")}` : "";
-            let queryStr = `page=1&size=10000&sort=createdAt,desc&sort=id,desc${filterQuery}`;
-            if (selectedStorageStatus) {
-                queryStr += `&storageStatus=${selectedStorageStatus}`;
-            }
+            const storageQuery = selectedStorageStatus
+                ? `&storageStatus=${selectedStorageStatus}`
+                : "";
+            const items: any[] = [];
+            const exportPageSize = 100;
+            let exportPage = 1;
+            let totalPages = 1;
 
-            const res = await callFetchAccountingDossiers(queryStr);
-            const items = res?.data?.result || [];
+            do {
+                const queryStr = `page=${exportPage}&size=${exportPageSize}&sort=createdAt,desc&sort=id,desc${filterQuery}${storageQuery}`;
+                const res = await callFetchAccountingDossiers(queryStr);
+                items.push(...(res?.data?.result || []));
+                totalPages = Math.max(1, Number(res?.data?.meta?.pages || 1));
+                exportPage += 1;
+            } while (exportPage <= totalPages);
             
             if (items.length === 0) {
                 notify.warning("Không có dữ liệu phù hợp để xuất Excel");

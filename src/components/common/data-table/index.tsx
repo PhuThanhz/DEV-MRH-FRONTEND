@@ -27,7 +27,7 @@ const DataTable = <
     dateFormatter = "string",
     rowSelection,
     onChange,
-    sticky = { offsetHeader: 48 },
+    sticky = { offsetHeader: 64 },
 }: ProTableProps<T, U, ValueType>) => {
     return (
         <ConfigProvider locale={vi_VN}>
@@ -39,7 +39,8 @@ const DataTable = <
                     postData={postData}
                     pagination={{
                         showQuickJumper: true,
-                        showSizeChanger: true,
+                        showSizeChanger: { showSearch: false },
+                        showTitle: false,
                         ...pagination,
                     }}
                     bordered

@@ -32,7 +32,8 @@ const LayoutClient = () => {
             style={{
                 display: "flex",
                 flexDirection: "column",
-                minHeight: "100vh",
+                minHeight: "100dvh",
+                height: isHomePage ? "100dvh" : undefined,
                 backgroundColor: "#f5f5f5",
                 overflowX: "hidden",
                 overflowY: isHomePage ? "hidden" : "auto",
@@ -51,6 +52,8 @@ const LayoutClient = () => {
                     position: "relative",
                     display: isHomePage ? "flex" : "block",
                     flexDirection: isHomePage ? "column" : undefined,
+                    minHeight: isHomePage ? 0 : undefined,
+                    overflow: isHomePage ? "hidden" : undefined,
                 }}
             >
                 <Outlet />

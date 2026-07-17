@@ -52,6 +52,16 @@ export default defineConfig({
     host: true, // cho phép truy cập từ thiết bị khác trong cùng mạng LAN
     port: 3000,
     strictPort: true, // tránh tự đổi port khi 3000 đang dùng
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        ws: true,
+        headers: {
+          Origin: 'http://localhost:3000',
+        },
+      },
+    },
   },
   css: {
     preprocessorOptions: {

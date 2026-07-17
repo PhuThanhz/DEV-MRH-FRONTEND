@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     Layout,
     Tree,
@@ -269,7 +269,7 @@ const PersonalDrivePage: React.FC = () => {
         }
     }, [activeOwnerId]);
 
-    const loadFolderDocuments = async (folderId: number) => {
+    const loadFolderDocuments = useCallback(async (folderId: number) => {
         setLoadingDocs(true);
         try {
             const res = await callFetchFolderDocuments(folderId);
@@ -283,7 +283,7 @@ const PersonalDrivePage: React.FC = () => {
         } finally {
             setLoadingDocs(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         if (selectedFolderId) {
@@ -684,7 +684,7 @@ const PersonalDrivePage: React.FC = () => {
         }
     };
 
-    const handleDeleteDoc = async (record: IDocument) => {
+    const handleDeleteDoc = useCallback(async (record: IDocument) => {
         try {
             if (record.isShortcut) {
                 await callDeleteDocumentShortcut(record.id!, selectedFolderId!);
@@ -699,9 +699,9 @@ const PersonalDrivePage: React.FC = () => {
         } catch (err: any) {
             message.error(err.message || "Xóa tài liệu thất bại");
         }
-    };
+    }, [loadFolderDocuments, selectedFolderId]);
 
-    const columns = [
+    const columns = useMemo(() => [
         {
             title: "Mã tài liệu",
             dataIndex: "documentCode",
@@ -849,7 +849,7 @@ const PersonalDrivePage: React.FC = () => {
                 );
             }
         }
-    ];
+    ], [editDocForm, handleDeleteDoc, isReadOnly]);
 
     const findFolderById = (folders: IDocumentFolder[], id: number): IDocumentFolder | null => {
         for (const f of folders) {

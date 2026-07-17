@@ -91,4 +91,130 @@
     }
 }
 
+/* ===== PHÂN TRANG DÙNG CHUNG (DataTable / ProTable) ===== */
+/* Scope trong .custom-pro-table nên áp dụng mọi trang list, load 1 lần từ CSS global. */
+.custom-pro-table .ant-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 10px 4px 2px;
+    font-size: 13px;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-total-text {
+    margin-inline-end: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Nút số trang + prev/next: bo tròn mềm, nền phẳng, không viền cứng */
+.custom-pro-table .ant-pagination .ant-pagination-item,
+.custom-pro-table .ant-pagination .ant-pagination-prev,
+.custom-pro-table .ant-pagination .ant-pagination-next {
+    min-width: 32px;
+    height: 32px;
+    line-height: 30px;
+    margin: 0;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-item a {
+    color: #475569;
+    font-weight: 500;
+    padding: 0 6px;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-item:hover,
+.custom-pro-table .ant-pagination .ant-pagination-prev:hover .ant-pagination-item-link,
+.custom-pro-table .ant-pagination .ant-pagination-next:hover .ant-pagination-item-link {
+    background: #f1f5f9;
+    border-color: transparent;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-item:hover a {
+    color: #1e293b;
+}
+
+/* Trang đang chọn: nền hồng brand đặc, phẳng, không lòe */
+.custom-pro-table .ant-pagination .ant-pagination-item-active {
+    background: #e8637a;
+    border-color: transparent;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-item-active:hover {
+    background: #d94c66;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-item-active a,
+.custom-pro-table .ant-pagination .ant-pagination-item-active:hover a {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* prev / next */
+.custom-pro-table .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
+.custom-pro-table .ant-pagination .ant-pagination-next .ant-pagination-item-link {
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: #64748b;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-disabled .ant-pagination-item-link {
+    color: #cbd5e1;
+}
+
+/* Ô chọn số dòng / trang */
+.custom-pro-table .ant-pagination .ant-select .ant-select-selector {
+    border-radius: 8px !important;
+    border-color: #e2e8f0 !important;
+    height: 32px !important;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.custom-pro-table .ant-pagination .ant-select:hover .ant-select-selector {
+    border-color: #f7a8b8 !important;
+}
+
+.custom-pro-table .ant-pagination .ant-select-focused .ant-select-selector {
+    border-color: #e8637a !important;
+    box-shadow: 0 0 0 3px rgba(232, 99, 122, 0.12) !important;
+}
+
+/* Ô "Đến ... Trang" (quick jumper) */
+.custom-pro-table .ant-pagination .ant-pagination-options-quick-jumper {
+    color: #94a3b8;
+    height: 32px;
+    line-height: 32px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-options-quick-jumper input {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    height: 32px;
+    width: 52px;
+    text-align: center;
+    color: #334155;
+    font-weight: 600;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-options-quick-jumper input:hover {
+    border-color: #f7a8b8;
+}
+
+.custom-pro-table .ant-pagination .ant-pagination-options-quick-jumper input:focus {
+    border-color: #e8637a;
+    box-shadow: 0 0 0 3px rgba(232, 99, 122, 0.12);
+    outline: none;
+}
+
 /* CUSTOM SIDEBAR */

@@ -106,7 +106,7 @@ export const useWebSocket = (onMessageReceived: (msg: IWebSocketMessage) => void
                 return;
             }
 
-            const baseUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+            const baseUrl = import.meta.env.VITE_BACKEND_URL?.trim() || window.location.origin;
             const endpoint = baseUrl.endsWith('/api/v1')
                 ? `${baseUrl}/ws-endpoint`
                 : `${baseUrl}/api/v1/ws-endpoint`;

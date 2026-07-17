@@ -1,6 +1,7 @@
 const Footer = () => {
     return (
         <footer
+            className="client-footer"
             style={{
                 padding: "12px 16px",
                 background: "#ffffff",
@@ -84,6 +85,20 @@ const Footer = () => {
                     TEC Team
                 </span>
             </div>
+            <style>{`
+                @media (max-height: 720px) and (min-width: 641px) {
+                    .client-footer {
+                        padding-top: 7px !important;
+                        padding-bottom: 7px !important;
+                    }
+                }
+
+                @media (max-width: 640px) {
+                    .client-footer {
+                        padding: 8px 12px !important;
+                    }
+                }
+            `}</style>
         </footer>
     );
 };

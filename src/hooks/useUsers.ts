@@ -21,6 +21,7 @@ export const useUsersQuery = (query: string, enabled = true) => {
             if (!res?.data) throw new Error("Không thể lấy danh sách người dùng");
             return res.data as IModelPaginate<IUser>;
         },
+        placeholderData: (previousData) => previousData,
     });
 };
 

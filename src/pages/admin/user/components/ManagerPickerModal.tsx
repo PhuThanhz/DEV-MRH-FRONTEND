@@ -9,7 +9,16 @@ const { Text } = Typography;
 interface ManagerPickerModalProps {
     open: boolean;
     onClose: () => void;
-    onSelect: (user: { id: string; name: string; departmentName?: string; companyName?: string }) => void;
+    onSelect: (user: {
+        id: string;
+        name: string;
+        email?: string;
+        employeeCode?: string;
+        jobTitle?: string;
+        positionLevel?: string;
+        departmentName?: string;
+        companyName?: string;
+    }) => void;
     title?: string;
     description?: string;
 }
@@ -67,6 +76,10 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
         onSelect({
             id: record.id,
             name: record.name,
+            email: record.email,
+            employeeCode: record.employeeCode,
+            jobTitle: record.jobTitle,
+            positionLevel: record.positionLevel,
             departmentName: record.departmentName,
             companyName: record.companyName,
         });
@@ -131,6 +144,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
                 <Button 
                     type="primary" 
                     size="small"
+                    style={{ background: "#e8356d", borderColor: "#e8356d" }}
                     onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(record);
@@ -144,6 +158,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
 
     return (
         <Modal
+            className="manager-picker-modal"
             open={open}
             onCancel={onClose}
             footer={null}
@@ -160,6 +175,22 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
             destroyOnHidden
             styles={{ body: MODAL_BODY_SCROLL }}
         >
+            <style>{`
+                .manager-picker-modal .ant-modal-title { color: #172033; }
+                .manager-picker-modal .ant-input:focus,
+                .manager-picker-modal .ant-input-affix-wrapper-focused,
+                .manager-picker-modal .ant-select-focused .ant-select-selector {
+                    border-color: #e8356d !important;
+                    box-shadow: 0 0 0 2px rgba(232, 53, 109, 0.10) !important;
+                }
+                .manager-picker-modal .ant-table-thead > tr > th {
+                    color: #475569;
+                    background: #f8fafc;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                .manager-picker-modal .ant-table-tbody > tr:hover > td { background: #fff7fa !important; }
+            `}</style>
             <Space direction="vertical" style={{ width: "100%", marginTop: 16 }} size="middle">
                 <div style={{ display: "flex", gap: 12 }}>
                     <Input
@@ -205,7 +236,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
                         showTotal: (total, range) => `${range[0]}-${range[1]} trên ${total} người`,
                     }}
                     size="middle"
-                    bordered
+                    bordered={false}
                 />
             </Space>
         </Modal>

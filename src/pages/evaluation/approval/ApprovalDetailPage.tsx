@@ -56,6 +56,30 @@ const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" 
 const getComment = (comments: any[], type: string) =>
     comments?.find(c => c.commentType === type)?.content ?? "";
 
+const getStickyStyle = (col: "empScore" | "empResult" | "mgrScore" | "mgrResult" | "apprScore" | "apprResult", isHeader = false): React.CSSProperties => {
+    let right = 0;
+    if (col === "apprResult") right = 0;
+    else if (col === "apprScore") right = 120;
+    else if (col === "mgrResult") right = 240;
+    else if (col === "mgrScore") right = 360;
+    else if (col === "empResult") right = 480;
+    else if (col === "empScore") right = 600;
+    
+    const isLeftmost = col === "empScore";
+    
+    return {
+        position: "sticky",
+        right,
+        width: 120,
+        minWidth: 120,
+        zIndex: isHeader ? 2 : 1,
+        background: isHeader ? "#f8fafc" : "#fff",
+        borderLeft: isLeftmost ? "1.5px solid #cbd5e1" : undefined,
+        boxShadow: isLeftmost ? "-3px 0 6px -2px rgba(0,0,0,0.15)" : undefined,
+        backgroundClip: "padding-box",
+    };
+};
+
 interface IApproverCriteriaRowProps {
     c: any;
     cIdx: number;
@@ -86,29 +110,30 @@ const ApproverCriteriaRow = React.memo(({
                     {(c.weight * 100).toFixed(0)}%
                 </span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
                 {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
                     <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
                 {!hasSub && empScore != null
                     ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span>
                     : <span style={{ color: "#e5e7eb" }}>—</span>}
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
                 {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : (
                     <span style={{ fontSize: 18, fontWeight: 800, color: realMgrScore != null ? "#111827" : "#e5e7eb" }}>{realMgrScore ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
                 {!hasSub && realMgrScore != null
                     ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(realMgrScore * c.weight).toFixed(2)}</span>
                     : <span style={{ color: "#e5e7eb" }}>—</span>}
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("apprScore") }}>
                 {hasSub ? <span style={{ color: "#e5e7eb" }}>—</span> : isEditable ? (
                     <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        popupMatchSelectWidth={false}
                         className={mgrScore == null ? "unfilled-select" : ""}
                         value={mgrScore ?? undefined} loading={savingScore === c.id}
                         onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
@@ -116,7 +141,7 @@ const ApproverCriteriaRow = React.memo(({
                     <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("apprResult") }}>
                 {!hasSub && mgrScore != null
                     ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span>
                     : <span style={{ color: "#e5e7eb" }}>—</span>}
@@ -155,21 +180,22 @@ const ApproverSubCriteriaRow = React.memo(({
                     {(sub.weight * 100).toFixed(0)}%
                 </span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
                 {subEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(subEmp * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: subRealMgr != null ? "#111827" : "#e5e7eb" }}>{subRealMgr ?? "—"}</span>
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
                 {subRealMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subRealMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("apprScore") }}>
                 {isEditable ? (
                     <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        popupMatchSelectWidth={false}
                         className={subMgr == null ? "unfilled-select" : ""}
                         value={subMgr ?? undefined} loading={savingScore === sub.id}
                         onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
@@ -177,7 +203,7 @@ const ApproverSubCriteriaRow = React.memo(({
                     <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("apprResult") }}>
                 {subMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(subMgr * sub.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
             </td>
         </tr>
@@ -187,6 +213,7 @@ const ApproverSubCriteriaRow = React.memo(({
 const ApprovalDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const showCriteria = true;
 
     const [record, setRecord] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -417,7 +444,7 @@ const ApprovalDetailPage = () => {
     };
     const thSub: React.CSSProperties = {
         padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
-        background: "#ffffff", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
         textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
@@ -426,10 +453,10 @@ const ApprovalDetailPage = () => {
         textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "14px 14px", borderBottom: "1px solid #e2e8f0",
-        borderRight: "1px dashed #dbe3ef", fontSize: 12, color: "#4b5563",
-        verticalAlign: "top", lineHeight: 1.55, minWidth: 120,
-        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
+        padding: "10px 8px", borderBottom: "1px solid #e2e8f0",
+        borderRight: "1px dashed #dbe3ef", fontSize: 11.5, color: "#4b5563",
+        verticalAlign: "top", lineHeight: 1.5, minWidth: 155, width: 155,
+        textAlign: "justify", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdSc: React.CSSProperties = {
         padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
@@ -610,28 +637,39 @@ const ApprovalDetailPage = () => {
 
             {/* ─── BẢNG ĐÁNH GIÁ ─── */}
             <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1880 : 1660 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 2020, tableLayout: "fixed" }}>
+                    <colgroup>
+                        <col style={{ width: 64 }} />
+                        <col />
+                        <col style={{ width: 190 }} />
+                        {showCriteria && [1, 2, 3, 4, 5].map(n => <col key={n} style={{ width: 155 }} />)}
+                        <col style={{ width: 80 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 230 }}>Nội dung đánh giá</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left" }}>Nội dung đánh giá</th>
                             <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
-                            <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>
-                            <th rowSpan={2} style={thS}>Trọng số</th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
-                                <span style={{ color: "#111827" }}>CBNV đánh giá</span>
-                            </th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none", color: "#111827" }}>Quản lý chấm</th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Phê duyệt chấm</th>
+                            {showCriteria && <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>}
+                            <th rowSpan={2} style={{ ...thS, width: 80 }}>Trọng số</th>
+                            <th colSpan={2} style={{ ...thG, ...getStickyStyle("empScore", true) }}>CBNV đánh giá</th>
+                            <th colSpan={2} style={{ ...thG, ...getStickyStyle("mgrScore", true) }}>Quản lý chấm</th>
+                            <th colSpan={2} style={{ ...thG, ...getStickyStyle("apprScore", true) }}>Phê duyệt chấm</th>
                         </tr>
                         <tr>
-                            {[1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
-                            <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
-                            <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
-                            <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm</th>
-                            <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
-                            <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>
-                            <th style={thSub}>Kết quả</th>
+                            {showCriteria && [1,2,3,4,5].map(n => <th key={n} style={{ ...thSub, width: 155, color: "#e11d48" }}>Mức {n}</th>)}
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empScore", true) }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empResult", true) }}>Kết quả</th>
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("mgrScore", true) }}>Điểm</th>
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("mgrResult", true) }}>Kết quả</th>
+                            <th style={{ ...thSub, ...getStickyStyle("apprScore", true) }}>Điểm</th>
+                            <th style={{ ...thSub, ...getStickyStyle("apprResult", true) }}>Kết quả</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -643,20 +681,33 @@ const ApprovalDetailPage = () => {
                                 let empTotal = 0, realMgrTotal = 0, mgrTotal = 0;
                                 const rows: React.ReactNode[] = [];
 
-                            rows.push(
-                                <tr key={`sec-${section.id}`}>
-                                    <td colSpan={15} style={{
-                                        padding: "10px 18px",
-                                        background: "#f3f4f6",
-                                        borderTop: "1px solid #e5e7eb",
-                                        borderBottom: "1px solid #e5e7eb",
-                                        borderLeft: "4px solid #f43f5e"
-                                    }}>
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                            <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
+                                rows.push(
+                                    <tr key={`sec-${section.id}`}>
+                                        <td colSpan={9} style={{
+                                            padding: "10px 18px",
+                                            background: "#f3f4f6",
+                                            borderTop: "1px solid #e5e7eb",
+                                            borderBottom: "1px solid #e5e7eb",
+                                            borderLeft: "4px solid #f43f5e"
+                                        }}>
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
+                                            </div>
+                                        </td>
+                                        <td colSpan={6} style={{
+                                            position: "sticky",
+                                            right: 0,
+                                            zIndex: 1,
+                                            padding: "10px 18px",
+                                            background: "#f3f4f6",
+                                            borderTop: "1px solid #e5e7eb",
+                                            borderBottom: "1px solid #e5e7eb",
+                                            textAlign: "right",
+                                            borderLeft: "1.5px solid #cbd5e1",
+                                            boxShadow: "-3px 0 6px -2px rgba(0,0,0,0.15)"
+                                        }}>
                                             <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Trọng số {(section.weight * 100).toFixed(0)}%</span>
-                                        </div>
-                                    </td>
+                                        </td>
                                 </tr>
                             );
 
@@ -723,20 +774,20 @@ const ApprovalDetailPage = () => {
                             // Section subtotal
                             rows.push(
                                 <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                    <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                    <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
                                         Tổng kết {section.name}
                                     </td>
                                     <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                    <td style={{ padding: "12px", borderLeft: "none" }} />
-                                    <td style={{ padding: "12px", textAlign: "center" }}>
+                                    <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("empScore"), background: "#f9fafb" }} />
+                                    <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empResult"), background: "#f9fafb" }}>
                                         <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{empTotal.toFixed(2)}</span>
                                     </td>
-                                    <td style={{ padding: "12px", borderLeft: "none" }} />
-                                    <td style={{ padding: "12px", textAlign: "center" }}>
+                                    <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("mgrScore"), background: "#f9fafb" }} />
+                                    <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("mgrResult"), background: "#f9fafb" }}>
                                         <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{realMgrTotal.toFixed(2)}</span>
                                     </td>
-                                    <td style={{ padding: "12px", borderLeft: "none" }} />
-                                    <td style={{ padding: "12px", textAlign: "center" }}>
+                                    <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("apprScore"), background: "#f9fafb" }} />
+                                    <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("apprResult"), background: "#f9fafb" }}>
                                         <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
                                     </td>
                                 </tr>
@@ -756,20 +807,20 @@ const ApprovalDetailPage = () => {
                                             Tổng điểm đánh giá chung
                                         </td>
                                         <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#111827" }}>100%</td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("empScore") }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empResult") }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
                                                 {dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
                                             </span>
                                         </td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("mgrScore") }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("mgrResult") }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
                                                 {record.managerTotalScore != null ? record.managerTotalScore.toFixed(2) : "—"}
                                             </span>
                                         </td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("apprScore") }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("apprResult") }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#f43f5e" }}>
                                                 {dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
                                             </span>

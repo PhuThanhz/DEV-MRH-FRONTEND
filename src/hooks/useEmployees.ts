@@ -27,6 +27,7 @@ export const useEmployeesQuery = (query: string) => {
             if (!res?.data) throw new Error("Không thể lấy danh sách nhân viên");
             return res.data as IModelPaginate<IEmployee>;
         },
+        placeholderData: (previousData) => previousData,
     });
 };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import { Layout } from "antd";
-import { Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import SliderAdmin from "./slider.admin";
 import HeaderAdmin from "./header.admin";
 import { useAppSelector } from "@/redux/hooks";
@@ -9,6 +9,7 @@ import Loading from "@/components/common/loading/loading";
 import { NotificationProvider } from "@/hooks/useNotifications";
 import { useTrackRecentQuickAccess } from "@/hooks/useQuickAccess";
 import { LotusGuideProvider } from "@/components/common/guide/LotusGuideProvider";
+import { PATHS } from "@/constants/paths";
 
 const QrScannerModal = lazy(() => import("@/components/common/qr/QrScannerModal"));
 const LotusCharmAssistant = lazy(() => import("@/components/common/navigation/LotusCharmAssistant"));
@@ -79,10 +80,9 @@ const LayoutAdmin = () => {
 
     if (isLoading) return <Loading />;
 
-    if (!isAuthenticated)
-        return (
-            <NotPermitted message="Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn." />
-        );
+    if (!isAuthenticated) {
+        return <Navigate to={PATHS.LOGIN} replace />;
+    }
 
     const isAdmin = roleName.includes("ADMIN");
     const isEmployee = roleName === "EMPLOYEE";

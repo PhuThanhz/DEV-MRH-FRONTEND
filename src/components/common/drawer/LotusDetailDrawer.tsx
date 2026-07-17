@@ -11,6 +11,7 @@ interface LotusDetailDrawerProps {
     destroyOnClose?: boolean;
     keyboard?: boolean;
     closeAriaLabel?: string;
+    maskClosable?: boolean;
 }
 
 const LotusDetailDrawer = ({
@@ -21,6 +22,7 @@ const LotusDetailDrawer = ({
     destroyOnClose = true,
     keyboard = true,
     closeAriaLabel = "Đóng",
+    maskClosable = true,
 }: LotusDetailDrawerProps) => {
     const isMobile = useIsMobile();
 
@@ -31,6 +33,7 @@ const LotusDetailDrawer = ({
             open={open}
             onClose={onClose}
             keyboard={keyboard}
+            maskClosable={maskClosable}
             closable={false}
             styles={{
                 mask: { background: "rgba(15, 23, 42, 0.42)", backdropFilter: "blur(1px)" },

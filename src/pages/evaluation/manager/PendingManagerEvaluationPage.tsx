@@ -34,7 +34,7 @@ const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: R
     EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ duyệt cấp trên", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
+    PENDING_APPROVAL: { text: "Chờ chấm & duyệt cuối", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
     COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
 };
 
@@ -61,8 +61,8 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
     const [batchSubmitting, setBatchSubmitting] = useState(false);
 
     const qc = useQueryClient();
-    const pendingQuery = usePendingManagerRecordsQuery();
-    const managerQuery = useManagerRecordsQuery();
+    const pendingQuery = usePendingManagerRecordsQuery(activeTab === "pending");
+    const managerQuery = useManagerRecordsQuery(activeTab === "history");
 
     const records: any[] = activeTab === "pending" ? (pendingQuery.data || []) : (managerQuery.data || []);
     const loading = activeTab === "pending" ? pendingQuery.isLoading : managerQuery.isLoading;

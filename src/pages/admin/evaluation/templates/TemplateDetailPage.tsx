@@ -217,6 +217,10 @@ const TemplateDetailPage: React.FC = () => {
         // 3. For each section, validate criteria and levels completeness
         for (const sec of sections) {
             const criteriaList = sec.criteria || [];
+            if (!Number.isFinite(sec.weight) || (sec.weight ?? 0) <= 0) {
+                notify.error(`Phần "${sec.name}" phải có trọng số lớn hơn 0%!`);
+                return;
+            }
             if (criteriaList.length === 0) {
                 notify.error(`Phần "${sec.name}" phải có ít nhất một tiêu chí!`);
                 return;
@@ -232,11 +236,17 @@ const TemplateDetailPage: React.FC = () => {
 
             // If a criterion has sub-criteria, scoring is configured on the children.
             for (const crit of criteriaList) {
+                if (!Number.isFinite(crit.weight) || (crit.weight ?? 0) <= 0) {
+                    notify.error(`Tiêu chí "${crit.name}" phải có trọng số lớn hơn 0%!`);
+                    return;
+                }
                 const criteriaToValidate = crit.subCriteria?.length ? crit.subCriteria : [crit];
                 for (const criteria of criteriaToValidate) {
                     const configuredLevels = criteria.levels || [];
-                    const validLevels = configuredLevels.filter((l: any) => l.description && l.description.trim() !== "");
-                    if (validLevels.length < 5) {
+                    const validLevels = new Set(configuredLevels
+                        .filter((l: any) => l.description?.trim() && [1, 2, 3, 4, 5].includes(l.level))
+                        .map((l: any) => l.level));
+                    if (configuredLevels.length !== 5 || validLevels.size !== 5) {
                         const criteriaLabel = crit.subCriteria?.length
                             ? `Mục con "${criteria.name}" của tiêu chí "${crit.name}"`
                             : `Tiêu chí "${criteria.name}"`;

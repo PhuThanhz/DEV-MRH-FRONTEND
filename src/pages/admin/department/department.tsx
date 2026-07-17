@@ -27,7 +27,7 @@ import type { IDepartment, ICompany } from "@/types/backend";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchCompany } from "@/config/api";
 import DepartmentJobTitleTab from "./tab.department-job-title";
-import { Modal } from "antd";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import {
     useDepartmentsQuery,
     useDeleteDepartmentMutation,
@@ -455,19 +455,16 @@ const DepartmentPage = () => {
             />
 
             {openJobTitle && dataInit?.id && (
-                <Modal
-                    title={`Chức danh phòng ban: ${dataInit.name}`}
+                <LotusDetailDrawer
                     open={openJobTitle}
-                    onCancel={() => setOpenJobTitle(false)}
-                    footer={null}
-                    width="80vw"
-                    destroyOnHidden
+                    onClose={() => setOpenJobTitle(false)}
                 >
                     <DepartmentJobTitleTab
                         departmentId={dataInit.id}
                         companyId={dataInit.company?.id}
+                        departmentName={dataInit.name}
                     />
-                </Modal>
+                </LotusDetailDrawer>
             )}
 
         </PageContainer>

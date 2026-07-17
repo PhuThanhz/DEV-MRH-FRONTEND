@@ -1,40 +1,31 @@
-import { useState } from "react";
-import { Table, Tag, Button, Tooltip, Empty, Input } from "antd";
+import { lazy, Suspense, useState, type ReactNode } from "react";
+import { Button, Tooltip, Drawer, Timeline, Empty } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
     EyeOutlined,
     ClockCircleOutlined,
-    CheckCircleOutlined,
     SyncOutlined,
-    StopOutlined,
     TrophyOutlined,
+    FileExcelOutlined,
+    HistoryOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { SearchOutlined } from "@ant-design/icons";
-import { useMyEvaluationRecordsQuery } from "@/hooks/useEvaluations";
+import {
+    useAllEvaluationRecordsQuery,
+    useMyEvaluationRecordsQuery,
+    useEvaluationRecordHistoryQuery,
+} from "@/hooks/useEvaluations";
+import { notify } from "@/components/common/notification/notify";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import EvaluationStatusTag, { type EvaluationStatus } from "../components/EvaluationStatusTag";
+import DataTable from "@/components/common/data-table";
+import SearchFilter from "@/components/common/filter/SearchFilter";
 
-
-type RecordStatus =
-    | "NOT_STARTED"
-    | "EMPLOYEE_DRAFTING"
-    | "PENDING_MANAGER_REVIEW"
-    | "MANAGER_REVIEWING"
-    | "PENDING_APPROVAL"
-    | "COMPLETED";
-
-const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: React.ReactNode; tagColor: string }> = {
-    NOT_STARTED: { text: "Chưa bắt đầu", color: "#8c8c8c", icon: <StopOutlined />, tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
-    COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
-};
+const MyEvaluationDetailDrawer = lazy(() => import("./MyEvaluationDetailPage"));
 
 const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
     A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
@@ -44,13 +35,19 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
 };
 
+const getNumericScore = (value: unknown) => {
+    if (value === null || value === undefined || value === "") return null;
+    const score = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(score) ? score : null;
+};
+
 const isEmployeePhaseOpen = (record: any) => {
     const start = record.period?.employeeStartDate;
     const deadline = record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline;
     return (!start || !dayjs().isBefore(dayjs(start))) && (!deadline || !dayjs().isAfter(dayjs(deadline)));
 };
 
-const getDisplayStatus = (record: any): RecordStatus => {
+const getDisplayStatus = (record: any): EvaluationStatus => {
     const start = record.period?.employeeStartDate;
     if ((record.status === "EMPLOYEE_DRAFTING" || record.status === "REVISION_NEEDED") && start && dayjs().isBefore(dayjs(start))) {
         return "NOT_STARTED";
@@ -61,20 +58,97 @@ const getDisplayStatus = (record: any): RecordStatus => {
 const isEmployeeActionable = (record: any) =>
     (record.status === "NOT_STARTED" || record.status === "EMPLOYEE_DRAFTING" || record.status === "REVISION_NEEDED") && isEmployeePhaseOpen(record);
 
+const STATUS_LABELS: Record<string, string> = {
+    NOT_STARTED: "Chưa bắt đầu",
+    EMPLOYEE_DRAFTING: "Nhân viên đang tự đánh giá",
+    PENDING_MANAGER_REVIEW: "Chờ quản lý trực tiếp chấm",
+    MANAGER_REVIEWING: "Quản lý trực tiếp đang chấm",
+    PENDING_APPROVAL: "Chờ quản lý gián tiếp duyệt",
+    REVISION_NEEDED: "Yêu cầu chỉnh sửa",
+    COMPLETED: "Hoàn tất",
+};
+
+type ActionTone = "view" | "history";
+
+const ActionIconButton = ({
+    label,
+    icon,
+    tone,
+    onClick,
+}: {
+    label: string;
+    icon: ReactNode;
+    tone: ActionTone;
+    onClick: () => void;
+}) => (
+    <Tooltip title={label} placement="top">
+        <Button
+            className={`evaluation-action-button evaluation-action-button--${tone}`}
+            icon={icon}
+            aria-label={label}
+            onClick={onClick}
+        />
+    </Tooltip>
+);
+
 interface IProps {
     isTab?: boolean;
+    viewMode?: "mine" | "all";
 }
 
-const MyEvaluationPage = ({ isTab }: IProps) => {
+const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
     const _isTab = isTab;
     const navigate = useNavigate();
     const [searchText, setSearchText] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
+    const [historyRecord, setHistoryRecord] = useState<any | null>(null);
+    const [selectedEvaluationId, setSelectedEvaluationId] = useState<number | null>(null);
+    const isAllView = viewMode === "all";
+    const myRecordsQuery = useMyEvaluationRecordsQuery(!isAllView);
+    const allRecordsQuery = useAllEvaluationRecordsQuery(isAllView);
+    const records = (isAllView ? allRecordsQuery.data : myRecordsQuery.data) || [];
+    const loading = isAllView ? allRecordsQuery.isLoading : myRecordsQuery.isLoading;
+    const historyQuery = useEvaluationRecordHistoryQuery(historyRecord?.id || 0);
 
-    const { data: records = [], isLoading: loading } = useMyEvaluationRecordsQuery();
+    const closeEvaluationDetail = () => {
+        setSelectedEvaluationId(null);
+        void myRecordsQuery.refetch();
+    };
 
-    const columns = [
+    const exportFilteredRecords = async () => {
+        if (filteredRecords.length === 0) {
+            notify.warning("Không có dữ liệu để xuất Excel");
+            return;
+        }
+        const module = await import("xlsx-js-style");
+        const XLSXStyle = module.default ?? module;
+        const rows = filteredRecords.map((record: any, index: number) => ({
+            STT: index + 1,
+            "Mã nhân viên": record.employee?.employeeCode || record.employeeCode || "",
+            "Tên nhân viên": record.employee?.fullName || record.employee?.username || "",
+            "Email": record.employee?.email || "",
+            "Công ty": record.employee?.companyName || "",
+            "Phòng ban": record.employee?.departmentName || "",
+            "Kỳ đánh giá": record.period?.name || record.periodName || "",
+            "Biểu mẫu": record.template?.name || "",
+            "Trạng thái": STATUS_LABELS[record.status] || record.status || "",
+            "Điểm nhân viên": getNumericScore(record.employeeTotalScore) ?? "",
+            "Điểm quản lý": getNumericScore(record.managerTotalScore) ?? "",
+            "Xếp loại": record.finalGrade || "",
+            "Hạn tự đánh giá": (record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline)
+                ? dayjs(record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline).format("DD/MM/YYYY") : "",
+            "Ngày hoàn tất": record.completedAt ? dayjs(record.completedAt).format("DD/MM/YYYY HH:mm") : "",
+        }));
+        const worksheet = XLSXStyle.utils.json_to_sheet(rows);
+        worksheet["!cols"] = [6, 15, 24, 28, 22, 22, 24, 24, 28, 15, 15, 12, 18, 20].map(wch => ({ wch }));
+        const workbook = XLSXStyle.utils.book_new();
+        XLSXStyle.utils.book_append_sheet(workbook, worksheet, "Danh_sach_danh_gia");
+        XLSXStyle.writeFile(workbook, `Danh_sach_danh_gia_${dayjs().format("YYYYMMDD_HHmm")}.xlsx`);
+        notify.success("Đã xuất Excel theo dữ liệu đang lọc");
+    };
+
+    const columns: any[] = [
         {
             title: "STT",
             key: "stt",
@@ -85,12 +159,41 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             ),
         },
         {
+            title: "Mã nhân viên",
+            dataIndex: ["employee", "employeeCode"],
+            key: "employeeCode",
+            width: 120,
+            render: (_: any, record: any) => (
+                <span style={{ color: "#475569", fontSize: 12, fontWeight: 600 }}>
+                    {record.employee?.employeeCode || record.employeeCode || "—"}
+                </span>
+            ),
+        },
+        {
+            title: "Tên nhân viên",
+            dataIndex: ["employee", "fullName"],
+            key: "employeeName",
+            width: 190,
+            render: (_: any, record: any) => (
+                <div>
+                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>
+                        {record.employee?.fullName || record.employee?.name || record.employee?.username || "Chưa rõ nhân sự"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                        {record.employee?.email || "Chưa cập nhật email"}
+                    </div>
+                </div>
+            ),
+        },
+        {
             title: "Kỳ đánh giá",
             dataIndex: ["period", "name"],
             key: "period",
-            render: (val: string, record: any) => (
+            render: (_: any, record: any) => (
                 <div>
-                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>{val || record.periodName}</div>
+                    <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>
+                        {record.period?.name || record.periodName || "—"}
+                    </div>
                     {record.period?.description && (
                         <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{record.period.description}</div>
                     )}
@@ -101,11 +204,10 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             title: "Biểu mẫu",
             dataIndex: ["template", "name"],
             key: "template",
-            render: (val: string) => (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <FileTextOutlined style={{ color: "#3b82f6", fontSize: 13 }} />
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "#374151" }}>{val}</span>
-                </div>
+            render: (_: any, record: any) => (
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#374151" }}>
+                    {record.template?.name || "—"}
+                </span>
             ),
         },
         {
@@ -114,7 +216,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             key: "status",
             width: 170,
             align: "center" as const,
-            render: (_val: RecordStatus, record: any) => {
+            render: (_val: any, record: any) => {
                 const displayStatus = getDisplayStatus(record);
                 
                 const deadline = record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline;
@@ -122,27 +224,10 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                 const isOverdue = isPendingAction && deadline && dayjs().isAfter(dayjs(deadline));
                 
                 if (isOverdue) {
-                    return (
-                        <Tag
-                            color="error"
-                            icon={<ClockCircleOutlined />}
-                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                        >
-                            Quá hạn tự đánh giá
-                        </Tag>
-                    );
+                    return <EvaluationStatusTag status="OVERDUE_EMPLOYEE" />;
                 }
 
-                const cfg = STATUS_CONFIG[displayStatus] ?? STATUS_CONFIG.NOT_STARTED;
-                return (
-                    <Tag
-                        color={cfg.tagColor}
-                        icon={cfg.icon}
-                        style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                    >
-                        {cfg.text}
-                    </Tag>
-                );
+                return <EvaluationStatusTag status={displayStatus} />;
             },
         },
         {
@@ -151,11 +236,14 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             key: "employeeTotalScore",
             width: 120,
             align: "center" as const,
-            render: (val: number | null) => (
-                <span style={{ fontWeight: 700, color: val ? "#1677ff" : "#d9d9d9", fontSize: 14 }}>
-                    {val != null ? val.toFixed(2) : "—"}
-                </span>
-            ),
+            render: (_: any, record: any) => {
+                const score = getNumericScore(record.employeeTotalScore);
+                return (
+                    <span style={{ fontWeight: 700, color: score !== null ? "#1677ff" : "#d9d9d9", fontSize: 14 }}>
+                        {score !== null ? score.toFixed(2) : "—"}
+                    </span>
+                );
+            },
         },
         {
             title: "Điểm quản lý",
@@ -163,11 +251,12 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             key: "managerTotalScore",
             width: 120,
             align: "center" as const,
-            render: (val: number | null, record: any) => {
+            render: (_: any, record: any) => {
                 if (record.status !== "COMPLETED") return <span style={{ color: "#d9d9d9" }}>—</span>;
+                const score = getNumericScore(record.managerTotalScore);
                 return (
-                    <span style={{ fontWeight: 700, color: val ? "#7c3aed" : "#d9d9d9", fontSize: 14 }}>
-                        {val != null ? val.toFixed(2) : "—"}
+                    <span style={{ fontWeight: 700, color: score !== null ? "#7c3aed" : "#d9d9d9", fontSize: 14 }}>
+                        {score !== null ? score.toFixed(2) : "—"}
                     </span>
                 );
             }
@@ -178,9 +267,10 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             key: "finalGrade",
             width: 100,
             align: "center" as const,
-            render: (val: string | null, record: any) => {
-                if (record.status !== "COMPLETED" || !val) return <span style={{ color: "#d9d9d9" }}>—</span>;
-                const cfg = GRADE_CONFIG[val] ?? { color: "#8c8c8c", bg: "#f5f5f5", label: val };
+            render: (_: any, record: any) => {
+                const grade = record.finalGrade;
+                if (record.status !== "COMPLETED" || !grade) return <span style={{ color: "#d9d9d9" }}>—</span>;
+                const cfg = GRADE_CONFIG[grade] ?? { color: "#8c8c8c", bg: "#f5f5f5", label: grade };
                 return (
                     <Tooltip title={cfg.label}>
                         <span style={{
@@ -189,7 +279,7 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                             background: cfg.bg, border: `2px solid ${cfg.color}`,
                             color: cfg.color, fontWeight: 800, fontSize: 15
                         }}>
-                            {val}
+                            {grade}
                         </span>
                     </Tooltip>
                 );
@@ -222,9 +312,9 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             dataIndex: "completedAt",
             key: "completedAt",
             width: 130,
-            render: (val: string | null) => (
-                <span style={{ fontSize: 12, color: val ? "#374151" : "#d9d9d9" }}>
-                    {val ? dayjs(val).format("DD/MM/YYYY") : "—"}
+            render: (_: any, record: any) => (
+                <span style={{ fontSize: 12, color: record.completedAt ? "#374151" : "#d9d9d9" }}>
+                    {record.completedAt ? dayjs(record.completedAt).format("DD/MM/YYYY") : "—"}
                 </span>
             ),
         },
@@ -232,38 +322,63 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             title: "Hành động",
             key: "action",
             align: "center" as const,
-            width: 100,
+            width: isAllView ? 110 : 70,
             render: (_: any, record: any) => {
                 const isActionable = isEmployeeActionable(record);
+                const openDetail = () => {
+                    if (!isAllView) {
+                        setSelectedEvaluationId(record.id);
+                        return;
+                    }
+                    navigate(`/admin/evaluation/${record.status === "PENDING_APPROVAL" ? "approval" : "manager"}/records/${record.id}${isTab ? "?from=process" : ""}`);
+                };
+                const detailButton = <ActionIconButton label={isActionable ? "Chấm điểm" : "Xem chi tiết"} icon={<EyeOutlined />} tone="view" onClick={openDetail} />;
+
+                if (!isAllView) return detailButton;
+
                 return (
-                    <Button
-                        type="primary"
-                        size="small"
-                        icon={<EyeOutlined />}
-                        onClick={() => navigate(`/admin/evaluation/my-records/${record.id}`)}
-                        style={{
-                            borderRadius: 6,
-                            fontWeight: 600,
-                            background: isActionable ? "#1677ff" : "#ffffff",
-                            color: isActionable ? "#ffffff" : "#334155",
-                            border: isActionable ? "none" : "1px solid #cbd5e1",
-                            fontSize: 12,
-                            height: 28,
-                        }}
-                    >
-                        {isActionable ? (record.status === "REVISION_NEEDED" ? "Sửa lại" : "Chấm điểm") : "Xem chi tiết"}
-                    </Button>
+                    <div className="evaluation-action-group">
+                        {detailButton}
+                        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_HISTORY} hideChildren>
+                            <ActionIconButton label="Lịch sử xử lý" icon={<HistoryOutlined />} tone="history" onClick={() => setHistoryRecord(record)} />
+                        </Access>
+                    </div>
                 );
             },
         },
     ];
 
+    if (isAllView) {
+        columns.splice(3, 0, {
+            title: "Đơn vị",
+            key: "organization",
+            width: 190,
+            render: (_: any, record: any) => (
+                <div>
+                    <div style={{ color: "#334155", fontSize: 12, fontWeight: 600 }}>
+                        {record.employee?.companyName || "Chưa xác định công ty"}
+                    </div>
+                    <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 2 }}>
+                        {record.employee?.departmentName || "Chưa xác định phòng ban"}
+                    </div>
+                </div>
+            ),
+        });
+    }
+
     const baseRecords = records.filter(r =>
         (r.period?.name || "").toLowerCase().includes(searchText.toLowerCase()) ||
-        (r.template?.name || "").toLowerCase().includes(searchText.toLowerCase())
+        (r.template?.name || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.employee?.fullName || r.employee?.username || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.employee?.employeeCode || (r as any).employeeCode || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.employee?.email || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.employee?.companyName || "").toLowerCase().includes(searchText.toLowerCase()) ||
+        (r.employee?.departmentName || "").toLowerCase().includes(searchText.toLowerCase())
     );
 
-    const pending = baseRecords.filter(isEmployeeActionable).length;
+    const pending = isAllView
+        ? baseRecords.filter(r => ["NOT_STARTED", "EMPLOYEE_DRAFTING", "REVISION_NEEDED"].includes(r.status)).length
+        : baseRecords.filter(isEmployeeActionable).length;
     const completed = baseRecords.filter(r => r.status === "COMPLETED").length;
     const inProgress = baseRecords.filter(r =>
         ["PENDING_MANAGER_REVIEW", "MANAGER_REVIEWING", "PENDING_APPROVAL"].includes(r.status)
@@ -287,38 +402,230 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
             if (rPeriodId !== advancedFilters.periodId) return false;
         }
 
+        if (advancedFilters.companyId && r.employee?.companyId !== advancedFilters.companyId) return false;
+        if (advancedFilters.departmentId && r.employee?.departmentId !== advancedFilters.departmentId) return false;
+
         return true;
     });
 
     const content = (
         <div style={{ padding: isTab ? "8px 0" : 0 }}>
             <style>{`
-                    .my-eval-table .ant-table-thead > tr > th {
-                        background: #f8fafc !important;
-                        color: #475569 !important;
-                        font-size: 12px !important;
-                        font-weight: 600 !important;
-                        border-bottom: 1px solid #e2e8f0 !important;
-                        padding: 12px 16px !important;
-                    }
-                    .my-eval-table .ant-table-tbody > tr > td {
-                        border-bottom: 1px solid #f1f5f9 !important;
-                        padding: 12px 16px !important;
-                        font-size: 13px !important;
-                    }
-                    .my-eval-table .ant-table-tbody > tr:hover > td {
-                        background: #f8fafc !important;
-                    }
-                    .my-eval-table .ant-pagination {
-                        margin: 16px 20px !important;
-                    }
-                `}</style>
+                .evaluation-action-group {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 7px;
+                    min-width: 164px;
+                }
+                .evaluation-action-button.ant-btn {
+                    width: 34px;
+                    min-width: 34px;
+                    height: 34px;
+                    padding: 0;
+                    border-radius: 7px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: none;
+                    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+                }
+                .evaluation-action-button.ant-btn .anticon { font-size: 16px; }
+                .evaluation-action-button--view.ant-btn {
+                    color: #1d4ed8;
+                    background: #eff6ff;
+                    border-color: #bfdbfe;
+                }
+                .evaluation-action-button--history.ant-btn {
+                    color: #6d28d9;
+                    background: #f5f3ff;
+                    border-color: #ddd6fe;
+                }
+                .evaluation-action-button--deadline.ant-btn {
+                    color: #c2410c;
+                    background: #fff7ed;
+                    border-color: #fed7aa;
+                }
+                .evaluation-action-button--reassign.ant-btn {
+                    color: #047857;
+                    background: #ecfdf5;
+                    border-color: #a7f3d0;
+                }
+                .evaluation-action-button.ant-btn:hover,
+                .evaluation-action-button.ant-btn:focus-visible {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.10);
+                }
+                .evaluation-action-button--view.ant-btn:hover,
+                .evaluation-action-button--view.ant-btn:focus-visible { color: #1d4ed8 !important; background: #dbeafe !important; border-color: #93c5fd !important; }
+                .evaluation-action-button--history.ant-btn:hover,
+                .evaluation-action-button--history.ant-btn:focus-visible { color: #6d28d9 !important; background: #ede9fe !important; border-color: #c4b5fd !important; }
+                .evaluation-action-button--deadline.ant-btn:hover,
+                .evaluation-action-button--deadline.ant-btn:focus-visible { color: #c2410c !important; background: #ffedd5 !important; border-color: #fdba74 !important; }
+                .evaluation-action-button--reassign.ant-btn:hover,
+                .evaluation-action-button--reassign.ant-btn:focus-visible { color: #047857 !important; background: #d1fae5 !important; border-color: #6ee7b7 !important; }
+                .evaluation-action-button.ant-btn:active { transform: translateY(0); }
+                .evaluation-admin-modal .ant-select-focused .ant-select-selector,
+                .evaluation-admin-modal .ant-picker-focused,
+                .evaluation-admin-modal .ant-input:focus,
+                .evaluation-admin-modal .ant-input-focused {
+                    border-color: #e8356d !important;
+                    box-shadow: 0 0 0 2px rgba(232, 53, 109, 0.10) !important;
+                }
+                .evaluation-admin-modal .evaluation-modal-alert.ant-alert-info {
+                    background: #fff5f8;
+                    border-color: #ffc7d8;
+                }
+                .evaluation-admin-modal .evaluation-modal-alert.ant-alert-info .ant-alert-icon {
+                    color: #e8356d;
+                }
+                .evaluation-admin-modal .evaluation-modal-alert .ant-alert-message {
+                    color: #7a2944;
+                }
+                .evaluation-current-evaluator {
+                    margin-top: 7px;
+                    padding: 8px 10px;
+                    background: #fff7fa;
+                    border-left: 3px solid #f3a5bd;
+                    border-radius: 4px;
+                }
+                .evaluation-current-evaluator__name { color: #334155; font-size: 12px; font-weight: 700; }
+                .evaluation-current-evaluator__meta { margin-top: 2px; color: #64748b; font-size: 11px; }
+                .evaluation-role-segmented.ant-segmented {
+                    width: 100%;
+                    padding: 3px;
+                    background: #f6f7f9;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                }
+                .evaluation-role-segmented .ant-segmented-group { width: 100%; }
+                .evaluation-role-segmented .ant-segmented-item {
+                    flex: 1;
+                    min-height: 34px;
+                    color: #64748b;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+                .evaluation-role-segmented .ant-segmented-item-selected {
+                    color: #e8356d;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+                }
+                .evaluation-person-picker.ant-btn {
+                    width: 100%;
+                    height: auto;
+                    min-height: 52px;
+                    padding: 8px 10px;
+                    border-radius: 6px;
+                    text-align: left;
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-start;
+                    white-space: normal;
+                }
+                .evaluation-person-picker.ant-btn:hover,
+                .evaluation-person-picker.ant-btn:focus-visible {
+                    color: #334155 !important;
+                    border-color: #e8356d !important;
+                    box-shadow: 0 0 0 2px rgba(232, 53, 109, 0.10);
+                }
+                .evaluation-person-picker--error.ant-btn { border-color: #ff4d4f; }
+                .evaluation-person-picker__icon {
+                    width: 32px;
+                    min-width: 32px;
+                    height: 32px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #e8356d;
+                    background: #fff0f5;
+                    border-radius: 5px;
+                }
+                .evaluation-person-picker__content { flex: 1; min-width: 0; margin: 0 9px; }
+                .evaluation-person-picker__name {
+                    color: #1e293b;
+                    font-size: 12px;
+                    font-weight: 700;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+                .evaluation-person-picker__meta {
+                    margin-top: 2px;
+                    color: #64748b;
+                    font-size: 11px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+            `}</style>
+            <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+                <SearchFilter
+                    searchPlaceholder={isAllView
+                        ? "Tìm nhân viên, mã NV, công ty, phòng ban, kỳ đánh giá..."
+                        : "Tìm kỳ đánh giá hoặc biểu mẫu..."}
+                    onSearch={setSearchText}
+                    showFilterButton={false}
+                    showAddButton={false}
+                />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <AdvancedFilterSelect
+                        fields={[
+                            {
+                                key: "periodId",
+                                label: "Kỳ đánh giá",
+                                options: Array.from(
+                                    new Map(records.filter(r => r.period?.id).map(r => [r.period!.id, { label: r.period!.name, value: r.period!.id }])).values()
+                                ),
+                            },
+                            ...(isAllView ? [
+                                {
+                                    key: "companyId",
+                                    label: "Công ty",
+                                    options: Array.from(new Map(
+                                        records.filter(r => r.employee?.companyId).map(r => [
+                                            r.employee.companyId,
+                                            { label: r.employee.companyName || "Chưa đặt tên", value: r.employee.companyId },
+                                        ])
+                                    ).values()),
+                                },
+                                {
+                                    key: "departmentId",
+                                    label: "Phòng ban",
+                                    options: Array.from(new Map(
+                                        records
+                                            .filter(r => r.employee?.departmentId && (!advancedFilters.companyId || r.employee.companyId === advancedFilters.companyId))
+                                            .map(r => [
+                                                r.employee.departmentId,
+                                                { label: r.employee.departmentName || "Chưa đặt tên", value: r.employee.departmentId },
+                                            ])
+                                    ).values()),
+                                },
+                            ] : []),
+                            {
+                                key: "status",
+                                label: "Trạng thái",
+                                options: [
+                                    { label: "Cần tự đánh giá", value: "EMPLOYEE_DRAFTING" },
+                                    { label: "Đang xử lý", value: "PROCESSING" },
+                                    { label: "Hoàn tất", value: "COMPLETED" },
+                                ],
+                            },
+                        ]}
+                        onChange={setAdvancedFilters}
+                    />
+                    {isAllView && (
+                        <Button icon={<FileExcelOutlined />} onClick={exportFilteredRecords} style={{ color: "#15803d", borderColor: "#86efac", borderRadius: 6, fontWeight: 600 }}>
+                            Xuất Excel
+                        </Button>
+                    )}
+                </div>
+            </div>
 
             {/* Summary Cards */}
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
                 {[
                     {
-                        label: "Cần tự đánh giá",
+                        label: isAllView ? "Đang tự đánh giá" : "Cần tự đánh giá",
                         value: pending,
                         color: "#1677ff",
                         key: "EMPLOYEE_DRAFTING",
@@ -398,72 +705,77 @@ const MyEvaluationPage = ({ isTab }: IProps) => {
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
-                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Hồ sơ cần tự đánh giá" :
-                                 selectedCard === "PROCESSING" ? "Bản đánh giá đang chờ quản lý" :
+                                {selectedCard === "EMPLOYEE_DRAFTING" ? (isAllView ? "Hồ sơ đang ở bước nhân viên tự đánh giá" : "Hồ sơ cần tự đánh giá") :
+                                 selectedCard === "PROCESSING" ? "Hồ sơ đang chờ xử lý" :
                                  selectedCard === "COMPLETED" ? "Danh sách đã hoàn tất" :
-                                 "Hồ sơ đánh giá cá nhân"}
+                                 (isAllView ? "Tất cả hồ sơ đánh giá" : "Hồ sơ đánh giá của tôi")}
                             </div>
-                            <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
-                                {selectedCard === "EMPLOYEE_DRAFTING" ? "Các bản đánh giá thuộc trách nhiệm tự đánh giá của nhân sự" :
-                                 selectedCard === "PROCESSING" ? "Các bản đã nộp và đang chờ quản lý chấm/phê duyệt" :
-                                 selectedCard === "COMPLETED" ? "Các bản đánh giá đã có kết quả chính thức" :
-                                 "Tất cả hồ sơ mà người dùng hiện tại là nhân sự được đánh giá"}
-                            </div>
+                            {(selectedCard === "EMPLOYEE_DRAFTING" || selectedCard === "PROCESSING" || selectedCard === "COMPLETED") && (
+                                <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
+                                    {selectedCard === "EMPLOYEE_DRAFTING" ? (isAllView ? "Các hồ sơ nhân viên chưa nộp hoặc đang tự đánh giá" : "Các bản đánh giá thuộc trách nhiệm tự đánh giá của bạn") :
+                                     selectedCard === "PROCESSING" ? "Các bản đã nộp và đang chờ quản lý chấm hoặc chấm & duyệt cuối" :
+                                     "Các bản đánh giá đã có kết quả chính thức"}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                        <AdvancedFilterSelect
-                            fields={[
-                                {
-                                    key: "periodId",
-                                    label: "Kỳ đánh giá",
-                                    options: Array.from(
-                                        new Map(records.filter(r => r.period?.id).map(r => [r.period!.id, { label: r.period!.name, value: r.period!.id }])).values()
-                                    ),
-                                }
-                            ]}
-                            onChange={(filters) => setAdvancedFilters(filters)}
-                        />
-                        <Input
-                            placeholder="Tìm kiếm kỳ đánh giá, biểu mẫu..."
-                            prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                            value={searchText}
-                            onChange={e => setSearchText(e.target.value)}
-                            style={{ width: 280, borderRadius: 6 }}
-                        />
-                    </div>
                 </div>
-                <Table
-                    className="my-eval-table"
+                <DataTable<any>
                     columns={columns}
                     dataSource={filteredRecords}
                     rowKey="id"
                     loading={loading}
-                    pagination={{ pageSize: 10, size: "small" }}
-                    size="middle"
-                    scroll={{ x: "max-content" }}
-                    locale={{
-                        emptyText: (
-                            <Empty
-                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                description={
-                                    selectedCard === "EMPLOYEE_DRAFTING" ? "Chưa có hồ sơ nào cần tự đánh giá." :
-                                    selectedCard === "PROCESSING" ? "Không có bản đánh giá nào đang chờ quản lý xử lý." :
-                                    selectedCard === "COMPLETED" ? "Chưa có bản đánh giá nào đã hoàn tất." :
-                                    "Chưa có bản đánh giá nào."
-                                }
-                                style={{ margin: "40px 0" }}
-                            />
-                        )
+                    pagination={{
+                        pageSize: 10,
+                        showTotal: (total, range) => `${range[0]}–${range[1]} trên ${total} hồ sơ`,
                     }}
+                    scroll={{ x: "max-content" }}
                 />
             </div>
+
+            {selectedEvaluationId != null && (
+                <Suspense fallback={null}>
+                    <MyEvaluationDetailDrawer
+                        recordId={selectedEvaluationId}
+                        onClose={closeEvaluationDetail}
+                    />
+                </Suspense>
+            )}
+
+            <Drawer
+                title={historyRecord ? `Lịch sử đánh giá - ${historyRecord.employee?.fullName || historyRecord.employee?.username || "Nhân viên"}` : "Lịch sử đánh giá"}
+                open={!!historyRecord}
+                onClose={() => setHistoryRecord(null)}
+                width={520}
+                destroyOnHidden
+            >
+                {historyQuery.isLoading ? (
+                    <div style={{ color: "#64748b", padding: "16px 0" }}>Đang tải lịch sử...</div>
+                ) : (historyQuery.data || []).length === 0 ? (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lịch sử xử lý" />
+                ) : (
+                    <Timeline items={(historyQuery.data || []).map((item: any) => ({
+                        color: item.toStatus === "COMPLETED" ? "green" : item.toStatus === "REVISION_NEEDED" ? "red" : "blue",
+                        children: (
+                            <div style={{ paddingBottom: 8 }}>
+                                <div style={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>{item.performedBy?.fullName || item.performedBy?.username || "Hệ thống"}</div>
+                                <div style={{ color: "#475569", fontSize: 12, marginTop: 3 }}>
+                                    {item.fromStatus ? (STATUS_LABELS[item.fromStatus] || item.fromStatus) : "Khởi tạo"} → {STATUS_LABELS[item.toStatus] || item.toStatus}
+                                </div>
+                                {item.note && <div style={{ color: "#64748b", fontSize: 12, marginTop: 5 }}>{item.note}</div>}
+                                <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 5 }}>{item.performedAt ? dayjs(item.performedAt).format("DD/MM/YYYY HH:mm") : "—"}</div>
+                            </div>
+                        ),
+                    }))} />
+                )}
+            </Drawer>
+
         </div>
     );
 
     return (
-        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS}>
-            {isTab ? content : <PageContainer title="Đánh giá cá nhân">{content}</PageContainer>}
+        <Access permission={isAllView ? ALL_PERMISSIONS.EVALUATION.GET_ALL_RECORDS : ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS}>
+            {isTab ? content : <PageContainer title={isAllView ? "Tất cả đánh giá" : "Đánh giá của tôi"}>{content}</PageContainer>}
         </Access>
     );
 };

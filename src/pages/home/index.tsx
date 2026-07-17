@@ -9,7 +9,7 @@ const HomePage = () => {
                 position: "relative",
                 width: "100%",
                 flex: 1,
-                minHeight: "calc(100vh - 111px)",
+                minHeight: 0,
                 backgroundImage: "url('/logo/backgroundlotus.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
@@ -168,11 +168,11 @@ const HomePage = () => {
             {/* Animation styles */}
             <style>{`
                 :root {
-                    --logo-size: clamp(140px, 15vw, 240px);
+                    --logo-size: clamp(112px, min(15vw, 26vh), 240px);
                     --orbital-size: clamp(130px, 14vw, 220px);
                     --hrm-font-size: clamp(52px, 9vw, 120px);
                     --hrm-letter-spacing: clamp(10px, 2.5vw, 20px);
-                    --content-gap: clamp(20px, 2.5vw, 40px);
+                    --content-gap: clamp(12px, min(2.5vw, 3.5vh), 40px);
                 }
 
                 .lotus-fab {
@@ -199,7 +199,7 @@ const HomePage = () => {
                     flex-direction: column;
                     align-items: center;
                     gap: var(--content-gap);
-                    padding: clamp(16px, 4vw, 40px) clamp(16px, 5vw, 40px);
+                    padding: clamp(10px, 3vh, 32px) clamp(16px, 5vw, 40px);
                     max-width: 100%;
                     box-sizing: border-box;
                 }
@@ -213,7 +213,7 @@ const HomePage = () => {
                     justify-content: center;
                     background: rgba(255, 255, 255, 0.95);
                     border-radius: 50%;
-                    padding: clamp(20px, 4vw, 40px);
+                    padding: clamp(16px, min(3vw, 4vh), 40px);
                     border: 2px solid rgba(236, 72, 153, 0.15);
                     box-shadow: 0 15px 40px rgba(236, 72, 153, 0.15),
                                 inset 0 0 30px rgba(255, 255, 255, 0.9);
@@ -323,6 +323,28 @@ const HomePage = () => {
                     }
                 }
 
+                @media (max-height: 720px) {
+                    :root {
+                        --logo-size: clamp(104px, 24vh, 168px);
+                        --content-gap: clamp(10px, 2.5vh, 18px);
+                    }
+                    .main-content {
+                        padding-top: 8px;
+                        padding-bottom: 8px;
+                    }
+                    .lotus-fab {
+                        bottom: 0;
+                        right: -8px;
+                        transform: scale(0.72);
+                        transform-origin: bottom right;
+                    }
+                    .gradient-orb-1,
+                    .gradient-orb-2 {
+                        width: 220px !important;
+                        height: 220px !important;
+                    }
+                }
+
                 @media (max-width: 480px) {
                     :root {
                         --logo-size: clamp(112px, 34vw, 150px);
@@ -363,10 +385,11 @@ const HomePage = () => {
                         --content-gap: 12px;
                     }
                     .main-content {
-                        flex-direction: row;
-                        flex-wrap: wrap;
                         justify-content: center;
                         padding: 8px 20px;
+                    }
+                    .lotus-fab {
+                        transform: scale(0.55);
                     }
                     .gradient-orb-1,
                     .gradient-orb-2 {

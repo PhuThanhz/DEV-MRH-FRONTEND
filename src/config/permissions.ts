@@ -1323,6 +1323,7 @@ export const ALL_PERMISSIONS = {
         ACTIVATE_PERIOD: { method: "PATCH", apiPath: "/api/v1/evaluation/periods/{id}/activate", module: "EVALUATION_PERIOD" },
         CLOSE_PERIOD: { method: "PATCH", apiPath: "/api/v1/evaluation/periods/{id}/close", module: "EVALUATION_PERIOD" },
         GET_UNFINISHED_RECORDS: { method: "GET", apiPath: "/api/v1/evaluation/periods/{id}/unfinished-records", module: "EVALUATION_PERIOD" },
+        GET_ALL_RECORDS: { method: "GET", apiPath: "/api/v1/evaluation/records", module: "EVALUATION_PERIOD" },
 
         // RECORDS & WORKFLOW
         GET_RECORD_BY_ID: { method: "GET", apiPath: "/api/v1/evaluation/records/{id}", module: "EVALUATION_MANAGER" },

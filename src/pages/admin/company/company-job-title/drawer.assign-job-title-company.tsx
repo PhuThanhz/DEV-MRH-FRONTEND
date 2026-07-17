@@ -11,6 +11,7 @@ import {
     Input,
     Spin,
     Tooltip,
+    Tag,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
@@ -27,6 +28,7 @@ import DrawerSalaryGrade from "./company-salary-grade/drawer.company-salary-grad
 interface JobTitle {
     id: number;
     nameVi: string;
+    nameEn?: string;
     positionLevel?: {
         code?: string;
         bandOrder?: number;
@@ -178,6 +180,14 @@ const DrawerAssignCompanyJobTitle = ({
         {
             title: "Tên chức danh",
             dataIndex: "nameVi",
+            render: (text, record: any) => (
+                <Space direction="vertical" size={0}>
+                    <span>{text}</span>
+                    {record.nameEn && (
+                        <span style={{ fontSize: "12px", color: "#666" }}>{record.nameEn}</span>
+                    )}
+                </Space>
+            ),
         },
         {
             title: "Cấp bậc",
@@ -185,7 +195,7 @@ const DrawerAssignCompanyJobTitle = ({
             width: 120,
             render: (_, record) => {
                 const code = record.positionLevel?.code;
-                return <Badge color="blue" text={code ?? "--"} />;
+                return <Tag color="blue" style={{ fontWeight: 500 }}>{code ?? "—"}</Tag>;
             },
         },
         {

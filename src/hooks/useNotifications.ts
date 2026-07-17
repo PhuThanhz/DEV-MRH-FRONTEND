@@ -48,13 +48,14 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 
 const STORAGE_KEY = "notifications_seen_map";
 const NOTIFICATION_SYNC_DELAY_MS = 1200;
-const QUERY_INVALIDATION_DELAY_MS = 350;
+const QUERY_INVALIDATION_DELAY_MS = 1200;
 
 const EVALUATION_QUERY_KEYS = [
     ["evaluation-period"],
     ["evaluation-periods"],
     ["period-progress"],
     ["evaluation-record"],
+    ["evaluation-task-counts"],
     ["my-evaluation-records"],
     ["manager-evaluation-records"],
     ["pending-manager-evaluation-records"],

@@ -1,11 +1,10 @@
-import { Modal, Form, Input, DatePicker, Tooltip, Button, Select } from "antd";
+import { Form, Input, DatePicker, Tooltip, Button, Select } from "antd";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
-import { getModalWidth } from "@/utils/responsive";
 import { fetchPeriodCompanyOptions, PERIOD_COMPANY_OPTIONS_QUERY_KEY } from "@/hooks/useEvaluationPeriodReferenceData";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
@@ -16,6 +15,7 @@ import {
     AuditOutlined,
     InfoCircleOutlined,
 } from "@ant-design/icons";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
 interface IProps {
     openModal: boolean;
@@ -156,11 +156,23 @@ const PeriodModal = (props: IProps) => {
     };
 
     const isEdit = !!dataInit?.id;
+    const handleClose = () => {
+        setOpenModal(false);
+        setDataInit?.(null);
+    };
 
     return (
-        <Modal
-            title={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <LotusDetailDrawer
+            open={openModal}
+            onClose={handleClose}
+            height="min(760px, calc(100vh - 16px))"
+            destroyOnClose
+            maskClosable={false}
+            closeAriaLabel={isEdit ? "Đóng chỉnh sửa kỳ đánh giá" : "Đóng tạo kỳ đánh giá"}
+        >
+            <div className="period-form-drawer">
+                <header className="period-form-drawer__header">
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{
                         width: 34, height: 34, borderRadius: 8, flexShrink: 0,
                         background: isEdit ? "#fff7e6" : "#e6f4ff",
@@ -177,34 +189,13 @@ const PeriodModal = (props: IProps) => {
                             {isEdit ? "Cập nhật thông tin và mốc thời gian" : "Thiết lập thông tin và lịch trình"}
                         </div>
                     </div>
-                </div>
-            }
-            open={openModal}
-            footer={[
-                <Button key="cancel" onClick={() => { setOpenModal(false); if (setDataInit) setDataInit(null); }}>
-                    Hủy
-                </Button>,
-                <Access
-                    key="submit"
-                    permission={isEdit ? ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD : ALL_PERMISSIONS.EVALUATION.CREATE_PERIOD}
-                    hideChildren
-                >
-                    <Button type="primary" onClick={() => form.submit()} loading={isSubmit}>
-                        {isEdit ? "Lưu thay đổi" : "Tạo kỳ đánh giá"}
-                    </Button>
-                </Access>
-            ]}
-            onCancel={() => { setOpenModal(false); if (setDataInit) setDataInit(null); }}
-            confirmLoading={isSubmit}
-            width={getModalWidth(640)}
-            destroyOnHidden
-            maskClosable={false}
-            styles={{ body: { padding: "16px 24px 8px" } }}
-        >
-            <Form form={form} layout="vertical" onFinish={onFinish}>
+                    </div>
+                </header>
+                <main className="period-form-drawer__body">
+                    <Form form={form} layout="vertical" onFinish={onFinish}>
 
                 {/* Tên + Mô tả + Công ty — 2 cột ngang */}
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "0 16px" }}>
+                <div className="period-form-grid period-form-grid--details">
                     <Form.Item
                         label={<span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Tên kỳ đánh giá</span>}
                         name="name"
@@ -233,6 +224,7 @@ const PeriodModal = (props: IProps) => {
                         />
                     </Form.Item>
                     <Form.Item
+                        className="period-form-description"
                         label={<span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>Mô tả</span>}
                         name="description"
                         style={{ marginBottom: 16, gridColumn: "1 / -1" }}
@@ -259,7 +251,7 @@ const PeriodModal = (props: IProps) => {
                 </div>
 
                 {/* 4 mốc thời gian — grid 2×2 */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" }}>
+                <div className="period-form-grid period-form-grid--timeline">
                     {DATE_FIELDS.map((field, idx) => (
                         <div key={field.name} style={{
                             background: "#f8fafc",
@@ -310,7 +302,7 @@ const PeriodModal = (props: IProps) => {
                 </div>
 
                 {/* Flow indicator */}
-                <div style={{
+                <div className="period-form-flow" style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     gap: 4, marginTop: 10, marginBottom: 4,
                 }}>
@@ -329,8 +321,40 @@ const PeriodModal = (props: IProps) => {
                     ))}
                 </div>
 
-            </Form>
-        </Modal>
+                    </Form>
+                </main>
+                <footer className="period-form-drawer__footer">
+                    <Button onClick={handleClose}>Hủy</Button>
+                    <Access
+                        permission={isEdit ? ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD : ALL_PERMISSIONS.EVALUATION.CREATE_PERIOD}
+                        hideChildren
+                    >
+                        <Button type="primary" onClick={() => form.submit()} loading={isSubmit}>
+                            {isEdit ? "Lưu thay đổi" : "Tạo kỳ đánh giá"}
+                        </Button>
+                    </Access>
+                </footer>
+                <style>{`
+                    .period-form-drawer { height: 100%; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+                    .period-form-drawer__header { flex: 0 0 auto; padding: 18px 28px; border-bottom: 1px solid #e7edf4; background: #fff; }
+                    .period-form-drawer__body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 22px max(24px, calc((100% - 720px) / 2)); background: #fafbfd; }
+                    .period-form-drawer__body form { padding: 22px; border: 1px solid #e7edf4; border-radius: 8px; background: #fff; }
+                    .period-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                    .period-form-grid--details { gap: 0 16px; }
+                    .period-form-grid--timeline { gap: 12px 16px; }
+                    .period-form-flow { flex-wrap: wrap; }
+                    .period-form-drawer__footer { flex: 0 0 auto; display: flex; justify-content: flex-end; gap: 10px; padding: 14px 28px; border-top: 1px solid #e7edf4; background: #fff; }
+                    @media (max-width: 767px) {
+                        .period-form-drawer__header { padding: 16px 18px; }
+                        .period-form-drawer__body { padding: 16px; }
+                        .period-form-drawer__body form { padding: 16px; }
+                        .period-form-grid { grid-template-columns: minmax(0, 1fr); }
+                        .period-form-description { grid-column: auto !important; }
+                        .period-form-drawer__footer { padding: 12px 16px; }
+                    }
+                `}</style>
+            </div>
+        </LotusDetailDrawer>
     );
 };
 

@@ -126,7 +126,16 @@ const isAuthEndpoint = (url?: string) => {
     if (!url) return false;
     return (
         url.includes("/api/v1/auth/login") ||
-        url.includes("/api/v1/auth/refresh")
+        url.includes("/api/v1/auth/refresh") ||
+        url.includes("/api/v1/auth/logout")
+    );
+};
+
+const shouldSkipRefresh = (url?: string) => {
+    if (!url) return false;
+    return (
+        url.includes("/api/v1/auth/login") ||
+        url.includes("/api/v1/auth/logout")
     );
 };
 
@@ -161,14 +170,19 @@ const redirectToLoginOnce = async () => {
     logoutInProgress = true;
 
     const { store } = await import("@/redux/store");
-    const { setLogoutAction } = await import("@/redux/slice/accountSlide");
+    const { setLogoutAction, setRefreshTokenAction } = await import("@/redux/slice/accountSlide");
 
     store.dispatch(setLogoutAction());
     localStorage.removeItem("access_token");
 
-    if (!window.location.pathname.startsWith("/login")) {
-        window.location.replace("/login");
-    }
+    // SPA-friendly redirect using Redux state and LayoutApp
+    store.dispatch(setRefreshTokenAction({ status: true, message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." }));
+
+    setTimeout(() => {
+        if (!window.location.pathname.startsWith("/login")) {
+            window.location.replace("/login");
+        }
+    }, 500);
 };
 
 
@@ -215,6 +229,10 @@ instance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config as LimitedRequestConfig | undefined;
         releaseRequestSlot(originalRequest);
+
+        if (originalRequest && shouldSkipRefresh(originalRequest.url)) {
+            return Promise.reject(error?.response?.data ?? error);
+        }
 
         if (GATEWAY_ERROR_STATUSES.has(error.response?.status)) {
             recordGatewayFailure();

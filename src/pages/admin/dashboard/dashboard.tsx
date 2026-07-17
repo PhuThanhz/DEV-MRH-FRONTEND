@@ -4,7 +4,7 @@ import { Pie } from "@/components/common/chart/LazyChart";
 import { useNavigate } from "react-router-dom";
 import { TrophyOutlined, CheckCircleFilled } from "@ant-design/icons";
 import PageContainer from "@/components/common/data-table/PageContainer";
-import { useDashboardSummaryQuery, useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
+import { useDashboardSummaryQuery, useDepartmentCompletenessOverviewQuery } from "@/hooks/useDashboard";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -390,79 +390,47 @@ const DashboardPage = () => {
     const isMobile = useIsMobile();
     const canViewProfiles = useAccess(ALL_PERMISSIONS.DASHBOARD.GET_DEPARTMENT_COMPLETENESS);
     const { data, isLoading } = useDashboardSummaryQuery();
-    const { data: completeness, isLoading: isLoadingComplete } = useDepartmentCompletenessQuery();
+    const { data: completenessOverview, isLoading: isLoadingComplete } = useDepartmentCompletenessOverviewQuery();
 
     const companyCount = data?.totalCompany ?? 0;
     const departmentCount = data?.totalDepartment ?? 0;
     const unitCount = data?.totalSection ?? 0;
-    const fullCount = completeness?.filter(d => d.score === 7).length ?? 0;
-    const totalDept = completeness?.length ?? 0;
+    const fullCount = completenessOverview?.full ?? 0;
+    const totalDept = completenessOverview?.total ?? 0;
     const missingCount = totalDept - fullCount;
 
-    /* Top 5 departments with lowest score */
-    const top5Missing = useMemo(() => {
-        if (!completeness) return [];
-        return [...completeness]
-            .filter(d => d.score < 7)
-            .sort((a, b) => a.score - b.score)
-            .slice(0, 5);
-    }, [completeness]);
+    const top5Missing = completenessOverview?.topMissing ?? [];
 
     /* Pie data */
     const pieData = useMemo(() => {
-        if (!completeness || completeness.length === 0) return [];
-        const full = completeness.filter(d => d.score === 7).length;
-        const partial = completeness.filter(d => d.score > 0 && d.score < 7).length;
-        const empty = completeness.filter(d => d.score === 0).length;
+        if (!completenessOverview || completenessOverview.total === 0) return [];
         return [
-            { name: "Hoàn chỉnh (7/7)", value: full, color: PIE_COLORS["Hoàn chỉnh (7/7)"] },
-            { name: "Đang bổ sung", value: partial, color: PIE_COLORS["Đang bổ sung"] },
-            { name: "Chưa có hồ sơ", value: empty, color: PIE_COLORS["Chưa có hồ sơ"] },
+            { name: "Hoàn chỉnh (7/7)", value: completenessOverview.full, color: PIE_COLORS["Hoàn chỉnh (7/7)"] },
+            { name: "Đang bổ sung", value: completenessOverview.partial, color: PIE_COLORS["Đang bổ sung"] },
+            { name: "Chưa có hồ sơ", value: completenessOverview.empty, color: PIE_COLORS["Chưa có hồ sơ"] },
         ].filter(d => d.value > 0);
-    }, [completeness]);
+    }, [completenessOverview]);
 
     /* Missing Criteria Stats */
     const missingCriteriaStats = useMemo(() => {
-        if (!completeness) return [];
-        
-        const stats = {
-            orgChart: 0,
-            jobTitleMap: 0,
-            objectives: 0,
-            departmentProcedure: 0,
-            permissions: 0,
-            careerPath: 0,
-            salaryGrade: 0,
-        };
-
-        completeness.forEach(dept => {
-            if (!dept.orgChart) stats.orgChart++;
-            if (!dept.jobTitleMap) stats.jobTitleMap++;
-            if (!dept.objectives) stats.objectives++;
-            if (!dept.departmentProcedure) stats.departmentProcedure++;
-            if (!dept.permissions) stats.permissions++;
-            if (!dept.careerPath) stats.careerPath++;
-            if (!dept.salaryGrade) stats.salaryGrade++;
-        });
-
-        const keys: (keyof typeof stats)[] = [
-            "orgChart",
-            "jobTitleMap",
-            "objectives",
-            "departmentProcedure",
-            "permissions",
-            "careerPath",
-            "salaryGrade",
+        if (!completenessOverview) return [];
+        const stats = [
+            { key: "orgChart", count: completenessOverview.missingOrgChart },
+            { key: "jobTitleMap", count: completenessOverview.missingJobTitleMap },
+            { key: "objectives", count: completenessOverview.missingObjectives },
+            { key: "departmentProcedure", count: completenessOverview.missingDepartmentProcedure },
+            { key: "permissions", count: completenessOverview.missingPermissions },
+            { key: "careerPath", count: completenessOverview.missingCareerPath },
+            { key: "salaryGrade", count: completenessOverview.missingSalaryGrade },
         ];
 
-        return keys
-            .map(key => ({
-                key,
-                label: CRITERIA_MAP[key].label,
-                count: stats[key],
+        return stats
+            .map(item => ({
+                ...item,
+                label: CRITERIA_MAP[item.key as keyof typeof CRITERIA_MAP].label,
             }))
             .sort((a, b) => b.count - a.count);
-    }, [completeness]);
+    }, [completenessOverview]);
 
     /* KPI – hồ sơ trend text + class */
     const hoSoTrend =

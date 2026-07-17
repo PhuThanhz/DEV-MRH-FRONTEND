@@ -176,16 +176,18 @@ const LoginPage = () => {
           --line: #eee3e8;
           --accent: #dc3e7c;
           --accent-deep: #ad285b;
-          min-height: 100vh;
-          min-height: 100dvh;
+          height: 100vh;
+          height: 100dvh;
+          min-height: 0;
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          overflow: hidden;
           color: var(--ink);
           background: #f8f7f5;
           font-family: "Avenir Next", "Segoe UI", sans-serif;
         }
         .login-page *, .login-page *::before, .login-page *::after { box-sizing: border-box; }
-        .login-panel { grid-column: 2; min-height: 100dvh; padding: clamp(32px, 6vw, 96px); display: flex; flex-direction: column; justify-content: space-between; background-color: #fff8fb; background-image: radial-gradient(rgba(220,62,124,.08) .7px, transparent .7px); background-size: 11px 11px; }
+        .login-panel { grid-column: 2; min-width: 0; height: 100%; min-height: 0; padding: clamp(32px, 6vw, 96px); display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; overscroll-behavior: contain; background-color: #fff8fb; background-image: radial-gradient(rgba(220,62,124,.08) .7px, transparent .7px); background-size: 11px 11px; }
         .login-form-wrap { position: relative; width: min(100%, 414px); margin: auto; padding: 46px 42px 38px; border: 1px solid #f1dce5; border-radius: 22px; background: rgba(255,255,255,.94); box-shadow: 0 24px 60px rgba(141,32,76,.12); }
         .login-form-wrap::before { content: ""; position: absolute; top: 0; left: 42px; width: 58px; height: 4px; border-radius: 0 0 4px 4px; background: var(--accent); }
         .login-heading { margin-bottom: 32px; }
@@ -214,7 +216,7 @@ const LoginPage = () => {
 
         .login-brand {
           grid-column: 1; grid-row: 1; position: relative; isolation: isolate;
-          min-height: 100dvh; overflow: hidden; display: grid; place-items: center; padding: 48px;
+          min-width: 0; height: 100%; min-height: 0; overflow: hidden; display: grid; place-items: center; padding: 48px;
           background: #ad285b;
         }
         .login-brand::before {
@@ -258,12 +260,14 @@ const LoginPage = () => {
         }
         .login-page *:focus-visible { outline: 3px solid rgba(207,92,137,.34); outline-offset: 3px; }
 
-        @media (max-width: 850px) {
+        @media (max-width: 850px) and (orientation: portrait) {
           .login-page {
             display: flex;
             flex-direction: column;
             background: linear-gradient(to bottom, #fff8fb 0%, #fbeff3 100%);
+            height: auto;
             min-height: 100dvh;
+            overflow-y: auto;
           }
           .login-brand {
             order: 1;
@@ -281,6 +285,8 @@ const LoginPage = () => {
           .login-panel {
             order: 2;
             flex: 1;
+            height: auto;
+            min-height: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -288,6 +294,7 @@ const LoginPage = () => {
             padding: 0 20px 40px;
             margin-top: -70px;
             z-index: 10;
+            overflow: visible;
             background: transparent;
           }
           .login-form-wrap {
@@ -309,7 +316,7 @@ const LoginPage = () => {
             margin-top: 18px;
           }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 480px) and (orientation: portrait) {
           .login-brand {
             min-height: 250px;
             border-radius: 0 0 40px 40px;
@@ -327,6 +334,65 @@ const LoginPage = () => {
           }
           .login-heading h2 {
             font-size: 28px;
+          }
+        }
+
+        @media (min-width: 851px) and (max-height: 680px),
+               (max-width: 850px) and (orientation: landscape) {
+          .login-panel {
+            padding: clamp(12px, 3dvh, 24px);
+          }
+          .login-form-wrap {
+            width: min(100%, 390px);
+            padding: clamp(20px, 4dvh, 30px) 32px clamp(18px, 3dvh, 24px);
+            border-radius: 18px;
+          }
+          .login-form-wrap::before {
+            left: 32px;
+          }
+          .login-heading {
+            margin-bottom: clamp(12px, 3dvh, 20px);
+          }
+          .login-heading h2 {
+            font-size: 30px;
+          }
+          .login-heading p {
+            margin-top: 6px;
+          }
+          .login-page .ant-form-item {
+            margin-bottom: 11px;
+          }
+          .login-page .ant-form-item-label {
+            padding-bottom: 4px;
+          }
+          .login-page .ant-input-affix-wrapper,
+          .login-page .submit-item .ant-btn {
+            height: 44px;
+          }
+          .login-actions {
+            margin: 0 0 14px;
+          }
+          .account-activation {
+            margin-top: 12px;
+          }
+          .login-footer {
+            margin-top: 14px;
+          }
+          .login-brand {
+            padding: 24px;
+          }
+          .brand-copy {
+            width: min(56%, 280px);
+            gap: 12px;
+          }
+          .hero-logo-frame {
+            width: min(62%, 28dvh);
+            padding: 11%;
+            box-shadow: 0 20px 42px rgba(92,15,46,.25), inset 0 0 0 9px #fce6ef;
+          }
+          .brand-caption {
+            margin-top: 12px;
+            font-size: clamp(52px, 12dvh, 84px);
           }
         }
       `}</style>

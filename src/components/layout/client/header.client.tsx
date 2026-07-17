@@ -66,16 +66,18 @@ const Header = () => {
         return "Người dùng";
     };
 
-    const handleLogout = async () => {
-        try {
-            await callLogout();
-        } finally {
+    const handleLogout = () => {
+        const logoutRequest = callLogout();
+        navigate(PATHS.HOME, { replace: true, flushSync: true });
+
+        window.setTimeout(() => {
             localStorage.removeItem("access_token");
             sessionStorage.clear();
             dispatch(setLogoutAction());
-            navigate(PATHS.HOME, { replace: true });
             message.success("Đăng xuất thành công");
-        }
+        }, 0);
+
+        void logoutRequest.catch(() => undefined);
     };
 
     const itemsDropdown: MenuProps["items"] = [

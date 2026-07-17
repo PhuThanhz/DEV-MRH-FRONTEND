@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Space, Tag, Button, Popconfirm } from "antd";  // ← thêm Button, Popconfirm
+import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -27,6 +28,8 @@ const getBackendData = <T,>(res: any): T => {
     return res?.data ?? res;
 };
 
+const escapeFilterValue = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
 const EmployeePage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IEmployee | null>(null);
@@ -47,17 +50,22 @@ const EmployeePage = () => {
     const { data, isFetching, refetch } = useEmployeesQuery(query);
     const { mutate: deleteEmployee } = useDeleteEmployeeMutation();
 
-    useEffect(() => {
+    const buildQuery = useCallback((
+        page = PAGINATION_CONFIG.DEFAULT_PAGE,
+        size = PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+        sortBy = "createdAt,desc"
+    ) => {
         const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
+            page,
+            size,
+            sort: sortBy,
         };
 
         const filters: string[] = [];
+        const search = escapeFilterValue(searchValue);
 
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or email~'${searchValue}' or userInfo.employeeCode~'${searchValue}')`);
+        if (search)
+            filters.push(`(name~'${search}' or email~'${search}' or userInfo.employeeCode~'${search}')`);
 
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
@@ -68,8 +76,12 @@ const EmployeePage = () => {
         if (departmentFilter !== null && departmentFilter !== undefined) q.departmentId = departmentFilter;
         if (sectionFilter !== null && sectionFilter !== undefined) q.sectionId = sectionFilter;
 
-        setQuery(queryString.stringify(q, { encode: false }));
+        return queryString.stringify(q, { encode: false });
     }, [searchValue, activeFilter, companyFilter, departmentFilter, sectionFilter]);
+
+    useEffect(() => {
+        setQuery(buildQuery());
+    }, [buildQuery]);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -79,44 +91,31 @@ const EmployeePage = () => {
 
     const employees = data?.result ?? [];
 
-    const buildQuery = (params: any, sort: any) => {
-        const q: any = {
-            page: params.current,
-            size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        };
+    const handleTableChange = useCallback((pagination: TablePaginationConfig, _filters: any, sorter: any) => {
+        const activeSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+        let sortBy = "createdAt,desc";
 
-        const filters: string[] = [];
+        if (activeSorter?.field === "name")
+            sortBy = activeSorter.order === "ascend" ? "name,asc" : "name,desc";
+        else if (activeSorter?.field === "email")
+            sortBy = activeSorter.order === "ascend" ? "email,asc" : "email,desc";
 
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or email~'${searchValue}' or userInfo.employeeCode~'${searchValue}')`);
+        setQuery(buildQuery(
+            pagination.current || PAGINATION_CONFIG.DEFAULT_PAGE,
+            pagination.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+            sortBy
+        ));
+    }, [buildQuery]);
 
-        if (activeFilter !== null)
-            filters.push(`active=${activeFilter}`);
+    const reloadTable = useCallback(() => {
+        refetch();
+    }, [refetch]);
 
-        if (filters.length > 0) q.filter = filters.join(" and ");
-
-        if (companyFilter !== null && companyFilter !== undefined) q.companyId = companyFilter;
-        if (departmentFilter !== null && departmentFilter !== undefined) q.departmentId = departmentFilter;
-        if (sectionFilter !== null && sectionFilter !== undefined) q.sectionId = sectionFilter;
-
-        const temp = queryString.stringify(q, { encode: false });
-        let sortBy = "sort=createdAt,desc";
-
-        if (sort?.name)
-            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
-        else if (sort?.email)
-            sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
-
-        return `${temp}&${sortBy}`;
-    };
-
-    const reloadTable = () => refetch();
-
-    const handleDelete = (id: string) => {
+    const handleDelete = useCallback((id: string) => {
         deleteEmployee(id, { onSuccess: reloadTable });
-    };
+    }, [deleteEmployee, reloadTable]);
 
-    const columns: ProColumns<IEmployee>[] = [
+    const columns: ProColumns<IEmployee>[] = useMemo(() => [
         {
             title: "STT",
             key: "index",
@@ -342,7 +341,61 @@ const EmployeePage = () => {
                 </Space>
             ),
         },
-    ];
+    ], [handleDelete, meta.page, meta.pageSize]);
+
+    const filterFields = useMemo(() => [
+        {
+            key: "company",
+            label: "Công ty",
+            asyncOptions: async () => {
+                const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                return (res?.data?.result ?? []).map((c: ICompany) => ({
+                    label: c.name || "",
+                    value: c.id ?? 0,
+                    color: "blue",
+                }));
+            },
+            searchable: true,
+        },
+        {
+            key: "department",
+            label: "Phòng ban",
+            dependsOn: "company",
+            asyncOptions: async (companyId: number) => {
+                if (!companyId) return [];
+                const res = await callFetchDepartmentsByCompany(companyId);
+                return (getBackendData<IDepartment[]>(res) ?? []).map((d: IDepartment) => ({
+                    label: d.name || "",
+                    value: d.id ?? 0,
+                    color: "green",
+                }));
+            },
+            searchable: true,
+        },
+        {
+            key: "section",
+            label: "Bộ phận",
+            dependsOn: "department",
+            asyncOptions: async (departmentId: number) => {
+                if (!departmentId) return [];
+                const res = await callFetchSectionsByDepartment(departmentId);
+                return (getBackendData<ISection[]>(res) ?? []).map((s: ISection) => ({
+                    label: s.name || "",
+                    value: s.id ?? 0,
+                    color: "purple",
+                }));
+            },
+            searchable: true,
+        },
+        {
+            key: "active",
+            label: "Trạng thái",
+            options: [
+                { label: "Đang hoạt động", value: true, color: "green" },
+                { label: "Ngừng hoạt động", value: false, color: "red" },
+            ],
+        },
+    ], []);
 
     return (
         <PageContainer
@@ -365,59 +418,7 @@ const EmployeePage = () => {
                     />
                     <div className="flex flex-wrap gap-3 items-center">
                         <AdvancedFilterSelect
-                            fields={[
-                                {
-                                    key: "company",
-                                    label: "Công ty",
-                                    asyncOptions: async () => {
-                                        const res = await callFetchCompany("page=1&size=100&sort=name,asc");
-                                        return (res?.data?.result ?? []).map((c: ICompany) => ({
-                                            label: c.name || "",
-                                            value: c.id ?? 0,
-                                            color: "blue",
-                                        }));
-                                    },
-                                    searchable: true,
-                                },
-                                {
-                                    key: "department",
-                                    label: "Phòng ban",
-                                    dependsOn: "company",
-                                    asyncOptions: async (companyId: number) => {
-                                        if (!companyId) return [];
-                                        const res = await callFetchDepartmentsByCompany(companyId);
-                                        return (getBackendData<IDepartment[]>(res) ?? []).map((d: IDepartment) => ({
-                                            label: d.name || "",
-                                            value: d.id ?? 0,
-                                            color: "green",
-                                        }));
-                                    },
-                                    searchable: true,
-                                },
-                                {
-                                    key: "section",
-                                    label: "Bộ phận",
-                                    dependsOn: "department",
-                                    asyncOptions: async (departmentId: number) => {
-                                        if (!departmentId) return [];
-                                        const res = await callFetchSectionsByDepartment(departmentId);
-                                        return (getBackendData<ISection[]>(res) ?? []).map((s: ISection) => ({
-                                            label: s.name || "",
-                                            value: s.id ?? 0,
-                                            color: "purple",
-                                        }));
-                                    },
-                                    searchable: true,
-                                },
-                                {
-                                    key: "active",
-                                    label: "Trạng thái",
-                                    options: [
-                                        { label: "Đang hoạt động", value: true, color: "green" },
-                                        { label: "Ngừng hoạt động", value: false, color: "red" },
-                                    ],
-                                },
-                            ]}
+                            fields={filterFields}
                             onChange={(filters) => {
                                 setActiveFilter(
                                     filters.active !== undefined ? filters.active : null
@@ -445,15 +446,7 @@ const EmployeePage = () => {
                     columns={columns}
                     dataSource={employees}
                     scroll={{ x: "max-content" }}       // ← đồng bộ
-                    request={async (params, sort) => {
-                        const q = buildQuery(params, sort);
-                        setQuery(q);
-                        return Promise.resolve({
-                            data: employees,
-                            success: true,
-                            total: meta.total,
-                        });
-                    }}
+                    onChange={handleTableChange}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
                         current: meta.page,

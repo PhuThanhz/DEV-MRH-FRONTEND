@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Space, Tag, Button } from "antd";
+import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -24,6 +25,8 @@ import ViewDetailUser from "@/pages/admin/user/view.user";
 
 type RoleOption = { label: string; value: string; color?: string };
 
+const escapeFilterValue = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
 const UserPage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IUser | null>(null);
@@ -34,7 +37,6 @@ const UserPage = () => {
     // ← bỏ state createdAtFilter
     const [searchValue, setSearchValue] = useState<string>("");
 
-    const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
     const [query, setQuery] = useState<string>(
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=lastLoginAt,desc`
     );
@@ -48,38 +50,44 @@ const UserPage = () => {
         (state) => state.account.user.role?.name === "SUPER_ADMIN"
     );
 
-    useEffect(() => {
-        if (rolesData?.result) {
-            const list = rolesData.result.map((r: any) => ({
+    const roleOptions = useMemo<RoleOption[]>(() => {
+        if (!rolesData?.result) return [];
+        return rolesData.result.map((r: any) => ({
                 label: r.name,
                 value: r.name,
                 color: "blue",
             }));
-            setRoleOptions(list);
-        }
     }, [rolesData]);
 
-    useEffect(() => {
+    const buildQuery = useCallback((
+        page = PAGINATION_CONFIG.DEFAULT_PAGE,
+        size = PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+        sortBy = "lastLoginAt,desc"
+    ) => {
         const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "lastLoginAt,desc",
+            page,
+            size,
+            sort: sortBy,
         };
 
         const filters: string[] = [];
+        const search = escapeFilterValue(searchValue);
 
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
+        if (search)
+            filters.push(`(name~'${search}' or email~'${search}')`);
         if (roleFilter)
-            filters.push(`role.name='${roleFilter}'`);
+            filters.push(`role.name='${escapeFilterValue(roleFilter)}'`);
         if (activeFilter !== null)
             filters.push(`active=${activeFilter}`);
-        // ← bỏ createdAtFilter
 
         if (filters.length > 0) q.filter = filters.join(" and ");
 
-        setQuery(queryString.stringify(q, { encode: false }));
-    }, [searchValue, roleFilter, activeFilter]); // ← bỏ createdAtFilter khỏi deps
+        return queryString.stringify(q, { encode: false });
+    }, [searchValue, roleFilter, activeFilter]);
+
+    useEffect(() => {
+        setQuery(buildQuery());
+    }, [buildQuery]);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -89,39 +97,28 @@ const UserPage = () => {
 
     const users = data?.result || [];
 
-    const buildQuery = (params: any, sort: any) => {
-        const q: any = {
-            page: params.current,
-            size: params.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-        };
+    const handleTableChange = useCallback((pagination: TablePaginationConfig, _filters: any, sorter: any) => {
+        const activeSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+        let sortBy = "lastLoginAt,desc";
+        if (activeSorter?.field === "name")
+            sortBy = activeSorter.order === "ascend" ? "name,asc" : "name,desc";
+        else if (activeSorter?.field === "email")
+            sortBy = activeSorter.order === "ascend" ? "email,asc" : "email,desc";
+        else if (activeSorter?.field === "lastLoginAt")
+            sortBy = activeSorter.order === "ascend" ? "lastLoginAt,asc" : "lastLoginAt,desc";
 
-        const filters: string[] = [];
+        setQuery(buildQuery(
+            pagination.current || PAGINATION_CONFIG.DEFAULT_PAGE,
+            pagination.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+            sortBy
+        ));
+    }, [buildQuery]);
 
-        if (searchValue)
-            filters.push(`(name~'${searchValue}' or email~'${searchValue}')`);
-        if (roleFilter)
-            filters.push(`role.name='${roleFilter}'`);
-        if (activeFilter !== null)
-            filters.push(`active=${activeFilter}`);
-        // ← bỏ createdAtFilter
+    const reloadTable = useCallback(() => {
+        refetch();
+    }, [refetch]);
 
-        if (filters.length > 0) q.filter = filters.join(" and ");
-
-        const temp = queryString.stringify(q, { encode: false });
-        let sortBy = "sort=lastLoginAt,desc";
-        if (sort?.name)
-            sortBy = sort.name === "ascend" ? "sort=name,asc" : "sort=name,desc";
-        else if (sort?.email)
-            sortBy = sort.email === "ascend" ? "sort=email,asc" : "sort=email,desc";
-        else if (sort?.lastLoginAt)
-            sortBy = sort.lastLoginAt === "ascend" ? "sort=lastLoginAt,asc" : "sort=lastLoginAt,desc";
-
-        return `${temp}&${sortBy}`;
-    };
-
-    const reloadTable = () => refetch();
-
-    const columns: ProColumns<IUser>[] = [
+    const columns: ProColumns<IUser>[] = useMemo(() => [
         {
             title: "STT",
             key: "index",
@@ -274,7 +271,7 @@ const UserPage = () => {
                 </Space>
             ),
         },
-    ];
+    ], [isSuperAdmin, meta.page, meta.pageSize]);
 
     return (
         <PageContainer
@@ -323,11 +320,7 @@ const UserPage = () => {
                     columns={columns}
                     dataSource={users}
                     scroll={{ x: "max-content" }}
-                    request={async (params, sort) => {
-                        const q = buildQuery(params, sort);
-                        setQuery(q);
-                        return Promise.resolve({ data: users, success: true, total: meta.total });
-                    }}
+                    onChange={handleTableChange}
                     pagination={{
                         defaultPageSize: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
                         current: meta.page,

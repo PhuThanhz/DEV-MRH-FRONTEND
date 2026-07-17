@@ -32,6 +32,7 @@ export const useJobTitlesQuery = (query: string, enabled = true) => {
                 result: [],
             };
         },
+        placeholderData: (previousData) => previousData,
     });
 };
 

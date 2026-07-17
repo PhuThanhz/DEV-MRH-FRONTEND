@@ -8,11 +8,7 @@ import { generateMenuItems } from "./menuItems";
 import { useQuery } from "@tanstack/react-query";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import {
-    callFetchPendingManagerRecords,
-    callFetchPendingApprovalRecords,
-    callFetchMyEvaluationRecords
-} from "@/config/api";
+import { callFetchEvaluationTaskCounts } from "@/config/api";
 
 const { Sider } = Layout;
 
@@ -46,45 +42,20 @@ const SliderAdmin: React.FC<IProps> = ({
     const canViewManagerEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS);
     const canViewApproverEval = useAccess(ALL_PERMISSIONS.EVALUATION.GET_PENDING_APPROVAL_RECORDS);
 
-    const pendingManagerQuery = useQuery({
-        queryKey: ["pending-manager-evaluation-records"],
+    const taskCountsQuery = useQuery({
+        queryKey: ["evaluation-task-counts"],
         queryFn: async () => {
-            const res = await callFetchPendingManagerRecords();
-            return res?.data || [];
+            const res = await callFetchEvaluationTaskCounts();
+            return res?.data;
         },
-        select: (records: any[]) => records.length,
-        enabled: canViewManagerEval,
+        enabled: canViewMyEval || canViewManagerEval || canViewApproverEval,
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
     });
 
-    const pendingApprovalQuery = useQuery({
-        queryKey: ["pending-approval-evaluation-records"],
-        queryFn: async () => {
-            const res = await callFetchPendingApprovalRecords();
-            return res?.data || [];
-        },
-        select: (records: any[]) => records.length,
-        enabled: canViewApproverEval,
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-    });
-
-    const myRecordsQuery = useQuery({
-        queryKey: ["my-evaluation-records"],
-        queryFn: async () => {
-            const res = await callFetchMyEvaluationRecords();
-            return res?.data || [];
-        },
-        select: (records: any[]) => records.filter(r => r.status === "EMPLOYEE_DRAFTING" || r.status === "REVISION_NEEDED").length,
-        enabled: canViewMyEval,
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-    });
-
-    const pendingManagerCount = pendingManagerQuery.data || 0;
-    const pendingApprovalCount = pendingApprovalQuery.data || 0;
-    const myPendingCount = myRecordsQuery.data || 0;
+    const pendingManagerCount = canViewManagerEval ? taskCountsQuery.data?.pendingManager || 0 : 0;
+    const pendingApprovalCount = canViewApproverEval ? taskCountsQuery.data?.pendingApproval || 0 : 0;
+    const myPendingCount = canViewMyEval ? taskCountsQuery.data?.myPending || 0 : 0;
 
     const totalTasksCount = pendingManagerCount + pendingApprovalCount + myPendingCount;
 

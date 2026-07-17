@@ -411,7 +411,7 @@ const AccountingDocumentPage = () => {
 
     const totalRows = totalDossierDocuments;
 
-    const columns: ProColumns<AccountingListRow>[] = [
+    const columns: ProColumns<AccountingListRow>[] = useMemo(() => [
         {
             title: "Bộ chứng từ",
             dataIndex: "dossierCode",
@@ -604,7 +604,7 @@ const AccountingDocumentPage = () => {
                 </Space>
             ),
         },
-    ];
+    ], [canView]);
 
     const buildTreeData = (items?: IDocumentFolder[]): DataNode[] => {
         if (!items) return [];

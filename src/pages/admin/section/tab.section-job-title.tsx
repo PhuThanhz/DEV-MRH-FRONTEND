@@ -32,6 +32,7 @@ import DrawerSectionSalaryGrade from "../section/section-salary-grade/drawer.sec
 import DrawerJobTitlePerformanceContent from "@/pages/admin/job-title-performance-content/drawer.job-title-performance-content";
 
 import type { ISectionJobTitle } from "@/types/backend";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const { Text } = Typography;
 
@@ -248,12 +249,10 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
                     cancelText="Huỷ"
                     onConfirm={() => handleDelete(record.id)}
                 >
-                    <Button
-                        type="text"
-                        danger
+                    <ActionButton
+                        variant="danger"
+                        tooltip="Xoá chức danh"
                         icon={<DeleteOutlined />}
-                        size="small"
-                        style={{ borderRadius: 6 }}
                     />
                 </Popconfirm>
             ),

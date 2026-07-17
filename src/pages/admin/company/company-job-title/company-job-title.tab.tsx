@@ -33,6 +33,7 @@ import {
 import DrawerAssignCompanyJobTitle from "./drawer.assign-job-title-company";
 import DrawerSalaryGrade from "./company-salary-grade/drawer.company-salary-grade";
 import DrawerJobTitlePerformanceContent from "../../job-title-performance-content/drawer.job-title-performance-content";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 import type { IJobTitle } from "@/types/backend";
 import { useQueryClient } from "@tanstack/react-query";
@@ -350,12 +351,10 @@ const CompanyJobTitleTab = ({
                         cancelText="Huỷ"
                         onConfirm={() => handleDelete(record.id)}
                     >
-                        <Button
-                            type="text"
-                            danger
+                        <ActionButton
+                            variant="danger"
+                            tooltip="Xoá chức danh khỏi công ty"
                             icon={<DeleteOutlined />}
-                            size="small"
-                            style={{ borderRadius: 6 }}
                         />
                     </Popconfirm>
                 );

@@ -15,7 +15,8 @@ import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelec
 import Breadcrumb from "@/components/common/navigation/Breadcrumb";
 
 import type { IDepartmentCompleteness } from "@/types/backend";
-import { useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
+import { useDepartmentCompletenessOverviewQuery, useDepartmentCompletenessQuery } from "@/hooks/useDashboard";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
 import ViewDepartmentCompleteness from "./view.departmentcompleteness";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -34,6 +35,7 @@ const CRITERIA = PRIORITIZED_KEYS.map(key => ({
 }));
 
 type ScoreFilterValue = "all" | "full" | "partial" | "empty";
+const EMPTY_COMPLETENESS: IDepartmentCompleteness[] = [];
 
 /* ─────────────────────────────────────────────────────────────
    Sub-components
@@ -268,13 +270,25 @@ const DepartmentProfilePage = () => {
     const tableRef = useRef<ActionType>(null);
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const { data: completeness, isLoading, refetch } = useDepartmentCompletenessQuery();
-
     const [searchValue, setSearchValue] = useState(() => searchParams.get("search") || "");
     const [companyFilter, setCompanyFilter] = useState<string | null>(() => searchParams.get("company"));
     const [scoreFilter, setScoreFilter] = useState<ScoreFilterValue>(() => (searchParams.get("status") as ScoreFilterValue) || "all");
     const [missingFilter, setMissingFilter] = useState<string | null>(() => searchParams.get("missing"));
     const [resetSignal, setResetSignal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    const { data: completenessPage, isLoading, refetch } = useDepartmentCompletenessQuery({
+        page: page - 1,
+        size: pageSize,
+        search: searchValue.trim() || undefined,
+        companyName: companyFilter || undefined,
+        status: scoreFilter === "all" ? undefined : scoreFilter,
+        missing: missingFilter || undefined,
+    });
+    const { data: overview } = useDepartmentCompletenessOverviewQuery();
+    const { data: companiesPage } = useCompaniesQuery("page=1&size=200&sort=name,asc");
+    const completeness = completenessPage?.result ?? EMPTY_COMPLETENESS;
 
     const [openView, setOpenView] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IDepartmentCompleteness | null>(null);
@@ -294,11 +308,6 @@ const DepartmentProfilePage = () => {
         }
     }, [completeness, searchParams]);
 
-    // Refetch data on mount
-    useEffect(() => {
-        refetch();
-    }, [refetch]);
-
     const handleCloseView = () => {
         setOpenView(false);
         setSelectedRecord(null);
@@ -309,52 +318,23 @@ const DepartmentProfilePage = () => {
     };
 
     /* ── Danh sách công ty duy nhất từ data ── */
-    const companyOptions = useMemo(() => {
-        if (!completeness) return [];
-        const seen = new Set<string>();
-        return completeness.reduce<{ label: string; value: string }[]>((acc, d) => {
-            if (!seen.has(d.companyName)) {
-                seen.add(d.companyName);
-                acc.push({ label: d.companyName, value: d.companyName });
-            }
-            return acc;
-        }, []);
-    }, [completeness]);
+    const companyOptions = useMemo(() => (companiesPage?.result ?? []).map((company) => ({
+        label: company.name,
+        value: company.name,
+    })), [companiesPage]);
 
     /* ── Count theo từng bucket ── */
-    const countFull = useMemo(() => completeness?.filter((d) => d.score === 7).length ?? 0, [completeness]);
-    const countPartial = useMemo(() => completeness?.filter((d) => d.score > 0 && d.score < 7).length ?? 0, [completeness]);
-    const countEmpty = useMemo(() => completeness?.filter((d) => d.score === 0).length ?? 0, [completeness]);
+    const countFull = overview?.full ?? 0;
+    const countPartial = overview?.partial ?? 0;
+    const countEmpty = overview?.empty ?? 0;
 
     /* ── Filter client-side ── */
     const dataSource = useMemo(() => {
-        if (!completeness) return [];
-        let list = [...completeness];
-
-        if (searchValue.trim())
-            list = list.filter((d) =>
-                d.departmentName.toLowerCase().includes(searchValue.trim().toLowerCase())
-            );
-
-        if (companyFilter)
-            list = list.filter((d) => d.companyName === companyFilter);
-
-        if (scoreFilter === "full") list = list.filter((d) => d.score === 7);
-        else if (scoreFilter === "partial") list = list.filter((d) => d.score > 0 && d.score < 7);
-        else if (scoreFilter === "empty") list = list.filter((d) => d.score === 0);
-
-        if (missingFilter) {
-            list = list.filter((d) => !d[missingFilter as keyof IDepartmentCompleteness]);
-        }
-
-        // Default sorting: lowest score first (score asc)
-        list.sort((a, b) => a.score - b.score);
-
-        return list;
-    }, [completeness, searchValue, companyFilter, scoreFilter, missingFilter]);
+        return completeness;
+    }, [completeness]);
 
     /* ── Stats (toàn bộ data) ── */
-    const totalDept = completeness?.length ?? 0;
+    const totalDept = overview?.total ?? 0;
     const totalFull = countFull;
     const missingCount = totalDept - totalFull;
 
@@ -364,6 +344,7 @@ const DepartmentProfilePage = () => {
         setCompanyFilter(null);
         setScoreFilter("all");
         setMissingFilter(null);
+        setPage(1);
         setResetSignal((s) => s + 1);
         setSearchParams(new URLSearchParams(), { replace: true });
         refetch();
@@ -537,6 +518,7 @@ const DepartmentProfilePage = () => {
                         searchValue={searchValue}
                         onSearch={(val) => {
                             setSearchValue(val);
+                            setPage(1);
                             const newParams = new URLSearchParams(searchParams);
                             if (val.trim()) newParams.set("search", val.trim());
                             else newParams.delete("search");
@@ -580,6 +562,7 @@ const DepartmentProfilePage = () => {
                                     setCompanyFilter(filters.company || null);
                                     setScoreFilter((filters.score as ScoreFilterValue) || "all");
                                     setMissingFilter(filters.missing && filters.missing !== "all" ? filters.missing : null);
+                                    setPage(1);
                                     
                                     const newParams = new URLSearchParams(searchParams);
                                     if (filters.company) newParams.set("company", filters.company);
@@ -607,7 +590,9 @@ const DepartmentProfilePage = () => {
                 dataSource={dataSource}
                 scroll={{ x: "max-content" }}  // ← scroll ngang thay vì vỡ layout
                 pagination={{
-                    defaultPageSize: 10,
+                    current: page,
+                    pageSize,
+                    total: completenessPage?.meta.total ?? 0,
                     showQuickJumper: true,
                     showSizeChanger: true,
                     pageSizeOptions: ["10", "20", "50"],
@@ -623,6 +608,10 @@ const DepartmentProfilePage = () => {
                             phòng ban
                         </span>
                     ),
+                }}
+                onChange={(pagination) => {
+                    setPage(pagination.current ?? 1);
+                    setPageSize(pagination.pageSize ?? 10);
                 }}
                 rowSelection={false}
             />

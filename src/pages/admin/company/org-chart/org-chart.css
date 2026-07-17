@@ -12,10 +12,18 @@
 
 @keyframes orgPanelSlideUp {
     from {
-        transform: translateY(100%);
+        opacity: 0;
+        transform: translateX(100%);
     }
     to {
-        transform: translateY(0);
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [style*="orgPanelSlideUp"] {
+        animation: none !important;
     }
 }
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useBlocker } from "react-router-dom";
-import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb } from "antd";
+import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb, Switch } from "antd";
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
@@ -66,6 +66,28 @@ const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER")
 const getComment = (comments: any[], type: string) =>
     comments?.find(c => c.commentType === type)?.content ?? "";
 
+const getStickyStyle = (col: "empScore" | "empResult" | "mgrScore" | "mgrResult", isHeader = false): React.CSSProperties => {
+    let right = 0;
+    if (col === "mgrResult") right = 0;
+    else if (col === "mgrScore") right = 120;
+    else if (col === "empResult") right = 240;
+    else if (col === "empScore") right = 360;
+    
+    const isLeftmost = col === "empScore";
+    
+    return {
+        position: "sticky",
+        right,
+        width: 120,
+        minWidth: 120,
+        zIndex: isHeader ? 2 : 1,
+        background: isHeader ? "#f8fafc" : "#fff",
+        borderLeft: isLeftmost ? "1.5px solid #cbd5e1" : undefined,
+        boxShadow: isLeftmost ? "-3px 0 6px -2px rgba(0,0,0,0.15)" : undefined,
+        backgroundClip: "padding-box",
+    };
+};
+
 interface IManagerCriteriaRowProps {
     c: any;
     cIdx: number;
@@ -80,10 +102,11 @@ interface IManagerCriteriaRowProps {
     tdB: any;
     tdLvl: any;
     tdSc: any;
+    showCriteria: boolean;
 }
 
 const ManagerCriteriaRow = React.memo(({
-    c, cIdx, hasSub, isEditable, empScore, avgEmp, mgrScore, avgMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+    c, cIdx, hasSub, isEditable, empScore, avgEmp, mgrScore, avgMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc, showCriteria
 }: IManagerCriteriaRowProps) => {
     const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
     return (
@@ -94,31 +117,32 @@ const ManagerCriteriaRow = React.memo(({
                 {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
             </td>
             <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
+            {showCriteria && [1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
             <td style={{ ...tdB, textAlign: "center" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap", display: "inline-block" }}>
                     {(c.weight * 100).toFixed(0)}%
                 </span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
                 {hasSub ? (
                     <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
                 ) : (
                     <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
                 {hasSub ? (
                     avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
                 ) : (
                     empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
                 )}
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
                 {hasSub ? (
                     <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
                 ) : isEditable ? (
                     <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        popupMatchSelectWidth={false}
                         className={mgrScore == null ? "unfilled-select" : ""}
                         value={mgrScore ?? undefined} loading={savingScore === c.id}
                         onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
@@ -126,7 +150,7 @@ const ManagerCriteriaRow = React.memo(({
                     <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
                 {hasSub ? (
                     avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
                 ) : (
@@ -149,10 +173,11 @@ interface IManagerSubCriteriaRowProps {
     tdB: any;
     tdLvl: any;
     tdSc: any;
+    showCriteria: boolean;
 }
 
 const ManagerSubCriteriaRow = React.memo(({
-    sub, cIdx, si, isEditable, subEmp, subMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc
+    sub, cIdx, si, isEditable, subEmp, subMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc, showCriteria
 }: IManagerSubCriteriaRowProps) => {
     const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
     return (
@@ -163,19 +188,20 @@ const ManagerSubCriteriaRow = React.memo(({
                 {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
             </td>
             <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
+            {showCriteria && [1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
             <td style={{ ...tdB, textAlign: "center" }}>
                 <span style={{ color: "#e5e7eb" }}>—</span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
                 <span style={{ color: "#e5e7eb" }}>—</span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
                 {isEditable ? (
                     <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
+                        popupMatchSelectWidth={false}
                         className={subMgr == null ? "unfilled-select" : ""}
                         value={subMgr ?? undefined} loading={savingScore === sub.id}
                         onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
@@ -183,7 +209,7 @@ const ManagerSubCriteriaRow = React.memo(({
                     <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
                 )}
             </td>
-            <td style={tdSc}>
+            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
                 <span style={{ color: "#e5e7eb" }}>—</span>
             </td>
         </tr>
@@ -193,6 +219,7 @@ const ManagerSubCriteriaRow = React.memo(({
 const ManagerEvaluationDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const showCriteria = true;
 
     const [record, setRecord] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -259,7 +286,7 @@ const ManagerEvaluationDetailPage = () => {
             await callManagerSaveScore(record.id, criteriaId, score);
             notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu điểm");
             setLocalScores(prev => ({ ...prev, [criteriaId]: originalScore }));
         } finally { setSavingScore(null); }
     };
@@ -272,7 +299,7 @@ const ManagerEvaluationDetailPage = () => {
             setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu nhận xét");
         } finally { setSavingComment(false); }
     };
 
@@ -287,7 +314,7 @@ const ManagerEvaluationDetailPage = () => {
             notify.success("Đã nộp phê duyệt!");
             fetchRecord();
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi nộp bản đánh giá");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi nộp bản đánh giá");
         } finally { setSubmitting(false); }
     };
 
@@ -308,7 +335,7 @@ const ManagerEvaluationDetailPage = () => {
             setPlanForm({ content: "", requirements: "", solution: "", completionTimeline: "" });
             fetchRecord();
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu kế hoạch đào tạo");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu kế hoạch đào tạo");
         } finally { setSavingPlan(false); }
     };
 
@@ -368,7 +395,7 @@ const ManagerEvaluationDetailPage = () => {
     };
     const thSub: React.CSSProperties = {
         padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
-        background: "#ffffff", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
         textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
@@ -377,10 +404,10 @@ const ManagerEvaluationDetailPage = () => {
         textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "14px 14px", borderBottom: "1px solid #e2e8f0",
-        borderRight: "1px dashed #dbe3ef", fontSize: 12, color: "#4b5563",
-        verticalAlign: "top", lineHeight: 1.55, minWidth: 120,
-        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
+        padding: "10px 8px", borderBottom: "1px solid #e2e8f0",
+        borderRight: "1px dashed #dbe3ef", fontSize: 11.5, color: "#4b5563",
+        verticalAlign: "top", lineHeight: 1.5, minWidth: 155, width: 155,
+        textAlign: "justify", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdSc: React.CSSProperties = {
         padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
@@ -452,18 +479,21 @@ const ManagerEvaluationDetailPage = () => {
             let empTotal = 0, mgrTotal = 0;
             section.criteria?.forEach((c: any) => {
                 const hasSub = c.subCriteria?.length > 0;
-                const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
-                if (!hasSub) {
-                    if (empScore != null) empTotal += empScore * c.weight;
-                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
-                } else {
-                    c.subCriteria?.forEach((sub: any) => {
+                if (hasSub) {
+                    let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
+                    c.subCriteria.forEach((sub: any) => {
                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
                         const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                        if (subEmp != null) empTotal += subEmp * sub.weight;
-                        if (subMgr != null) mgrTotal += subMgr * sub.weight;
+                        if (subEmp != null) { sumEmp += subEmp; cntEmp++; }
+                        if (subMgr != null) { sumMgr += subMgr; cntMgr++; }
                     });
+                    if (cntEmp > 0) empTotal += (sumEmp / c.subCriteria.length) * c.weight;
+                    if (cntMgr > 0) mgrTotal += (sumMgr / c.subCriteria.length) * c.weight;
+                } else {
+                    const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                    if (empScore != null) empTotal += empScore * c.weight;
+                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
                 }
             });
             // Convert to 0-5 scale for the radar chart
@@ -510,7 +540,7 @@ const ManagerEvaluationDetailPage = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         <button
-                            onClick={() => navigate("/admin/evaluation/process")}
+                            onClick={() => navigate("/admin/evaluation/process?tab=PENDING_EVAL")}
                             style={{
                                 width: 40, height: 40, borderRadius: 10,
                                 border: "1px solid #e5e7eb", background: "#fff",
@@ -701,25 +731,53 @@ const ManagerEvaluationDetailPage = () => {
 
             {/* ─── BẢNG ĐÁNH GIÁ ─── */}
             <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1680 : 1500 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1780, tableLayout: "fixed" }}>
+                    <colgroup>
+                        <col style={{ width: 64 }} />
+                        <col />
+                        <col style={{ width: 190 }} />
+                        {showCriteria && [1, 2, 3, 4, 5].map(n => <col key={n} style={{ width: 155 }} />)}
+                        <col style={{ width: 80 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                        <col style={{ width: 120 }} />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 230 }}>Nội dung đánh giá</th>
+                            <th rowSpan={2} style={{ ...thS, textAlign: "left" }}>Nội dung đánh giá</th>
                             <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
-                            <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>
-                            <th rowSpan={2} style={thS}>Trọng số</th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
+                            {showCriteria && <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>}
+                            <th rowSpan={2} style={{ ...thS, width: 80 }}>Trọng số</th>
+                            <th colSpan={2} style={{
+                                ...thG,
+                                position: "sticky",
+                                right: 240,
+                                zIndex: 2,
+                                background: "#f8fafc",
+                                borderLeft: "1.5px solid #cbd5e1",
+                                boxShadow: "-3px 0 6px -2px rgba(0,0,0,0.15)",
+                                backgroundClip: "padding-box"
+                            }}>
                                 <span style={{ color: "#111827" }}>CBNV đánh giá</span>
                             </th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Đánh giá của Quản lý</th>
+                            <th colSpan={2} style={{
+                                ...thG,
+                                borderLeft: "none",
+                                position: "sticky",
+                                right: 0,
+                                zIndex: 2,
+                                background: "#f8fafc",
+                                backgroundClip: "padding-box"
+                            }}>Đánh giá của Quản lý</th>
                         </tr>
                         <tr>
-                            {[1, 2, 3, 4, 5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
-                            <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
-                            <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
-                            <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>
-                            <th style={thSub}>Kết quả</th>
+                            {showCriteria && [1, 2, 3, 4, 5].map(n => <th key={n} style={{ ...thSub, width: 155, color: "#e11d48" }}>Mức {n}</th>)}
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empScore", true) }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
+                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empResult", true) }}>Kết quả</th>
+                            <th style={{ ...thSub, ...getStickyStyle("mgrScore", true) }}>Điểm</th>
+                            <th style={{ ...thSub, ...getStickyStyle("mgrResult", true) }}>Kết quả</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -733,7 +791,7 @@ const ManagerEvaluationDetailPage = () => {
 
                                 rows.push(
                                     <tr key={`sec-${section.id}`}>
-                                        <td colSpan={13} style={{
+                                        <td colSpan={showCriteria ? 13 : 8} style={{
                                             padding: "10px 18px",
                                             background: "#f3f4f6",
                                             borderTop: "1px solid #e5e7eb",
@@ -791,6 +849,7 @@ const ManagerEvaluationDetailPage = () => {
                                             tdB={tdB}
                                             tdLvl={tdLvl}
                                             tdSc={tdSc}
+                                            showCriteria={showCriteria}
                                         />
                                     );
 
@@ -813,6 +872,7 @@ const ManagerEvaluationDetailPage = () => {
                                                     tdB={tdB}
                                                     tdLvl={tdLvl}
                                                     tdSc={tdSc}
+                                                    showCriteria={showCriteria}
                                                 />
                                             );
                                         });
@@ -822,16 +882,16 @@ const ManagerEvaluationDetailPage = () => {
                                 // Section subtotal
                                 rows.push(
                                     <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                        <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                        <td colSpan={showCriteria ? 8 : 3} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
                                             Tổng kết {section.name}
                                         </td>
                                         <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                        <td style={{ padding: "12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
+                                        <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("empScore"), background: "#f9fafb" }} />
+                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empResult"), background: "#f9fafb" }}>
                                             <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{empTotal.toFixed(2)}</span>
                                         </td>
-                                        <td style={{ padding: "12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
+                                        <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("mgrScore"), background: "#f9fafb" }} />
+                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("mgrResult"), background: "#f9fafb" }}>
                                             <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
                                         </td>
                                     </tr>
@@ -847,18 +907,18 @@ const ManagerEvaluationDetailPage = () => {
                                     {sectionElements}
                                     {/* Grand Total */}
                                     <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fff" }}>
-                                        <td colSpan={8} style={{ padding: "18px 24px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                        <td colSpan={showCriteria ? 8 : 3} style={{ padding: "18px 24px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                                             Tổng điểm đánh giá chung
                                         </td>
                                         <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#111827" }}>100%</td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("empScore") }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empResult") }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
                                                 {dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
                                             </span>
                                         </td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
+                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("mgrScore") }} />
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("mgrResult") }}>
                                             <span style={{ fontSize: 24, fontWeight: 900, color: "#f43f5e" }}>
                                                 {dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
                                             </span>

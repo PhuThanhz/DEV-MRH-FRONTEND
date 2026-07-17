@@ -32,7 +32,7 @@ const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: R
     EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
     PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
     MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ duyệt cấp trên", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
+    PENDING_APPROVAL: { text: "Chờ chấm & duyệt cuối", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
     COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
 };
 
@@ -57,8 +57,8 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
-    const pendingQuery = usePendingApprovalRecordsQuery();
-    const approvalQuery = useApprovalRecordsQuery();
+    const pendingQuery = usePendingApprovalRecordsQuery(activeTab === "pending");
+    const approvalQuery = useApprovalRecordsQuery(activeTab === "history");
     const batchApproveMutation = useBatchApproveRecordsMutation();
 
     const records: any[] = activeTab === "pending" ? (pendingQuery.data || []) : (approvalQuery.data || []);
@@ -74,9 +74,9 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 const failedCount = data?.failedRecords?.length ?? 0;
                 
                 if (failedCount > 0) {
-                    notify.warning(`Duyệt cấp trên xong: Thành công ${successCount}, thất bại ${failedCount}.`);
+                    notify.warning(`Chấm & duyệt cuối xong: Thành công ${successCount}, thất bại ${failedCount}.`);
                 } else {
-                    notify.success(`Đã duyệt cấp trên thành công ${successCount} bản đánh giá`);
+                    notify.success(`Đã chấm & duyệt cuối thành công ${successCount} bản đánh giá`);
                 }
                 setSelectedRowKeys([]);
             },
@@ -301,7 +301,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         height: 28,
                     }}
                 >
-                    {record.status === "PENDING_APPROVAL" ? "Duyệt cấp trên" : "Xem chi tiết"}
+                    {record.status === "PENDING_APPROVAL" ? "Chấm & duyệt cuối" : "Xem chi tiết"}
                 </Button>
             ),
         },
@@ -421,7 +421,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
                 {[
                     {
-                        label: "Chờ duyệt cấp trên",
+                        label: "Chờ chấm & duyệt cuối",
                         value: pending,
                         color: "#1677ff",
                         key: "pending",
@@ -490,11 +490,11 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 border: "1px solid #e2e8f0",
                 overflow: "hidden",
             }}>
-                <div className="evaluation-work-switch" role="tablist" aria-label="Bộ lọc hồ sơ duyệt cấp trên">
+                <div className="evaluation-work-switch" role="tablist" aria-label="Bộ lọc hồ sơ chấm và duyệt cuối">
                     <div className="evaluation-work-switch__inner">
                         {[
-                            { key: "pending", label: "Cần duyệt cấp trên" },
-                            { key: "history", label: "Lịch sử duyệt" },
+                            { key: "pending", label: "Cần chấm & duyệt" },
+                            { key: "history", label: "Lịch sử xử lý" },
                         ].map(tab => (
                             <button
                                 key={tab.key}
@@ -519,7 +519,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
-                                {activeTab === "pending" ? "Hồ sơ chờ duyệt cấp trên" : "Hồ sơ đã duyệt cấp trên"}
+                                {activeTab === "pending" ? "Hồ sơ chờ chấm & duyệt cuối" : "Hồ sơ đã xử lý cuối"}
                             </div>
                             <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
                                 {activeTab === "pending" ? "Các bản đánh giá thuộc trách nhiệm của quản lý gián tiếp/cấp phê duyệt" : "Các bản đánh giá đã được duyệt hoặc yêu cầu chỉnh sửa"}
@@ -614,8 +614,8 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                                 description={
                                     activeTab === "pending"
-                                        ? "Không có hồ sơ nào đang chờ duyệt cấp trên."
-                                        : "Chưa có lịch sử duyệt cấp trên."
+                                        ? "Không có hồ sơ nào đang chờ chấm & duyệt cuối."
+                                        : "Chưa có lịch sử xử lý cuối."
                                 }
                                 style={{ margin: "40px 0" }}
                             />

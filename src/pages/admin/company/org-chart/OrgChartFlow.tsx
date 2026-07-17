@@ -53,6 +53,13 @@ import MiniPanel from "./MiniPanel";
 import DrawerCloseButton from "@/components/common/drawer/DrawerCloseButton";
 import type { IReqCreateNodeTree } from "@/types/backend";
 import { ORG_CHART_NODE_SIZE } from "./orgChartConstants";
+import {
+    OrgChartHighlightProvider,
+} from "./orgChartHighlightStore";
+import {
+    useEdgeHighlightState,
+    useOrgChartHighlightStore,
+} from "./useOrgChartHighlight";
 
 import ViewJobDescription, { type EnrichedJD } from "../../job-description/view.job-description/index";
 
@@ -74,6 +81,21 @@ interface IOrgNode {
     posY?: number | null;
     jobDescriptionId?: number | null;
 }
+const getAncestorIds = (nodeId: string, edges: Edge[]): Set<string> => {
+    const ancestors = new Set<string>();
+    const stack = [nodeId];
+    while (stack.length > 0) {
+        const current = stack.pop()!;
+        const parentEdges = edges.filter((e) => e.target === current);
+        for (const edge of parentEdges) {
+            if (!ancestors.has(edge.source)) {
+                ancestors.add(edge.source);
+                stack.push(edge.source);
+            }
+        }
+    }
+    return ancestors;
+};
 
 const getPositionCode = (jobTitle: any) =>
     jobTitle?.positionCode ||
@@ -106,7 +128,7 @@ const extractList = (res: any): any[] => {
 
 
 // ── Edge renderer ─────────────────────────────────────────────────────────────
-const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, data }: EdgeProps) => {
+const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps) => {
     // Compute dynamic border radius proportional to the vertical gap
     const verticalGap = Math.abs(targetY - sourceY);
     const dynamicRadius = Math.min(16, Math.max(6, verticalGap * 0.12));
@@ -122,13 +144,13 @@ const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, 
         borderRadius: dynamicRadius,
         offset: dynamicOffset,
     });
-    const edgeType: string = data?.edgeType ?? "none";
+    const edgeType = useEdgeHighlightState(id);
     const stroke =
         edgeType === "ancestor" ? "#60a5fa" :
             edgeType === "descendant" ? "#f59e0b" :
                 "#cbd5e1";
     const strokeWidth = edgeType === "none" ? 1.45 : 2.3;
-    const strokeOpacity = edgeType === "none" && data?.dimmed ? 0.14 : edgeType === "none" ? 0.9 : 1;
+    const strokeOpacity = edgeType === "none" ? 0.9 : 1;
     const strokeDasharray = edgeType === "ancestor" ? "6 4" : undefined;
     return (
         <path id={id} d={d} fill="none"
@@ -175,33 +197,6 @@ const getLayoutedElements = (
 const EDGE_DEFAULTS = { type: "orgEdge" } satisfies Partial<Edge>;
 
 // ── Graph traversal ───────────────────────────────────────────────────────────
-const getAncestorIds = (nodeId: string, edges: Edge[]): Set<string> => {
-    const result = new Set<string>();
-    let current = nodeId;
-    for (; ;) {
-        const p = edges.find((e) => e.target === current);
-        if (!p || result.has(p.source)) break;
-        result.add(p.source);
-        current = p.source;
-    }
-    return result;
-};
-
-const getDescendantIds = (nodeId: string, edges: Edge[]): Set<string> => {
-    const result = new Set<string>();
-    const queue = [nodeId];
-    while (queue.length > 0) {
-        const cur = queue.shift()!;
-        for (const e of edges) {
-            if (e.source === cur && !result.has(e.target)) {
-                result.add(e.target);
-                queue.push(e.target);
-            }
-        }
-    }
-    return result;
-};
-
 const getHiddenNodeIds = (collapsedIds: Set<string>, edges: Edge[]): Set<string> => {
     const hidden = new Set<string>();
     const queue = Array.from(collapsedIds);
@@ -253,56 +248,10 @@ const getDepthHiddenNodeIds = (nodes: Node[], edges: Edge[], maxDepth: number): 
     return hidden;
 };
 
-// ── Pure highlight calculator ─────────────────────────────────────────────────
-const applyHighlight = (
-    nodes: Node[], edges: Edge[], hoveredId: string | null,
-): { nodes: Node[]; edges: Edge[] } => {
-    if (!hoveredId) {
-        return {
-            nodes: nodes.map((n) =>
-                n.data.highlightState === "idle" ? n : { ...n, data: { ...n.data, highlightState: "idle" } }
-            ),
-            edges: edges.map((e) =>
-                !e.data?.edgeType || (e.data.edgeType === "none" && !e.data.dimmed)
-                    ? e : { ...e, data: { edgeType: "none", dimmed: false } }
-            ),
-        };
-    }
-    const ancestorIds = getAncestorIds(hoveredId, edges);
-    const descendantIds = getDescendantIds(hoveredId, edges);
-    const relatedIds = new Set([hoveredId, ...ancestorIds, ...descendantIds]);
-
-    const newNodes = nodes.map((n) => {
-        const hs: OrgNodeData["highlightState"] =
-            n.id === hoveredId ? "active" :
-                ancestorIds.has(n.id) ? "ancestor" :
-                    descendantIds.has(n.id) ? "descendant" : "dimmed";
-        return n.data.highlightState === hs ? n : { ...n, data: { ...n.data, highlightState: hs } };
-    });
-
-    const newEdges = edges.map((e) => {
-        const isAnc =
-            (ancestorIds.has(e.source) || e.source === hoveredId) &&
-            (ancestorIds.has(e.target) || e.target === hoveredId) &&
-            !descendantIds.has(e.source);
-        const isDes =
-            (descendantIds.has(e.target) || e.target === hoveredId) &&
-            (descendantIds.has(e.source) || e.source === hoveredId) &&
-            !ancestorIds.has(e.target);
-        const edgeType = isAnc ? "ancestor" : isDes ? "descendant" : "none";
-        const dimmed = !relatedIds.has(e.source) && !relatedIds.has(e.target);
-        if (e.data?.edgeType === edgeType && e.data?.dimmed === dimmed) return e;
-        return { ...e, data: { edgeType, dimmed } };
-    });
-
-    return { nodes: newNodes, edges: newEdges };
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     const query = ownerType === "COMPANY" ? `filter=companyId:${ownerId}` : `filter=departmentId:${ownerId}`;
     const { fitView, setCenter } = useReactFlow();
+    const highlightStore = useOrgChartHighlightStore();
     const { isMobile, isTablet, isSmallLaptop } = useBreakpoint();
     const isNarrowViewport = isMobile || isTablet;
     const isCompactViewport = isMobile || isTablet || isSmallLaptop;
@@ -337,6 +286,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     const [chartId, setChartId] = useState<number | null>(null);
     const [nodes, setNodes] = useState<Node[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
+    const [panelNodes, setPanelNodes] = useState<Node[]>([]);
+    const [panelEdges, setPanelEdges] = useState<Edge[]>([]);
     const [isClosing, setIsClosing] = useState(false);
     const [openModal, setOpenModal] = useState(false);
     const [prefilledParentId, setPrefilledParentId] = useState<number | null>(null);
@@ -352,6 +303,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
     const flowViewportRef = useRef<HTMLDivElement>(null);
 
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const selectedNodeIdRef = useRef<string | null>(null);
+    selectedNodeIdRef.current = selectedNodeId;
 
     const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(new Set());
     const collapsedNodeIdsRef = useRef<Set<string>>(new Set());
@@ -359,13 +312,15 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
 
     const nodesRef = useRef<Node[]>([]);
     const edgesRef = useRef<Edge[]>([]);
-    const rafRef = useRef<number | null>(null);
     const fitDebounceRef = useRef<number | null>(null);
     const fitFirstRafRef = useRef<number | null>(null);
     const fitSecondRafRef = useRef<number | null>(null);
-    const pendingHoverRef = useRef<string | null>(null);
     nodesRef.current = nodes;
     edgesRef.current = edges;
+
+    useEffect(() => {
+        highlightStore.setGraph(edges);
+    }, [edges, highlightStore]);
 
     const nodeSize = isMobile
         ? ORG_CHART_NODE_SIZE.mobile
@@ -422,19 +377,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         }, debounceMs);
     }, [fitMinZoom, fitPadding, fitView]);
 
-    const applyHighlightNow = useCallback((hoveredId: string | null) => {
-        pendingHoverRef.current = hoveredId;
-        if (rafRef.current !== null) return;
-
-        rafRef.current = requestAnimationFrame(() => {
-            rafRef.current = null;
-            const { nodes: n, edges: e } = applyHighlight(nodesRef.current, edgesRef.current, pendingHoverRef.current);
-            unstable_batchedUpdates(() => { setNodes(n); setEdges(e); });
-        });
-    }, [setNodes, setEdges]);
-
     useEffect(() => () => {
-        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
         if (fitDebounceRef.current !== null) window.clearTimeout(fitDebounceRef.current);
         if (fitFirstRafRef.current !== null) cancelAnimationFrame(fitFirstRafRef.current);
         if (fitSecondRafRef.current !== null) cancelAnimationFrame(fitSecondRafRef.current);
@@ -636,7 +579,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         const chart = data?.result?.[0];
         if (chart?.id) { setChartId(chart.id); loadNodes(chart.id); }
         else if (data?.meta !== undefined) handleCreateChart();
-    }, [data]); // eslint-disable-line
+    }, [data]);
 
     const handleCreateChart = useCallback(async () => {
         try {
@@ -646,8 +589,10 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             });
             const id = (res as any)?.id ?? (res as any)?.data?.id ?? (res as any)?.result?.id;
             if (id) { setChartId(id); setNodes([]); setEdges([]); }
-        } catch { }
-    }, [ownerType, ownerId]); // eslint-disable-line
+        } catch {
+            message.error("Không thể tạo sơ đồ tổ chức.");
+        }
+    }, [ownerType, ownerId]);
 
     const loadNodes = useCallback(async (id: number) => {
         const res = await callFetchOrgNodes(id);
@@ -662,7 +607,6 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 holderName: n.holderName ?? "",
                 isGoal: n.isGoal ?? false,
                 jobDescriptionId: n.jobDescriptionId ?? null,
-                highlightState: "idle",
                 isSelected: false,
                 onEdit: () => { }, onDelete: () => { }, onJD: () => { },
                 onSelect: () => { }, onMouseEnter: () => { }, onMouseLeave: () => { },
@@ -671,7 +615,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
 
         const rfEdges: Edge[] = nodeList.filter((n) => n.parentId).map((n) => ({
             id: `e-${n.parentId}-${n.id}`, source: String(n.parentId), target: String(n.id),
-            ...EDGE_DEFAULTS, data: { edgeType: "none", dimmed: false },
+            ...EDGE_DEFAULTS,
         }));
 
         const hiddenNodeIds = getHiddenNodeIds(collapsedNodeIdsRef.current, rfEdges);
@@ -701,7 +645,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     allowEdit: canEdit,
                     allowDelete: canDelete,
                     allowCreate: canCreate,
-                    isSelected: selectedNodeId === node.id,
+                    isSelected: selectedNodeIdRef.current === node.id,
                     isMobile,
                     isTablet,
                     isSmallLaptop,
@@ -734,8 +678,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     onSelect: () => {
                         setSelectedNodeId((prev) => prev === node.id ? null : node.id);
                     },
-                    onMouseEnter: () => applyHighlightNow(node.id),
-                    onMouseLeave: () => applyHighlightNow(null),
+                    onMouseEnter: () => highlightStore.setHovered(node.id),
+                    onMouseLeave: () => highlightStore.setHovered(null),
                 } as OrgNodeData,
             };
         });
@@ -746,8 +690,22 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         }));
 
         unstable_batchedUpdates(() => { setNodes(withCbs); setEdges(withEdgesCbs); });
+        setPanelNodes(withCbs.map((node) => ({
+            id: node.id,
+            position: node.position,
+            data: {
+                title: node.data.title,
+                levelCode: node.data.levelCode,
+                holderName: node.data.holderName,
+            },
+        })));
+        setPanelEdges(withEdgesCbs.map((edge) => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+        })));
         scheduleFitView();
-    }, [ownerType, applyHighlightNow, canEdit, canDelete, canCreate, selectedNodeId, layoutNodeW, layoutNodeH, isMobile, isTablet, isSmallLaptop, scheduleFitView]); // eslint-disable-line
+    }, [ownerType, highlightStore, canEdit, canDelete, canCreate, layoutNodeW, layoutNodeH, isMobile, isTablet, isSmallLaptop, scheduleFitView]);
 
     const handleSearchSelect = (nodeId: string) => {
         setSelectedNodeId(nodeId);
@@ -1160,7 +1118,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                             </div>
 
                             <SearchBar
-                                nodes={nodes}
+                                nodes={panelNodes}
                                 onSelect={(id) => handleSearchSelect(id)}
                                 onClear={() => setSelectedNodeId(null)}
                                 isMobile={isMobile}
@@ -1171,7 +1129,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 </div>
 
                 {/* ── Toolbar (right) ── */}
-                <div style={{
+                {!selectedNodeId && <div style={{
                     display: "flex",
                     gap: isMobile ? 4 : isSmallLaptop ? 6 : 8,
                     flexWrap: "nowrap",
@@ -1292,7 +1250,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                             />
                         </Tooltip>
                     )}
-                </div>
+                </div>}
             </div>
 
             {/* ── React Flow Area ── */}
@@ -1343,8 +1301,8 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                 {/* ── MiniPanel ── */}
                 <MiniPanel
                     nodeId={selectedNodeId}
-                    nodes={nodes}
-                    edges={edges}
+                    nodes={panelNodes}
+                    edges={panelEdges}
                     isMobile={isMobile}
                     isTablet={isTablet}
                     isSmallLaptop={isSmallLaptop}
@@ -1440,7 +1398,9 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
 };
 
 const OrgChartFlow = (props: Props) => (
-    <ReactFlowProvider><OrgChartInner {...props} /></ReactFlowProvider>
+    <OrgChartHighlightProvider>
+        <ReactFlowProvider><OrgChartInner {...props} /></ReactFlowProvider>
+    </OrgChartHighlightProvider>
 );
 
 export default OrgChartFlow;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Drawer, Table, Input, Checkbox, Space, Badge, Button } from "antd";
+import { Drawer, Table, Input, Checkbox, Space, Badge, Button, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/config/api";
 
 import { notify } from "@/components/common/notification/notify";
+import { getModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -124,52 +125,71 @@ const DrawerAssignSectionJobTitle = ({
      * TABLE COLUMNS
      * =====================================================
      */
+    const getTooltip = (id: number): string => {
+        if (assignedJobIds.includes(id)) return "Chức danh này đã được gán vào bộ phận";
+        if (blockedJobIds.includes(id)) return "Chức danh đã được gán ở cấp trên (Công ty hoặc Phòng ban)";
+        return "Có thể gán chức danh này";
+    };
+
     const columns: ColumnsType<any> = [
         {
-            title: "",
+            title: "Chọn",
             dataIndex: "id",
-            width: 50,
+            width: 70,
+            align: "center",
             render: (id: number) => {
                 const disabled =
                     assignedJobIds.includes(id) || blockedJobIds.includes(id);
 
                 return (
-                    <Checkbox
-                        checked={selected.includes(id)}
-                        disabled={disabled}
-                        onChange={(e) => {
-                            if (e.target.checked)
-                                setSelected((prev) => [...prev, id]);
-                            else
-                                setSelected((prev) =>
-                                    prev.filter((x) => x !== id)
-                                );
-                        }}
-                    />
+                    <Tooltip title={getTooltip(id)}>
+                        <Checkbox
+                            checked={selected.includes(id)}
+                            disabled={disabled}
+                            onChange={(e) => {
+                                if (e.target.checked)
+                                    setSelected((prev) => [...prev, id]);
+                                else
+                                    setSelected((prev) =>
+                                        prev.filter((x) => x !== id)
+                                    );
+                            }}
+                        />
+                    </Tooltip>
                 );
             },
         },
         {
             title: "Tên chức danh",
             dataIndex: "nameVi",
+            render: (text, record) => (
+                <Space direction="vertical" size={0}>
+                    <span>{text}</span>
+                    {record.nameEn && (
+                        <span style={{ fontSize: "12px", color: "#666" }}>{record.nameEn}</span>
+                    )}
+                </Space>
+            ),
         },
         {
             title: "Cấp bậc",
             align: "center",
+            width: 120,
             render: (_, record) => {
                 const pl = record.positionLevel;
                 const display =
                     pl?.code ||
                     (record.band && record.level
                         ? `${record.band}${record.level}`
-                        : "--");
+                        : "—");
 
-                return <Badge color="blue" text={display} />;
+                return <Tag color="blue" style={{ fontWeight: 500 }}>{display}</Tag>;
             },
         },
         {
             title: "Trạng thái",
             align: "center",
+            width: 180,
             render: (_, record) => {
                 if (assignedJobIds.includes(record.id))
                     return <Badge status="success" text="Đã gán bộ phận" />;
@@ -192,16 +212,30 @@ const DrawerAssignSectionJobTitle = ({
             title="Gán chức danh vào bộ phận"
             open={open}
             placement="right"
-            width="45vw"
+            width={getModalWidth(750)}
             onClose={onClose}
             destroyOnHidden
+            footer={
+                <div style={{ textAlign: "right" }}>
+                    <Button onClick={onClose}>Huỷ</Button>
+                    <Button
+                        type="primary"
+                        style={{ marginLeft: 12 }}
+                        onClick={handleAssign}
+                        disabled={selected.length === 0}
+                    >
+                        Gán ({selected.length})
+                    </Button>
+                </div>
+            }
         >
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 <Input.Search
                     placeholder="Tìm kiếm chức danh…"
                     allowClear
                     enterButton
                     onSearch={setSearch}
+                    style={{ width: "100%" }}
                 />
 
                 <Table
@@ -209,21 +243,9 @@ const DrawerAssignSectionJobTitle = ({
                     dataSource={data}
                     columns={columns}
                     rowKey="id"
-                    pagination={{ pageSize: 10 }}
-                    size="small"
+                    pagination={{ pageSize: 10, showSizeChanger: false }}
+                    size="middle"
                 />
-
-                <div style={{ textAlign: "right" }}>
-                    <Button onClick={onClose}>Huỷ</Button>
-                    <Button
-                        type="primary"
-                        style={{ marginLeft: 8 }}
-                        onClick={handleAssign}
-                        disabled={selected.length === 0}
-                    >
-                        Gán ({selected.length})
-                    </Button>
-                </div>
             </Space>
         </Drawer>
     );

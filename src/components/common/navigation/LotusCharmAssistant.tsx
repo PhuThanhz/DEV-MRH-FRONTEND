@@ -229,7 +229,7 @@ const LotusCharmAssistant = () => {
                     justifyContent: "center",
                     boxShadow: "0 14px 28px rgba(232,99,122,0.24)",
                     cursor: "pointer",
-                    zIndex: 9999,
+                    zIndex: 900,
                 }}
             >
                 <ArrowUpOutlined style={{ fontSize: 19 }} />
@@ -264,7 +264,8 @@ const LotusCharmAssistant = () => {
                 position: "fixed",
                 bottom: -5,
                 right: 15,
-                zIndex: 9999,
+                zIndex: open ? 1000 : 900,
+                pointerEvents: "none",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-end",
@@ -301,7 +302,8 @@ const LotusCharmAssistant = () => {
                         animation: "scaleIn 0.18s ease-out forwards",
                         display: "flex",
                         flexDirection: "column",
-                        overflow: "hidden"
+                        overflow: "hidden",
+                        pointerEvents: "auto"
                     }}
                 >
                     <style>
@@ -721,6 +723,7 @@ const LotusCharmAssistant = () => {
                     justifyContent: "center",
                     cursor: "pointer",
                     userSelect: "none",
+                    pointerEvents: "auto",
                     filter: open
                         ? "brightness(1.06) drop-shadow(0 0 10px rgba(232,99,122,0.35))"
                         : "drop-shadow(0 6px 14px rgba(192,57,43,0.18))",

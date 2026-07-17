@@ -12,7 +12,7 @@ import type { IResNotificationDTO,
     IPermissionContent, IPermissionCategoryRequest, IUpdatePermissionContentReq, ICreatePermissionContentReq, IPermissionMatrix, IAssignPermissionReq,
     IJobDescription, IDepartmentMissionTree, IDepartmentMissionVersion,
     ICreateDepartmentMissionReq, IDepartmentProcedure, IReqUpdateProfileDTO, IOrgChart, IOrgNode, IUserPosition, IEmployeeCareerPath, IEmployeeCareerPathHistory, IReqAssignCareerPath
-    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
+    , IReqPromoteEmployee, ICareerPathTemplate, ICareerPathTemplateRequest, IReqChangePasswordDTO, IDashboardSummary, IEmployee, ICreateEmployeeReq, IUpdateEmployeeReq, IDepartmentCompleteness, IDepartmentCompletenessOverview, IJobTitleByLevel, ICareerPathPreviewResponse, ICareerPathBulkRequest
     , ICareerPathBulkResult, IJobTitleAssignStatus, IAccessDTO, IShareLogDTO, ICreateShareTokenRequest,
     IResShareTokenDTO,
     IResPublicProcedureDTO, IReqCreateNodeTree, IDocumentCategory,
@@ -46,6 +46,7 @@ import type { IResNotificationDTO,
     ITemplateCriteria,
     ITemplateCriteriaLevel,
     IEvaluationRecord,
+    IEvaluationTaskCounts,
     IResScoreDTO,
     IResCommentDTO,
     IResTrainingPlanDTO,
@@ -1804,9 +1805,26 @@ export const callFetchDashboardSummary = () => {
         "/api/v1/dashboard/summary"
     );
 };
-export const callFetchDepartmentCompleteness = () => {
-    return axios.get<IBackendRes<IDepartmentCompleteness[]>>(
-        "/api/v1/dashboard/department-completeness"
+export interface DepartmentCompletenessParams {
+    page?: number;
+    size?: number;
+    search?: string;
+    companyName?: string;
+    status?: string;
+    missing?: string;
+}
+
+export const callFetchDepartmentCompleteness = (params: DepartmentCompletenessParams = {}) => {
+    return axios.get<IBackendRes<IModelPaginate<IDepartmentCompleteness>>>(
+        "/api/v1/dashboard/department-completeness",
+        { params }
+    );
+};
+
+export const callFetchDepartmentCompletenessOverview = () => {
+    return axios.get<IBackendRes<IDepartmentCompletenessOverview>>(
+        "/api/v1/dashboard/department-completeness",
+        { params: { overview: true } }
     );
 };
 export const callFetchUsersUnassignedCareerPath = (departmentId: number) => {
@@ -2408,6 +2426,12 @@ export const callFetchEvaluationRecordById = (id: number) =>
 
 export const callFetchMyEvaluationRecords = () =>
     axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/my-records`);
+
+export const callFetchAllEvaluationRecords = () =>
+    axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/records`);
+
+export const callFetchEvaluationTaskCounts = () =>
+    axios.get<IBackendRes<IEvaluationTaskCounts>>(`/api/v1/evaluation/task-counts`);
 
 export const callFetchManagerRecordsByPeriod = (periodId: number) =>
     axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);

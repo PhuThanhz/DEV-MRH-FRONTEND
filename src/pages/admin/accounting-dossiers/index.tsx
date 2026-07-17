@@ -231,6 +231,11 @@ const AccountingDossierPage = () => {
     const [myTasksTab, setMyTasksTab] = useState<"PENDING_ME" | "CREATED_BY_ME" | "INVOLVED_ME">("PENDING_ME");
 
     useEffect(() => {
+        if (isSuperAdmin) {
+            setViewMode("ALL_DOSSIERS");
+            setMyTasksTab("PENDING_ME");
+            return;
+        }
         if (!isApproverRole) {
             setViewMode("MY_TASKS");
             setMyTasksTab("CREATED_BY_ME");
@@ -238,7 +243,7 @@ const AccountingDossierPage = () => {
             setViewMode("MY_TASKS");
             setMyTasksTab("PENDING_ME");
         }
-    }, [isApproverRole]);
+    }, [isApproverRole, isSuperAdmin]);
 
     const isPendingMeMode = viewMode === "MY_TASKS" && myTasksTab === "PENDING_ME";
 
@@ -756,6 +761,7 @@ const AccountingDossierPage = () => {
                 item.company?.name,
                 item.department?.name,
                 item.section?.name,
+                item.createdBy,
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -861,6 +867,19 @@ const AccountingDossierPage = () => {
             ),
         },
         {
+            title: "Người tạo",
+            dataIndex: "createdBy",
+            width: 170,
+            render: (value: string | null | undefined, record) => (
+                <Space direction="vertical" size={0}>
+                    <span style={{ fontWeight: 600 }}>{value || "-"}</span>
+                    {record.creatorId && (
+                        <span className="text-xs text-gray-500">{record.creatorId}</span>
+                    )}
+                </Space>
+            ),
+        },
+        {
             title: "Trạng thái",
             dataIndex: "status",
             width: 140,
@@ -906,9 +925,10 @@ const AccountingDossierPage = () => {
             width: 170,
             render: (_, record) => {
                 const isCreator = user?.id === record.creatorId;
-                const canEdit = editableStatuses.includes(record.status) && isCreator && canUpdateDossier;
-                const canDelete = editableStatuses.includes(record.status) && isCreator && canDeleteDossier;
-                const canSubmit = editableStatuses.includes(record.status) && isCreator && canSubmitDossier;
+                const canMutateOwnOrAdmin = isCreator || isSuperAdmin;
+                const canEdit = editableStatuses.includes(record.status) && canMutateOwnOrAdmin && (canUpdateDossier || isSuperAdmin);
+                const canDelete = editableStatuses.includes(record.status) && canMutateOwnOrAdmin && (canDeleteDossier || isSuperAdmin);
+                const canSubmit = editableStatuses.includes(record.status) && canMutateOwnOrAdmin && (canSubmitDossier || isSuperAdmin);
                 const canRequestReturn = returnRequestableStatuses.includes(record.status) && isCreator && perms.requestReturn;
 
                 const canApproveQuick = isPendingMeMode && perms.approve && ["SUBMITTED", "IN_REVIEW"].includes(record.status);

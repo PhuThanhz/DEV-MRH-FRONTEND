@@ -1,11 +1,11 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation, useBlocker } from "react-router-dom";
-import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb, Collapse } from "antd";
+import { Button, Spin, Tag, Popconfirm, Input, Alert, Empty, Progress, Breadcrumb, Collapse, Switch, Dropdown, Tooltip } from "antd";
 import {
-    ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
+    CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
-    FileTextOutlined, TrophyOutlined, FileExcelOutlined
+    FileTextOutlined, TrophyOutlined, FileExcelOutlined, MoreOutlined, LoadingOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
@@ -22,6 +22,7 @@ import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -50,7 +51,77 @@ const SCORE_DESCRIPTIONS: Record<number, string> = {
     5: "Xuất sắc"
 };
 
-const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm - ${SCORE_DESCRIPTIONS[v]}`, value: v }));
+const SCORE_VALUES = [1, 2, 3, 4, 5] as const;
+
+const EMPLOYEE_SCORE_WIDTH = 184;
+const FINAL_SCORE_WIDTH = 152;
+const CONTENT_WIDTH = 280;
+const METHOD_WIDTH = 190;
+const LEVEL_WIDTH = 155;
+const WEIGHT_EPSILON = 0.001;
+
+type TemplateStructureIssue = {
+    sectionId?: number;
+    message: string;
+};
+
+const getTemplateStructureIssues = (sections?: any[]): TemplateStructureIssue[] => {
+    if (!sections?.length) {
+        return [{ message: "Mẫu đánh giá chưa có phần đánh giá nào." }];
+    }
+
+    const issues: TemplateStructureIssue[] = [];
+    let totalSectionWeight = 0;
+
+    sections.forEach(section => {
+        const sectionWeight = Number(section.weight);
+        if (!Number.isFinite(sectionWeight) || sectionWeight <= 0 || sectionWeight > 1) {
+            issues.push({ sectionId: section.id, message: `Phần "${section.name}" có trọng số không hợp lệ.` });
+            return;
+        }
+        totalSectionWeight += sectionWeight;
+
+        const criteria = section.criteria ?? [];
+        if (!criteria.length) {
+            issues.push({
+                sectionId: section.id,
+                message: `Phần "${section.name}" có trọng số ${(sectionWeight * 100).toFixed(0)}% nhưng chưa được cấu hình tiêu chí.`,
+            });
+            return;
+        }
+
+        const criteriaWeight = criteria.reduce((sum: number, item: any) => sum + Number(item.weight ?? 0), 0);
+        if (!Number.isFinite(criteriaWeight) || Math.abs(criteriaWeight - sectionWeight) > WEIGHT_EPSILON) {
+            issues.push({
+                sectionId: section.id,
+                message: `Trọng số tiêu chí trong phần "${section.name}" phải cộng đúng ${(sectionWeight * 100).toFixed(0)}%.`,
+            });
+        }
+
+        criteria.forEach((criterion: any) => {
+            const scorableCriteria = criterion.subCriteria?.length ? criterion.subCriteria : [criterion];
+            scorableCriteria.forEach((scorable: any) => {
+                const levels = scorable.levels ?? [];
+                const validLevels = new Set(
+                    levels
+                        .filter((level: any) => level.description?.trim() && SCORE_VALUES.includes(level.level))
+                        .map((level: any) => level.level),
+                );
+                if (levels.length !== 5 || validLevels.size !== 5) {
+                    issues.push({
+                        sectionId: section.id,
+                        message: `Tiêu chí "${scorable.name}" chưa có đầy đủ mô tả cho 5 mức điểm.`,
+                    });
+                }
+            });
+        });
+    });
+
+    if (Math.abs(totalSectionWeight - 1) > WEIGHT_EPSILON) {
+        issues.push({ message: `Tổng trọng số các phần phải bằng 100% (hiện tại ${(totalSectionWeight * 100).toFixed(1)}%).` });
+    }
+    return issues;
+};
 
 const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" | "APPROVER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
@@ -60,6 +131,67 @@ const getComment = (comments: any[], type: string) =>
 
 const formatDateTime = (value?: string | null) =>
     value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "—";
+
+const getStickyStyle = (col: "empScore" | "finalScore", isCompleted: boolean, isHeader = false): React.CSSProperties => {
+    const width = col === "empScore" ? EMPLOYEE_SCORE_WIDTH : FINAL_SCORE_WIDTH;
+    const right = col === "empScore" && isCompleted ? FINAL_SCORE_WIDTH : 0;
+    const isLeftmost = col === "empScore";
+
+    return {
+        position: "sticky",
+        right,
+        width,
+        minWidth: width,
+        maxWidth: width,
+        boxSizing: "border-box",
+        overflow: "hidden",
+        zIndex: isHeader ? 4 : 2,
+        background: isHeader ? "#f8fafc" : "#fff",
+        borderLeft: isLeftmost ? "1px solid #dbe3ef" : undefined,
+        boxShadow: isLeftmost ? "-2px 0 4px -4px rgba(15,23,42,0.18)" : undefined,
+        backgroundClip: "padding-box",
+    };
+};
+
+interface ScorePickerProps {
+    value: number | null;
+    result?: number | null;
+    loading: boolean;
+    onChange: (score: number) => void;
+}
+
+const ScorePicker = React.memo(({ value, result, loading, onChange }: ScorePickerProps) => (
+    <div
+        className={`evaluation-score-picker${value == null ? " is-empty" : " has-value"}${loading ? " is-saving" : ""}`}
+        aria-busy={loading}
+    >
+        <div className="evaluation-score-picker-options" role="group" aria-label="Chọn điểm đánh giá từ 1 đến 5">
+            {SCORE_VALUES.map(score => (
+                <button
+                    key={score}
+                    type="button"
+                    className={`evaluation-score-option${value === score ? " is-selected" : ""}`}
+                    aria-label={`${score} điểm - ${SCORE_DESCRIPTIONS[score]}`}
+                    aria-pressed={value === score}
+                    title={`${score} điểm - ${SCORE_DESCRIPTIONS[score]}`}
+                    disabled={loading}
+                    onClick={() => {
+                        if (value !== score) onChange(score);
+                    }}
+                >
+                    {loading && value === score ? <LoadingOutlined spin /> : score}
+                </button>
+            ))}
+        </div>
+        <div className={`evaluation-score-result${value == null || result == null ? " is-label-only" : ""}`}>
+            {value == null
+                ? "Chưa chấm"
+                : result == null
+                  ? "Điểm thành phần"
+                  : <>Kết quả <strong>{result.toFixed(2)}</strong></>}
+        </div>
+    </div>
+));
 
 interface ICriteriaRowProps {
     c: any;
@@ -83,53 +215,57 @@ const CriteriaRow = React.memo(({
 }: ICriteriaRowProps) => {
     const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
     return (
-        <tr className="eval-row">
+        <tr className="eval-row" id={!hasSub ? `evaluation-criteria-${c.id}` : undefined}>
             <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
             <td style={{ ...tdB, color: "#111827" }}>
-                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
-                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
+                <div style={{ fontWeight: hasSub ? 750 : 650 }}>{c.name}</div>
+                {c.description && <div className="evaluation-criteria-description">{c.description}</div>}
             </td>
-            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-            <td style={{ ...tdB, textAlign: "center" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px" }}>
-                    {(c.weight * 100).toFixed(0)}%
-                </span>
+            <td style={{ ...tdB, color: "#64748b", fontSize: 12 }}>{c.measurementMethod || "—"}</td>
+            {SCORE_VALUES.map(lvl => (
+                <td
+                    key={lvl}
+                    style={tdLvl}
+                >
+                    {getL(lvl) || <span className="evaluation-level-empty">Chưa có mô tả</span>}
+                </td>
+            ))}
+            <td style={{ ...tdB, textAlign: "center", verticalAlign: "middle" }}>
+                <span className="evaluation-weight-badge">{(c.weight * 100).toFixed(0)}%</span>
             </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore", isCompleted), padding: "10px 8px" }}>
                 {hasSub ? (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
+                    <div className="evaluation-score-readout">
+                        <span>Điểm trung bình</span>
+                        <strong>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</strong>
+                        <small>Kết quả {avgEmp != null ? (avgEmp * c.weight).toFixed(2) : "—"}</small>
+                    </div>
                 ) : isEditable ? (
                     <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                            className={empScore == null ? "unfilled-select" : ""}
-                            value={empScore ?? undefined} loading={savingScore === c.id}
-                            onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
+                        <ScorePicker
+                            value={empScore}
+                            result={empScore != null ? empScore * c.weight : null}
+                            loading={savingScore === c.id}
+                            onChange={(score) => handleSaveScore(c.id, score)}
+                        />
                     </Access>
                 ) : (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
+                    <div className="evaluation-score-readout">
+                        <span>Điểm nhân viên</span>
+                        <strong>{empScore ?? "—"}</strong>
+                        <small>Kết quả {empScore != null ? (empScore * c.weight).toFixed(2) : "—"}</small>
+                    </div>
                 )}
             </td>
-            <td style={tdSc}>
-                {hasSub ? (
-                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                ) : (
-                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                )}
-            </td>
-            {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
-                {hasSub ? (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: avgFinal != null ? "#111827" : "#e5e7eb" }}>{avgFinal != null ? avgFinal.toFixed(2) : "—"}</span>
-                ) : (
-                    finalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{finalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                )}
-            </td>}
-            {isCompleted && <td style={tdSc}>
-                {hasSub ? (
-                    avgFinal != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgFinal * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                ) : (
-                    finalScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(finalScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                )}
+            {isCompleted && <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("finalScore", isCompleted) }}>
+                <div className="evaluation-score-readout is-final">
+                    <span>Điểm cuối</span>
+                    <strong>{hasSub ? (avgFinal?.toFixed(2) ?? "—") : (finalScore ?? "—")}</strong>
+                    <small>Kết quả {hasSub
+                        ? (avgFinal != null ? (avgFinal * c.weight).toFixed(2) : "—")
+                        : (finalScore != null ? (finalScore * c.weight).toFixed(2) : "—")}
+                    </small>
+                </div>
             </td>}
         </tr>
     );
@@ -155,51 +291,60 @@ const SubCriteriaRow = React.memo(({
 }: ISubCriteriaRowProps) => {
     const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
     return (
-        <tr className="eval-row">
+        <tr className="eval-row" id={`evaluation-criteria-${sub.id}`}>
             <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-            <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
-                <div style={{ fontWeight: 500 }}>{sub.name}</div>
-                {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
+            <td style={{ ...tdB, color: "#111827" }}>
+                <div style={{ fontWeight: 650 }}>{sub.name}</div>
+                {sub.description && <div className="evaluation-criteria-description">{sub.description}</div>}
             </td>
-            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-            {[1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-            <td style={{ ...tdB, textAlign: "center" }}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none" }}>
+            <td style={{ ...tdB, color: "#64748b", fontSize: 12 }}>{sub.measurementMethod || "—"}</td>
+            {SCORE_VALUES.map(lvl => (
+                <td
+                    key={lvl}
+                    style={tdLvl}
+                >
+                    {getSL(lvl) || <span className="evaluation-level-empty">Chưa có mô tả</span>}
+                </td>
+            ))}
+            <td style={{ ...tdB, textAlign: "center", verticalAlign: "middle", color: "#cbd5e1" }}>—</td>
+            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore", isCompleted), padding: "10px 8px" }}>
                 {isEditable ? (
                     <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                        <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                            className={subEmp == null ? "unfilled-select" : ""}
-                            value={subEmp ?? undefined} loading={savingScore === sub.id}
-                            onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
+                        <ScorePicker
+                            value={subEmp}
+                            loading={savingScore === sub.id}
+                            onChange={(score) => handleSaveScore(sub.id, score)}
+                        />
                     </Access>
                 ) : (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
+                    <div className="evaluation-score-readout">
+                        <span>Điểm thành phần</span>
+                        <strong>{subEmp ?? "—"}</strong>
+                    </div>
                 )}
             </td>
-            <td style={tdSc}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
-            </td>
-            {isCompleted && <td style={{ ...tdSc, borderLeft: "none" }}>
-                {subFinalScore != null ? <span style={{ fontSize: 18, fontWeight: 800, color: "#111827" }}>{subFinalScore}</span> : <span style={{ color: "#e5e7eb" }}>—</span>}
-            </td>}
-            {isCompleted && <td style={tdSc}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
+            {isCompleted && <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("finalScore", isCompleted) }}>
+                <div className="evaluation-score-readout is-final">
+                    <span>Điểm cuối</span>
+                    <strong>{subFinalScore ?? "—"}</strong>
+                </div>
             </td>}
         </tr>
     );
 });
 
-const MyEvaluationDetailPage = () => {
-    const { id } = useParams<{ id: string }>();
+interface MyEvaluationDetailPageProps {
+    recordId?: number;
+    onClose?: () => void;
+}
+
+const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPageProps) => {
+    const { id: routeId } = useParams<{ id: string }>();
+    const id = recordId != null ? String(recordId) : routeId;
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
     const isReadonlyView = searchParams.get("readonly") === "true";
-    const backPath = searchParams.get("from") === "summary"
-        ? "/admin/evaluation/summary"
-        : "/admin/evaluation/my-records";
 
     const [record, setRecord] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -212,6 +357,25 @@ const MyEvaluationDetailPage = () => {
     const [savingScore, setSavingScore] = useState<number | null>(null);
     const [isError, setIsError] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
+
+    const backPath = searchParams.get("from") === "summary"
+        ? "/admin/evaluation/summary"
+        : searchParams.get("from") === "process"
+        ? "/admin/evaluation/process?tab=MY_EVAL"
+        : searchParams.get("from") === "progress"
+        ? `/admin/evaluation/periods/${record?.period?.id || record?.periodId || ""}/progress`
+        : "/admin/evaluation/my-records";
+
+    const handleClose = () => {
+        if (!onClose) {
+            navigate(backPath);
+            return;
+        }
+        if (isDirty && !window.confirm("Bạn có nhận xét chưa lưu. Bạn có chắc muốn đóng bản đánh giá?")) {
+            return;
+        }
+        onClose();
+    };
 
     useBlocker(() => {
         if (isDirty) {
@@ -252,12 +416,19 @@ const MyEvaluationDetailPage = () => {
 
     const handleSaveScore = async (criteriaId: number, score: number) => {
         if (!record?.id) return;
+        const previousScore = localScores[criteriaId];
         setSavingScore(criteriaId);
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
             await callEmployeeSaveScore(record.id, criteriaId, score);
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
+            setLocalScores(prev => {
+                const next = { ...prev };
+                if (previousScore == null) delete next[criteriaId];
+                else next[criteriaId] = previousScore;
+                return next;
+            });
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu điểm");
         } finally { setSavingScore(null); }
     };
 
@@ -269,12 +440,17 @@ const MyEvaluationDetailPage = () => {
             setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi lưu nhận xét");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu nhận xét");
         } finally { setSavingComment(false); }
     };
 
     const handleSubmit = async () => {
         if (!record?.id) return;
+        const structureIssues = getTemplateStructureIssues(record.template?.sections);
+        if (structureIssues.length) {
+            notify.error("Mẫu đánh giá chưa được cấu hình hợp lệ. Vui lòng liên hệ quản trị viên.");
+            return;
+        }
         setSubmitting(true);
         try {
             // Tự động lưu nhận xét tự đánh giá trước khi nộp
@@ -284,7 +460,7 @@ const MyEvaluationDetailPage = () => {
             notify.success("Đã nộp bản đánh giá!");
             fetchRecord();
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi nộp bản đánh giá");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi nộp bản đánh giá");
         } finally { setSubmitting(false); }
     };
 
@@ -296,7 +472,7 @@ const MyEvaluationDetailPage = () => {
             notify.success("Đã xác nhận kết quả!");
             fetchRecord();
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi xác nhận");
+            notify.error(err?.message || err?.response?.data?.message || "Lỗi xác nhận");
         } finally { setConfirming(false); }
     };
 
@@ -312,19 +488,35 @@ const MyEvaluationDetailPage = () => {
         }
     };
 
-    if (loading) return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+    const renderInWorkspaceDrawer = (content: React.ReactNode) => (
+        <>
+            <div style={{ minHeight: "80vh", background: "#f8fafc" }} />
+            <LotusDetailDrawer
+                open
+                onClose={handleClose}
+                destroyOnClose={false}
+                keyboard={false}
+                maskClosable={false}
+                closeAriaLabel="Đóng bản đánh giá"
+            >
+                {content}
+            </LotusDetailDrawer>
+        </>
+    );
+
+    if (loading) return renderInWorkspaceDrawer(
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", background: "#f8fafc" }}>
             <Spin size="large" />
         </div>
     );
-    if (isError) return (
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
+    if (isError) return renderInWorkspaceDrawer(
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", gap: 16, background: "#f8fafc" }}>
             <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
         </div>
     );
-    if (!record) return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+    if (!record) return renderInWorkspaceDrawer(
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", background: "#f8fafc" }}>
             <Empty description="Không tìm thấy bản đánh giá" />
         </div>
     );
@@ -382,7 +574,19 @@ const MyEvaluationDetailPage = () => {
         });
     });
     const scoredCount = allLeafCriteria.filter(c => localScores[c.id] != null).length;
-    const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0
+    const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0;
+    const remainingCount = allLeafCriteria.length - scoredCount;
+    const templateStructureIssues = getTemplateStructureIssues(record.template?.sections);
+    const hasTemplateStructureError = templateStructureIssues.length > 0;
+    const canSubmit = progressPct === 100 && !hasTemplateStructureError;
+    const handleGoToNextUnscored = () => {
+        const nextCriteria = allLeafCriteria.find(criteria => localScores[criteria.id] == null);
+        if (!nextCriteria) return;
+        document.getElementById(`evaluation-criteria-${nextCriteria.id}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+        });
+    };
 
     const thS: React.CSSProperties = {
         padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
@@ -395,7 +599,7 @@ const MyEvaluationDetailPage = () => {
     };
     const thSub: React.CSSProperties = {
         padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
-        background: "#ffffff", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
         textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
@@ -404,10 +608,11 @@ const MyEvaluationDetailPage = () => {
         textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "14px 14px", borderBottom: "1px solid #e2e8f0",
-        borderRight: "1px dashed #dbe3ef", fontSize: 12, color: "#4b5563",
-        verticalAlign: "top", lineHeight: 1.55, minWidth: 120,
-        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
+        padding: "13px 12px", borderBottom: "1px solid #e2e8f0",
+        borderRight: "1px solid #edf1f5", fontSize: 12, color: "#475569",
+        verticalAlign: "top", lineHeight: 1.55, minWidth: LEVEL_WIDTH, width: LEVEL_WIDTH,
+        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal",
+        whiteSpace: "normal"
     };
     const tdSc: React.CSSProperties = {
         padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
@@ -480,18 +685,21 @@ const MyEvaluationDetailPage = () => {
             let empTotal = 0, mgrTotal = 0;
             section.criteria?.forEach((c: any) => {
                 const hasSub = c.subCriteria?.length > 0;
-                const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
-                if (!hasSub) {
-                    if (empScore != null) empTotal += empScore * c.weight;
-                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
-                } else {
-                    c.subCriteria?.forEach((sub: any) => {
+                if (hasSub) {
+                    let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
+                    c.subCriteria.forEach((sub: any) => {
                         const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
                         const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                        if (subEmp != null) empTotal += subEmp * sub.weight;
-                        if (subMgr != null) mgrTotal += subMgr * sub.weight;
+                        if (subEmp != null) { sumEmp += subEmp; cntEmp++; }
+                        if (subMgr != null) { sumMgr += subMgr; cntMgr++; }
                     });
+                    if (cntEmp > 0) empTotal += (sumEmp / c.subCriteria.length) * c.weight;
+                    if (cntMgr > 0) mgrTotal += (sumMgr / c.subCriteria.length) * c.weight;
+                } else {
+                    const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                    if (empScore != null) empTotal += empScore * c.weight;
+                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
                 }
             });
             // Convert to 0-5 scale for the radar chart
@@ -594,112 +802,90 @@ const MyEvaluationDetailPage = () => {
         </div>
     );
 
-    return (
-        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 16px 100px", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f9fafb", minHeight: "100vh" }}>
+    return renderInWorkspaceDrawer(
+        <div className="employee-evaluation-detail" style={{ width: "100%", height: "100%", minHeight: 0, boxSizing: "border-box", overflow: "auto", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f8fafc" }}>
 
-            {/* ─── HEADER ─── */}
-            <div style={{
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: 16,
-                padding: "24px 28px",
-                marginBottom: 16,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
-            }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <button
-                            onClick={() => navigate(backPath)}
-                            style={{
-                                width: 40, height: 40, borderRadius: 10,
-                                border: "1px solid #e5e7eb", background: "#fff",
-                                color: "#111827", display: "flex", alignItems: "center",
-                                justifyContent: "center", cursor: "pointer", fontSize: 16,
-                                flexShrink: 0, transition: "all 0.15s"
+            {/* ─── WORKSPACE HEADER ─── */}
+            <div className="employee-evaluation-workspace-header">
+                <div style={{ minWidth: 0, flex: "1 1 440px" }}>
+                    <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0 }}>
+                        Tự đánh giá
+                    </div>
+                    <h1 style={{ margin: "4px 0 0", color: "#0f172a", fontSize: 21, lineHeight: 1.35, fontWeight: 800, letterSpacing: 0 }}>
+                        {record.template?.name}
+                    </h1>
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 9 }}>
+                        <Tag color={statusCfg.tagColor} style={{ margin: 0, borderRadius: 5, fontWeight: 650 }}>
+                            {statusCfg.text}
+                        </Tag>
+                        <span className="evaluation-meta-pill">
+                            {record.period?.name || `Đợt ${record.periodId}`}
+                        </span>
+                        {employeeDeadline && (
+                            <span style={{ color: "#64748b", fontSize: 12, fontWeight: 600 }}>
+                                Hạn chấm {dayjs(employeeDeadline).format("DD/MM/YYYY")}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 12 }}>
+                    {isEditable && (
+                        <div className="evaluation-header-progress">
+                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18 }}>
+                                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700 }}>Tiến độ</span>
+                                <span style={{ color: "#0f172a", fontSize: 13, fontWeight: 800 }}>{scoredCount}/{allLeafCriteria.length}</span>
+                            </div>
+                            <Progress
+                                percent={progressPct}
+                                showInfo={false}
+                                strokeWidth={5}
+                                strokeColor={progressPct === 100 ? "#16a34a" : "#475569"}
+                                trailColor="#e2e8f0"
+                                style={{ width: 140, margin: 0 }}
+                            />
+                        </div>
+                    )}
+
+                    {record.employeeTotalScore != null && (
+                        <div className="evaluation-score-summary">
+                            <span>NV đánh giá</span>
+                            <strong>{record.employeeTotalScore.toFixed(2)}</strong>
+                        </div>
+                    )}
+
+                    {isCompleted && gradeCfg && record.managerTotalScore != null && (
+                        <div className="evaluation-score-summary">
+                            <span>Kết quả</span>
+                            <strong>{(record.approverTotalScore ?? record.managerTotalScore).toFixed(2)}</strong>
+                        </div>
+                    )}
+
+                    {isCompleted && gradeCfg && (
+                        <div className="evaluation-grade-summary" style={{ color: gradeCfg.color, borderColor: `${gradeCfg.color}35`, background: gradeCfg.bg }}>
+                            <span>{gradeCfg.label}</span>
+                            <strong>{record.finalGrade}</strong>
+                        </div>
+                    )}
+
+                    <Tooltip title="Xuất dữ liệu">
+                        <Dropdown
+                            trigger={["click"]}
+                            menu={{
+                                items: [
+                                    { key: "excel", icon: <FileExcelOutlined />, label: "Xuất Excel", onClick: handleExportExcel },
+                                    { key: "pdf", icon: <FileTextOutlined />, label: "Xuất PDF", onClick: handlePrintPDF },
+                                ],
                             }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#f9fafb"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#d1d5db"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; }}
                         >
-                            <ArrowLeftOutlined />
-                        </button>
-                        <div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>{record.template?.name}</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                                <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 500 }}>Kỳ đánh giá:</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: "#f43f5e", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 6, padding: "2px 10px" }}>
-                                    {record.period?.name || `Đợt ${record.periodId}`}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <Button
-                                icon={<FileExcelOutlined />}
-                                onClick={handleExportExcel}
-                                style={{ borderRadius: 6, color: "#047857", borderColor: "#34d399", background: "#ecfdf5" }}
-                            >
-                                Xuất Excel
-                            </Button>
-                            <Button
-                                icon={<FileTextOutlined />}
-                                onClick={handlePrintPDF}
-                                style={{ borderRadius: 6, color: "#1d4ed8", borderColor: "#60a5fa", background: "#eff6ff" }}
-                            >
-                                Xuất PDF
-                            </Button>
-                        </div>
-                        {/* Nhân viên đánh giá */}
-                        {record.employeeTotalScore != null && (
-                            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>NV đánh giá</div>
-                                <div style={{ fontSize: 20, fontWeight: 900, color: "#475569", marginTop: 2 }}>{record.employeeTotalScore.toFixed(2)}</div>
-                            </div>
-                        )}
-
-                        {/* Điểm Quản lý & Xếp loại */}
-                        {isCompleted && gradeCfg && record.managerTotalScore != null && (
-                            <>
-                                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                                    <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Kết quả đánh giá</div>
-                                    <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{(record.approverTotalScore ?? record.managerTotalScore).toFixed(2)}</div>
-                                </div>
-                                <div style={{ background: gradeCfg.bg, border: `1px solid ${gradeCfg.color}30`, borderRadius: 12, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
-                                        <div style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", opacity: 0.8 }}>Xếp loại</div>
-                                        <div style={{ fontSize: 16, fontWeight: 800, color: gradeCfg.color }}>{gradeCfg.label}</div>
-                                    </div>
-                                    <div style={{ width: 1.5, height: 36, background: `${gradeCfg.color}30`, borderRadius: 2 }}></div>
-                                    <div style={{ fontSize: 36, fontWeight: 900, color: gradeCfg.color, lineHeight: 1 }}>{record.finalGrade}</div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Manager score is hidden here until COMPLETED */}
-                    </div>
+                            <Button aria-label="Xuất dữ liệu" icon={<MoreOutlined />} className="evaluation-header-menu-button" />
+                        </Dropdown>
+                    </Tooltip>
                 </div>
             </div>
 
-            {renderAdminEmployeeInfo()}
-
-            {/* ─── PROGRESS ─── */}
-            {isEditable && (
-                <div style={{ background: "linear-gradient(to right, #fff, #fff8f9)", border: "1px solid #fce7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, display: "flex", alignItems: "center", gap: 20, boxShadow: "0 4px 20px rgba(244,63,94,0.04)" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff1f2", color: "#f43f5e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, border: "1px solid #fecdd3" }}>
-                        <TrophyOutlined />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                                Tiến độ đánh giá
-                                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: "#6b7280" }}>(<span style={{ color: "#f43f5e", fontWeight: 700 }}>{scoredCount}</span> / {allLeafCriteria.length} tiêu chí)</span>
-                            </div>
-                            <span style={{ fontSize: 22, fontWeight: 900, color: progressPct === 100 ? "#f43f5e" : "#111827" }}>{progressPct}%</span>
-                        </div>
-                        <Progress percent={progressPct} showInfo={false} strokeWidth={8} strokeColor={{ '0%': '#f43f5e', '100%': '#be123c' }} trailColor="#f3f4f6" status={progressPct === 100 ? "success" : "active"} style={{ margin: 0 }} />
-                    </div>
-                </div>
-            )}
+            <div className="employee-evaluation-workspace-body">
+                {renderAdminEmployeeInfo()}
 
             {!isReadonlyView && isCompleted && !hasConfirmed && (() => {
                 // T12: Tính số ngày còn lại trước khi auto-acknowledge (7 ngày từ approvedAt)
@@ -862,12 +1048,10 @@ const MyEvaluationDetailPage = () => {
                 <div style={{ flex: "2 1 400px" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12, borderBottom: "1px solid #f3f4f6", paddingBottom: 8 }}><BookOutlined style={{ color: "#f43f5e", marginRight: 8 }} />Hướng dẫn thực hiện</div>
                     <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>1. Cột Nội dung đánh giá:</strong> Phản ánh các nội dung đánh giá chính liên quan đến người lao động.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>2. Cột Phương pháp đo lường:</strong> Thể hiện phương pháp được sử dụng để đo lường nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>3. Tiêu chí đánh giá theo thang điểm:</strong> Định nghĩa cụ thể, phù hợp với từng nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>4. Cột trọng số:</strong> Tổng trọng số của mỗi phần là 100%, trọng số cao thể hiện mức độ quan trọng.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>5. Cột chấm điểm:</strong> Cá nhân, cán bộ ghi số điểm chi tiết cho từng nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>6. Cột kết quả:</strong> Là điểm qui đổi = Điểm chấm × Trọng số.</div>
+                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>1. Nội dung đánh giá:</strong> Phản ánh tiêu chí chính cần được xem xét trong kỳ đánh giá.</div>
+                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>2. Phương pháp đo lường:</strong> Cho biết căn cứ hoặc cách thức dùng để đánh giá tiêu chí.</div>
+                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>3. Mức 1 đến Mức 5:</strong> Đọc mô tả của từng mức trước khi lựa chọn điểm phù hợp.</div>
+                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>4. CBNV đánh giá:</strong> Nhấn số tương ứng để lưu điểm; kết quả quy đổi được hiển thị lớn ngay bên dưới.</div>
                     </div>
                 </div>
                 <div style={{ flex: "1 1 300px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", padding: "16px 20px" }}>
@@ -892,26 +1076,56 @@ const MyEvaluationDetailPage = () => {
             </div>
 
             {/* ─── BẢNG ĐÁNH GIÁ ─── */}
-            <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isCompleted ? 1680 : 1500 }}>
+            {hasTemplateStructureError && (
+                <Alert
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 12, borderRadius: 8 }}
+                    message="Mẫu đánh giá chưa hoàn chỉnh"
+                    description={(
+                        <div>
+                            {templateStructureIssues.slice(0, 3).map((issue, index) => (
+                                <div key={`${issue.sectionId ?? "template"}-${index}`}>{issue.message}</div>
+                            ))}
+                            <div>Không thể nộp đánh giá cho đến khi quản trị viên xử lý cấu hình này.</div>
+                        </div>
+                    )}
+                />
+            )}
+            <div className="employee-evaluation-table-shell" style={{ position: "relative", isolation: "isolate", overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch", marginBottom: 16, borderRadius: 12, border: "1px solid #dfe5ec", background: "#fff", boxShadow: "0 4px 16px rgba(15,23,42,0.05)" }}>
+                <table className="employee-evaluation-table" style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: isCompleted ? 1725 : 1573, tableLayout: "fixed" }}>
+                    <colgroup>
+                        <col style={{ width: 64 }} />
+                        <col style={{ width: CONTENT_WIDTH }} />
+                        <col style={{ width: METHOD_WIDTH }} />
+                        {SCORE_VALUES.map(n => <col key={n} style={{ width: LEVEL_WIDTH }} />)}
+                        <col style={{ width: 80 }} />
+                        <col style={{ width: EMPLOYEE_SCORE_WIDTH }} />
+                        {isCompleted && <col style={{ width: FINAL_SCORE_WIDTH }} />}
+                    </colgroup>
                     <thead>
                         <tr>
                             <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 230 }}>Nội dung đánh giá</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
-                            <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>
-                            <th rowSpan={2} style={thS}>Trọng số</th>
-                            <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>
-                                <span style={{ color: "#111827" }}>CBNV đánh giá</span>
+                            <th rowSpan={2} style={{ ...thS, width: CONTENT_WIDTH, textAlign: "left" }}>Nội dung đánh giá</th>
+                            <th rowSpan={2} style={{ ...thS, width: METHOD_WIDTH, textAlign: "left" }}>Phương pháp đo lường</th>
+                            <th colSpan={5} style={{ ...thG, background: "#f8fafc" }}>Tiêu chí đánh giá theo thang điểm</th>
+                            <th rowSpan={2} style={{ ...thS, width: 80 }}>Trọng số</th>
+                            <th rowSpan={2} style={{ ...thG, color: "#111827", ...getStickyStyle("empScore", isCompleted, true) }}>
+                                <div>CBNV đánh giá<span style={{ color: "#e8637a", marginLeft: 4 }}>*</span></div>
+                                <small className="evaluation-header-helper">Điểm & kết quả</small>
                             </th>
-                            {isCompleted && <th colSpan={2} style={{ ...thG, borderLeft: "none" }}>Kết quả đánh giá</th>}
+                            {isCompleted && <th rowSpan={2} style={{ ...thG, ...getStickyStyle("finalScore", isCompleted, true) }}>
+                                <div>Kết quả cuối</div>
+                                <small className="evaluation-header-helper">Điểm & quy đổi</small>
+                            </th>}
                         </tr>
                         <tr>
-                            {[1, 2, 3, 4, 5].map(n => <th key={n} style={{ ...thSub, width: 130, color: "#e11d48" }}>Mức {n}</th>)}
-                            <th style={{ ...thSub, borderLeft: "none", color: "#374151" }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
-                            <th style={{ ...thSub, color: "#374151" }}>Kết quả</th>
-                            {isCompleted && <th style={{ ...thSub, borderLeft: "none" }}>Điểm</th>}
-                            {isCompleted && <th style={thSub}>Kết quả</th>}
+                            {SCORE_VALUES.map(n => (
+                                <th key={n} style={{ ...thSub, width: LEVEL_WIDTH, color: "#d94c66" }}>
+                                    <div>Mức {n}</div>
+                                    <small className="evaluation-level-name">{SCORE_DESCRIPTIONS[n]}</small>
+                                </th>
+                            ))}
                         </tr>
                     </thead>
                     <tbody>
@@ -921,10 +1135,11 @@ const MyEvaluationDetailPage = () => {
                             const sectionElements = record.template?.sections?.map((section: any) => {
                                 let empTotal = 0, finalTotal = 0;
                                 const rows: React.ReactNode[] = [];
+                                const sectionIssues = templateStructureIssues.filter(issue => issue.sectionId === section.id);
 
                                 rows.push(
                                     <tr key={`sec-${section.id}`}>
-                                        <td colSpan={isCompleted ? 13 : 11} style={{
+                                        <td colSpan={isCompleted ? 11 : 10} style={{
                                             padding: "10px 18px",
                                             background: "#f3f4f6",
                                             borderTop: "1px solid #e5e7eb",
@@ -939,13 +1154,33 @@ const MyEvaluationDetailPage = () => {
                                     </tr>
                                 );
 
+                                if (!section.criteria?.length) {
+                                    rows.push(
+                                        <tr key={`invalid-${section.id}`}>
+                                            <td colSpan={isCompleted ? 11 : 10} style={{ padding: "18px 22px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 13 }}>
+                                                Phần này chưa được cấu hình tiêu chí nên chưa thể chấm điểm hoặc tính kết quả. Vui lòng liên hệ quản trị viên.
+                                            </td>
+                                        </tr>
+                                    );
+                                    return rows;
+                                }
+
+                                if (sectionIssues.length > 0) {
+                                    rows.push(
+                                        <tr key={`warning-${section.id}`}>
+                                            <td colSpan={isCompleted ? 11 : 10} style={{ padding: "12px 18px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 12 }}>
+                                                {sectionIssues[0].message}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
                                 section.criteria?.forEach((c: any, cIdx: number) => {
                                     const hasSub = c.subCriteria?.length > 0;
                                     const empScore = localScores[c.id] ?? getScore(record.scores, c.id, "EMPLOYEE");
                                     const mgrScore = getScore(record.scores, c.id, "MANAGER");
                                     const apprScore = getScore(record.scores, c.id, "APPROVER");
                                     const finalScore = apprScore ?? mgrScore;
-                                    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
 
                                     let avgEmp: number | null = null;
                                     let avgFinal: number | null = null;
@@ -1018,24 +1253,20 @@ const MyEvaluationDetailPage = () => {
                                     }
                                 });
 
-                                // Section subtotal
                                 rows.push(
                                     <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                        <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                        <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
                                             Tổng kết {section.name}
                                         </td>
-                                        <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                        <td style={{ padding: "12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{empTotal.toFixed(2)}</span>
+                                        <td style={{ padding: "12px", textAlign: "center", fontWeight: 750, color: "#475569" }}>{(section.weight * 100).toFixed(0)}%</td>
+                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted), background: "#f9fafb" }}>
+                                            <div className="evaluation-total-cell"><span>CBNV</span><strong>{empTotal.toFixed(2)}</strong></div>
                                         </td>
-                                        {isCompleted && <td style={{ padding: "12px", borderLeft: "none" }} />}
-                                        {isCompleted && <td style={{ padding: "12px", textAlign: "center" }}>
-                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{finalTotal.toFixed(2)}</span>
+                                        {isCompleted && <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted), background: "#f9fafb" }}>
+                                            <div className="evaluation-total-cell is-final"><span>Điểm cuối</span><strong>{finalTotal.toFixed(2)}</strong></div>
                                         </td>}
                                     </tr>
                                 );
-
                                 dynamicEmpTotal += empTotal;
                                 dynamicMgrTotal += finalTotal;
                                 return rows;
@@ -1049,17 +1280,15 @@ const MyEvaluationDetailPage = () => {
                                         <td colSpan={8} style={{ padding: "18px 24px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                                             Tổng điểm đánh giá chung
                                         </td>
-                                        <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#111827" }}>100%</td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none" }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center" }}>
-                                            <span style={{ fontSize: 24, fontWeight: 900, color: "#f43f5e" }}>
-                                                {dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
+                                        <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#475569" }}>{hasTemplateStructureError ? "—" : "100%"}</td>
+                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted) }}>
+                                            <span style={{ fontSize: 22, fontWeight: 900, color: "#e8637a" }}>
+                                                {!hasTemplateStructureError && dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
                                             </span>
                                         </td>
-                                        {isCompleted && <td style={{ padding: "18px 12px", borderLeft: "none" }} />}
-                                        {isCompleted && <td style={{ padding: "18px 12px", textAlign: "center" }}>
-                                            <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
-                                                {dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
+                                        {isCompleted && <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted) }}>
+                                            <span style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>
+                                                {!hasTemplateStructureError && dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
                                             </span>
                                         </td>}
                                     </tr>
@@ -1124,51 +1353,52 @@ const MyEvaluationDetailPage = () => {
                     </div>
                 </div>
             )}
+            </div>
 
             {/* ─── STICKY BOTTOM BAR ─── */}
             {isEditable && (
-                <div style={{
-                    position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-                    background: "rgba(255,255,255,0.92)",
-                    backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-                    borderTop: "1px solid #e5e7eb",
-                    boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
-                    padding: "12px 24px",
-                    display: "flex", justifyContent: "center", alignItems: "center", gap: 20
-                }}>
+                <div className="employee-evaluation-action-bar">
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
                             width: 36, height: 36, borderRadius: 10,
-                            background: progressPct === 100 ? "#f43f5e" : "#f3f4f6",
+                            background: canSubmit ? "#166534" : "#f1f5f9",
                             display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.3s"
                         }}>
-                            {progressPct === 100
+                            {canSubmit
                                 ? <CheckCircleOutlined style={{ color: "#fff", fontSize: 18 }} />
-                                : <FileTextOutlined style={{ color: "#9ca3af", fontSize: 16 }} />}
+                                : <FileTextOutlined style={{ color: "#64748b", fontSize: 16 }} />}
                         </div>
                         <div>
-                            <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Tiến độ</div>
+                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 0 }}>Tiến độ đánh giá</div>
                             <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>
-                                <span style={{ color: "#f43f5e" }}>{scoredCount}</span> / {allLeafCriteria.length} tiêu chí
+                                {scoredCount} / {allLeafCriteria.length} tiêu chí
                             </div>
                         </div>
                     </div>
-                    <div style={{ width: 1, height: 28, background: "#e5e7eb" }} />
+                    <div className="evaluation-action-bar-spacer" />
+                    {remainingCount > 0 && (
+                        <Button onClick={handleGoToNextUnscored} style={{ height: 40, borderRadius: 6, fontWeight: 650 }}>
+                            Đi tới mục chưa chấm ({remainingCount})
+                        </Button>
+                    )}
                     <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SUBMIT} hideChildren>
                         <Popconfirm
                             title="Xác nhận nộp đánh giá?"
-                            description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
-                            onConfirm={progressPct === 100 ? handleSubmit : undefined}
-                            okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
+                            description={hasTemplateStructureError ? "Mẫu đánh giá chưa được cấu hình hợp lệ." : progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
+                            onConfirm={canSubmit ? handleSubmit : undefined}
+                            okText={canSubmit ? "Nộp ngay" : "Đã hiểu"}
                             cancelText="Hủy"
-                            okButtonProps={{ disabled: progressPct < 100 }}
+                            okButtonProps={{ disabled: !canSubmit }}
                         >
-                            <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
+                            <Button
+                                type="primary"
+                                icon={<SendOutlined />}
+                                loading={submitting}
+                                disabled={!canSubmit}
+                                className={canSubmit ? "evaluation-submit-button" : undefined}
                                 style={{
-                                    borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
-                                    background: progressPct === 100 ? "#f43f5e" : undefined,
+                                    borderRadius: 6, fontWeight: 700, height: 42, padding: "0 24px",
                                     border: "none",
-                                    boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
                                 }}>
                                 Nộp bản đánh giá
                             </Button>
@@ -1178,17 +1408,293 @@ const MyEvaluationDetailPage = () => {
             )}
 
             <style>{`
-                .eval-row:hover td { background-color: #fafafa !important; }
-                .unfilled-select .ant-select-selector {
-                    border-color: #fecdd3 !important;
-                    background-color: #fff1f2 !important;
+                .employee-evaluation-workspace-header {
+                    position: sticky;
+                    top: 0;
+                    z-index: 20;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 20px;
+                    padding: 16px 24px;
+                    background: rgba(255, 255, 255, 0.97);
+                    border-bottom: 1px solid #e2e8f0;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                    backdrop-filter: blur(10px);
                 }
-                .unfilled-select:hover .ant-select-selector {
-                    border-color: #f43f5e !important;
+                .employee-evaluation-workspace-body {
+                    width: 100%;
+                    max-width: 1680px;
+                    margin: 0 auto;
+                    padding: 20px 24px 28px;
+                    box-sizing: border-box;
                 }
-                .unfilled-select .ant-select-selection-placeholder {
-                    color: #f43f5e !important;
-                    font-weight: 500;
+                .evaluation-meta-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    min-height: 24px;
+                    padding: 2px 9px;
+                    color: #475569;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 5px;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                .evaluation-header-progress {
+                    padding: 8px 12px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                }
+                .evaluation-score-summary {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    min-height: 50px;
+                    padding: 7px 13px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    text-align: center;
+                }
+                .evaluation-score-summary span {
+                    color: #64748b;
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                }
+                .evaluation-score-summary strong {
+                    margin-top: 1px;
+                    color: #0f172a;
+                    font-size: 18px;
+                    line-height: 1.2;
+                }
+                .evaluation-grade-summary {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    min-height: 50px;
+                    padding: 7px 13px;
+                    border: 1px solid;
+                    border-radius: 6px;
+                }
+                .evaluation-grade-summary span { font-size: 12px; font-weight: 750; }
+                .evaluation-grade-summary strong { font-size: 24px; line-height: 1; }
+                .evaluation-header-menu-button {
+                    width: 40px;
+                    height: 40px;
+                    padding: 0;
+                    border-radius: 6px;
+                    color: #334155;
+                }
+                .employee-evaluation-action-bar {
+                    position: sticky;
+                    bottom: 0;
+                    z-index: 30;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 11px 24px;
+                    background: rgba(255, 255, 255, 0.96);
+                    border-top: 1px solid #e2e8f0;
+                    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.07);
+                    backdrop-filter: blur(12px);
+                }
+                .evaluation-action-bar-spacer { flex: 1; }
+                .evaluation-submit-button {
+                    background: #e8637a !important;
+                    border-color: #e8637a !important;
+                    box-shadow: 0 4px 12px rgba(232, 99, 122, 0.24) !important;
+                }
+                .evaluation-submit-button:hover,
+                .evaluation-submit-button:focus-visible {
+                    background: #d94c66 !important;
+                    border-color: #d94c66 !important;
+                }
+                .evaluation-submit-button:active {
+                    background: #c94760 !important;
+                    border-color: #c94760 !important;
+                    box-shadow: 0 2px 7px rgba(232, 99, 122, 0.2) !important;
+                }
+                .employee-evaluation-table-shell {
+                    scrollbar-color: #cbd5e1 transparent;
+                    scrollbar-width: thin;
+                }
+                .employee-evaluation-table-shell::-webkit-scrollbar { height: 9px; }
+                .employee-evaluation-table-shell::-webkit-scrollbar-track { background: #f8fafc; }
+                .employee-evaluation-table-shell::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border: 2px solid #f8fafc;
+                    border-radius: 8px;
+                }
+                .employee-evaluation-table th,
+                .employee-evaluation-table td { box-sizing: border-box; }
+                .evaluation-header-helper {
+                    display: block;
+                    margin-top: 4px;
+                    color: #94a3b8;
+                    font-size: 10px;
+                    font-weight: 650;
+                }
+                .evaluation-level-name {
+                    display: block;
+                    margin-top: 2px;
+                    color: #94a3b8;
+                    font-size: 10px;
+                    font-weight: 650;
+                }
+                .evaluation-criteria-description {
+                    margin-top: 4px;
+                    color: #64748b;
+                    font-size: 11px;
+                    font-style: italic;
+                    font-weight: 400;
+                }
+                .evaluation-weight-badge {
+                    flex: 0 0 auto;
+                    padding: 2px 7px;
+                    color: #475569;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 750;
+                }
+                .evaluation-level-empty {
+                    color: #cbd5e1;
+                    font-style: italic;
+                }
+                .evaluation-score-picker {
+                    width: 160px;
+                    max-width: 100%;
+                    min-width: 0;
+                    margin-left: auto;
+                    padding: 4px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    overflow: hidden;
+                    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+                }
+                .evaluation-score-picker.is-empty {
+                    background: #fff8fa;
+                    border-color: #f1b5c0;
+                }
+                .evaluation-score-picker.has-value {
+                    background: #ffffff;
+                    border-color: #ead4d9;
+                }
+                .evaluation-score-picker-options {
+                    display: grid;
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
+                    gap: 3px;
+                }
+                .evaluation-score-option {
+                    width: 100%;
+                    min-width: 0;
+                    height: 30px;
+                    padding: 0;
+                    color: #475569;
+                    background: transparent;
+                    border: 0;
+                    border-radius: 4px;
+                    font: inherit;
+                    font-size: 13px;
+                    font-weight: 750;
+                    line-height: 30px;
+                    cursor: pointer;
+                    transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+                }
+                .evaluation-score-option:hover:not(:disabled):not(.is-selected) {
+                    color: #c94760;
+                    background: #fff0f3;
+                }
+                .evaluation-score-option:active:not(:disabled) { transform: scale(0.96); }
+                .evaluation-score-option:focus-visible {
+                    outline: 2px solid #e8637a;
+                    outline-offset: 1px;
+                }
+                .evaluation-score-option.is-selected {
+                    color: #ffffff;
+                    background: #e8637a;
+                    box-shadow: 0 2px 5px rgba(232, 99, 122, 0.24);
+                }
+                .evaluation-score-option:disabled { cursor: wait; }
+                .evaluation-score-picker.is-saving .evaluation-score-picker-options { opacity: 0.62; }
+                .evaluation-score-result {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                    min-height: 34px;
+                    margin: 6px -4px -4px;
+                    padding: 5px 10px 6px;
+                    color: #8491a5;
+                    background: #fff7f9;
+                    border-top: 1px solid #f5d4da;
+                    font-size: 10px;
+                    font-weight: 750;
+                    line-height: 1;
+                    text-align: left;
+                    white-space: nowrap;
+                }
+                .evaluation-score-result strong {
+                    color: #d94c66;
+                    font-size: 21px;
+                    font-weight: 900;
+                    line-height: 1;
+                    font-variant-numeric: tabular-nums;
+                }
+                .evaluation-score-result.is-label-only { justify-content: center; }
+                .evaluation-score-picker:focus-within {
+                    border-color: #e8637a;
+                    box-shadow: 0 0 0 2px rgba(232, 99, 122, 0.12);
+                }
+                .evaluation-score-readout {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 2px;
+                    min-height: 58px;
+                }
+                .evaluation-score-readout > span,
+                .evaluation-score-readout > small {
+                    color: #94a3b8;
+                    font-size: 10px;
+                    font-weight: 650;
+                }
+                .evaluation-score-readout > strong {
+                    color: #e8637a;
+                    font-size: 20px;
+                    line-height: 1.15;
+                }
+                .evaluation-score-readout.is-final > strong { color: #0f172a; }
+                .evaluation-total-cell {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 7px;
+                }
+                .evaluation-total-cell span { color: #94a3b8; font-size: 10px; font-weight: 700; }
+                .evaluation-total-cell strong { color: #e8637a; font-size: 16px; }
+                .evaluation-total-cell.is-final strong { color: #0f172a; }
+                @media (max-width: 768px) {
+                    .employee-evaluation-workspace-header {
+                        align-items: flex-start;
+                        padding: 14px 14px;
+                    }
+                    .employee-evaluation-workspace-body { padding: 14px 10px 24px; }
+                    .evaluation-header-progress { display: none; }
+                    .employee-evaluation-action-bar {
+                        flex-wrap: wrap;
+                        padding: 10px 12px;
+                    }
+                    .evaluation-action-bar-spacer { display: none; }
+                    .employee-evaluation-action-bar > button,
+                    .employee-evaluation-action-bar .ant-popconfirm-open + button { flex: 1; }
+                    .employee-evaluation-table-shell { border-radius: 8px !important; }
                 }
             `}</style>
         </div>

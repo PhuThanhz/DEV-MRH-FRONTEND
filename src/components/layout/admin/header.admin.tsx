@@ -53,16 +53,18 @@ const HeaderAdmin: React.FC<IProps> = ({
             ? name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
             : "AD";
 
-    const handleLogout = async () => {
-        try {
-            await callLogout();
-        } finally {
+    const handleLogout = () => {
+        const logoutRequest = callLogout();
+        navigate(PATHS.HOME, { replace: true, flushSync: true });
+
+        window.setTimeout(() => {
             localStorage.removeItem("access_token");
             sessionStorage.clear();
             dispatch(setLogoutAction());
-            navigate(PATHS.HOME, { replace: true });
             message.success("Đăng xuất thành công");
-        }
+        }, 0);
+
+        void logoutRequest.catch(() => undefined);
     };
 
     const roleName = user?.role?.name || "Admin";

@@ -5,7 +5,6 @@ import {
     Button,
     Popconfirm,
     Space,
-    Tooltip,
     Empty,
     Tag,
     Typography,
@@ -35,6 +34,7 @@ import type { IDepartmentJobTitle } from "@/types/backend";
 import DrawerAssignJobTitle from "./drawer.assign-job-title";
 import DrawerDepartmentSalaryGrade from "./department-salary-grade/drawer.department-salary-grade";
 import DrawerJobTitlePerformanceContent from "@/pages/admin/job-title-performance-content/drawer.job-title-performance-content";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const { Text } = Typography;
 
@@ -255,24 +255,19 @@ const DepartmentJobTitleTab = ({
                             cancelText="Đóng"
                             onConfirm={() => handleDeactivate(record.id)}
                         >
-                            <Button
-                                type="text"
-                                danger
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Hủy gán chức danh"
                                 icon={<DeleteOutlined />}
-                                size="small"
-                                style={{ borderRadius: 6 }}
                             />
                         </Popconfirm>
                     ) : (
-                        <Tooltip title="Khôi phục chức danh">
-                            <Button
-                                type="text"
-                                icon={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-                                size="small"
-                                style={{ borderRadius: 6 }}
-                                onClick={() => handleRestore(record.id)}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="success"
+                            tooltip="Khôi phục chức danh"
+                            icon={<CheckCircleOutlined />}
+                            onClick={() => handleRestore(record.id)}
+                        />
                     )}
                 </Access>
             ),
@@ -280,7 +275,11 @@ const DepartmentJobTitleTab = ({
     ];
 
     return (
-        <PageContainer title="">
+        <PageContainer
+            title={departmentName ? `Chức danh phòng ban: ${departmentName}` : "Chức danh phòng ban"}
+            fullHeight
+            contentClassName="px-4 sm:px-8 py-4 flex-1 min-h-0 overflow-auto"
+        >
             <div className="dept-job-title-table">
                 <style>{`
                     .dept-job-title-table .ant-table-sticky-holder {

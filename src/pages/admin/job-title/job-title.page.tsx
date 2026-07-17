@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Space, Tag, Button } from "antd";              // ← thêm Button, bỏ Badge
+import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -20,6 +21,8 @@ import ModalJobTitle from "./modal.job-title";
 import ViewDetailJobTitle from "./view.job-title";
 import Access from "@/components/share/access";
 
+const escapeFilterValue = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
 const JobTitlePage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IJobTitle | null>(null);
@@ -36,54 +39,52 @@ const JobTitlePage = () => {
         `page=${PAGINATION_CONFIG.DEFAULT_PAGE}&size=${PAGINATION_CONFIG.DEFAULT_PAGE_SIZE}&sort=createdAt,desc`
     );
 
-    const { data, isFetching, refetch } = useJobTitlesQuery(query);
+    const { data, isFetching } = useJobTitlesQuery(query);
 
     const meta = data?.meta ?? { page: 1, pageSize: 10, total: 0 };
     const list = data?.result ?? [];
 
-    // ===================== BUILD FILTERS =====================
-    const buildFilters = (
-        search: string,
-        active: boolean | null,
-        companyId: number | null,
+    const buildQuery = useCallback((
+        page = PAGINATION_CONFIG.DEFAULT_PAGE,
+        size = PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+        sortBy = PAGINATION_CONFIG.DEFAULT_SORT,
     ) => {
-        const parts: string[] = [];
-        if (search)
-            parts.push(`(nameVi~'${search}' or nameEn~'${search}')`);
-        if (active !== null)
-            parts.push(`active=${active}`);
-        if (companyId)
-            parts.push(`positionLevel.company.id:${companyId}`);
-        return parts;
-    };
-
-    // ===================== AUTO BUILD QUERY =====================
-    useEffect(() => {
         const q: any = {
-            page: PAGINATION_CONFIG.DEFAULT_PAGE,
-            size: PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
-            sort: "createdAt,desc",
+            page,
+            size,
+            sort: sortBy,
         };
-        const filters = buildFilters(searchValue, activeFilter, companyIdFilter);
+
+        const filters: string[] = [];
+        const search = escapeFilterValue(searchValue);
+        if (search)
+            filters.push(`(nameVi~'${search}' or nameEn~'${search}')`);
+        if (activeFilter !== null)
+            filters.push(`active=${activeFilter}`);
+        if (companyIdFilter)
+            filters.push(`positionLevel.company.id:${companyIdFilter}`);
+
         if (filters.length > 0) q.filter = filters.join(" and ");
-        setQuery(queryString.stringify(q, { encode: false }));
+
+        return queryString.stringify(q, { encode: false });
     }, [searchValue, activeFilter, companyIdFilter]);
 
-    // ===================== BUILD QUERY FOR TABLE =====================
-    const buildQuery = (params: any, sort: any) => {
-        const q: any = {
-            page: params.current,
-            size: params.pageSize,
-        };
-        const filters = buildFilters(searchValue, activeFilter, companyIdFilter);
-        if (filters.length > 0) q.filter = filters.join(" and ");
+    useEffect(() => {
+        setQuery(buildQuery());
+    }, [buildQuery]);
 
-        let sortBy = "sort=createdAt,desc";
-        if (sort?.nameVi)
-            sortBy = sort.nameVi === "ascend" ? "sort=nameVi,asc" : "sort=nameVi,desc";
+    const handleTableChange = useCallback((pagination: TablePaginationConfig, _filters: any, sorter: any) => {
+        const activeSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+        const sortBy = activeSorter?.field === "nameVi"
+            ? activeSorter.order === "ascend" ? "nameVi,asc" : "nameVi,desc"
+            : PAGINATION_CONFIG.DEFAULT_SORT;
 
-        return `${queryString.stringify(q, { encode: false })}&${sortBy}`;
-    };
+        setQuery(buildQuery(
+            pagination.current || PAGINATION_CONFIG.DEFAULT_PAGE,
+            pagination.pageSize || PAGINATION_CONFIG.DEFAULT_PAGE_SIZE,
+            sortBy,
+        ));
+    }, [buildQuery]);
 
     // ===================== RESET =====================
     const handleReset = () => {
@@ -91,11 +92,10 @@ const JobTitlePage = () => {
         setActiveFilter(null);
         setCompanyIdFilter(null);
         setResetSignal((s) => s + 1);
-        refetch();
     };
 
     // ===================== COLUMNS =====================
-    const columns: ProColumns<IJobTitle>[] = [
+    const columns: ProColumns<IJobTitle>[] = useMemo(() => [
         {
             title: "STT",
             width: 60,
@@ -175,7 +175,29 @@ const JobTitlePage = () => {
                 </Space>
             ),
         },
-    ];
+    ], [meta.page, meta.pageSize]);
+
+    const filterFields = useMemo(() => [
+        {
+            key: "active",
+            label: "Trạng thái",
+            options: [
+                { label: "Đang hoạt động", value: true, color: "green" },
+                { label: "Ngừng hoạt động", value: false, color: "red" },
+            ],
+        },
+        {
+            key: "companyId",
+            label: "Công ty",
+            asyncOptions: async () => {
+                const res = await callFetchCompany("page=1&size=100&sort=name,asc");
+                return (res.data?.result ?? []).map((c: ICompany) => ({
+                    label: c.name,
+                    value: c.id,
+                }));
+            },
+        },
+    ], []);
 
     return (
         <PageContainer
@@ -198,27 +220,7 @@ const JobTitlePage = () => {
                     />
                     <AdvancedFilterSelect
                         resetSignal={resetSignal}
-                        fields={[
-                            {
-                                key: "active",
-                                label: "Trạng thái",
-                                options: [
-                                    { label: "Đang hoạt động", value: true, color: "green" },
-                                    { label: "Ngừng hoạt động", value: false, color: "red" },
-                                ],
-                            },
-                            {
-                                key: "companyId",
-                                label: "Công ty",
-                                asyncOptions: async () => {
-                                    const res = await callFetchCompany("page=1&size=100&sort=name,asc");
-                                    return (res.data?.result ?? []).map((c: ICompany) => ({
-                                        label: c.name,
-                                        value: c.id,
-                                    }));
-                                },
-                            },
-                        ]}
+                        fields={filterFields}
                         onChange={(val) => {
                             setActiveFilter(val.active !== undefined ? val.active : null);
                             setCompanyIdFilter(val.companyId !== undefined ? val.companyId : null);
@@ -234,15 +236,7 @@ const JobTitlePage = () => {
                 columns={columns}
                 dataSource={list}
                 scroll={{ x: "max-content" }}           // ← bắt buộc để fixed: "right" hoạt động
-                request={async (params, sort) => {
-                    const q = buildQuery(params, sort);
-                    setQuery(q);
-                    return {
-                        data: list,
-                        success: true,
-                        total: meta.total,
-                    };
-                }}
+                onChange={handleTableChange}
                 pagination={{
                     current: meta.page,
                     pageSize: meta.pageSize,

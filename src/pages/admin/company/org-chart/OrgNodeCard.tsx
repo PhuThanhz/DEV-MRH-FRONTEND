@@ -1,8 +1,9 @@
 import { Tooltip, Popconfirm, Dropdown, type MenuProps } from "antd";
 import { DeleteOutlined, EditOutlined, FileTextOutlined, UserOutlined, PlusOutlined, ApartmentOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Handle, Position } from "reactflow";
-import { memo, useState, useRef } from "react";
+import { memo, useMemo, useState, useRef } from "react";
 import { ORG_CHART_NODE_SIZE } from "./orgChartConstants";
+import { useNodeHighlightState } from "./useOrgChartHighlight";
 
 export interface OrgNodeData {
     title: string;
@@ -24,7 +25,6 @@ export interface OrgNodeData {
     onSelect?: () => void;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
-    highlightState?: "idle" | "active" | "ancestor" | "descendant" | "dimmed";
     isSelected?: boolean;
     childCount?: number;
     isCollapsed?: boolean;
@@ -70,7 +70,7 @@ const getBandStyle = (code: string): { bg: string; border: string; color: string
     return map[prefix] ?? { bg: "#f8fafc", border: "1px solid #cbd5e1", color: "#475569" };
 };
 
-const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
+const OrgNodeCard = ({ id, data }: { id: string; data: OrgNodeData }) => {
     const [cardHover, setCardHover] = useState(false);
     const [jdHover, setJdHover] = useState(false);
     const [editHover, setEditHover] = useState(false);
@@ -113,6 +113,13 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
     // Font sizes (increased for maximum legibility, title slightly adjusted to fit)
     const titleSize = isMobile ? 12.5 : isTablet ? 13.5 : isSmallLaptop ? 14 : 15;
     const holderSize = isMobile ? 9.5 : isTablet ? 10.2 : isSmallLaptop ? 10.5 : 11;
+    const holderNameSize = !data.holderName
+        ? holderSize
+        : data.holderName.length > 25
+            ? Math.max(holderSize - 2, 8.5)
+            : data.holderName.length > 20
+                ? Math.max(holderSize - 1.2, 9)
+                : holderSize;
     const levelSize = isMobile ? 8.5 : isTablet ? 9.5 : 10;
     const jdBtnSize = isMobile ? 9.5 : isTablet ? 10 : 11;
     const actionBtnW = isMobile ? 22 : 25;
@@ -125,7 +132,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
 
     const isSimple = isCompactMode;
 
-    const hs = data.highlightState ?? "idle";
+    const hs = useNodeHighlightState(id);
     const accent = ACCENT_COLORS[hs];
 
     const showEdit = data.allowEdit !== false;
@@ -153,9 +160,39 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
         cardBorderColor = "#3b82f6";
     } else if (hs === "descendant") {
         cardBorderColor = "#f59e0b";
-    } else if (hs === "dimmed") {
-        cardBorderColor = "#f1f5f9";
     }
+
+    const actionBarStyle = useMemo<React.CSSProperties>(() => ({
+        position: "absolute",
+        top: isMobile ? -10 : -13,
+        right: isMobile ? -2 : -4,
+        display: "flex",
+        gap: 5,
+        zIndex: 10,
+        opacity: cardHover ? 1 : 0,
+        transform: cardHover ? "translateY(0) scale(1)" : "translateY(4px) scale(0.95)",
+        transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+        pointerEvents: cardHover ? "auto" : "none",
+    }), [cardHover, isMobile]);
+
+    const cardStyle = useMemo<React.CSSProperties>(() => ({
+        width: NODE_W,
+        minHeight: CARD_H,
+        background: cardBg,
+        borderRadius: 12,
+        border: `1.5px solid ${cardBorderColor}`,
+        boxShadow: cardShadow,
+        position: "relative",
+        overflow: "hidden",
+        cursor: data.onSelect ? "pointer" : "default",
+        display: "flex",
+        flexDirection: "column",
+        opacity: 1,
+        filter: "none",
+        transform: hs === "active" ? "scale(1.02)" : "scale(1)",
+        transition: TRANS,
+        willChange: "transform, opacity, filter",
+    }), [CARD_H, NODE_W, cardBg, cardBorderColor, cardShadow, data.onSelect, hs]);
 
     const handleMouseEnter = () => {
         if (leaveTimer.current) clearTimeout(leaveTimer.current);
@@ -228,18 +265,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                     <div
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
-                        style={{
-                            position: "absolute",
-                            top: isMobile ? -10 : -13,
-                            right: isMobile ? -2 : -4,
-                            display: "flex",
-                            gap: 5,
-                            zIndex: 10,
-                            opacity: cardHover ? 1 : 0,
-                            transform: cardHover ? "translateY(0) scale(1)" : "translateY(4px) scale(0.95)",
-                            transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
-                            pointerEvents: cardHover ? "auto" : "none",
-                        }}
+                        style={actionBarStyle}
                     >
                         {showCreate && (
                             isDepartment ? (
@@ -317,24 +343,7 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                 {/* ── Symmetrical Premium Card Body ── */}
                 <div
                     onClick={handleCardClick}
-                    style={{
-                        width: NODE_W,
-                        minHeight: CARD_H,
-                        background: cardBg,
-                        borderRadius: 12,
-                        // Clean solid uniform border for all cards
-                        border: `1.5px solid ${cardBorderColor}`,
-                        boxShadow: cardShadow,
-                        position: "relative",
-                        overflow: "hidden",
-                        cursor: data.onSelect ? "pointer" : "default",
-                        display: "flex", flexDirection: "column",
-                        opacity: hs === "dimmed" ? 0.4 : 1,
-                        filter: hs === "dimmed" ? "grayscale(100%)" : "none",
-                        transform: hs === "active" ? "scale(1.02)" : "scale(1)",
-                        transition: TRANS,
-                        willChange: "transform, opacity, filter",
-                    }}
+                    style={cardStyle}
                 >
                     {isSimple ? (
                         /* ── Symmetrical Compact Mode (Unused) ── */
@@ -532,16 +541,17 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                             {!isCompactMode && (
                                                 <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
                                                     {hasHolder ? (
+                                                        <Tooltip title={data.holderName} placement="bottom">
                                                         <div style={{
                                                             minHeight: isMobile ? 22 : 28,
-                                                            display: "inline-flex",
+                                                            display: "flex",
                                                             alignItems: "center",
                                                             gap: isMobile ? 4 : 5,
                                                             background: "#ffffff",
                                                             border: "1px solid #cbd5e1",
-                                                            borderRadius: 20,
-                                                            padding: isMobile ? "2px 6px" : "3px 10px",
-                                                            maxWidth: "100%",
+                                                            borderRadius: 8,
+                                                            padding: isMobile ? "3px 6px" : "4px 8px",
+                                                            width: "100%",
                                                         }}>
                                                             <div style={{
                                                                 width: holderIconW, height: holderIconH,
@@ -557,18 +567,21 @@ const OrgNodeCard = ({ data }: { data: OrgNodeData }) => {
                                                             </div>
                                                             <span style={{
                                                                 fontFamily: "'Be Vietnam Pro',sans-serif",
-                                                                fontSize: holderSize,
+                                                                fontSize: holderNameSize,
                                                                 fontWeight: 700,
                                                                 color: "#1e293b",
                                                                 lineHeight: 1.3,
                                                                 textAlign: "left",
-                                                                whiteSpace: "nowrap",
+                                                                minWidth: 0,
+                                                                flex: 1,
                                                                 overflow: "hidden",
+                                                                whiteSpace: "nowrap",
                                                                 textOverflow: "ellipsis",
                                                             }}>
                                                                 {data.holderName ?? ""}
                                                             </span>
                                                         </div>
+                                                        </Tooltip>
                                                     ) : (
                                                         <div style={{
                                                             height: isMobile ? 22 : 28,

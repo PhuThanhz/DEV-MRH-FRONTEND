@@ -12,6 +12,8 @@ import type {
 import {
     callFetchEvaluationRecordById,
     callFetchMyEvaluationRecords,
+    callFetchAllEvaluationRecords,
+    callFetchEvaluationTaskCounts,
     callFetchManagerRecords,
     callFetchPendingManagerRecords,
     callFetchApprovalRecords,
@@ -28,6 +30,7 @@ import {
     callRejectRecord,
     callBatchApproveRecords,
     callExtendEvaluationRecordDeadline,
+    callReassignEvaluators,
     callFetchCompletedSummary,
     callEmployeeConfirmRecord,
     callFetchRecordHistory,
@@ -63,53 +66,86 @@ export const useEvaluationRecordQuery = (id: number) => {
     });
 };
 
-export const useMyEvaluationRecordsQuery = () => {
+export const useMyEvaluationRecordsQuery = (enabled = true) => {
     return useQuery({
         queryKey: ["my-evaluation-records"],
         queryFn: async () => {
             const res = await callFetchMyEvaluationRecords();
             return res?.data || [];
         },
+        enabled,
     });
 };
 
-export const useManagerRecordsQuery = () => {
+export const useAllEvaluationRecordsQuery = (enabled = true) => {
+    return useQuery({
+        queryKey: ["all-evaluation-records"],
+        queryFn: async () => {
+            const res = await callFetchAllEvaluationRecords();
+            return res?.data || [];
+        },
+        enabled,
+        staleTime: 30 * 1000,
+    });
+};
+
+export const useEvaluationTaskCountsQuery = (enabled = true) => {
+    return useQuery({
+        queryKey: ["evaluation-task-counts"],
+        queryFn: async () => {
+            const res = await callFetchEvaluationTaskCounts();
+            return res?.data;
+        },
+        enabled,
+        staleTime: 30 * 1000,
+    });
+};
+
+export const useManagerRecordsQuery = (enabled = true) => {
     return useQuery({
         queryKey: ["manager-evaluation-records"],
         queryFn: async () => {
             const res = await callFetchManagerRecords();
             return res?.data || [];
         },
+        enabled,
+        staleTime: 30 * 1000,
     });
 };
 
-export const usePendingManagerRecordsQuery = () => {
+export const usePendingManagerRecordsQuery = (enabled = true) => {
     return useQuery({
         queryKey: ["pending-manager-evaluation-records"],
         queryFn: async () => {
             const res = await callFetchPendingManagerRecords();
             return res?.data || [];
         },
+        enabled,
+        staleTime: 30 * 1000,
     });
 };
 
-export const useApprovalRecordsQuery = () => {
+export const useApprovalRecordsQuery = (enabled = true) => {
     return useQuery({
         queryKey: ["approval-evaluation-records"],
         queryFn: async () => {
             const res = await callFetchApprovalRecords();
             return res?.data || [];
         },
+        enabled,
+        staleTime: 30 * 1000,
     });
 };
 
-export const usePendingApprovalRecordsQuery = () => {
+export const usePendingApprovalRecordsQuery = (enabled = true) => {
     return useQuery({
         queryKey: ["pending-approval-evaluation-records"],
         queryFn: async () => {
             const res = await callFetchPendingApprovalRecords();
             return res?.data || [];
         },
+        enabled,
+        staleTime: 30 * 1000,
     });
 };
 
@@ -161,6 +197,8 @@ export const useEmployeeSubmitMutation = () => {
             notify.success("Nộp bản tự đánh giá thành công!");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };
@@ -184,10 +222,12 @@ export const useManagerSubmitMutation = () => {
     return useMutation({
         mutationFn: (recordId: number) => callManagerSubmitRecord(recordId),
         onSuccess: (_, recordId) => {
-            notify.success("Đã gửi bản đánh giá lên bước duyệt cấp trên!");
+            notify.success("Đã gửi bản đánh giá lên bước chấm & duyệt cuối!");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["manager-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };
@@ -224,11 +264,13 @@ export const useApproveRecordMutation = () => {
         mutationFn: (variables: { recordId: number; overrideReason?: string }) =>
             callApproveRecord(variables.recordId, variables.overrideReason),
         onSuccess: (_, variables) => {
-            notify.success("Duyệt cấp trên và hoàn tất bản đánh giá thành công!");
+            notify.success("Chấm & duyệt cuối và hoàn tất bản đánh giá thành công!");
             qc.invalidateQueries({ queryKey: ["evaluation-record", variables.recordId] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["evaluation-completed-summary"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };
@@ -242,6 +284,8 @@ export const useRejectRecordMutation = () => {
             notify.success("Đã trả lại bản đánh giá thành công!");
             qc.invalidateQueries({ queryKey: ["evaluation-record", variables.recordId] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };
@@ -254,6 +298,8 @@ export const useBatchApproveRecordsMutation = () => {
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["evaluation-completed-summary"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };
@@ -269,8 +315,41 @@ export const useExtendRecordDeadlineMutation = () => {
             cascade?: boolean;
         }) => callExtendEvaluationRecordDeadline(data),
         onSuccess: () => {
-            notify.success("Gia hạn deadline thành công!");
+            notify.success("Đã gia hạn hạn xử lý");
             qc.invalidateQueries({ queryKey: ["evaluation-record"] });
+            qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-record-history"] });
+        },
+        onError: (error: any) => {
+            const message = Array.isArray(error?.message) ? error.message.join(". ") : error?.message;
+            notify.error(message || "Không thể gia hạn hạn xử lý");
+        },
+    });
+};
+
+export const useReassignEvaluatorsMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (data: {
+            recordIds: number[];
+            evaluatorRole: "DIRECT_MANAGER" | "INDIRECT_MANAGER";
+            newEvaluatorUserId: string;
+            reason?: string;
+        }) => callReassignEvaluators(data),
+        onSuccess: () => {
+            notify.success("Đã điều chuyển người xử lý");
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-record-history"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
+        },
+        onError: (error: any) => {
+            const message = Array.isArray(error?.message) ? error.message.join(". ") : error?.message;
+            notify.error(message || "Không thể điều chuyển người xử lý");
         },
     });
 };
@@ -283,6 +362,8 @@ export const useEmployeeConfirmRecordMutation = () => {
             notify.success("Đã xác nhận kết quả đánh giá!");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
         },
     });
 };

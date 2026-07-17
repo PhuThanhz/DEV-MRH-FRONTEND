@@ -1604,6 +1604,21 @@ export interface IDepartmentCompleteness {
     jobTitleMap: boolean;
     score: number;
 }
+
+export interface IDepartmentCompletenessOverview {
+    total: number;
+    full: number;
+    partial: number;
+    empty: number;
+    missingOrgChart: number;
+    missingObjectives: number;
+    missingDepartmentProcedure: number;
+    missingPermissions: number;
+    missingCareerPath: number;
+    missingSalaryGrade: number;
+    missingJobTitleMap: number;
+    topMissing: IDepartmentCompleteness[];
+}
 /* ===================== EMPLOYEE ===================== */
 
 export interface IEmployee {
@@ -2011,6 +2026,12 @@ export interface IEvaluationRecord {
     effectiveManagerDeadline?: string;
     effectiveApprovalDeadline?: string;
     period?: IEvaluationPeriod;
+}
+
+export interface IEvaluationTaskCounts {
+    myPending: number;
+    pendingManager: number;
+    pendingApproval: number;
 }
 
 export interface IEvaluationDelegation {

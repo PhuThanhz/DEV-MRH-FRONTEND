@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import type { ReactNode } from "react";
 import { Result } from "antd";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import NotFound from 'components/share/not.found';
 import ProtectedRoute from 'components/share/protected-route.ts';
@@ -105,6 +105,11 @@ const AccessAny = ({ permissions, children }: { permissions: PermissionDef[]; ch
   );
 };
 
+const PeriodProgressRedirect = () => {
+  const { periodId } = useParams<{ periodId: string }>();
+  return <Navigate to={`/admin/evaluation/periods?progressPeriodId=${periodId}`} replace />;
+};
+
 export default function App() {
   const dispatch = useAppDispatch();
 
@@ -118,7 +123,7 @@ export default function App() {
     dispatch(fetchAccount());
   }, []);
 
-  const router = createBrowserRouter([
+  const router = useMemo(() => createBrowserRouter([
     {
       path: PATHS.HOME,
       element: (
@@ -540,7 +545,7 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS}>
-                <PeriodProgressDashboard />
+                <PeriodProgressRedirect />
               </Access>
             </ProtectedRoute>
           ),
@@ -659,7 +664,7 @@ export default function App() {
     { path: PATHS.CONFIRM_RESET_PASSWORD, element: <ConfirmResetPassword />, errorElement: <RouteErrorFallback /> },
     { path: "/public/view/:token", element: <PublicProcedureView />, errorElement: <RouteErrorFallback /> },
     { path: "*", element: <NotFound /> },
-  ]);
+  ]), []);
 
   return (
     <Suspense fallback={<Loading />}>

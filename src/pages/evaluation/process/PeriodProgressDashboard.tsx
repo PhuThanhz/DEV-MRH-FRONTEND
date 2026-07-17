@@ -2,18 +2,12 @@ import React, { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-    Card,
-    Col,
-    Row,
     Table,
-    Typography,
     Button,
     Progress,
-    Tag,
     Alert,
     Empty,
     Spin,
-    Space
 } from "antd";
 import {
     ArrowLeftOutlined,
@@ -23,44 +17,42 @@ import {
     UserOutlined,
     FileTextOutlined,
     TeamOutlined,
-    BellOutlined,
-    CalendarOutlined,
-    SwapOutlined,
-    ExportOutlined,
     BarChartOutlined,
-    AuditOutlined,
-    SafetyCertificateOutlined
 } from "@ant-design/icons";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { usePeriodProgressQuery } from "@/hooks/useEvaluations";
 import { callFetchEvaluationGradeDistribution, callFetchEvaluationPeriodById } from "@/config/api";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
 
-const PeriodProgressDashboard: React.FC = () => {
-    const { periodId } = useParams<{ periodId: string }>();
+
+interface PeriodProgressDashboardProps {
+    periodIdOverride?: number;
+    onClose?: () => void;
+}
+
+const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ periodIdOverride, onClose }) => {
+    const { periodId: routePeriodId } = useParams<{ periodId: string }>();
     const navigate = useNavigate();
+    const periodId = periodIdOverride ?? Number(routePeriodId);
 
-    // Fetch Period info
     const { data: period, isLoading: isPeriodLoading } = useQuery({
         queryKey: ["evaluation-period", periodId],
         queryFn: async () => {
             if (!periodId) return null;
-            const res = await callFetchEvaluationPeriodById(Number(periodId));
+            const res = await callFetchEvaluationPeriodById(periodId);
             return res?.data || null;
         },
         enabled: !!periodId
     });
 
-    // Fetch progress data
-    const { data: progressData, isLoading: isProgressLoading, error } = usePeriodProgressQuery(Number(periodId));
+    const { data: progressData, isLoading: isProgressLoading, error } = usePeriodProgressQuery(periodId);
 
     const { data: gradeDistribution = [], isLoading: isGradeLoading } = useQuery({
         queryKey: ["evaluation-grade-distribution", periodId],
         queryFn: async () => {
             if (!periodId) return [];
-            const res = await callFetchEvaluationGradeDistribution(Number(periodId));
+            const res = await callFetchEvaluationGradeDistribution(periodId);
             return res?.data || [];
         },
         enabled: !!periodId,
@@ -89,17 +81,19 @@ const PeriodProgressDashboard: React.FC = () => {
     const managerReviewEligible = Math.max(0, activeRecordCount - (kpi?.draftingCount ?? 0));
     const approvalEligible = (kpi?.completedCount ?? 0) + (kpi?.pendingApprovalCount ?? 0);
     const overallCompletion = activeRecordCount > 0 ? Math.round(((kpi?.completedCount ?? 0) / activeRecordCount) * 100) : 0;
+
     const statusRows = kpi ? [
-        { label: "Nhân viên đang tự đánh giá", value: kpi.draftingCount, color: "#2563eb" },
-        { label: "Chờ quản lý chấm", value: kpi.pendingManagerCount, color: "#7c3aed" },
-        { label: "Chờ duyệt cấp trên", value: kpi.pendingApprovalCount, color: "#0891b2" },
-        { label: "Đã hoàn thành", value: kpi.completedCount, color: "#16a34a" },
-        { label: "Đã hủy", value: kpi.cancelledCount, color: "#94a3b8" },
+        { label: "Nhân viên đang tự đánh giá", value: kpi.draftingCount, color: "#1F6C9F", bg: "#E1F3FE" },
+        { label: "Chờ quản lý chấm", value: kpi.pendingManagerCount, color: "#6B46C1", bg: "#EDE9FE" },
+        { label: "Chờ chấm & duyệt cuối", value: kpi.pendingApprovalCount, color: "#1F6C9F", bg: "#E1F3FE" },
+        { label: "Đã hoàn thành", value: kpi.completedCount, color: "#346538", bg: "#EDF3EC" },
+        { label: "Đã hủy", value: kpi.cancelledCount, color: "#6B7280", bg: "#F3F4F6" },
     ].filter(item => item.value > 0) : [];
+
     const phaseRows = kpi ? [
-        { label: "Nhân viên tự đánh giá", caption: "Hoàn thành phần tự đánh giá", done: selfReviewCompleted, total: activeRecordCount, color: "#2563eb" },
-        { label: "Quản lý chấm điểm", caption: "Hoàn thành phần chấm điểm", done: managerReviewCompleted, total: managerReviewEligible, color: "#7c3aed" },
-        { label: "Duyệt cấp trên", caption: "Hoàn thành bước duyệt cấp trên", done: kpi.completedCount, total: approvalEligible, color: "#16a34a" },
+        { label: "Nhân viên tự đánh giá", caption: "Hoàn thành phần tự đánh giá", done: selfReviewCompleted, total: activeRecordCount },
+        { label: "Quản lý chấm điểm", caption: "Hoàn thành phần quản lý chấm điểm", done: managerReviewCompleted, total: managerReviewEligible },
+        { label: "Chấm & duyệt cuối", caption: "Hoàn thành bước chấm và duyệt cuối", done: kpi.completedCount, total: approvalEligible },
     ] : [];
 
     const departmentWatchList = useMemo(() => {
@@ -153,7 +147,7 @@ const PeriodProgressDashboard: React.FC = () => {
                     type="error"
                     showIcon
                     action={
-                        <Button type="primary" onClick={() => window.location.reload()}>
+                        <Button onClick={() => window.location.reload()}>
                             Tải lại trang
                         </Button>
                     }
@@ -165,87 +159,91 @@ const PeriodProgressDashboard: React.FC = () => {
     // Columns for department progress table
     const deptColumns = [
         {
-            title: "Tên phòng ban",
+            title: "Phòng ban",
             dataIndex: "departmentName",
             key: "departmentName",
-            render: (text: string) => <Text style={{ fontWeight: 600 }}>{text}</Text>
+            render: (text: string) => <span style={{ fontWeight: 600, color: "#111111" }}>{text}</span>
         },
         {
             title: "Tổng số",
             dataIndex: "totalRecords",
             key: "totalRecords",
             align: "center" as const,
-            render: (val: number) => <Tag color="blue" style={{ fontSize: 13, minWidth: 40, textAlign: 'center' }}>{val}</Tag>
+            render: (val: number) => <span style={{ fontWeight: 600 }}>{val}</span>
         },
         {
-            title: "NV Đang Đánh Giá",
+            title: "Đang đánh giá",
             dataIndex: "draftingCount",
             key: "draftingCount",
             align: "center" as const
         },
         {
-            title: "QL Chấm Điểm",
+            title: "Chờ QL chấm",
             dataIndex: "pendingManagerCount",
             key: "pendingManagerCount",
             align: "center" as const
         },
         {
-            title: "Duyệt cấp trên",
+            title: "Chờ duyệt cuối",
             dataIndex: "pendingApprovalCount",
             key: "pendingApprovalCount",
             align: "center" as const
         },
         {
-            title: "Hoàn Thành",
+            title: "Hoàn thành",
             dataIndex: "completedCount",
             key: "completedCount",
             align: "center" as const,
-            render: (val: number) => <span style={{ color: "#52c41a", fontWeight: "bold" }}>{val}</span>
+            render: (val: number) => <span style={{ color: "#346538", fontWeight: 600 }}>{val}</span>
         },
         {
-            title: "Đã Hủy",
+            title: "Đã hủy",
             dataIndex: "cancelledCount",
             key: "cancelledCount",
             align: "center" as const,
-            render: (val: number) => val > 0 ? <span style={{ color: "#8c8c8c" }}>{val}</span> : "0"
+            render: (val: number) => <span style={{ color: "#787774" }}>{val}</span>
         },
         {
-            title: "Trễ Hạn",
+            title: "Trễ hạn",
             dataIndex: "overdueCount",
             key: "overdueCount",
             align: "center" as const,
-            render: (val: number) => val > 0 ? <Tag color="red" style={{ fontWeight: "bold" }}>{val}</Tag> : "0"
+            render: (val: number) => val > 0
+                ? <span className="pd-badge pd-badge--red">{val}</span>
+                : <span style={{ color: "#787774" }}>0</span>
         }
     ];
 
-    // Columns for overdue records table
     const overdueColumns = [
         {
             title: "Nhân viên",
             key: "employee",
             render: (_: any, record: any) => (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <Text style={{ fontWeight: 600 }}>{record.employeeName}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{record.employeeEmail}</Text>
+                <div>
+                    <div style={{ fontWeight: 600, color: "#111111" }}>{record.employeeName}</div>
+                    <div style={{ fontSize: 12, color: "#787774", marginTop: 2 }}>{record.employeeEmail}</div>
                 </div>
             )
         },
         {
-            title: "Bước đang kẹt",
+            title: "Bước đang xử lý",
             dataIndex: "statusLabel",
             key: "statusLabel",
             render: (text: string, record: any) => {
-                let color = "orange";
-                if (record.status === "EMPLOYEE_DRAFTING") color = "blue";
-                if (record.status === "PENDING_APPROVAL") color = "purple";
-                return <Tag color={color}>{text}</Tag>;
+                const isApproval = record.status === "PENDING_APPROVAL";
+                const isDrafting = record.status === "EMPLOYEE_DRAFTING";
+                return (
+                    <span className={`pd-badge ${isDrafting ? "pd-badge--blue" : isApproval ? "pd-badge--purple" : "pd-badge--amber"}`}>
+                        {text}
+                    </span>
+                );
             }
         },
         {
             title: "Hạn chót",
             dataIndex: "deadline",
             key: "deadline",
-            render: (val: string) => dayjs(val).format("DD/MM/YYYY HH:mm")
+            render: (val: string) => <span style={{ color: "#2F3437" }}>{dayjs(val).format("DD/MM/YYYY HH:mm")}</span>
         },
         {
             title: "Số ngày trễ",
@@ -253,7 +251,7 @@ const PeriodProgressDashboard: React.FC = () => {
             key: "overdueDays",
             align: "center" as const,
             render: (val: number) => (
-                <span style={{ color: "#cf1322", fontWeight: "bold" }}>
+                <span style={{ color: "#9F2F2D", fontWeight: 600 }}>
                     {val} ngày
                 </span>
             )
@@ -263,13 +261,12 @@ const PeriodProgressDashboard: React.FC = () => {
             key: "action",
             align: "center" as const,
             render: (_: any, record: any) => (
-                <Button
-                    type="primary"
-                    size="small"
+                <button
+                    className="pd-btn-action"
                     onClick={() => navigate(getRecordDetailPath(record.recordId, record.status))}
                 >
-                    Xử lý nhanh
-                </Button>
+                    Xử lý
+                </button>
             )
         }
     ];
@@ -277,300 +274,726 @@ const PeriodProgressDashboard: React.FC = () => {
     return (
         <PageContainer
             title={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Button
-                        type="text"
-                        icon={<ArrowLeftOutlined />}
-                        onClick={() => navigate("/admin/evaluation/periods")}
-                        aria-label="Quay lại danh sách kỳ đánh giá"
-                    />
-                    <span>Tiến độ kỳ đánh giá</span>
-                </div>
+                onClose
+                    ? <span>Tiến độ kỳ đánh giá</span>
+                    : (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <Button
+                                type="text"
+                                icon={<ArrowLeftOutlined />}
+                                onClick={() => navigate("/admin/evaluation/periods")}
+                                aria-label="Quay lại danh sách kỳ đánh giá"
+                            />
+                            <span>Tiến độ kỳ đánh giá</span>
+                        </div>
+                    )
             }
         >
             <Spin spinning={isLoading}>
-            <div className="period-progress-page">
+            <div className="pd-page">
                 <style>{`
-                    .period-progress-page { max-width: 1440px; margin: 0 auto; padding: 4px 16px 32px; }
-                    .progress-hero { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; padding: 24px 28px; margin-bottom: 18px; border: 1px solid #e9edf5; border-radius: 16px; background: linear-gradient(112deg, #fff7fb 0%, #ffffff 48%, #f7f9ff 100%); }
-                    .progress-eyebrow { color: #a21caf; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-                    .progress-hero h1 { margin: 5px 0 8px; color: #172033; font-size: clamp(22px, 2vw, 30px); line-height: 1.2; letter-spacing: -.02em; }
-                    .progress-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: #64748b; font-size: 13px; }
-                    .progress-overall { min-width: 180px; text-align: right; }
-                    .progress-overall__value { color: #172033; font-size: 32px; font-weight: 760; letter-spacing: -.04em; line-height: 1; }
-                    .metric-card, .progress-panel, .admin-control-card { border: 1px solid #e8edf5 !important; border-radius: 14px !important; box-shadow: 0 6px 20px rgba(15, 23, 42, .035) !important; }
-                    .metric-card .ant-card-body { padding: 18px 20px !important; }
-                    .metric-card__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: #64748b; font-size: 13px; font-weight: 650; }
-                    .metric-card__value { color: #172033; font-size: 30px; line-height: 1; font-weight: 760; letter-spacing: -.03em; }
-                    .metric-card__note { margin-top: 8px; color: #94a3b8; font-size: 12px; }
-                    .progress-panel .ant-card-head { min-height: 56px; padding: 0 20px; border-bottom-color: #edf1f6; }
-                    .progress-panel .ant-card-head-title { padding: 16px 0; color: #273449; font-weight: 720; }
-                    .status-row { display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid #f0f3f7; }
-                    .status-row:last-child { border-bottom: 0; }
-                    .status-row__label { display: flex; align-items: center; gap: 9px; color: #475569; font-size: 13px; }
-                    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-                    .phase-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 4px 0 18px; }
-                    .phase-index { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 750; }
-                    .phase-row__head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
-                    .phase-row__title { color: #273449; font-size: 14px; font-weight: 720; }
-                    .phase-row__caption { margin-top: 2px; color: #94a3b8; font-size: 12px; }
-                    .overdue-strip { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 16px; margin-bottom: 18px; border: 1px solid #fecaca; border-radius: 12px; background: #fff8f7; color: #991b1b; }
-                    .admin-control-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
-                    .admin-control-card .ant-card-body { padding: 16px !important; }
-                    .admin-control-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-                    .admin-control-card__icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; }
-                    .admin-control-card__title { color: #172033; font-size: 14px; font-weight: 760; }
-                    .admin-control-card__desc { color: #64748b; font-size: 12px; line-height: 1.5; min-height: 36px; }
-                    .admin-control-card__footer { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-                    .grade-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 42px; gap: 10px; align-items: center; padding: 8px 0; }
-                    .grade-badge { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
-                    .watch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
-                    .watch-row:last-child { border-bottom: 0; }
-                    .audit-list { display: grid; gap: 10px; }
-                    .audit-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #edf2f7; }
-                    .audit-item__label { color: #334155; font-size: 13px; font-weight: 650; }
-                    .audit-item__note { color: #94a3b8; font-size: 12px; margin-top: 2px; }
-                    @media (max-width: 1100px) { .admin-control-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-                    @media (max-width: 767px) { .progress-hero { padding: 20px; align-items: flex-start; flex-direction: column; } .progress-overall { text-align: left; } }
-                    @media (max-width: 640px) { .admin-control-grid { grid-template-columns: 1fr; } }
+                    .pd-page {
+                        font-family: 'Geist Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        color: #2F3437;
+                        padding: 0 0 40px;
+                    }
+
+                    /* ── Hero ── */
+                    .pd-hero {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 24px;
+                        padding: 28px 32px;
+                        background: #FFFFFF;
+                        border: 1px solid #EAEAEA;
+                        border-radius: 12px;
+                        margin-bottom: 24px;
+                    }
+                    .pd-hero__name {
+                        margin: 0 0 10px;
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #111111;
+                        letter-spacing: -0.02em;
+                        line-height: 1.2;
+                    }
+                    .pd-hero__meta {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 6px 20px;
+                        color: #787774;
+                        font-size: 13px;
+                    }
+                    .pd-hero__meta-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+                    .pd-hero__right {
+                        display: flex;
+                        align-items: center;
+                        gap: 20px;
+                        flex-shrink: 0;
+                    }
+                    .pd-hero__pct {
+                        text-align: right;
+                    }
+                    .pd-hero__pct-value {
+                        font-size: 34px;
+                        font-weight: 700;
+                        color: #111111;
+                        letter-spacing: -0.03em;
+                        line-height: 1;
+                    }
+                    .pd-hero__pct-label {
+                        font-size: 11px;
+                        color: #787774;
+                        margin-top: 4px;
+                        font-weight: 500;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                    }
+
+                    /* ── Status badge ── */
+                    .pd-status {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 7px;
+                        padding: 5px 12px;
+                        border-radius: 9999px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 0.04em;
+                        text-transform: uppercase;
+                        border: 1px solid;
+                    }
+                    .pd-status--active  { background: #EDF3EC; color: #346538; border-color: rgba(52,101,56,0.2); }
+                    .pd-status--closed  { background: #F3F4F6; color: #6B7280; border-color: #E5E7EB; }
+                    .pd-status--draft   { background: #FBF3DB; color: #956400; border-color: rgba(149,100,0,0.2); }
+                    .pd-status__dot {
+                        width: 6px; height: 6px;
+                        border-radius: 50%;
+                        background: currentColor;
+                    }
+
+                    /* ── Overdue strip ── */
+                    .pd-overdue-strip {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 13px 18px;
+                        margin-bottom: 20px;
+                        background: #FDEBEC;
+                        border: 1px solid rgba(159,47,45,0.2);
+                        border-radius: 8px;
+                        color: #9F2F2D;
+                        font-size: 13px;
+                        font-weight: 500;
+                    }
+                    .pd-overdue-strip strong { font-weight: 700; }
+
+                    /* ── KPI grid ── */
+                    .pd-kpi-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, minmax(0, 1fr));
+                        gap: 16px;
+                        margin-bottom: 24px;
+                    }
+                    .pd-kpi-card {
+                        background: #FFFFFF;
+                        border: 1px solid #EAEAEA;
+                        border-radius: 10px;
+                        padding: 20px 24px;
+                        transition: box-shadow 200ms ease, transform 200ms ease;
+                    }
+                    .pd-kpi-card:hover {
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                        transform: translateY(-1px);
+                    }
+                    .pd-kpi-card__head {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 14px;
+                    }
+                    .pd-kpi-card__label {
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        color: #787774;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                    }
+                    .pd-kpi-card__icon {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 6px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                    }
+                    .pd-kpi-card__value {
+                        font-size: 30px;
+                        font-weight: 700;
+                        color: #111111;
+                        letter-spacing: -0.03em;
+                        line-height: 1;
+                        margin-bottom: 6px;
+                    }
+                    .pd-kpi-card__value--red { color: #9F2F2D; }
+                    .pd-kpi-card__note {
+                        font-size: 12px;
+                        color: #787774;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    /* ── Panels ── */
+                    .pd-panels {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                        margin-bottom: 16px;
+                    }
+                    .pd-panels--three {
+                        grid-template-columns: 5fr 7fr;
+                    }
+                    .pd-panel {
+                        background: #FFFFFF;
+                        border: 1px solid #EAEAEA;
+                        border-radius: 10px;
+                        overflow: hidden;
+                    }
+                    .pd-panel__head {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 16px 20px;
+                        border-bottom: 1px solid #EAEAEA;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #111111;
+                    }
+                    .pd-panel__head-icon {
+                        color: #787774;
+                        font-size: 14px;
+                    }
+                    .pd-panel__sub {
+                        font-size: 12px;
+                        color: #787774;
+                        font-weight: 400;
+                        padding: 12px 20px 0;
+                    }
+                    .pd-panel__body {
+                        padding: 8px 20px 20px;
+                    }
+
+                    /* ── Status rows ── */
+                    .pd-status-row {
+                        display: grid;
+                        grid-template-columns: minmax(0,1fr) 44px;
+                        gap: 10px;
+                        align-items: center;
+                        padding: 13px 0;
+                        border-bottom: 1px solid rgba(0,0,0,0.05);
+                    }
+                    .pd-status-row:last-child { border-bottom: 0; padding-bottom: 4px; }
+                    .pd-status-row__label {
+                        display: flex;
+                        align-items: center;
+                        gap: 9px;
+                        font-size: 13.5px;
+                        color: #2F3437;
+                        font-weight: 500;
+                    }
+                    .pd-dot {
+                        width: 8px; height: 8px;
+                        border-radius: 50%;
+                        flex-shrink: 0;
+                    }
+                    .pd-status-row__count {
+                        font-weight: 700;
+                        color: #111111;
+                        text-align: right;
+                        font-size: 14px;
+                    }
+
+                    /* ── Phase rows ── */
+                    .pd-phase-row {
+                        display: grid;
+                        grid-template-columns: 28px minmax(0,1fr);
+                        gap: 12px;
+                        padding: 14px 0;
+                        border-bottom: 1px solid rgba(0,0,0,0.05);
+                    }
+                    .pd-phase-row:last-child { border-bottom: 0; }
+                    .pd-phase-idx {
+                        width: 28px; height: 28px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        font-weight: 700;
+                        background: #F7F6F3;
+                        color: #787774;
+                        border: 1px solid #EAEAEA;
+                        flex-shrink: 0;
+                        margin-top: 2px;
+                    }
+                    .pd-phase-head {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: baseline;
+                        gap: 8px;
+                        margin-bottom: 8px;
+                    }
+                    .pd-phase-title {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #111111;
+                    }
+                    .pd-phase-caption {
+                        font-size: 12px;
+                        color: #787774;
+                        margin-top: 1px;
+                    }
+                    .pd-phase-count {
+                        font-weight: 700;
+                        color: #111111;
+                        font-size: 13px;
+                        white-space: nowrap;
+                    }
+
+                    /* ── Grade rows ── */
+                    .pd-grade-row {
+                        display: grid;
+                        grid-template-columns: 34px minmax(0,1fr) 38px;
+                        gap: 12px;
+                        align-items: center;
+                        padding: 10px 0;
+                        border-bottom: 1px solid rgba(0,0,0,0.05);
+                    }
+                    .pd-grade-row:last-child { border-bottom: 0; }
+                    .pd-grade-badge {
+                        width: 28px; height: 28px;
+                        border-radius: 6px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 13px;
+                        font-weight: 700;
+                        border: 1px solid;
+                    }
+                    .pd-grade-count {
+                        font-weight: 600;
+                        color: #111111;
+                        text-align: right;
+                        font-size: 13px;
+                    }
+
+                    /* ── Watch rows ── */
+                    .pd-watch-row {
+                        display: grid;
+                        grid-template-columns: minmax(0,1fr) auto;
+                        gap: 12px;
+                        align-items: center;
+                        padding: 12px 0;
+                        border-bottom: 1px solid rgba(0,0,0,0.05);
+                    }
+                    .pd-watch-row:last-child { border-bottom: 0; }
+                    .pd-watch-name {
+                        font-size: 13.5px;
+                        font-weight: 600;
+                        color: #111111;
+                    }
+                    .pd-watch-sub {
+                        font-size: 12px;
+                        color: #787774;
+                        margin-top: 3px;
+                    }
+                    .pd-watch-right {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: flex-end;
+                        gap: 3px;
+                    }
+                    .pd-watch-pct {
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #111111;
+                    }
+                    .pd-watch-overdue {
+                        font-size: 11px;
+                        color: #9F2F2D;
+                        font-weight: 600;
+                    }
+
+                    /* ── Generic badges ── */
+                    .pd-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        padding: 2px 8px;
+                        border-radius: 9999px;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                        letter-spacing: 0.03em;
+                    }
+                    .pd-badge--red    { background: #FDEBEC; color: #9F2F2D; }
+                    .pd-badge--blue   { background: #E1F3FE; color: #1F6C9F; }
+                    .pd-badge--purple { background: #EDE9FE; color: #6B46C1; }
+                    .pd-badge--amber  { background: #FBF3DB; color: #956400; }
+                    .pd-badge--green  { background: #EDF3EC; color: #346538; }
+                    .pd-badge--gray   { background: #F3F4F6; color: #6B7280; }
+
+                    /* ── Action button ── */
+                    .pd-btn-action {
+                        padding: 5px 12px;
+                        background: #111111;
+                        color: #FFFFFF;
+                        border: none;
+                        border-radius: 5px;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: background 150ms ease, transform 100ms ease;
+                        font-family: inherit;
+                    }
+                    .pd-btn-action:hover  { background: #333333; }
+                    .pd-btn-action:active { transform: scale(0.97); }
+
+                    /* ── Table overrides ── */
+                    .pd-page .ant-table-wrapper {
+                        border-radius: 0;
+                    }
+                    .pd-page .ant-table-thead > tr > th {
+                        background: #FAFAFA !important;
+                        color: #787774 !important;
+                        font-size: 11.5px !important;
+                        font-weight: 700 !important;
+                        text-transform: uppercase !important;
+                        letter-spacing: 0.05em !important;
+                        border-bottom: 1px solid #EAEAEA !important;
+                        padding: 12px 16px !important;
+                    }
+                    .pd-page .ant-table-tbody > tr > td {
+                        padding: 13px 16px !important;
+                        font-size: 13px !important;
+                        border-bottom: 1px solid rgba(0,0,0,0.04) !important;
+                        color: #2F3437 !important;
+                    }
+                    .pd-page .ant-table-tbody > tr:hover > td {
+                        background: #FBFBFA !important;
+                    }
+
+                    /* ── Full-width table panel ── */
+                    .pd-table-panel {
+                        background: #FFFFFF;
+                        border: 1px solid #EAEAEA;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        margin-bottom: 16px;
+                    }
+                    .pd-table-panel__head {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 16px 20px;
+                        border-bottom: 1px solid #EAEAEA;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #111111;
+                    }
+
+                    /* ── Calibration alert override ── */
+                    .pd-page .ant-alert {
+                        border-radius: 8px !important;
+                        margin-top: 14px;
+                    }
+
+                    /* ── Progress bar ── */
+                    .pd-page .ant-progress-bg {
+                        background: #111111 !important;
+                    }
+                    .pd-page .ant-progress-inner {
+                        background: #EAEAEA !important;
+                    }
+
+                    /* ── Responsive ── */
+                    @media (max-width: 1023px) {
+                        .pd-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+                        .pd-panels { grid-template-columns: 1fr; }
+                        .pd-panels--three { grid-template-columns: 1fr; }
+                    }
+                    @media (max-width: 639px) {
+                        .pd-kpi-grid { grid-template-columns: 1fr; }
+                        .pd-hero { flex-direction: column; align-items: flex-start; padding: 20px; }
+                        .pd-hero__right { width: 100%; justify-content: space-between; }
+                    }
                 `}</style>
 
+                {/* ── Hero ── */}
                 {period && (
-                    <section className="progress-hero">
+                    <header className="pd-hero">
                         <div>
-                            <div className="progress-eyebrow">Báo cáo vận hành kỳ đánh giá</div>
-                            <h1>{period.name}</h1>
-                            <div className="progress-meta">
-                                <span><TeamOutlined /> {activeRecordCount} nhân sự đang tham gia</span>
-                                {period.approvalDeadline && <span>Hạn duyệt cấp trên: {dayjs(period.approvalDeadline).format("DD/MM/YYYY HH:mm")}</span>}
+                            <h1 className="pd-hero__name">{period.name}</h1>
+                            <div className="pd-hero__meta">
+                                <span className="pd-hero__meta-item">
+                                    <TeamOutlined />
+                                    {activeRecordCount} nhân sự tham gia
+                                </span>
+                                {period.approvalDeadline && (
+                                    <span className="pd-hero__meta-item">
+                                        Hạn duyệt cuối: {dayjs(period.approvalDeadline).format("DD/MM/YYYY")}
+                                    </span>
+                                )}
                             </div>
                         </div>
-                        <div className="progress-overall">
-                            <Tag color={period.status === "ACTIVE" ? "processing" : period.status === "CLOSED" ? "default" : "default"} style={{ margin: 0, borderRadius: 999, fontWeight: 650 }}>
+                        <div className="pd-hero__right">
+                            <span className={`pd-status pd-status--${period.status === "ACTIVE" ? "active" : period.status === "CLOSED" ? "closed" : "draft"}`}>
+                                <span className="pd-status__dot" />
                                 {period.status === "ACTIVE" ? "Đang mở" : period.status === "CLOSED" ? "Đã đóng" : "Bản nháp"}
-                            </Tag>
-                            <div className="progress-overall__value" style={{ marginTop: 10 }}>{overallCompletion}%</div>
-                            <div style={{ color: "#64748b", fontSize: 12, marginTop: 5 }}>hoàn thành toàn kỳ</div>
+                            </span>
+                            <div className="pd-hero__pct">
+                                <div className="pd-hero__pct-value">{overallCompletion}%</div>
+                                <div className="pd-hero__pct-label">Hoàn thành</div>
+                            </div>
                         </div>
-                    </section>
+                    </header>
                 )}
 
                 {kpi && (
                     <>
+                        {/* ── Overdue strip ── */}
                         {kpi.overdueCount > 0 && (
-                            <div className="overdue-strip" role="alert">
-                                <span><WarningOutlined style={{ marginRight: 8 }} />Có <strong>{kpi.overdueCount}</strong> hồ sơ đã trễ hạn và cần được xử lý.</span>
-                                <span style={{ fontSize: 12, color: "#b91c1c" }}>Xem danh sách ở bên dưới</span>
+                            <div className="pd-overdue-strip" role="alert">
+                                <span>
+                                    <WarningOutlined style={{ marginRight: 8 }} />
+                                    Có <strong>{kpi.overdueCount}</strong> hồ sơ đã trễ hạn cần xử lý.
+                                </span>
+                                <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.8 }}>
+                                    Xem danh sách bên dưới
+                                </span>
                             </div>
                         )}
 
-                        <Row gutter={[14, 14]} style={{ marginBottom: 18 }}>
-                            {[
-                                { label: "Tổng nhân sự", value: activeRecordCount, note: kpi.cancelledCount ? `${kpi.cancelledCount} hồ sơ đã hủy` : "Hồ sơ đang được theo dõi", icon: <UserOutlined />, color: "#475569" },
-                                { label: "Đang xử lý", value: inProgressCount, note: `${activeRecordCount ? Math.round((inProgressCount / activeRecordCount) * 100) : 0}% trong kỳ`, icon: <ClockCircleOutlined />, color: "#2563eb" },
-                                { label: "Đã hoàn thành", value: kpi.completedCount, note: `${overallCompletion}% hoàn tất`, icon: <CheckCircleOutlined />, color: "#16a34a" },
-                                { label: "Quá hạn", value: kpi.overdueCount, note: kpi.overdueCount ? "Cần can thiệp" : "Không có hồ sơ quá hạn", icon: <WarningOutlined />, color: kpi.overdueCount ? "#dc2626" : "#64748b" },
-                            ].map(metric => (
-                                <Col xs={12} lg={6} key={metric.label}>
-                                    <Card className="metric-card" bordered={false}>
-                                        <div className="metric-card__top"><span>{metric.label}</span><span style={{ color: metric.color }}>{metric.icon}</span></div>
-                                        <div className="metric-card__value" style={{ color: metric.label === "Quá hạn" && metric.value ? metric.color : undefined }}>{metric.value}</div>
-                                        <div className="metric-card__note">{metric.note}</div>
-                                    </Card>
-                                </Col>
-                            ))}
-                        </Row>
-
-                        <div className="admin-control-grid">
+                        {/* ── KPI cards ── */}
+                        <div className="pd-kpi-grid">
                             {[
                                 {
-                                    title: "Theo dõi toàn kỳ",
-                                    desc: "HR/Admin giám sát toàn bộ hồ sơ, trạng thái và tỷ lệ hoàn thành theo phòng ban.",
-                                    icon: <SafetyCertificateOutlined />,
-                                    color: "#2563eb",
-                                    value: `${overallCompletion}%`,
-                                    action: "Đang giám sát",
+                                    label: "Tổng nhân sự",
+                                    value: activeRecordCount,
+                                    note: kpi.cancelledCount ? `${kpi.cancelledCount} hồ sơ đã hủy` : "Đang theo dõi",
+                                    icon: <UserOutlined />,
+                                    iconBg: "#F7F6F3",
+                                    overdue: false,
                                 },
                                 {
-                                    title: "Nhắc hạn & gia hạn",
-                                    desc: "Ưu tiên xử lý hồ sơ quá hạn, có thể gia hạn riêng theo bước khi cần.",
-                                    icon: <BellOutlined />,
-                                    color: "#dc2626",
-                                    value: kpi.overdueCount,
-                                    action: kpi.overdueCount ? "Cần can thiệp" : "Ổn định",
+                                    label: "Đang xử lý",
+                                    value: inProgressCount,
+                                    note: `${activeRecordCount ? Math.round((inProgressCount / activeRecordCount) * 100) : 0}% trong kỳ`,
+                                    icon: <ClockCircleOutlined />,
+                                    iconBg: "#E1F3FE",
+                                    overdue: false,
                                 },
                                 {
-                                    title: "Can thiệp phân công",
-                                    desc: "Hỗ trợ điều chuyển quản lý chấm/duyệt khi cấu trúc nhân sự bị sai.",
-                                    icon: <SwapOutlined />,
-                                    color: "#7c3aed",
-                                    value: departmentWatchList.length,
-                                    action: "Theo dõi phòng ban",
-                                },
-                                {
-                                    title: "Báo cáo kết quả",
-                                    desc: "Truy cập báo cáo tổng hợp để xuất Excel/PDF và đối chiếu kết quả cuối kỳ.",
-                                    icon: <ExportOutlined />,
-                                    color: "#16a34a",
+                                    label: "Đã hoàn thành",
                                     value: kpi.completedCount,
-                                    action: "Mở báo cáo",
-                                    onClick: () => navigate("/admin/evaluation/summary"),
+                                    note: `${overallCompletion}% hoàn tất`,
+                                    icon: <CheckCircleOutlined />,
+                                    iconBg: "#EDF3EC",
+                                    overdue: false,
                                 },
-                            ].map(item => (
-                                <Card className="admin-control-card" bordered={false} key={item.title}>
-                                    <div className="admin-control-card__head">
-                                        <div className="admin-control-card__icon" style={{ background: `${item.color}14`, color: item.color }}>
-                                            {item.icon}
-                                        </div>
-                                        <Tag color={item.color === "#dc2626" && Number(item.value) > 0 ? "error" : "default"} style={{ margin: 0, borderRadius: 999, fontWeight: 700 }}>
-                                            {item.value}
-                                        </Tag>
+                                {
+                                    label: "Quá hạn",
+                                    value: kpi.overdueCount,
+                                    note: kpi.overdueCount ? "Cần can thiệp ngay" : "Không có hồ sơ quá hạn",
+                                    icon: <WarningOutlined />,
+                                    iconBg: kpi.overdueCount ? "#FDEBEC" : "#F7F6F3",
+                                    overdue: kpi.overdueCount > 0,
+                                },
+                            ].map(m => (
+                                <div className="pd-kpi-card" key={m.label}>
+                                    <div className="pd-kpi-card__head">
+                                        <span className="pd-kpi-card__label">{m.label}</span>
+                                        <span className="pd-kpi-card__icon" style={{ background: m.iconBg }}>
+                                            {m.icon}
+                                        </span>
                                     </div>
-                                    <div className="admin-control-card__title">{item.title}</div>
-                                    <div className="admin-control-card__desc">{item.desc}</div>
-                                    <div className="admin-control-card__footer">
-                                        <span style={{ color: item.color, fontSize: 12, fontWeight: 750 }}>{item.action}</span>
-                                        {item.onClick && <Button type="link" size="small" onClick={item.onClick} style={{ padding: 0 }}>Xem</Button>}
+                                    <div className={`pd-kpi-card__value${m.overdue ? " pd-kpi-card__value--red" : ""}`}>
+                                        {m.value}
                                     </div>
-                                </Card>
+                                    <div className="pd-kpi-card__note">{m.note}</div>
+                                </div>
                             ))}
                         </div>
 
-                        <Row gutter={[14, 14]} style={{ marginBottom: 18 }}>
-                            <Col xs={24} lg={9}>
-                                <Card className="progress-panel" title="Phân bổ hồ sơ" bordered={false}>
-                                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Theo trạng thái xử lý hiện tại</div>
-                                    {statusRows.length ? statusRows.map(item => (
-                                        <div className="status-row" key={item.label}>
-                                            <div>
-                                                <div className="status-row__label"><span className="status-dot" style={{ background: item.color }} />{item.label}</div>
-                                                <Progress percent={activeRecordCount ? Math.round((item.value / activeRecordCount) * 100) : 0} showInfo={false} strokeColor={item.color} trailColor="#edf1f6" size="small" style={{ margin: "8px 0 0 17px", width: "calc(100% - 17px)" }} />
-                                            </div>
-                                            <strong style={{ color: "#273449", textAlign: "right" }}>{item.value}</strong>
-                                        </div>
-                                    )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có hồ sơ để phân bổ" />}
-                                </Card>
-                            </Col>
-
-                            <Col xs={24} lg={15}>
-                                <Card className="progress-panel" title="Hành trình hoàn thành" bordered={false}>
-                                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 16 }}>Theo dõi mức hoàn tất ở mỗi chặng, không chỉ tổng số cuối kỳ.</div>
-                                    {phaseRows.map((phase, index) => {
-                                        const percent = phase.total ? Math.round((phase.done / phase.total) * 100) : 0;
+                        {/* ── Two panels: status distribution + journey ── */}
+                        <div className="pd-panels">
+                            {/* Status distribution */}
+                            <div className="pd-panel">
+                                <div className="pd-panel__head">
+                                    <FileTextOutlined className="pd-panel__head-icon" />
+                                    Phân bổ hồ sơ
+                                </div>
+                                <div className="pd-panel__sub">Theo trạng thái xử lý hiện tại</div>
+                                <div className="pd-panel__body">
+                                    {statusRows.length ? statusRows.map(item => {
+                                        const pct = activeRecordCount ? Math.round((item.value / activeRecordCount) * 100) : 0;
                                         return (
-                                            <div className="phase-row" key={phase.label}>
-                                                <div className="phase-index" style={{ color: phase.color }}>{index + 1}</div>
+                                            <div className="pd-status-row" key={item.label}>
                                                 <div>
-                                                    <div className="phase-row__head"><div><div className="phase-row__title">{phase.label}</div><div className="phase-row__caption">{phase.caption}</div></div><strong style={{ color: "#273449" }}>{phase.done}/{phase.total}</strong></div>
-                                                    <Progress percent={percent} strokeColor={phase.color} trailColor="#edf1f6" strokeWidth={8} format={value => `${value}%`} style={{ marginTop: 10 }} />
+                                                    <div className="pd-status-row__label">
+                                                        <span className="pd-dot" style={{ background: item.color }} />
+                                                        {item.label}
+                                                    </div>
+                                                    <Progress
+                                                        percent={pct}
+                                                        showInfo={false}
+                                                        strokeColor="#111111"
+                                                        trailColor="#EAEAEA"
+                                                        size="small"
+                                                        style={{ margin: "8px 0 0 17px", width: "calc(100% - 17px)" }}
+                                                    />
+                                                </div>
+                                                <strong className="pd-status-row__count">{item.value}</strong>
+                                            </div>
+                                        );
+                                    }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có hồ sơ" />}
+                                </div>
+                            </div>
+
+                            {/* Journey */}
+                            <div className="pd-panel">
+                                <div className="pd-panel__head">
+                                    <CheckCircleOutlined className="pd-panel__head-icon" />
+                                    Hành trình hoàn thành
+                                </div>
+                                <div className="pd-panel__sub">Mức hoàn tất tại từng chặng trong kỳ</div>
+                                <div className="pd-panel__body">
+                                    {phaseRows.map((phase, idx) => {
+                                        const pct = phase.total ? Math.round((phase.done / phase.total) * 100) : 0;
+                                        return (
+                                            <div className="pd-phase-row" key={phase.label}>
+                                                <div className="pd-phase-idx">{idx + 1}</div>
+                                                <div>
+                                                    <div className="pd-phase-head">
+                                                        <div>
+                                                            <div className="pd-phase-title">{phase.label}</div>
+                                                            <div className="pd-phase-caption">{phase.caption}</div>
+                                                        </div>
+                                                        <span className="pd-phase-count">{phase.done}/{phase.total}</span>
+                                                    </div>
+                                                    <Progress
+                                                        percent={pct}
+                                                        strokeColor="#111111"
+                                                        trailColor="#EAEAEA"
+                                                        strokeWidth={7}
+                                                        format={v => `${v}%`}
+                                                    />
                                                 </div>
                                             </div>
                                         );
                                     })}
-                                </Card>
-                            </Col>
-                        </Row>
+                                </div>
+                            </div>
+                        </div>
 
-                        <Row gutter={[14, 14]} style={{ marginBottom: 18 }}>
-                            <Col xs={24} lg={9}>
-                                <Card
-                                    className="progress-panel"
-                                    title={<span><BarChartOutlined style={{ marginRight: 8, color: "#2563eb" }} />Calibration sơ bộ</span>}
-                                    bordered={false}
-                                    loading={isGradeLoading}
-                                >
-                                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12 }}>
-                                        So sánh phân phối xếp loại để phát hiện xu hướng chấm quá cao/thấp trước khi chốt kỳ.
-                                    </div>
-                                    {normalizedGradeDistribution.length ? normalizedGradeDistribution.map(item => {
-                                        const percent = totalGraded ? Math.round((item.count / totalGraded) * 100) : 0;
-                                        const gradeColor = item.grade === "A" ? "#16a34a" : item.grade === "B" ? "#2563eb" : item.grade === "C" ? "#f59e0b" : "#dc2626";
-                                        return (
-                                            <div className="grade-row" key={item.grade}>
-                                                <div className="grade-badge" style={{ background: `${gradeColor}14`, color: gradeColor, border: `1px solid ${gradeColor}30` }}>{item.grade}</div>
-                                                <Progress percent={percent} showInfo={false} strokeColor={gradeColor} trailColor="#edf1f6" size="small" />
-                                                <strong style={{ color: "#273449", textAlign: "right" }}>{item.count}</strong>
-                                            </div>
-                                        );
-                                    }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu xếp loại" />}
+                        {/* ── Calibration + Department watch ── */}
+                        <div className="pd-panels pd-panels--three" style={{ marginBottom: 16 }}>
+                            {/* Calibration */}
+                            <div className="pd-panel">
+                                <div className="pd-panel__head">
+                                    <BarChartOutlined className="pd-panel__head-icon" />
+                                    Calibration sơ bộ
+                                </div>
+                                <div className="pd-panel__sub">Phân phối xếp loại để phát hiện xu hướng chấm lệch</div>
+                                <div className="pd-panel__body" style={{ paddingTop: 12 }}>
+                                    {isGradeLoading
+                                        ? <Spin size="small" />
+                                        : normalizedGradeDistribution.length
+                                            ? normalizedGradeDistribution.map(item => {
+                                                const pct = totalGraded ? Math.round((item.count / totalGraded) * 100) : 0;
+                                                const gColors: Record<string, { bg: string; color: string; border: string }> = {
+                                                    A: { bg: "#EDF3EC", color: "#346538", border: "rgba(52,101,56,0.25)" },
+                                                    B: { bg: "#E1F3FE", color: "#1F6C9F", border: "rgba(31,108,159,0.25)" },
+                                                    C: { bg: "#FBF3DB", color: "#956400", border: "rgba(149,100,0,0.25)" },
+                                                    D: { bg: "#FDEBEC", color: "#9F2F2D", border: "rgba(159,47,45,0.25)" },
+                                                    E: { bg: "#FDEBEC", color: "#9F2F2D", border: "rgba(159,47,45,0.25)" },
+                                                };
+                                                const gc = gColors[item.grade] || { bg: "#F3F4F6", color: "#6B7280", border: "#E5E7EB" };
+                                                return (
+                                                    <div className="pd-grade-row" key={item.grade}>
+                                                        <div className="pd-grade-badge" style={{ background: gc.bg, color: gc.color, borderColor: gc.border }}>
+                                                            {item.grade}
+                                                        </div>
+                                                        <Progress
+                                                            percent={pct}
+                                                            showInfo={false}
+                                                            strokeColor={gc.color}
+                                                            trailColor="#EAEAEA"
+                                                            size="small"
+                                                        />
+                                                        <span className="pd-grade-count">{item.count}</span>
+                                                    </div>
+                                                );
+                                            })
+                                            : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có dữ liệu xếp loại" />
+                                    }
                                     {calibrationAlerts.length > 0 && (
                                         <Alert
                                             type={excellentRate >= 70 || lowGradeRate >= 30 ? "warning" : "info"}
                                             showIcon
-                                            style={{ marginTop: 14, borderRadius: 10 }}
-                                            message="Gợi ý kiểm tra"
-                                            description={calibrationAlerts[0]}
+                                            message={<span style={{ fontWeight: 600 }}>Gợi ý kiểm tra</span>}
+                                            description={calibrationAlerts[0] as string}
                                         />
                                     )}
-                                </Card>
-                            </Col>
+                                </div>
+                            </div>
 
-                            <Col xs={24} lg={7}>
-                                <Card
-                                    className="progress-panel"
-                                    title={<span><TeamOutlined style={{ marginRight: 8, color: "#7c3aed" }} />Phòng ban cần chú ý</span>}
-                                    bordered={false}
-                                >
-                                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 8 }}>
-                                        Ưu tiên phòng ban có hồ sơ quá hạn hoặc tỷ lệ hoàn thành thấp.
-                                    </div>
-                                    {departmentWatchList.length ? departmentWatchList.map(dept => (
-                                        <div className="watch-row" key={dept.departmentId}>
-                                            <div>
-                                                <div style={{ color: "#273449", fontWeight: 720, fontSize: 13 }}>{dept.departmentName || "Chưa cập nhật phòng ban"}</div>
-                                                <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}>
-                                                    {dept.completedCount}/{dept.active} hoàn tất · {dept.stuck} đang xử lý
-                                                </div>
-                                            </div>
-                                            <Space size={4} direction="vertical" align="end">
-                                                <Tag color={dept.overdueCount ? "error" : "processing"} style={{ margin: 0, borderRadius: 999 }}>{dept.completion}%</Tag>
-                                                {dept.overdueCount > 0 && <span style={{ color: "#dc2626", fontSize: 11, fontWeight: 700 }}>{dept.overdueCount} quá hạn</span>}
-                                            </Space>
-                                        </div>
-                                    )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có phòng ban cần cảnh báo" />}
-                                </Card>
-                            </Col>
-
-                            <Col xs={24} lg={8}>
-                                <Card
-                                    className="progress-panel"
-                                    title={<span><AuditOutlined style={{ marginRight: 8, color: "#0f766e" }} />Kiểm soát audit</span>}
-                                    bordered={false}
-                                >
-                                    <div className="audit-list">
-                                        {[
-                                            { label: "Lịch sử trạng thái", note: "Ghi nhận nộp, chấm, duyệt, trả lại", ready: true },
-                                            { label: "Audit thay đổi điểm", note: "Theo dõi ai sửa điểm và thời điểm sửa", ready: true },
-                                            { label: "Lý do gia hạn", note: "Lưu lý do khi HR/Admin gia hạn hạn chót", ready: true },
-                                            { label: "Điều chuyển người xử lý", note: "Lưu lý do khi đổi quản lý chấm/duyệt", ready: true },
-                                            { label: "Nhân viên xác nhận kết quả", note: "Có bước xác nhận sau khi hoàn tất", ready: true },
-                                        ].map(item => (
-                                            <div className="audit-item" key={item.label}>
+                            {/* Department watch */}
+                            <div className="pd-panel">
+                                <div className="pd-panel__head">
+                                    <TeamOutlined className="pd-panel__head-icon" />
+                                    Phòng ban cần chú ý
+                                </div>
+                                <div className="pd-panel__sub">Phòng ban có hồ sơ quá hạn hoặc tiến độ thấp</div>
+                                <div className="pd-panel__body" style={{ paddingTop: 12 }}>
+                                    {departmentWatchList.length
+                                        ? departmentWatchList.map(dept => (
+                                            <div className="pd-watch-row" key={dept.departmentId}>
                                                 <div>
-                                                    <div className="audit-item__label">{item.label}</div>
-                                                    <div className="audit-item__note">{item.note}</div>
+                                                    <div className="pd-watch-name">{dept.departmentName || "Chưa cập nhật"}</div>
+                                                    <div className="pd-watch-sub">
+                                                        {dept.completedCount}/{dept.active} hoàn tất · {dept.stuck} đang xử lý
+                                                    </div>
                                                 </div>
-                                                <Tag color={item.ready ? "success" : "warning"} style={{ margin: 0, borderRadius: 999 }}>
-                                                    {item.ready ? "Đã có" : "Cần bổ sung"}
-                                                </Tag>
+                                                <div className="pd-watch-right">
+                                                    <span className="pd-watch-pct">{dept.completion}%</span>
+                                                    {dept.overdueCount > 0 && (
+                                                        <span className="pd-watch-overdue">{dept.overdueCount} quá hạn</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </Col>
-                        </Row>
+                                        ))
+                                        : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có phòng ban cần cảnh báo" />
+                                    }
+                                </div>
+                            </div>
+                        </div>
 
+                        {/* ── Overdue records table ── */}
                         {progressData.overdueRecords && progressData.overdueRecords.length > 0 && (
-                            <Card
-                                className="progress-panel"
-                                title={<span style={{ color: "#b91c1c" }}><WarningOutlined style={{ marginRight: 8 }} />Hồ sơ cần xử lý ({progressData.overdueRecords.length})</span>}
-                                bordered={false}
-                                style={{
-                                    marginBottom: 18,
-                                    borderColor: "#fecaca",
-                                    background: "#fffdfd"
-                                }}
-                            >
+                            <div className="pd-table-panel">
+                                <div className="pd-table-panel__head">
+                                    <WarningOutlined style={{ color: "#9F2F2D" }} />
+                                    <span style={{ color: "#9F2F2D" }}>
+                                        Hồ sơ cần xử lý ({progressData.overdueRecords.length})
+                                    </span>
+                                </div>
                                 <Table
                                     dataSource={progressData.overdueRecords}
                                     columns={overdueColumns}
@@ -578,14 +1001,15 @@ const PeriodProgressDashboard: React.FC = () => {
                                     pagination={{ pageSize: 5 }}
                                     size="middle"
                                 />
-                            </Card>
+                            </div>
                         )}
 
-                        <Card
-                            className="progress-panel"
-                            title={<span><FileTextOutlined style={{ marginRight: 8, color: "#64748b" }} />Tiến độ theo phòng ban</span>}
-                            bordered={false}
-                        >
+                        {/* ── Department progress full table ── */}
+                        <div className="pd-table-panel">
+                            <div className="pd-table-panel__head">
+                                <FileTextOutlined style={{ color: "#787774" }} />
+                                Tiến độ theo phòng ban
+                            </div>
                             <Table
                                 dataSource={progressData.departmentProgress}
                                 columns={deptColumns}
@@ -593,7 +1017,7 @@ const PeriodProgressDashboard: React.FC = () => {
                                 pagination={{ pageSize: 10 }}
                                 size="middle"
                             />
-                        </Card>
+                        </div>
                     </>
                 )}
             </div>

@@ -1,6 +1,5 @@
 import { Modal, Table, Form, Select, Button, Popconfirm, Tag, Row, Col, Empty, Tooltip, DatePicker, Input, Checkbox } from "antd";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import useAccess from "@/hooks/useAccess";
 import { useAppSelector } from "@/redux/hooks";
 import dayjs from "dayjs";
@@ -14,6 +13,8 @@ import {
     CalendarOutlined,
     InfoCircleOutlined,
     WarningOutlined,
+    UserOutlined,
+    RightOutlined,
 } from "@ant-design/icons";
 import {
     callFetchTemplatesInPeriod,
@@ -31,7 +32,33 @@ import {
 import type { IEvaluationPeriod, IEvaluationTemplate } from "@/types/backend";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
-import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
+import ManagerPickerModal from "@/pages/admin/user/components/ManagerPickerModal";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+
+type DeadlinePhase = "EMPLOYEE" | "MANAGER" | "APPROVAL";
+
+const DEADLINE_PHASE_LABELS: Record<DeadlinePhase, string> = {
+    EMPLOYEE: "Nhân viên tự đánh giá",
+    MANAGER: "Quản lý trực tiếp chấm",
+    APPROVAL: "Quản lý gián tiếp duyệt",
+};
+
+const getRecordDeadlinePhase = (status?: string): DeadlinePhase => {
+    if (["PENDING_MANAGER_REVIEW", "MANAGER_REVIEWING", "REVISION_NEEDED"].includes(status || "")) return "MANAGER";
+    if (status === "PENDING_APPROVAL") return "APPROVAL";
+    return "EMPLOYEE";
+};
+
+const getRecordPhaseDeadline = (record: any, period: IEvaluationPeriod | null, phase = getRecordDeadlinePhase(record?.recordStatus)) => {
+    if (phase === "MANAGER") return record?.managerDeadlineOverride ?? period?.managerDeadline;
+    if (phase === "APPROVAL") return record?.approvalDeadlineOverride ?? period?.approvalDeadline;
+    return record?.employeeDeadlineOverride ?? period?.employeeDeadline;
+};
+
+const isRecordDeadlineOverdue = (record: any, period: IEvaluationPeriod | null) => {
+    const deadline = getRecordPhaseDeadline(record, period);
+    return !!deadline && dayjs().isAfter(dayjs(deadline));
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderUserOption = (u: any) => {
@@ -78,7 +105,6 @@ interface IProps {
 
 const PeriodDetailDrawer = (props: IProps) => {
     const { open, onClose, period, readOnly = false } = props;
-    const isMobile = useIsMobile();
     const roleName = useAppSelector(state => state.account.user.role?.name?.toUpperCase() || "");
     const isSuperAdmin = roleName === "SUPER_ADMIN";
     const canExtendDeadline = useAccess(ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE);
@@ -101,6 +127,8 @@ const PeriodDetailDrawer = (props: IProps) => {
     const [reassignForm] = Form.useForm();
     const [reassignModalOpen, setReassignModalOpen] = useState(false);
     const [selectedEmployeeForReassign, setSelectedEmployeeForReassign] = useState<any>(null);
+    const [selectedReassignEvaluator, setSelectedReassignEvaluator] = useState<any>(null);
+    const [managerPickerOpen, setManagerPickerOpen] = useState(false);
     const [reassigning, setReassigning] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [linkedTemplates, setLinkedTemplates] = useState<any[]>([]);
@@ -372,8 +400,18 @@ const PeriodDetailDrawer = (props: IProps) => {
     };
 
     const handleOpenExtendModal = (record: any) => {
-        setSelectedEmployeeForExtend(record);
+        if (!isRecordDeadlineOverdue(record, period)) {
+            notify.warning("Chỉ có thể gia hạn khi bước xử lý hiện tại đã quá hạn");
+            return;
+        }
+        const phase = getRecordDeadlinePhase(record.recordStatus);
+        setSelectedEmployeeForExtend({
+            ...record,
+            phase,
+            currentDeadline: getRecordPhaseDeadline(record, period, phase),
+        });
         extendForm.resetFields();
+        extendForm.setFieldsValue({ cascade: true });
         setExtendModalOpen(true);
     };
 
@@ -388,7 +426,7 @@ const PeriodDetailDrawer = (props: IProps) => {
         try {
             const res = await callExtendEvaluationRecordDeadline({
                 recordIds,
-                phase: values.phase,
+                phase: selectedEmployeeForExtend.phase,
                 deadline: values.deadline.toISOString(),
                 reason: values.reason,
                 cascade: values.cascade,
@@ -410,19 +448,36 @@ const PeriodDetailDrawer = (props: IProps) => {
 
     const handleBulkExtend = () => {
         const selectedRecords = employeesForSelectedTemplate.filter(e => selectedRowKeys.includes(e.id));
-        const recordIds = selectedRecords.map(e => e.recordId).filter(Boolean);
+        const eligibleRecords = selectedRecords.filter(record => record.recordId && isRecordDeadlineOverdue(record, period));
+        const recordIds = eligibleRecords.map(e => e.recordId).filter(Boolean);
         
-        if (recordIds.length === 0) {
-            notify.warning("Không tìm thấy mã bản ghi hợp lệ.");
+        if (eligibleRecords.length !== selectedRecords.length || recordIds.length === 0) {
+            notify.warning("Chỉ chọn các hồ sơ đã quá hạn để gia hạn hàng loạt");
             return;
         }
+
+        const phases = Array.from(new Set(eligibleRecords.map(record => getRecordDeadlinePhase(record.recordStatus))));
+        if (phases.length !== 1) {
+            notify.warning("Gia hạn hàng loạt chỉ áp dụng cho các hồ sơ cùng một bước xử lý");
+            return;
+        }
+
+        const phase = phases[0];
+        const currentDeadlines = eligibleRecords
+            .map(record => getRecordPhaseDeadline(record, period, phase))
+            .filter(Boolean)
+            .map(value => dayjs(value));
+        const latestDeadline = currentDeadlines.reduce((latest, value) => value.isAfter(latest) ? value : latest);
 
         setSelectedEmployeeForExtend({
             employee: { name: `${recordIds.length} nhân sự đã chọn` },
             recordId: recordIds,
-            isBulk: true
+            isBulk: true,
+            phase,
+            currentDeadline: latestDeadline.toISOString(),
         });
         extendForm.resetFields();
+        extendForm.setFieldsValue({ cascade: true });
         setExtendModalOpen(true);
     };
 
@@ -452,6 +507,8 @@ const PeriodDetailDrawer = (props: IProps) => {
 
     const handleOpenReassignModal = (record: any) => {
         setSelectedEmployeeForReassign(record);
+        setSelectedReassignEvaluator(null);
+        setManagerPickerOpen(false);
         reassignForm.resetFields();
         setReassignModalOpen(true);
     };
@@ -470,8 +527,16 @@ const PeriodDetailDrawer = (props: IProps) => {
             recordId: recordIds,
             isBulk: true
         });
+        setSelectedReassignEvaluator(null);
+        setManagerPickerOpen(false);
         reassignForm.resetFields();
         setReassignModalOpen(true);
+    };
+
+    const handleSelectReassignEvaluator = (user: any) => {
+        setSelectedReassignEvaluator(user);
+        reassignForm.setFieldValue("newEvaluatorUserId", String(user.id));
+        setManagerPickerOpen(false);
     };
 
     const handleReassignSubmit = async (values: any) => {
@@ -654,11 +719,11 @@ const PeriodDetailDrawer = (props: IProps) => {
 
                 // Tính toán deadline thực tế và trạng thái trễ hạn
                 const empDeadline = record.employeeDeadlineOverride ?? period?.employeeDeadline;
-                const isEmpPending = record.recordStatus === "EMPLOYEE_DRAFTING" || record.recordStatus === "REVISION_NEEDED";
+                const isEmpPending = record.recordStatus === "NOT_STARTED" || record.recordStatus === "EMPLOYEE_DRAFTING";
                 const isEmpOverdue = isEmpPending && empDeadline && dayjs().isAfter(dayjs(empDeadline));
 
                 const mgrDeadline = record.managerDeadlineOverride ?? period?.managerDeadline;
-                const isMgrPending = record.recordStatus === "PENDING_MANAGER_REVIEW" || record.recordStatus === "MANAGER_REVIEWING";
+                const isMgrPending = ["PENDING_MANAGER_REVIEW", "MANAGER_REVIEWING", "REVISION_NEEDED"].includes(record.recordStatus);
                 const isMgrOverdue = isMgrPending && mgrDeadline && dayjs().isAfter(dayjs(mgrDeadline));
 
                 const appDeadline = record.approvalDeadlineOverride ?? period?.approvalDeadline;
@@ -719,7 +784,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                 if (!isRecordActive || isPeriodClosed) return null;
                 return (
                     <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
-                        {record.recordId && (
+                        {record.recordId && isRecordDeadlineOverdue(record, period) && (
                             <Access permission={ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE} hideChildren>
                                 <Button
                                     type="text"
@@ -814,8 +879,15 @@ const PeriodDetailDrawer = (props: IProps) => {
 
     return (
     <>
-        <Modal
-            title={
+        <LotusDetailDrawer
+            open={open}
+            onClose={onClose}
+            destroyOnClose
+            keyboard={false}
+            maskClosable={false}
+            closeAriaLabel={readOnly ? "Đóng chi tiết kỳ đánh giá" : "Đóng thiết lập kỳ đánh giá"}
+        >
+            <div className="period-config-drawer">
                 <div className="period-config-title">
                     <div className="period-config-title__icon"><TeamOutlined /></div>
                     <div className="period-config-title__content">
@@ -829,40 +901,15 @@ const PeriodDetailDrawer = (props: IProps) => {
                         </Tag>
                     </div>
                 </div>
-            }
-            open={open}
-            onCancel={onClose}
-            width={getModalWidth(1200)}
-            footer={null}
-            centered
-            maskClosable={false}
-            className="period-config-modal"
-            styles={{ header: { marginBottom: 0, padding: 0 }, body: { ...MODAL_BODY_SCROLL, padding: 0 } }}
-        >
             <style>{`
-                .period-config-modal .ant-modal-content {
-                    overflow: hidden;
-                    border-radius: 16px;
-                    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
-                }
-                .period-config-modal .ant-modal-close {
-                    top: 18px;
-                    right: 18px;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    color: #64748b;
-                }
-                .period-config-modal .ant-modal-close:hover {
-                    color: #e11d72;
-                    background: #fff1f7;
-                }
+                .period-config-drawer { height: 100%; min-height: 0; display: flex; flex-direction: column; background: #fff; }
                 .period-config-title {
-                    min-height: 80px;
+                    min-height: 76px;
+                    flex: 0 0 auto;
                     display: flex;
                     align-items: center;
                     gap: 12px;
-                    padding: 18px 66px 18px 22px;
+                    padding: 16px 24px;
                     border-bottom: 1px solid #e9eef5;
                     background: #ffffff;
                 }
@@ -881,8 +928,9 @@ const PeriodDetailDrawer = (props: IProps) => {
                 .period-config-title__label { color: #64748b; font-size: 12px; font-weight: 650; }
                 .period-config-title__name { margin-top: 2px; color: #172033; font-size: 18px; font-weight: 760; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .period-config-title__meta { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
-                .period-config-sidebar { background: #fafbfc; }
-                .period-config-main { background: #ffffff; }
+                .period-config-layout { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(270px, 320px) minmax(0, 1fr); overflow: hidden; }
+                .period-config-sidebar { min-width: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; border-right: 1px solid #e9eef5; background: #fafbfc; overscroll-behavior: contain; }
+                .period-config-main { min-width: 0; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; background: #ffffff; overscroll-behavior: contain; }
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
                     height: 6px;
@@ -905,10 +953,10 @@ const PeriodDetailDrawer = (props: IProps) => {
                     box-shadow: 0 6px 14px -8px rgba(15, 23, 42, 0.35) !important;
                     border-color: #f9a8d4 !important;
                 }
-                .ant-table {
+                .period-config-drawer .ant-table {
                     border-radius: 8px !important;
                 }
-                .ant-table-thead > tr > th {
+                .period-config-drawer .ant-table-thead > tr > th {
                     background: rgba(241, 245, 249, 0.6) !important;
                     color: #475569 !important;
                     font-size: 11px !important;
@@ -918,23 +966,28 @@ const PeriodDetailDrawer = (props: IProps) => {
                     border-bottom: 1px solid #e2e8f0 !important;
                     padding: 8px 10px !important;
                 }
-                .ant-table-tbody > tr > td {
+                .period-config-drawer .ant-table-tbody > tr > td {
                     padding: 8px 10px !important;
                     border-bottom: 1px solid #f1f5f9 !important;
                 }
-                .ant-table-tbody > tr:last-child > td {
+                .period-config-drawer .ant-table-tbody > tr:last-child > td {
                     border-bottom: none !important;
                 }
-                .ant-table-row {
+                .period-config-drawer .ant-table-row {
                     transition: background-color 0.2s;
                 }
-                .ant-table-row:hover {
+                .period-config-drawer .ant-table-row:hover {
                     background-color: #f8fafc !important;
                 }
                 .btn-delete-action:hover {
                     background: rgba(239, 68, 68, 0.1) !important;
                     border-color: rgba(239, 68, 68, 0.2) !important;
                     color: #dc2626 !important;
+                }
+                @media (max-width: 1100px) {
+                    .period-config-layout { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+                    .period-config-sidebar { overflow: visible; border-right: 0; border-bottom: 1px solid #e9eef5; }
+                    .period-config-main { overflow: visible; }
                 }
                 @media (max-width: 767px) {
                     .period-config-title { padding: 16px 54px 16px 16px; align-items: flex-start; }
@@ -943,9 +996,8 @@ const PeriodDetailDrawer = (props: IProps) => {
                     .period-config-title__name { white-space: normal; font-size: 16px; }
                 }
             `}</style>
-            <Row gutter={0} style={{ margin: 0 }}>
-                {/* CỘT TRÁI: DANH SÁCH BIỂU MẪU ĐÃ GÁN (width: 33% trên desktop) */}
-                <Col xs={24} lg={8} className="period-config-sidebar" style={{ borderRight: isMobile ? "none" : "1px solid #e9eef5", borderBottom: isMobile ? "1px solid #e9eef5" : "none", padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="period-config-layout">
+                <aside className="period-config-sidebar">
                     <div>
                         <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                             <BookOutlined style={{ color: "#3b82f6", fontSize: "13px" }} />
@@ -1099,10 +1151,9 @@ const PeriodDetailDrawer = (props: IProps) => {
                             )}
                         </div>
                     </div>
-                </Col>
+                </aside>
 
-                {/* CỘT PHẢI: CHI TIẾT NHÂN SỰ & QUY TRÌNH GÁN (width: 67% trên desktop) */}
-                <Col xs={24} lg={16} className="period-config-main" style={{ padding: isMobile ? "20px 16px" : "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <main className="period-config-main">
                     {!selectedTemplateId ? (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 450, height: "100%" }}>
                             <Empty description="Chọn biểu mẫu ở cột bên trái để thiết lập danh sách nhân sự" />
@@ -1343,7 +1394,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                                 loading={loadingEmployees}
                                 pagination={{ pageSize: 5, size: "small" }}
                                 size="small"
-                                scroll={{ x: "max-content" }}
+                                tableLayout="fixed"
                                 style={{ 
                                     background: "#ffffff", 
                                     borderRadius: "8px", 
@@ -1355,9 +1406,10 @@ const PeriodDetailDrawer = (props: IProps) => {
                             />
                         </div>
                     )}
-                </Col>
-            </Row>
-        </Modal>
+                </main>
+            </div>
+            </div>
+        </LotusDetailDrawer>
 
         <Modal
             title={
@@ -1378,30 +1430,32 @@ const PeriodDetailDrawer = (props: IProps) => {
             width={450}
         >
             <Form form={extendForm} layout="vertical" onFinish={handleExtendDeadlineSubmit}>
-                <Form.Item
-                    name="phase"
-                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Giai đoạn gia hạn</span>}
-                    rules={[{ required: true, message: "Vui lòng chọn giai đoạn!" }]}
-                    initialValue="EMPLOYEE"
-                >
-                    <Select options={[
-                        { label: "Nhân viên tự đánh giá (EMPLOYEE)", value: "EMPLOYEE" },
-                        { label: "Quản lý trực tiếp chấm (MANAGER)", value: "MANAGER" },
-                        { label: "Ban lãnh đạo duyệt (APPROVAL)", value: "APPROVAL" },
-                    ]} />
-                </Form.Item>
+                <div style={{ padding: "10px 12px", marginBottom: 16, background: "#fff5f8", borderLeft: "3px solid #e8356d", borderRadius: 5 }}>
+                    <div style={{ color: "#334155", fontSize: 12, fontWeight: 700 }}>
+                        Bước hiện tại: {selectedEmployeeForExtend?.phase ? DEADLINE_PHASE_LABELS[selectedEmployeeForExtend.phase as DeadlinePhase] : "—"}
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 11, marginTop: 3 }}>
+                        Hạn hiện tại: {selectedEmployeeForExtend?.currentDeadline ? dayjs(selectedEmployeeForExtend.currentDeadline).format("DD/MM/YYYY HH:mm") : "—"}
+                    </div>
+                </div>
 
                 <Form.Item
                     name="deadline"
                     label={<span style={{ fontWeight: 600, color: "#475569" }}>Hạn chót mới</span>}
                     rules={[{ required: true, message: "Vui lòng chọn hạn chót mới!" }]}
                 >
-                    <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: "100%" }} />
+                    <DatePicker
+                        showTime
+                        format="DD/MM/YYYY HH:mm"
+                        style={{ width: "100%" }}
+                        disabledDate={date => date.endOf("day").isBefore(dayjs())}
+                    />
                 </Form.Item>
 
                 <Form.Item
                     name="reason"
                     label={<span style={{ fontWeight: 600, color: "#475569" }}>Lý do gia hạn</span>}
+                    rules={[{ required: true, whitespace: true, message: "Vui lòng nhập lý do gia hạn!" }]}
                     style={{ marginBottom: 12 }}
                 >
                     <Input.TextArea rows={3} placeholder="Nhập lý do gia hạn..." />
@@ -1442,8 +1496,8 @@ const PeriodDetailDrawer = (props: IProps) => {
                     </div>
                 </div>
             }
-            open={reassignModalOpen}
-            onCancel={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); }}
+            open={reassignModalOpen && !managerPickerOpen}
+            onCancel={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); setManagerPickerOpen(false); }}
             footer={null}
             destroyOnHidden
             centered
@@ -1467,16 +1521,27 @@ const PeriodDetailDrawer = (props: IProps) => {
                     label={<span style={{ fontWeight: 600, color: "#475569" }}>Người chấm/duyệt mới</span>}
                     rules={[{ required: true, message: "Vui lòng chọn người chấm/duyệt mới!" }]}
                 >
-                    <Select
-                        showSearch
-                        placeholder="Chọn tài khoản người chấm..."
-                        optionFilterProp="label"
-                        options={allUsers.map(u => ({
-                            label: `${u.name || u.username} (${u.email})`,
-                            value: String(u.id),
-                        }))}
-                    />
+                    <Input type="hidden" />
                 </Form.Item>
+                <Button
+                    onClick={() => setManagerPickerOpen(true)}
+                    style={{ width: "100%", height: 54, marginTop: -18, marginBottom: 18, padding: "7px 10px", display: "flex", alignItems: "center", textAlign: "left", borderColor: selectedReassignEvaluator ? "#f3a5bd" : "#d9d9d9" }}
+                >
+                    <span style={{ width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#e8356d", background: "#fff0f5", borderRadius: 5 }}>
+                        <UserOutlined />
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, margin: "0 9px" }}>
+                        <span style={{ display: "block", color: "#1e293b", fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {selectedReassignEvaluator?.name || "Chọn người chấm/duyệt mới"}
+                        </span>
+                        <span style={{ display: "block", marginTop: 2, color: "#64748b", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {selectedReassignEvaluator
+                                ? [selectedReassignEvaluator.jobTitle, selectedReassignEvaluator.positionLevel, selectedReassignEvaluator.departmentName, selectedReassignEvaluator.companyName].filter(Boolean).join(" · ") || selectedReassignEvaluator.email
+                                : "Tìm theo mã NV, chức danh, cấp bậc và đơn vị"}
+                        </span>
+                    </span>
+                    <RightOutlined style={{ color: "#94a3b8", fontSize: 11 }} />
+                </Button>
 
                 <Form.Item
                     name="reason"
@@ -1496,6 +1561,14 @@ const PeriodDetailDrawer = (props: IProps) => {
                 </div>
             </Form>
         </Modal>
+
+        <ManagerPickerModal
+            open={managerPickerOpen}
+            onClose={() => setManagerPickerOpen(false)}
+            onSelect={handleSelectReassignEvaluator}
+            title="Chọn người chấm/duyệt mới"
+            description="Tìm và chọn nhân sự theo mã nhân viên, chức danh, cấp bậc và đơn vị"
+        />
     </>
     );
 };
