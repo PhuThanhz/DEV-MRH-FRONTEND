@@ -1,11 +1,10 @@
-import { useState, useMemo } from "react";
-import { Button, Tooltip, Empty, Popconfirm, Drawer, Timeline, Tag } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Button, Tooltip, Empty, Popconfirm, Drawer, Timeline, Table, Badge } from "antd";
 import {
     EyeOutlined,
+    EditOutlined,
     HistoryOutlined,
-    TeamOutlined,
-    UserSwitchOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
@@ -26,8 +25,11 @@ import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import EvaluationStatusTag, { type EvaluationStatus } from "../components/EvaluationStatusTag";
 import { useAppSelector } from "@/redux/hooks";
-import DataTable from "@/components/common/data-table";
 import TabBar, { type TabItem } from "@/components/common/tabs/TabBar";
+import ManagerEvaluationDetailPage from "../manager/ManagerEvaluationDetailPage";
+import ApprovalDetailPage from "../approval/ApprovalDetailPage";
+import ActionButton from "@/components/common/ui/ActionButton";
+import ConfirmModal from "@/components/common/modal/ConfirmModal";
 
 type WorkView = "pending" | "history";
 
@@ -68,7 +70,7 @@ interface IProps {
 }
 
 const PendingEvaluationPage = ({ isTab }: IProps) => {
-    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [workView, setWorkView] = useState<WorkView>("pending");
     const [searchText, setSearchText] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
@@ -76,12 +78,24 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     const [batchSubmitting, setBatchSubmitting] = useState(false);
     const [filterResetSignal, setFilterResetSignal] = useState(0);
     const [historyRecord, setHistoryRecord] = useState<any | null>(null);
+    const [activeDetailRecord, setActiveDetailRecord] = useState<any | null>(null);
+    const [openBatchSubmitModal, setOpenBatchSubmitModal] = useState(false);
+    const [openBatchApproveModal, setOpenBatchApproveModal] = useState(false);
+
+    const requestedRecordId = Number(searchParams.get("recordId"));
+    const requestedDetailRole = searchParams.get("detailRole");
+
+    useEffect(() => {
+        if (!Number.isInteger(requestedRecordId) || requestedRecordId <= 0) return;
+        if (requestedDetailRole !== "MANAGER" && requestedDetailRole !== "APPROVER") return;
+        setActiveDetailRecord({ id: requestedRecordId, evalRole: requestedDetailRole });
+    }, [requestedDetailRole, requestedRecordId]);
 
     const qc = useQueryClient();
-    const pendingManagerQuery = usePendingManagerRecordsQuery(workView === "pending");
-    const pendingApprovalQuery = usePendingApprovalRecordsQuery(workView === "pending");
-    const managerHistoryQuery = useManagerRecordsQuery(workView === "history");
-    const approvalHistoryQuery = useApprovalRecordsQuery(workView === "history");
+    const pendingManagerQuery = usePendingManagerRecordsQuery(true);
+    const pendingApprovalQuery = usePendingApprovalRecordsQuery(true);
+    const managerHistoryQuery = useManagerRecordsQuery(true);
+    const approvalHistoryQuery = useApprovalRecordsQuery(true);
     const batchApproveMutation = useBatchApproveRecordsMutation();
     const historyQuery = useEvaluationRecordHistoryQuery(historyRecord?.id || 0);
 
@@ -99,9 +113,15 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     }, [pendingApprovalQuery.data, pendingManagerQuery.data]);
 
     const processedWorkCount = useMemo(() => {
-        const isProcessed = (record: any) => ["COMPLETED", "REVISION_NEEDED"].includes(record.status);
-        return (managerHistoryQuery.data || []).filter(isProcessed).length
-            + (approvalHistoryQuery.data || []).filter(isProcessed).length;
+        const isProcessed = (record: any, role: "MANAGER" | "APPROVER") => {
+            const hasRoleRecord = { ...record, evalRole: role };
+            if (isRecordActionable(hasRoleRecord)) return false;
+            if (record.status === "EMPLOYEE_DRAFTING" || record.status === "NOT_STARTED") return false;
+            return true;
+        };
+        const managerCount = (managerHistoryQuery.data || []).filter((r: any) => isProcessed(r, "MANAGER")).length;
+        const approvalCount = (approvalHistoryQuery.data || []).filter((r: any) => isProcessed(r, "APPROVER")).length;
+        return managerCount + approvalCount;
     }, [approvalHistoryQuery.data, managerHistoryQuery.data]);
 
     const records = useMemo(() => {
@@ -128,22 +148,42 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
         {
             key: "pending",
             label: (
-                <span className="evaluation-work-tab-label">
-                    Cần xử lý
-                    {pendingWorkCount > 0 && <span className="evaluation-work-tab-badge">{pendingWorkCount > 99 ? "99+" : pendingWorkCount}</span>}
-                </span>
+                <Badge 
+                    count={pendingWorkCount} 
+                    color={workView === "pending" ? "#e8637a" : "#e2e8f0"} 
+                    style={{ 
+                        color: workView === "pending" ? "#ffffff" : "#475569",
+                        fontWeight: 700,
+                        fontSize: 10,
+                        border: "1.5px solid #ffffff",
+                        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.15)",
+                    }}
+                    offset={[8, -8]}
+                >
+                    <span>Cần xử lý</span>
+                </Badge>
             ),
         },
         {
             key: "history",
             label: (
-                <span className="evaluation-work-tab-label">
-                    Đã xử lý
-                    {processedWorkCount > 0 && <span className="evaluation-work-tab-badge">{processedWorkCount > 99 ? "99+" : processedWorkCount}</span>}
-                </span>
+                <Badge 
+                    count={processedWorkCount} 
+                    color={workView === "history" ? "#e8637a" : "#e2e8f0"} 
+                    style={{ 
+                        color: workView === "history" ? "#ffffff" : "#475569",
+                        fontWeight: 700,
+                        fontSize: 10,
+                        border: "1.5px solid #ffffff",
+                        boxShadow: "0 1px 3px rgba(15, 23, 42, 0.15)",
+                    }}
+                    offset={[8, -8]}
+                >
+                    <span>Đã xử lý</span>
+                </Badge>
             ),
         },
-    ], [pendingWorkCount, processedWorkCount]);
+    ], [pendingWorkCount, processedWorkCount, workView]);
 
     const handleWorkViewChange = (value: WorkView) => {
         setWorkView(value);
@@ -175,6 +215,22 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     const clearProcessedSelection = (processedRecords: any[]) => {
         const processedKeys = new Set(processedRecords.map(record => record.workItemKey));
         setSelectedRowKeys(previous => previous.filter(key => !processedKeys.has(String(key))));
+    };
+
+    const closeDetailDrawer = () => {
+        setActiveDetailRecord(null);
+        setSearchParams(current => {
+            const next = new URLSearchParams(current);
+            next.delete("recordId");
+            next.delete("detailRole");
+            return next;
+        }, { replace: true });
+        qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["manager-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["approval-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
     };
 
     const handleBatchSubmit = async () => {
@@ -209,25 +265,28 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                 const successCount = data?.successIds?.length ?? selectedApproverIds.length;
                 const failedCount = data?.failedRecords?.length ?? 0;
                 if (failedCount > 0) {
-                    notify.warning(`Duyệt xong: Thành công ${successCount}, thất bại ${failedCount}.`);
+                    notify.warning(
+                        `${failedCount} bản đánh giá chưa được xử lý. ${successCount} bản đã phê duyệt thành công.`,
+                        { title: "Duyệt hàng loạt chưa hoàn tất" },
+                    );
                 } else {
-                    notify.success(`Đã chấm & duyệt cuối thành công ${successCount} bản đánh giá`);
+                    notify.success(`Đã phê duyệt kết quả thành công ${successCount} bản đánh giá`);
                 }
                 clearProcessedSelection(selectedApproverRecords);
             },
             onError: (err: any) => {
-                notify.error(err?.response?.data?.message || "Có lỗi xảy ra khi phê duyệt hàng loạt");
+                notify.error(err?.response?.data?.message || "Không thể phê duyệt các bản đánh giá đã chọn. Vui lòng thử lại.");
             }
         });
     };
 
     const statusFilters = useMemo(() => {
         const labels: Record<string, string> = {
-            PENDING_MANAGER_REVIEW: "Chờ quản lý chấm",
-            MANAGER_REVIEWING: "Quản lý đang chấm",
-            PENDING_APPROVAL: "Chờ duyệt cuối",
-            COMPLETED: "Hoàn tất",
-            REVISION_NEEDED: "Yêu cầu chỉnh sửa",
+            PENDING_MANAGER_REVIEW: "Chờ Quản lý đánh giá",
+            MANAGER_REVIEWING: "Quản lý đang đánh giá",
+            PENDING_APPROVAL: "Chờ phê duyệt kết quả",
+            COMPLETED: "Hoàn tất đánh giá",
+            REVISION_NEEDED: "Yêu cầu điều chỉnh",
         };
         const present = Array.from(new Set(records.map(r => r.status).filter(Boolean)));
         return present
@@ -274,24 +333,6 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
             ),
         },
         {
-            title: "Vai trò xử lý",
-            key: "evaluationRole",
-            width: 155,
-            align: "center" as const,
-            render: (_: any, record: any) => {
-                const isDirectManager = record.evalRole === "MANAGER";
-                return (
-                    <Tag
-                        icon={isDirectManager ? <TeamOutlined /> : <UserSwitchOutlined />}
-                        color={isDirectManager ? "blue" : "cyan"}
-                        style={{ margin: 0, borderRadius: 5, fontWeight: 600, fontSize: 11 }}
-                    >
-                        {isDirectManager ? "Quản lý trực tiếp" : "Quản lý gián tiếp"}
-                    </Tag>
-                );
-            },
-        },
-        {
             title: "Kỳ đánh giá",
             dataIndex: ["period", "name"],
             key: "period",
@@ -331,23 +372,23 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
             },
         },
         {
-            title: "Điểm NV đánh giá",
+            title: <span className="evaluation-table-nowrap">Điểm NV đánh giá</span>,
             dataIndex: "employeeTotalScore",
             key: "employeeTotalScore",
-            width: 160,
+            width: 178,
             align: "center" as const,
             sorter: (a: any, b: any) => (getNumericScore(a.employeeTotalScore) ?? -1) - (getNumericScore(b.employeeTotalScore) ?? -1),
             render: (_: any, record: any) => {
                 const score = getNumericScore(record.employeeTotalScore);
                 return (
-                    <span style={{ fontWeight: 700, color: score !== null ? "#1677ff" : "#d9d9d9", fontSize: 14 }}>
+                    <span style={{ fontWeight: 750, color: score !== null ? "#64748b" : "#cbd5e1", fontSize: 14 }}>
                         {score !== null ? score.toFixed(2) : "—"}
                     </span>
                 );
             },
         },
         {
-            title: "Điểm quản lý",
+            title: <div style={{ whiteSpace: "nowrap" }}>Điểm quản lý</div>,
             dataIndex: "managerTotalScore",
             key: "managerTotalScore",
             width: 120,
@@ -405,10 +446,13 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                 const fontWeight = isOverdue ? 600 : 400;
 
                 return (
-                    <span style={{ fontSize: 12, color, fontWeight }}>
-                        {dayjs(deadline).format("DD/MM/YYYY")}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color, fontWeight }}>
+                        <span style={{ fontSize: 13 }}>{dayjs(deadline).format("DD/MM/YYYY")}</span>
+                        <span style={{ fontSize: 11, color: isOverdue ? "#cf1322" : "#8c8c8c", marginTop: 2 }}>
+                            {dayjs(deadline).format("HH:mm")}
+                        </span>
                         {isOverdue && <div style={{ fontSize: 10, marginTop: 2 }}>(Quá hạn)</div>}
-                    </span>
+                    </div>
                 );
             },
         },
@@ -419,52 +463,55 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
             width: 130,
             sorter: (a: any, b: any) =>
                 (a.completedAt ? dayjs(a.completedAt).valueOf() : 0) - (b.completedAt ? dayjs(b.completedAt).valueOf() : 0),
-            render: (_: any, record: any) => (
-                <span style={{ fontSize: 12, color: record.completedAt ? "#374151" : "#d9d9d9" }}>
-                    {record.completedAt ? dayjs(record.completedAt).format("DD/MM/YYYY") : "—"}
-                </span>
-            ),
+            render: (_: any, record: any) => {
+                if (!record.completedAt) {
+                    return <span style={{ fontSize: 12, color: "#d9d9d9" }}>—</span>;
+                }
+                return (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: "#374151" }}>
+                        <span style={{ fontSize: 13 }}>{dayjs(record.completedAt).format("DD/MM/YYYY")}</span>
+                        <span style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
+                            {dayjs(record.completedAt).format("HH:mm")}
+                        </span>
+                    </div>
+                );
+            },
         },
         {
             title: "Hành động",
             key: "action",
             align: "center" as const,
-            width: 120,
+            width: 160,
+            fixed: "right" as const,
             render: (_: any, record: any) => {
                 const isManager = record.evalRole === "MANAGER";
-                const path = isManager
-                    ? `/admin/evaluation/manager/records/${record.id}`
-                    : `/admin/evaluation/approval/records/${record.id}`;
-                const label = isManager
-                    ? (record.status === "PENDING_MANAGER_REVIEW"
-                        ? "Chấm điểm"
-                        : record.status === "MANAGER_REVIEWING" ? "Tiếp tục chấm" : "Xem chi tiết")
-                    : (record.status === "PENDING_APPROVAL" ? "Duyệt cuối" : "Xem chi tiết");
                 const isHighlight = isManager
                     ? record.status === "PENDING_MANAGER_REVIEW" || record.status === "MANAGER_REVIEWING"
                     : record.status === "PENDING_APPROVAL";
 
+                const label = isHighlight
+                    ? (isManager ? "Đánh giá" : "Phê duyệt")
+                    : "Chi tiết";
+
                 return (
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <Tooltip title="Xem lịch sử xử lý">
-                            <Button
-                                size="small"
-                                icon={<HistoryOutlined />}
-                                aria-label="Xem lịch sử xử lý"
-                                onClick={() => setHistoryRecord(record)}
-                                style={{ width: 28, height: 28, padding: 0, borderRadius: 6 }}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="progress"
+                            tooltip="Xem lịch sử xử lý"
+                            icon={<HistoryOutlined />}
+                            aria-label="Xem lịch sử xử lý"
+                            onClick={() => setHistoryRecord(record)}
+                        />
                         <Button
-                            type="primary"
+                            type={isHighlight ? "primary" : "default"}
                             size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() => navigate(path)}
+                            icon={isHighlight ? <EditOutlined /> : <EyeOutlined />}
+                            onClick={() => setActiveDetailRecord(record)}
                             style={{
                                 borderRadius: 6,
-                                fontWeight: 600,
-                                background: isHighlight ? "#1677ff" : "#ffffff",
-                                color: isHighlight ? "#ffffff" : "#334155",
+                                fontWeight: 650,
+                                background: isHighlight ? "#e8637a" : "#ffffff",
+                                color: isHighlight ? "#ffffff" : "#475569",
                                 border: isHighlight ? "none" : "1px solid #cbd5e1",
                                 fontSize: 12,
                                 height: 28,
@@ -498,8 +545,9 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     }, [records, searchText]);
 
     const filteredRecords = useMemo(() => baseRecords.filter(record => {
-        if (workView === "history" && !["COMPLETED", "REVISION_NEEDED"].includes(record.status)) {
-            return false;
+        if (workView === "history") {
+            if (isRecordActionable(record)) return false;
+            if (record.status === "EMPLOYEE_DRAFTING" || record.status === "NOT_STARTED") return false;
         }
 
         if (advancedFilters.periodId && (record.period?.id || record.periodId) !== advancedFilters.periodId) {
@@ -524,8 +572,10 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
         return true;
     }), [workView, advancedFilters, baseRecords]);
 
+    const tableLoading = loading && filteredRecords.length === 0;
+
     const content = (
-        <div style={{ padding: isTab ? "8px 0" : 0 }}>
+        <>
             <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 14 }}>
                 <SearchFilter
                     searchPlaceholder="Tìm nhân viên, mã NV, kỳ đánh giá..."
@@ -570,11 +620,11 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                                 },
                                 {
                                     key: "taskType",
-                                    label: "Vai trò xử lý",
+                                    label: "Loại việc",
                                     options: [
                                         { label: "Tất cả", value: "" },
-                                        { label: "Quản lý trực tiếp", value: "manager" },
-                                        { label: "Quản lý gián tiếp", value: "approver" }
+                                        { label: "Đánh giá", value: "manager" },
+                                        { label: "Phê duyệt", value: "approver" }
                                     ]
                                 }
                             ]}
@@ -599,28 +649,13 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                     align-items: center;
                     justify-content: flex-end;
                 }
-                .evaluation-work-tab-label {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 7px;
-                }
-                .evaluation-work-tab-badge {
-                    min-width: 20px;
-                    height: 20px;
-                    padding: 0 6px;
-                    border-radius: 5px;
+
+                .evaluation-table-nowrap {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    background: #e2e8f0;
-                    color: #475569;
-                    font-size: 11px;
-                    font-weight: 700;
-                    font-variant-numeric: tabular-nums;
-                }
-                .tab-bar__item--active .evaluation-work-tab-badge {
-                    background: #ffe4ed;
-                    color: #d62f68;
+                    white-space: nowrap;
+                    min-width: 132px;
                 }
                 @media (max-width: 768px) {
                     .evaluation-work-toolbar {
@@ -651,42 +686,24 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                         <div style={{ display: "flex", gap: 8 }}>
                             {selectedManagerRecords.length > 0 && (
                                 <Access permission={ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT} hideChildren>
-                                    <Popconfirm
-                                        title={`Nộp ${selectedManagerRecords.length} bản đã chấm?`}
-                                        description="Gửi lên cấp trên phê duyệt. Những bản chưa chấm đủ điểm sẽ không được nộp."
-                                        onConfirm={handleBatchSubmit}
-                                        okText="Nộp"
-                                        cancelText="Hủy"
-                                        okButtonProps={{ loading: batchSubmitting }}
-                                    >
-                                        <Button type="primary" loading={batchSubmitting}>
-                                            Nộp {selectedManagerRecords.length} bản đã chấm
-                                        </Button>
-                                    </Popconfirm>
+                                    <Button type="primary" loading={batchSubmitting} onClick={() => setOpenBatchSubmitModal(true)}>
+                                        Nộp {selectedManagerRecords.length} bản đã đánh giá
+                                    </Button>
                                 </Access>
                             )}
 
                             {selectedApproverRecords.length > 0 && (
                                 <Access permission={ALL_PERMISSIONS.EVALUATION.BATCH_APPROVE_RECORDS} hideChildren>
-                                    <Popconfirm
-                                        title={`Duyệt cuối ${selectedApproverRecords.length} bản đánh giá?`}
-                                        description="Kết quả sẽ được duyệt hoàn tất và công bố tới nhân viên."
-                                        onConfirm={handleBatchApprove}
-                                        okText="Duyệt"
-                                        cancelText="Hủy"
-                                        okButtonProps={{ loading: batchApproving }}
-                                    >
-                                        <Button type="primary" color="purple" variant="solid" loading={batchApproving}>
-                                            Duyệt cuối {selectedApproverRecords.length} bản
-                                        </Button>
-                                    </Popconfirm>
+                                    <Button type="primary" color="purple" variant="solid" loading={batchApproving} onClick={() => setOpenBatchApproveModal(true)}>
+                                        Phê duyệt {selectedApproverRecords.length} bản
+                                    </Button>
                                 </Access>
                             )}
                         </div>
                     </div>
                 )}
 
-                <DataTable<any>
+                <Table
                     rowSelection={workView === "pending" ? {
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),
@@ -694,15 +711,27 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                             disabled: !isRecordActionable(record),
                         }),
                     } : undefined}
+                    className="my-eval-table"
                     columns={displayColumns}
                     dataSource={filteredRecords}
                     rowKey="workItemKey"
-                    loading={loading}
-                    pagination={{
-                        pageSize: 10,
-                        showTotal: (total, range) => `${range[0]}–${range[1]} trên ${total} hồ sơ`,
-                    }}
+                    loading={tableLoading}
+                    pagination={{ pageSize: 10, size: "small", showTotal: (total, range) => `${range[0]}–${range[1]} trên ${total} hồ sơ` }}
+                    size="middle"
                     scroll={{ x: "max-content" }}
+                    locale={{
+                        emptyText: (
+                            <Empty
+                                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                description={
+                                    workView === "pending"
+                                        ? "Không có hồ sơ nào đang chờ xử lý."
+                                        : "Chưa có lịch sử xử lý."
+                                }
+                                style={{ margin: "40px 0" }}
+                            />
+                        ),
+                    }}
                 />
             </div>
 
@@ -741,7 +770,47 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                     />
                 )}
             </Drawer>
-        </div>
+            {activeDetailRecord?.evalRole === "MANAGER" && (
+                <ManagerEvaluationDetailPage
+                    recordId={activeDetailRecord.id}
+                    onClose={closeDetailDrawer}
+                />
+            )}
+            {activeDetailRecord?.evalRole === "APPROVER" && (
+                <ApprovalDetailPage
+                    recordId={activeDetailRecord.id}
+                    onClose={closeDetailDrawer}
+                />
+            )}
+
+            <ConfirmModal
+                open={openBatchSubmitModal}
+                variant="info"
+                title={`Nộp ${selectedManagerRecords.length} bản đã đánh giá?`}
+                description="Gửi lên cấp phê duyệt. Những bản chưa hoàn thành đánh giá sẽ không được nộp."
+                okText="Nộp ngay"
+                onConfirm={async () => {
+                    setOpenBatchSubmitModal(false);
+                    await handleBatchSubmit();
+                }}
+                onCancel={() => setOpenBatchSubmitModal(false)}
+                loading={batchSubmitting}
+            />
+
+            <ConfirmModal
+                open={openBatchApproveModal}
+                variant="success"
+                title={`Phê duyệt ${selectedApproverRecords.length} bản đánh giá?`}
+                description="Kết quả sẽ được phê duyệt hoàn tất và công bố tới nhân viên."
+                okText="Phê duyệt ngay"
+                onConfirm={async () => {
+                    setOpenBatchApproveModal(false);
+                    await handleBatchApprove();
+                }}
+                onCancel={() => setOpenBatchApproveModal(false)}
+                loading={batchApproving}
+            />
+        </>
     );
 
     return isTab ? content : (

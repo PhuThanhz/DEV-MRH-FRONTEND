@@ -41,6 +41,14 @@ const ACTION_BUTTON_STYLES = `
         border-color: #e2e8f0 !important;
     }
     .app-action-button:active { transform: scale(0.96); }
+    .app-action-button .anticon {
+        font-size: 16px !important;
+        line-height: 1;
+    }
+    .app-action-button .anticon > svg {
+        width: 1em;
+        height: 1em;
+    }
     .app-action-button.is-view { color: #2563eb !important; background: #eff6ff !important; border-color: #dbeafe !important; }
     .app-action-button.is-view:hover { color: #1d4ed8 !important; background: #dbeafe !important; border-color: #bfdbfe !important; }
     .app-action-button.is-edit { color: #b45309 !important; background: #fffbeb !important; border-color: #fef3c7 !important; }

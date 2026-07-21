@@ -10,20 +10,23 @@ import {
 } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
 import type { IEvaluationTemplate } from "@/types/backend";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { callFetchEvaluationTemplates, callPublishEvaluationTemplate } from "@/config/api";
+import TemplateDetailPage from "./TemplateDetailPage";
 import TemplateModal from "./TemplateModal";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const toTitleCase = (str: string) => {
     if (!str) return "";
@@ -36,10 +39,13 @@ const toTitleCase = (str: string) => {
         .replace(/\bLtd\b/g, "LTD");
 };
 
-const PINK = "#e8637a";
-
 const TemplatePage = () => {
     const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const parsedDetailTemplateId = id ? Number(id) : null;
+    const detailTemplateId = parsedDetailTemplateId && Number.isFinite(parsedDetailTemplateId)
+        ? parsedDetailTemplateId
+        : null;
     const [openModal, setOpenModal] = useState(false);
     const [dataInit, setDataInit] = useState<IEvaluationTemplate | null>(null);
 
@@ -57,7 +63,7 @@ const TemplatePage = () => {
         try {
             const res = await callPublishEvaluationTemplate(id);
             if (res?.data) {
-                notify.success("Kích hoạt mẫu đánh giá thành công!");
+                notify.success("Kích hoạt mẫu đánh giá thành công.");
                 tableRef.current?.reload();
             }
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -95,6 +101,16 @@ const TemplatePage = () => {
         return `${temp}&${sortBy}`;
     };
 
+    const openDetailDrawer = (templateId?: number) => {
+        if (!templateId) return;
+        navigate(`/admin/evaluation/templates/${templateId}`);
+    };
+
+    const closeDetailDrawer = () => {
+        navigate("/admin/evaluation/templates");
+        tableRef.current?.reload();
+    };
+
     const columns: ProColumns<IEvaluationTemplate>[] = [
         {
             title: "STT",
@@ -111,7 +127,7 @@ const TemplatePage = () => {
             render: (val, record) => (
                 <Typography.Link 
                     style={{ fontWeight: 500, fontSize: "14px", color: "#262626" }}
-                    onClick={() => navigate(`/admin/evaluation/templates/${record.id}`)}
+                    onClick={() => openDetailDrawer(record.id)}
                 >
                     {val}
                 </Typography.Link>
@@ -204,19 +220,13 @@ const TemplatePage = () => {
                             permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
                             hideChildren
                         >
-                            <div
-                                onClick={() => navigate(`/admin/evaluation/templates/${entity.id}`)}
-                                style={{ 
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
-                                    color: "#1677ff", transition: "all 0.2s", background: "transparent"
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#e6f4ff"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                title="Xem chi tiết"
-                            >
-                                <EyeOutlined style={{ fontSize: 15 }} />
-                            </div>
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
+                                icon={<EyeOutlined />}
+                                onClick={() => openDetailDrawer(entity.id)}
+                                aria-label="Xem chi tiết"
+                            />
                         </Access>
                     )}
 
@@ -225,19 +235,13 @@ const TemplatePage = () => {
                             permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}
                             hideChildren
                         >
-                            <div
-                                onClick={() => navigate(`/admin/evaluation/templates/${entity.id}`)}
-                                style={{ 
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
-                                    color: PINK, transition: "all 0.2s", background: "transparent"
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fff0f2"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                title="Cấu hình tiêu chí"
-                            >
-                                <SettingOutlined style={{ fontSize: 15 }} />
-                            </div>
+                            <ActionButton
+                                variant="settings"
+                                tooltip="Cấu hình tiêu chí"
+                                icon={<SettingOutlined />}
+                                onClick={() => openDetailDrawer(entity.id)}
+                                aria-label="Cấu hình tiêu chí"
+                            />
                         </Access>
                     )}
 
@@ -246,22 +250,16 @@ const TemplatePage = () => {
                             permission={ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE}
                             hideChildren
                         >
-                            <div
+                            <ActionButton
+                                variant="edit"
+                                tooltip="Chỉnh sửa thông tin"
+                                icon={<EditOutlined />}
                                 onClick={() => {
                                     setDataInit(entity);
                                     setOpenModal(true);
                                 }}
-                                style={{ 
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 30, height: 30, borderRadius: 6, cursor: "pointer",
-                                    color: "#d97706", transition: "all 0.2s", background: "transparent"
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                title="Chỉnh sửa thông tin"
-                            >
-                                <EditOutlined style={{ fontSize: 15 }} />
-                            </div>
+                                aria-label="Chỉnh sửa thông tin"
+                            />
                         </Access>
                     )}
 
@@ -277,18 +275,12 @@ const TemplatePage = () => {
                                 okText="Đồng ý"
                                 cancelText="Hủy"
                             >
-                                <div
-                                    style={{ 
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        width: 30, height: 30, borderRadius: 6, cursor: "pointer",
-                                        color: "#16a34a", transition: "all 0.2s", background: "transparent"
-                                    }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#dcfce7"; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                    title="Kích hoạt mẫu"
-                                >
-                                    <CheckCircleOutlined style={{ fontSize: 15 }} />
-                                </div>
+                                <ActionButton
+                                    variant="success"
+                                    tooltip="Kích hoạt mẫu"
+                                    icon={<CheckCircleOutlined />}
+                                    aria-label="Kích hoạt mẫu"
+                                />
                             </Popconfirm>
                         </Access>
                     )}
@@ -398,6 +390,21 @@ const TemplatePage = () => {
                 setDataInit={setDataInit}
                 reloadTable={() => tableRef.current?.reload()}
             />
+
+            <LotusDetailDrawer
+                open={!!detailTemplateId}
+                onClose={closeDetailDrawer}
+                keyboard={false}
+                destroyOnClose={false}
+            >
+                {detailTemplateId && (
+                    <TemplateDetailPage
+                        templateIdOverride={detailTemplateId}
+                        embedded
+                        onClose={closeDetailDrawer}
+                    />
+                )}
+            </LotusDetailDrawer>
         </PageContainer>
     );
 };

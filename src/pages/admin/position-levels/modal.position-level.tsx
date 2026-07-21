@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ModalForm, ProFormText, ProFormSwitch } from "@ant-design/pro-components";
-import { Col, Form, Row, Select, message } from "antd";
+import { Col, Form, Row, Select } from "antd";
 
 import type { IPositionLevel } from "@/types/backend";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/hooks/usePositionLevels";
 import { useCompaniesQuery } from "@/hooks/useCompanies";
 import { useIsMobile, useModalWidth } from "@/components/common/modal/detail";
+import { notify } from "@/components/common/notification/notify";
 
 interface IProps {
     openModal: boolean;
@@ -59,14 +60,14 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
             updateLevel(payload, {
                 onSuccess: handleReset,
                 onError: (err: any) =>
-                    message.error(err?.response?.data?.message || "Lỗi cập nhật bậc chức danh"),
+                    notify.error(err?.response?.data?.message || "Không thể cập nhật bậc chức danh"),
             });
         } else {
             payload.companyId = values.companyId;
             createLevel(payload, {
                 onSuccess: handleReset,
                 onError: (err: any) =>
-                    message.error(err?.response?.data?.message || "Lỗi tạo mới bậc chức danh"),
+                    notify.error(err?.response?.data?.message || "Không thể tạo mới bậc chức danh"),
             });
         }
     };

@@ -65,7 +65,7 @@ const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
                 setFolderDocs([]);
             }
         } catch (error) {
-            notify.error("Lỗi khi tải danh sách tài liệu trong thư mục");
+            notify.error("Không thể tải danh sách tài liệu trong thư mục");
         } finally {
             setLoadingDocs(false);
         }
@@ -105,7 +105,7 @@ const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
         try {
             const folderId = Number(selectedKeys[0]);
             await callCreateDocumentShortcut(document.id, folderId);
-            notify.success("Thêm lối tắt thành công!");
+            notify.success("Thêm lối tắt thành công.");
             onClose();
         } catch (error: any) {
             const msg = error?.response?.data?.message || "Đã xảy ra lỗi khi thêm lối tắt";

@@ -28,6 +28,7 @@ import {
 import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 
 import type { ICompanySalaryGrade } from "@/types/backend";
+import ActionButton from "@/components/common/ui/ActionButton";
 import type { ColumnsType } from "antd/es/table";
 import { getModalWidth } from "@/utils/responsive";
 
@@ -147,19 +148,22 @@ const DrawerCompanySalaryGrade = ({
                             title="Bạn chắc chắn muốn xoá?"
                             onConfirm={() => handleDelete(record)}
                         >
-                            <Button
-                                type="text"
-                                danger
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xóa bậc lương"
                                 icon={<DeleteOutlined />}
                                 loading={deleting}
+                                aria-label="Xóa bậc lương"
                             />
                         </Popconfirm>
                     ) : (
-                        <Button
-                            type="text"
-                            icon={<UndoOutlined style={{ color: "#1677ff" }} />}
+                        <ActionButton
+                            variant="success"
+                            tooltip="Khôi phục bậc lương"
+                            icon={<UndoOutlined />}
                             onClick={() => handleRestore(record)}
                             loading={restoring}
+                            aria-label="Khôi phục bậc lương"
                         />
                     )}
                 </Space>

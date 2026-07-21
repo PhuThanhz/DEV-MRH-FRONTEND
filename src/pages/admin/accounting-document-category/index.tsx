@@ -24,6 +24,7 @@ import {
 } from "@/hooks/useAccountingDocumentCategories";
 
 import ModalAccountingDocumentCategory from "./modal.accounting-document-category";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const AccountingDocumentCategoryPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -206,13 +207,16 @@ const AccountingDocumentCategoryPage = () => {
                         permission={ALL_PERMISSIONS.ACCOUNTING_DOCUMENT_CATEGORIES.UPDATE}
                         hideChildren
                     >
-                        <EditOutlined
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
+                            icon={<EditOutlined />}
                             data-guide-id="accounting-document-category-edit-button"
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
                             }}
+                            aria-label="Chỉnh sửa"
                         />
                     </Access>
 
@@ -233,13 +237,12 @@ const AccountingDocumentCategoryPage = () => {
                                 entity.id && toggleMutation.mutate(entity.id)
                             }
                         >
-                            <PoweroffOutlined
+                            <ActionButton
+                                variant={entity.active ? "danger" : "success"}
+                                tooltip={entity.active ? "Ngừng hoạt động" : "Kích hoạt"}
+                                icon={<PoweroffOutlined />}
                                 data-guide-id="accounting-document-category-status-button"
-                                style={{
-                                    fontSize: 18,
-                                    color: entity.active ? "#52c41a" : "#d9d9d9",
-                                    cursor: "pointer",
-                                }}
+                                aria-label={entity.active ? "Ngừng hoạt động" : "Kích hoạt"}
                             />
                         </Popconfirm>
                     </Access>
@@ -259,13 +262,12 @@ const AccountingDocumentCategoryPage = () => {
                                 entity.id && deleteMutation.mutate(entity.id)
                             }
                         >
-                            <DeleteOutlined
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xóa loại chứng từ"
+                                icon={<DeleteOutlined />}
                                 data-guide-id="accounting-document-category-delete-button"
-                                style={{
-                                    fontSize: 18,
-                                    color: "#ff4d4f",
-                                    cursor: "pointer",
-                                }}
+                                aria-label="Xóa loại chứng từ"
                             />
                         </Popconfirm>
                     </Access>

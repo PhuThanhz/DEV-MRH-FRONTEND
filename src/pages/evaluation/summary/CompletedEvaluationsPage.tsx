@@ -82,7 +82,7 @@ const EXPORT_COLUMNS = [
     { key: "company", title: "Công ty", width: 26, align: "left" },
     { key: "department", title: "Phòng ban", width: 28, align: "left" },
     { key: "period", title: "Kỳ đánh giá", width: 24, align: "left" },
-    { key: "employeeScore", title: "Điểm NV đánh giá", width: 26, align: "center" },
+    { key: "employeeScore", title: <div style={{ whiteSpace: "nowrap" }}>Điểm NV đánh giá</div>, width: 26, align: "center" },
     { key: "finalScore", title: "Điểm kết quả", width: 14, align: "center" },
     { key: "grade", title: "Xếp loại", width: 12, align: "center" },
 ];
@@ -285,7 +285,7 @@ const CompletedEvaluationsPage = () => {
             }
         } catch (error: any) {
             if (error?.response?.status !== 403) {
-                notify.error("Lỗi tải danh sách kỳ đánh giá");
+                notify.error("Không thể tải danh sách kỳ đánh giá");
             }
         } finally {
             setPeriodLoading(false);
@@ -299,7 +299,7 @@ const CompletedEvaluationsPage = () => {
                 setCompanies(res.data.result);
             }
         } catch {
-            notify.error("Lỗi tải danh sách công ty");
+            notify.error("Không thể tải danh sách công ty");
         }
     };
 
@@ -310,7 +310,7 @@ const CompletedEvaluationsPage = () => {
                 setDepartments(res.data);
             }
         } catch {
-            notify.error("Lỗi tải danh sách phòng ban");
+            notify.error("Không thể tải danh sách phòng ban");
         }
     };
 
@@ -321,7 +321,7 @@ const CompletedEvaluationsPage = () => {
                 setSections(res.data);
             }
         } catch {
-            notify.error("Lỗi tải danh sách bộ phận");
+            notify.error("Không thể tải danh sách bộ phận");
         }
     };
 
@@ -343,7 +343,7 @@ const CompletedEvaluationsPage = () => {
                 setTotal(res.data.meta?.total || 0);
             }
         } catch {
-            notify.error("Lỗi tải báo cáo tổng hợp");
+            notify.error("Không thể tải báo cáo tổng hợp");
         } finally {
             setLoading(false);
         }
@@ -910,7 +910,7 @@ const CompletedEvaluationsPage = () => {
             render: (_: any, record: any) => <span style={{ fontWeight: 600, color: "#334155" }}>{record.period?.name || "—"}</span>,
         },
         {
-            title: "Điểm NV đánh giá",
+            title: <div style={{ whiteSpace: "nowrap" }}>Điểm NV đánh giá</div>,
             dataIndex: "employeeTotalScore",
             key: "employeeTotalScore",
             align: "center" as const,
@@ -1015,7 +1015,8 @@ const CompletedEvaluationsPage = () => {
             title: "Hành động",
             key: "actions",
             align: "center" as const,
-            width: 100,
+            width: 110,
+            fixed: "right" as const,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             render: (_: any, record: any) => (
                 <Button

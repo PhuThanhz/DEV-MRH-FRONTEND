@@ -13,7 +13,15 @@ interface IProps {
 }
 
 const ManageAccount = ({ open, onClose }: IProps) => {
-    const { isMobile } = useBreakpoint();
+    const { isMobile, isTablet, isSmallLaptop } = useBreakpoint();
+    const drawerWidth = isMobile
+        ? "100vw"
+        : isTablet
+            ? "94vw"
+            : isSmallLaptop
+                ? "90vw"
+                : "82vw";
+    const drawerTop = isMobile ? 0 : "clamp(1rem, 2.5vh, 2.25rem)";
 
     return (
         <Drawer
@@ -23,7 +31,7 @@ const ManageAccount = ({ open, onClose }: IProps) => {
             closable={false}
             maskClosable={false}
             destroyOnHidden
-            width={isMobile ? "100%" : "min(1200px, calc(100% - 80px))"}
+            width={drawerWidth}
             styles={{
                 mask: {
                     background: "rgba(10, 14, 32, 0.34)",
@@ -31,8 +39,10 @@ const ManageAccount = ({ open, onClose }: IProps) => {
                     top: 0,
                 },
                 wrapper: {
-                    top: 35,
-                    height: "calc(100% - 35px)",
+                    top: drawerTop,
+                    height: isMobile
+                        ? "100dvh"
+                        : "calc(100dvh - clamp(1rem, 2.5vh, 2.25rem))",
                     boxShadow: "-10px 0 40px rgba(15, 23, 42, 0.16)",
                     overflow: "visible",
                 },

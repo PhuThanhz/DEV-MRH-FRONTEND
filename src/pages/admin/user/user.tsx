@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Space, Tag, Button } from "antd";
+import { Space, Tag } from "antd";
 import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -22,6 +22,7 @@ import { useAppSelector } from "@/redux/hooks";
 
 import ModalUser from "@/pages/admin/user/modal.user";
 import ViewDetailUser from "@/pages/admin/user/view.user";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 type RoleOption = { label: string; value: string; color?: string };
 
@@ -53,10 +54,10 @@ const UserPage = () => {
     const roleOptions = useMemo<RoleOption[]>(() => {
         if (!rolesData?.result) return [];
         return rolesData.result.map((r: any) => ({
-                label: r.name,
-                value: r.name,
-                color: "blue",
-            }));
+            label: r.name,
+            value: r.name,
+            color: "blue",
+        }));
     }, [rolesData]);
 
     const buildQuery = useCallback((
@@ -253,18 +254,20 @@ const UserPage = () => {
             render: (_, entity) => (
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.USERS.GET_BY_ID} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
                             data-guide-id="user-detail-button"
-                            type="text" size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
                         />
                     </Access>
                     <Access permission={ALL_PERMISSIONS.USERS.UPDATE} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="user-edit-button"
-                            type="text" size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => { setDataInit(entity); setOpenModal(true); }}
                         />
                     </Access>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Drawer, Spin, Avatar, Empty } from "antd";
+import { Drawer, Spin, Empty } from "antd";
 import {
     CheckOutlined,
     SearchOutlined,
@@ -15,6 +15,7 @@ import "dayjs/locale/vi";
 import type { UnifiedNotification } from "@/hooks/useNotifications";
 import { useNotificationHistory } from "@/hooks/useNotificationHistory";
 import { getModalWidth } from "@/utils/responsive";
+import { resolveNotificationActionLink } from "./notificationNavigation";
 
 dayjs.extend(relativeTime);
 dayjs.locale("vi");
@@ -45,7 +46,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
             markOneRead(item);
         }
         if (item.actionLink) {
-            navigate(item.actionLink);
+            navigate(resolveNotificationActionLink(item.actionLink)!);
             onClose();
         }
     };
@@ -135,10 +136,10 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
             </div>
 
             {/* List Content */}
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar" onScroll={handleScroll}>
-                <div className="flex items-center justify-between mb-5">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar" onScroll={handleScroll}>
+                <div className="flex items-center justify-between mb-4">
                     <span className="text-[13px] font-bold text-slate-800 uppercase tracking-wide">
-                        {activeTab === 'unread' ? 'Đang chờ bạn xử lý' : 'Cập nhật gần đây'}
+                        {activeTab === 'unread' ? 'Thông báo chưa đọc' : 'Cập nhật gần đây'}
                     </span>
                     <button
                         onClick={markAllRead}
@@ -154,7 +155,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
                         <Spin />
                     </div>
                 ) : filteredItems.length > 0 ? (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2.5">
                         {filteredItems.map((item) => {
                             const isSystem = item.title === "Thông báo hệ thống";
                             const displayTitle = isSystem ? "Hệ thống Lotus HRM" : item.title;
@@ -163,68 +164,75 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ open, onClose }
                                 <div
                                     key={item.id}
                                     onClick={() => handleItemClick(item)}
-                                    className={`relative p-5 pl-6 rounded-[12px] transition-all cursor-pointer group overflow-hidden ${!item.isRead ? 'bg-white border border-slate-200 shadow-[0_2px_10px_rgba(15,23,42,0.04)] hover:border-slate-300 hover:shadow-[0_4px_16px_rgba(15,23,42,0.07)]' : 'bg-white/60 border border-slate-100 hover:bg-white hover:shadow-sm'}`}
+                                    className={`relative px-5 py-4 rounded-[14px] transition-all cursor-pointer group overflow-hidden ${!item.isRead ? 'bg-white border border-slate-200 shadow-[0_6px_20px_-18px_rgba(15,23,42,0.28)] hover:border-rose-100 hover:shadow-[0_10px_26px_-20px_rgba(225,29,72,0.28)]' : 'bg-white/65 border border-slate-100 hover:bg-white hover:border-slate-200'}`}
                                 >
                                     {!item.isRead && (
-                                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500" />
+                                        <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-rose-400/75" />
                                     )}
-                                    <div className="flex gap-4">
-                                        <Avatar
-                                            size={44}
-                                            src={isSystem ? "https://ui-avatars.com/api/?name=LT&background=1e293b&color=fff&bold=true" : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayTitle)}&background=f1f5f9&color=64748b`}
-                                            className={`flex-shrink-0 shadow-sm ${item.isRead ? 'grayscale-[40%]' : ''}`}
-                                        />
+                                    <div className="flex gap-3.5">
+                                        <div className={`w-9 h-9 flex-shrink-0 rounded-[10px] border flex items-center justify-center text-[12px] font-bold ${item.isRead ? "border-slate-200 bg-slate-50 text-slate-400" : "border-rose-100 bg-rose-50/60 text-rose-500"}`}>
+                                            {isSystem ? "LT" : displayTitle.slice(0, 1).toLocaleUpperCase("vi-VN")}
+                                        </div>
 
-                                        <div className="flex-1 min-w-0 pt-0.5">
-                                            <h4 className={`text-[14.5px] m-0 leading-tight truncate pr-32 ${!item.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-500'}`}>
-                                                {displayTitle}
-                                            </h4>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <h4 className={`flex-1 min-w-0 text-[14px] m-0 leading-tight truncate ${!item.isRead ? 'font-bold text-slate-800' : 'font-semibold text-slate-500'}`}>
+                                                    {displayTitle}
+                                                </h4>
+                                                <div className="flex items-center gap-1.5 flex-shrink-0 -mt-1">
+                                                    <time className="text-[11px] text-slate-400 font-medium tabular-nums whitespace-nowrap" dateTime={item.createdAt}>
+                                                        {item.createdAt ? dayjs(item.createdAt).format("DD/MM, HH:mm") : ""}
+                                                    </time>
+                                                    {item.type === "app" && (
+                                                        <button
+                                                            type="button"
+                                                            title="Xoá thông báo"
+                                                            aria-label="Xoá thông báo"
+                                                            className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                deleteOne(item);
+                                                            }}
+                                                        >
+                                                            <DeleteOutlined style={{ fontSize: 14 }} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                            <p className={`text-[13.5px] m-0 mt-1.5 mb-3.5 leading-relaxed ${!item.isRead ? 'text-slate-600' : 'text-slate-400'}`} dangerouslySetInnerHTML={{ __html: item.subtitle.replace(/\n/g, '<br/>') }} />
+                                            <p className={`text-[13px] m-0 mt-1.5 leading-relaxed whitespace-pre-line ${!item.isRead ? 'text-slate-600' : 'text-slate-400'}`}>
+                                                {item.subtitle}
+                                            </p>
 
                                             {item.actionLink && (
-                                                <div className="flex gap-2 mt-2">
+                                                <div className="flex items-center gap-1.5 mt-3">
                                                     <button
-                                                        className={`px-5 py-1.5 text-[13px] font-semibold rounded-[8px] transition-colors ${!item.isRead ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm' : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                                                        className="px-3.5 py-1.5 text-[12px] font-semibold rounded-[8px] border border-rose-100/90 bg-rose-50/65 hover:bg-rose-100/70 hover:border-rose-200/80 text-rose-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            navigate(item.actionLink!);
+                                                            if (!item.isRead) {
+                                                                markOneRead(item);
+                                                            }
+                                                            navigate(resolveNotificationActionLink(item.actionLink)!);
                                                             onClose();
                                                         }}
                                                     >
-                                                        Chi tiết
+                                                        Xem chi tiết
                                                     </button>
                                                     {!item.isRead && (
                                                         <button
-                                                            className="px-5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-[13px] font-semibold rounded-[8px] transition-colors"
+                                                            className="px-3 py-1.5 bg-transparent border border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700 text-[12px] font-semibold rounded-[8px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 markOneRead(item);
                                                             }}
                                                         >
-                                                            Đã hiểu
+                                                            Đánh dấu đã đọc
                                                         </button>
                                                     )}
                                                 </div>
                                             )}
 
-                                            <div className="absolute top-5 right-5 flex items-center gap-2">
-                                                <span className="text-[12px] text-slate-400 font-medium">
-                                                    {item.createdAt ? dayjs(item.createdAt).format("DD/MM, HH:mm") : ""}
-                                                </span>
-                                                {item.type === "app" && (
-                                                    <button
-                                                        title="Xoá thông báo"
-                                                        className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            deleteOne(item);
-                                                        }}
-                                                    >
-                                                        <DeleteOutlined style={{ fontSize: 14 }} />
-                                                    </button>
-                                                )}
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

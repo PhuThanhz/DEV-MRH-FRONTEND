@@ -87,7 +87,7 @@ export const useCreateDepartmentMutation = () => {
             qc.invalidateQueries({ queryKey: ["departments"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi tạo phòng ban");
+            notify.error(err?.message || "Không thể tạo phòng ban");
         },
     });
 };
@@ -111,7 +111,7 @@ export const useUpdateDepartmentMutation = () => {
             qc.invalidateQueries({ queryKey: ["departments"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi cập nhật phòng ban");
+            notify.error(err?.message || "Không thể cập nhật phòng ban");
         },
     });
 };
@@ -129,7 +129,7 @@ export const useDeleteDepartmentMutation = () => {
             qc.invalidateQueries({ queryKey: ["departments"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi xoá phòng ban");
+            notify.error(err?.message || "Không thể xoá phòng ban");
         },
     });
 };

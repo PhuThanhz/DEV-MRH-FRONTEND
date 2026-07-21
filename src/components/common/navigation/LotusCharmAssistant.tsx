@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
 import { getModalWidth } from "@/utils/responsive";
+import { resolveNotificationActionLink } from "@/components/common/notification/notificationNavigation";
 
 dayjs.extend(relativeTime);
 dayjs.locale("vi");
@@ -193,7 +194,7 @@ const LotusCharmAssistant = () => {
             await markOneRead(noti);
         }
         if (noti.actionLink) {
-            handleNavigate(noti.actionLink);
+            handleNavigate(resolveNotificationActionLink(noti.actionLink)!);
         }
     };
 

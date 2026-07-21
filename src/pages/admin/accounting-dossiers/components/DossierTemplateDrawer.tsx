@@ -36,6 +36,7 @@ import type {
     ICompany,
     IAccountingDossierCategoryRequest,
 } from "@/types/backend";
+import ActionButton from "@/components/common/ui/ActionButton";
 import {
     callCreateAccountingDossierCategory,
     callDeleteAccountingDossierCategory,
@@ -210,7 +211,12 @@ const DossierTemplateDrawer = ({
                         {canToggleActive && !record.active && <Button size="small" type="text" className="template-activate-button" icon={<PoweroffOutlined />} onClick={() => void toggleActive(record)}>Kích hoạt</Button>}
                         {((record.active && canToggleActive) || canDelete) && (
                             <Dropdown menu={getActionMenu(record)} trigger={["click"]}>
-                                <Button size="small" type="text" aria-label={`Thao tác với ${record.categoryName}`} icon={<MoreOutlined />} />
+                                <ActionButton
+                                    variant="default"
+                                    tooltip="Thao tác khác"
+                                    aria-label={`Thao tác với ${record.categoryName}`}
+                                    icon={<MoreOutlined />}
+                                />
                             </Dropdown>
                         )}
                     </div>
@@ -255,22 +261,39 @@ const DossierTemplateDrawer = ({
             responsive: ["sm"],
             render: (_, record) => (
                 <Space size={4} align="center">
-                    <Tooltip title="Xem mẫu">
-                        <Button type="text" size="small" aria-label={`Xem ${record.categoryName}`} icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />} onClick={() => setPreviewRecord(record)} />
-                    </Tooltip>
+                    <ActionButton
+                        variant="view"
+                        tooltip="Xem mẫu"
+                        aria-label={`Xem ${record.categoryName}`}
+                        icon={<EyeOutlined />}
+                        onClick={() => setPreviewRecord(record)}
+                    />
                     {canUpdate && (
-                        <Tooltip title="Chỉnh sửa mẫu">
-                            <Button type="text" size="small" aria-label={`Chỉnh sửa ${record.categoryName}`} icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />} onClick={() => setEditorRecord(record)} />
-                        </Tooltip>
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa mẫu"
+                            aria-label={`Chỉnh sửa ${record.categoryName}`}
+                            icon={<EditOutlined />}
+                            onClick={() => setEditorRecord(record)}
+                        />
                     )}
                     {canToggleActive && !record.active && (
-                        <Tooltip title="Kích hoạt lại">
-                            <Button type="text" size="small" className="template-activate-button" aria-label={`Kích hoạt lại ${record.categoryName}`} icon={<PoweroffOutlined style={{ fontSize: 16 }} />} onClick={() => void toggleActive(record)} />
-                        </Tooltip>
+                        <ActionButton
+                            variant="success"
+                            tooltip="Kích hoạt lại"
+                            aria-label={`Kích hoạt lại ${record.categoryName}`}
+                            icon={<PoweroffOutlined />}
+                            onClick={() => void toggleActive(record)}
+                        />
                     )}
                     {((record.active && canToggleActive) || canDelete) && (
                         <Dropdown menu={getActionMenu(record)} trigger={["click"]}>
-                            <Button type="text" size="small" aria-label={`Thao tác với ${record.categoryName}`} icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />} />
+                            <ActionButton
+                                variant="default"
+                                tooltip="Thao tác khác"
+                                aria-label={`Thao tác với ${record.categoryName}`}
+                                icon={<MoreOutlined />}
+                            />
                         </Dropdown>
                     )}
                 </Space>

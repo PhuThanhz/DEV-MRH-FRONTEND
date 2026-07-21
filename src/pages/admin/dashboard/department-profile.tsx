@@ -27,6 +27,7 @@ import {
     CRITERIA_MAP,
     PRIORITIZED_KEYS,
 } from "./departmentProfileCriteria";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 /* ────────────────────────────────────────────── */
 const CRITERIA = PRIORITIZED_KEYS.map(key => ({
@@ -402,7 +403,6 @@ const DepartmentProfilePage = () => {
             width: isMobile ? 60 : 150,
             fixed: "right",        // ← sticky bên phải
             render: (_, record) => {
-                const labelText = "Xem chi tiết";
                 const tooltipText = "Xem chi tiết hồ sơ phòng ban";
 
                 const openDetail = () => {
@@ -414,15 +414,13 @@ const DepartmentProfilePage = () => {
                 };
 
                 return (
-                    <Tooltip title={tooltipText}>
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                            onClick={openDetail}
-                            aria-label={tooltipText}
-                        />
-                    </Tooltip>
+                    <ActionButton
+                        variant="view"
+                        tooltip={tooltipText}
+                        icon={<EyeOutlined />}
+                        onClick={openDetail}
+                        aria-label={tooltipText}
+                    />
                 );
             },
         },

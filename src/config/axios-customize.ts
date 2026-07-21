@@ -1,7 +1,7 @@
 import type { IBackendRes } from "@/types/backend";
 import axios, { AxiosError } from "axios";
 import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import { notification } from "antd";
+import { notify } from "@/components/common/notification/notify";
 
 interface AccessTokenResponse {
     access_token: string;
@@ -279,23 +279,23 @@ instance.interceptors.response.use(
 
 
         if (error.response?.status === 403) {
-            notification.error({
-                message: error?.response?.data?.message ?? "",
-                description: error?.response?.data?.error ?? "",
-            });
+            notify.error(
+                [error?.response?.data?.message, error?.response?.data?.error].filter(Boolean).join(". ") || "Bạn không có quyền thực hiện thao tác này",
+                { id: "api-403" }
+            );
         }
 
         if (error.response?.status === 409) {
-            notification.error({
-                message: "Dữ liệu đã bị thay đổi",
-                description: "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại trang",
+            notify.warning("Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại trang", {
+                id: "api-409",
+                title: "Dữ liệu đã bị thay đổi",
             });
         }
 
         if (error.response?.status === 400 && error.response?.data?.message === "Mã đã tồn tại") {
-            notification.error({
-                message: "Lỗi dữ liệu",
-                description: "Mã đã tồn tại, vui lòng kiểm tra lại",
+            notify.warning("Mã đã tồn tại, vui lòng kiểm tra lại", {
+                id: "api-duplicate-code",
+                title: "Mã đã được sử dụng",
             });
         }
 

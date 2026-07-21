@@ -1,11 +1,12 @@
 import React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation, useBlocker } from "react-router-dom";
-import { Button, Spin, Tag, Popconfirm, Input, Alert, Empty, Progress, Breadcrumb, Collapse, Switch, Dropdown, Tooltip } from "antd";
+import { Button, Spin, Tag, Popconfirm, Input, Alert, Empty, Breadcrumb, Collapse, Switch, Dropdown, Tooltip } from "antd";
 import {
     CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
-    FileTextOutlined, TrophyOutlined, FileExcelOutlined, MoreOutlined, LoadingOutlined
+    FileTextOutlined, TrophyOutlined, FileExcelOutlined, MoreOutlined, LoadingOutlined,
+    RightOutlined, DownOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
@@ -22,7 +23,17 @@ import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
+import { useGrabToScroll } from "@/hooks/useGrabToScroll";
+import { useRef, useMemo } from "react";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+import { EvaluationUserInfo } from "../components/shared/EvaluationUserInfo";
+import { EvaluationGuidelines } from "../components/shared/EvaluationGuidelines";
+import { EvaluationCommentsSection } from "../components/shared/EvaluationCommentsSection";
+import { SharedCriteriaRow, SharedSubCriteriaRow } from "../components/shared/EvaluationTableRows";
+import { formatWeight } from "../components/evaluationScoring";
+import { EvaluationProgressIndicator } from "../components/shared/EvaluationProgressIndicator";
+import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import "../components/shared/evaluation-shell.css";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -126,15 +137,20 @@ const getTemplateStructureIssues = (sections?: any[]): TemplateStructureIssue[] 
 const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER" | "APPROVER") =>
     scores?.find(s => s.criteriaId === criteriaId && s.scoredBy === by)?.score ?? null;
 
-const getComment = (comments: any[], type: string) =>
-    comments?.find(c => c.commentType === type)?.content ?? "";
+const LEVEL_HEADER_CONFIG: Record<number, { title: string; subtitle: string; color: string; bg: string; border: string }> = {
+    1: { title: "Mức 1", subtitle: "Yếu", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+    2: { title: "Mức 2", subtitle: "Trung bình", color: "#ea580c", bg: "#fff7ed", border: "#ffddc1" },
+    3: { title: "Mức 3", subtitle: "Khá", color: "#b45309", bg: "#fefbeb", border: "#fef08a" },
+    4: { title: "Mức 4", subtitle: "Tốt", color: "#65a30d", bg: "#f7fee7", border: "#d9f99d" },
+    5: { title: "Mức 5", subtitle: "Xuất sắc", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+};
 
 const formatDateTime = (value?: string | null) =>
     value ? dayjs(value).format("DD/MM/YYYY HH:mm") : "—";
 
 const getStickyStyle = (col: "empScore" | "finalScore", isCompleted: boolean, isHeader = false): React.CSSProperties => {
-    const width = col === "empScore" ? EMPLOYEE_SCORE_WIDTH : FINAL_SCORE_WIDTH;
-    const right = col === "empScore" && isCompleted ? FINAL_SCORE_WIDTH : 0;
+    const width = col === "empScore" ? 220 : 150;
+    const right = col === "empScore" && isCompleted ? 150 : 0;
     const isLeftmost = col === "empScore";
 
     return {
@@ -142,196 +158,16 @@ const getStickyStyle = (col: "empScore" | "finalScore", isCompleted: boolean, is
         right,
         width,
         minWidth: width,
-        maxWidth: width,
         boxSizing: "border-box",
-        overflow: "hidden",
-        zIndex: isHeader ? 4 : 2,
-        background: isHeader ? "#f8fafc" : "#fff",
-        borderLeft: isLeftmost ? "1px solid #dbe3ef" : undefined,
-        boxShadow: isLeftmost ? "-2px 0 4px -4px rgba(15,23,42,0.18)" : undefined,
+        zIndex: isHeader ? 3 : 2,
+        background: "#ffffff",
+        borderLeft: isLeftmost ? "1.5px solid #cbd5e1" : undefined,
+        boxShadow: isLeftmost ? "-4px 0 8px -2px rgba(15,23,42,0.08)" : undefined,
         backgroundClip: "padding-box",
     };
 };
 
-interface ScorePickerProps {
-    value: number | null;
-    result?: number | null;
-    loading: boolean;
-    onChange: (score: number) => void;
-}
 
-const ScorePicker = React.memo(({ value, result, loading, onChange }: ScorePickerProps) => (
-    <div
-        className={`evaluation-score-picker${value == null ? " is-empty" : " has-value"}${loading ? " is-saving" : ""}`}
-        aria-busy={loading}
-    >
-        <div className="evaluation-score-picker-options" role="group" aria-label="Chọn điểm đánh giá từ 1 đến 5">
-            {SCORE_VALUES.map(score => (
-                <button
-                    key={score}
-                    type="button"
-                    className={`evaluation-score-option${value === score ? " is-selected" : ""}`}
-                    aria-label={`${score} điểm - ${SCORE_DESCRIPTIONS[score]}`}
-                    aria-pressed={value === score}
-                    title={`${score} điểm - ${SCORE_DESCRIPTIONS[score]}`}
-                    disabled={loading}
-                    onClick={() => {
-                        if (value !== score) onChange(score);
-                    }}
-                >
-                    {loading && value === score ? <LoadingOutlined spin /> : score}
-                </button>
-            ))}
-        </div>
-        <div className={`evaluation-score-result${value == null || result == null ? " is-label-only" : ""}`}>
-            {value == null
-                ? "Chưa chấm"
-                : result == null
-                  ? "Điểm thành phần"
-                  : <>Kết quả <strong>{result.toFixed(2)}</strong></>}
-        </div>
-    </div>
-));
-
-interface ICriteriaRowProps {
-    c: any;
-    cIdx: number;
-    hasSub: boolean;
-    isEditable: boolean;
-    empScore: number | null;
-    avgEmp: number | null;
-    isCompleted: boolean;
-    avgFinal: number | null;
-    finalScore: number | null;
-    savingScore: number | null;
-    handleSaveScore: (id: number, score: number) => void;
-    tdB: any;
-    tdLvl: any;
-    tdSc: any;
-}
-
-const CriteriaRow = React.memo(({
-    c, cIdx, hasSub, isEditable, empScore, avgEmp, isCompleted, avgFinal, finalScore, savingScore, handleSaveScore, tdB, tdLvl, tdSc
-}: ICriteriaRowProps) => {
-    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
-    return (
-        <tr className="eval-row" id={!hasSub ? `evaluation-criteria-${c.id}` : undefined}>
-            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-            <td style={{ ...tdB, color: "#111827" }}>
-                <div style={{ fontWeight: hasSub ? 750 : 650 }}>{c.name}</div>
-                {c.description && <div className="evaluation-criteria-description">{c.description}</div>}
-            </td>
-            <td style={{ ...tdB, color: "#64748b", fontSize: 12 }}>{c.measurementMethod || "—"}</td>
-            {SCORE_VALUES.map(lvl => (
-                <td
-                    key={lvl}
-                    style={tdLvl}
-                >
-                    {getL(lvl) || <span className="evaluation-level-empty">Chưa có mô tả</span>}
-                </td>
-            ))}
-            <td style={{ ...tdB, textAlign: "center", verticalAlign: "middle" }}>
-                <span className="evaluation-weight-badge">{(c.weight * 100).toFixed(0)}%</span>
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore", isCompleted), padding: "10px 8px" }}>
-                {hasSub ? (
-                    <div className="evaluation-score-readout">
-                        <span>Điểm trung bình</span>
-                        <strong>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</strong>
-                        <small>Kết quả {avgEmp != null ? (avgEmp * c.weight).toFixed(2) : "—"}</small>
-                    </div>
-                ) : isEditable ? (
-                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                        <ScorePicker
-                            value={empScore}
-                            result={empScore != null ? empScore * c.weight : null}
-                            loading={savingScore === c.id}
-                            onChange={(score) => handleSaveScore(c.id, score)}
-                        />
-                    </Access>
-                ) : (
-                    <div className="evaluation-score-readout">
-                        <span>Điểm nhân viên</span>
-                        <strong>{empScore ?? "—"}</strong>
-                        <small>Kết quả {empScore != null ? (empScore * c.weight).toFixed(2) : "—"}</small>
-                    </div>
-                )}
-            </td>
-            {isCompleted && <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("finalScore", isCompleted) }}>
-                <div className="evaluation-score-readout is-final">
-                    <span>Điểm cuối</span>
-                    <strong>{hasSub ? (avgFinal?.toFixed(2) ?? "—") : (finalScore ?? "—")}</strong>
-                    <small>Kết quả {hasSub
-                        ? (avgFinal != null ? (avgFinal * c.weight).toFixed(2) : "—")
-                        : (finalScore != null ? (finalScore * c.weight).toFixed(2) : "—")}
-                    </small>
-                </div>
-            </td>}
-        </tr>
-    );
-});
-
-interface ISubCriteriaRowProps {
-    sub: any;
-    cIdx: number;
-    si: number;
-    isEditable: boolean;
-    subEmp: number | null;
-    subFinalScore: number | null;
-    isCompleted: boolean;
-    savingScore: number | null;
-    handleSaveScore: (id: number, score: number) => void;
-    tdB: any;
-    tdLvl: any;
-    tdSc: any;
-}
-
-const SubCriteriaRow = React.memo(({
-    sub, cIdx, si, isEditable, subEmp, subFinalScore, isCompleted, savingScore, handleSaveScore, tdB, tdLvl, tdSc
-}: ISubCriteriaRowProps) => {
-    const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
-    return (
-        <tr className="eval-row" id={`evaluation-criteria-${sub.id}`}>
-            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-            <td style={{ ...tdB, color: "#111827" }}>
-                <div style={{ fontWeight: 650 }}>{sub.name}</div>
-                {sub.description && <div className="evaluation-criteria-description">{sub.description}</div>}
-            </td>
-            <td style={{ ...tdB, color: "#64748b", fontSize: 12 }}>{sub.measurementMethod || "—"}</td>
-            {SCORE_VALUES.map(lvl => (
-                <td
-                    key={lvl}
-                    style={tdLvl}
-                >
-                    {getSL(lvl) || <span className="evaluation-level-empty">Chưa có mô tả</span>}
-                </td>
-            ))}
-            <td style={{ ...tdB, textAlign: "center", verticalAlign: "middle", color: "#cbd5e1" }}>—</td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore", isCompleted), padding: "10px 8px" }}>
-                {isEditable ? (
-                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                        <ScorePicker
-                            value={subEmp}
-                            loading={savingScore === sub.id}
-                            onChange={(score) => handleSaveScore(sub.id, score)}
-                        />
-                    </Access>
-                ) : (
-                    <div className="evaluation-score-readout">
-                        <span>Điểm thành phần</span>
-                        <strong>{subEmp ?? "—"}</strong>
-                    </div>
-                )}
-            </td>
-            {isCompleted && <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("finalScore", isCompleted) }}>
-                <div className="evaluation-score-readout is-final">
-                    <span>Điểm cuối</span>
-                    <strong>{subFinalScore ?? "—"}</strong>
-                </div>
-            </td>}
-        </tr>
-    );
-});
 
 interface MyEvaluationDetailPageProps {
     recordId?: number;
@@ -339,6 +175,11 @@ interface MyEvaluationDetailPageProps {
 }
 
 const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPageProps) => {
+    const grabToScrollRef = useGrabToScroll();
+    const topScrollRef = useRef<HTMLDivElement>(null);
+    const [tableScrollWidth, setTableScrollWidth] = useState(0);
+    const [hasScrollbar, setHasScrollbar] = useState(false);
+
     const { id: routeId } = useParams<{ id: string }>();
     const id = recordId != null ? String(recordId) : routeId;
     const navigate = useNavigate();
@@ -354,27 +195,98 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
     const [savingComment, setSavingComment] = useState(false);
     const [selfReview, setSelfReview] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
+    const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
     const [isError, setIsError] = useState(false);
+    const [hoveredGroupId, setHoveredGroupId] = useState<string | number | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(true);
     const [isDirty, setIsDirty] = useState(false);
+    const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+
+    useEffect(() => {
+        const top = topScrollRef.current;
+        const bottom = grabToScrollRef.current;
+        if (!top || !bottom) return;
+
+        let activeScroll: 'top' | 'bottom' | null = null;
+
+        const syncTop = () => {
+            if (activeScroll === 'bottom') return;
+            activeScroll = 'top';
+            const topMax = top.scrollWidth - top.clientWidth;
+            if (topMax <= 0) { activeScroll = null; return; }
+            const ratio = top.scrollLeft / topMax;
+            const bottomMax = bottom.scrollWidth - bottom.clientWidth;
+            bottom.scrollLeft = ratio * bottomMax;
+            activeScroll = null;
+        };
+
+        const syncBottom = () => {
+            if (activeScroll === 'top') return;
+            activeScroll = 'bottom';
+            const bottomMax = bottom.scrollWidth - bottom.clientWidth;
+            if (bottomMax <= 0) { activeScroll = null; return; }
+            const ratio = bottom.scrollLeft / bottomMax;
+            const topMax = top.scrollWidth - top.clientWidth;
+            top.scrollLeft = ratio * topMax;
+            activeScroll = null;
+        };
+
+        top.addEventListener('scroll', syncTop);
+        bottom.addEventListener('scroll', syncBottom);
+
+        return () => {
+            top.removeEventListener('scroll', syncTop);
+            bottom.removeEventListener('scroll', syncBottom);
+        };
+    }, [grabToScrollRef, loading, record]);
+
+    useEffect(() => {
+        const bottom = grabToScrollRef.current;
+        if (!bottom) return;
+
+        const checkScroll = () => {
+            setTableScrollWidth(bottom.scrollWidth);
+            setHasScrollbar(bottom.scrollWidth > bottom.clientWidth);
+        };
+
+        checkScroll();
+        window.addEventListener("resize", checkScroll);
+
+        const observer = new ResizeObserver(checkScroll);
+        observer.observe(bottom);
+
+        const timer1 = setTimeout(checkScroll, 100);
+        const timer2 = setTimeout(checkScroll, 400);
+
+        return () => {
+            window.removeEventListener("resize", checkScroll);
+            observer.disconnect();
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
+    }, [loading, record, grabToScrollRef]);
 
     const backPath = searchParams.get("from") === "summary"
         ? "/admin/evaluation/summary"
         : searchParams.get("from") === "process"
-        ? "/admin/evaluation/process?tab=MY_EVAL"
-        : searchParams.get("from") === "progress"
-        ? `/admin/evaluation/periods/${record?.period?.id || record?.periodId || ""}/progress`
-        : "/admin/evaluation/my-records";
+            ? "/admin/evaluation/process?tab=MY_EVAL"
+            : searchParams.get("from") === "progress"
+                ? `/admin/evaluation/periods/${record?.period?.id || record?.periodId || ""}/progress`
+                : "/admin/evaluation/my-records";
 
     const handleClose = () => {
-        if (!onClose) {
-            navigate(backPath);
-            return;
-        }
         if (isDirty && !window.confirm("Bạn có nhận xét chưa lưu. Bạn có chắc muốn đóng bản đánh giá?")) {
             return;
         }
-        onClose();
+        setDrawerOpen(false);
+        setTimeout(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate(backPath);
+            }
+        }, 300);
     };
 
     useBlocker(() => {
@@ -420,7 +332,16 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         setSavingScore(criteriaId);
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            await callEmployeeSaveScore(record.id, criteriaId, score);
+            const response = await callEmployeeSaveScore(record.id, criteriaId, score);
+            const update = response.data;
+            if (update) {
+                setRecord((current: any) => ({
+                    ...current,
+                    scores: update.scores,
+                    scoringSummary: update.scoringSummary,
+                }));
+            }
+            notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
             setLocalScores(prev => {
                 const next = { ...prev };
@@ -458,7 +379,11 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
             setIsDirty(false);
             await callEmployeeSubmitRecord(record.id);
             notify.success("Đã nộp bản đánh giá!");
-            fetchRecord();
+            if (onClose || backPath) {
+                handleClose();
+            } else {
+                fetchRecord();
+            }
         } catch (err: any) {
             notify.error(err?.message || err?.response?.data?.message || "Lỗi nộp bản đánh giá");
         } finally { setSubmitting(false); }
@@ -492,7 +417,7 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         <>
             <div style={{ minHeight: "80vh", background: "#f8fafc" }} />
             <LotusDetailDrawer
-                open
+                open={drawerOpen}
                 onClose={handleClose}
                 destroyOnClose={false}
                 keyboard={false}
@@ -589,33 +514,33 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
     };
 
     const thS: React.CSSProperties = {
-        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#0f172a",
+        background: "#ffffff", borderBottom: "2px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
         textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const thG: React.CSSProperties = {
-        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0", textAlign: "center", verticalAlign: "middle"
+        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#0f172a",
+        background: "#ffffff", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1", textAlign: "center", verticalAlign: "middle"
     };
     const thSub: React.CSSProperties = {
-        padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
+        padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#0f172a",
+        background: "#ffffff", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
         textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
     };
     const tdB: React.CSSProperties = {
-        padding: "14px 14px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
-        fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#334155",
+        padding: "14px 14px", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
+        fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#1e293b",
         textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
     };
     const tdLvl: React.CSSProperties = {
-        padding: "13px 12px", borderBottom: "1px solid #e2e8f0",
-        borderRight: "1px solid #edf1f5", fontSize: 12, color: "#475569",
-        verticalAlign: "top", lineHeight: 1.55, minWidth: LEVEL_WIDTH, width: LEVEL_WIDTH,
+        padding: "12px 10px", borderBottom: "1px solid #cbd5e1",
+        borderRight: "1px solid #cbd5e1", fontSize: 12, color: "#334155",
+        verticalAlign: "top", lineHeight: 1.5, minWidth: 140, width: 140,
         textAlign: "left", overflowWrap: "break-word", wordBreak: "normal",
         whiteSpace: "normal"
     };
     const tdSc: React.CSSProperties = {
-        padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
+        padding: "14px 12px", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
         textAlign: "center", verticalAlign: "middle", background: "#ffffff"
     };
 
@@ -732,78 +657,10 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         },
     };
 
-    const renderInfoField = (label: string, value?: React.ReactNode) => (
-        <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>{label}</div>
-            <div style={{ fontSize: 13, color: value ? "#111827" : "#cbd5e1", fontWeight: 700, lineHeight: 1.45, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {value || "Chưa cập nhật"}
-            </div>
-        </div>
-    );
 
-    const renderManagerCard = (label: string, info: any) => (
-        <div style={{ background: "#f8fafc", border: "1px solid #eef2f7", borderRadius: 12, padding: "14px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 999, background: "#eef2ff", color: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-                    <TeamOutlined />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.4px" }}>{label}</div>
-                    <div style={{ fontSize: 14, color: info?.id ? "#111827" : "#cbd5e1", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {info?.fullName || info?.username || "Chưa cập nhật"}
-                    </div>
-                </div>
-            </div>
-            <div style={{ color: "#64748b", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {info?.jobTitle || "Chưa cập nhật chức danh"}{info?.positionLevel ? ` (${info.positionLevel})` : ""}
-            </div>
-        </div>
-    );
-
-    const renderAdminEmployeeInfo = () => !isReadonlyView ? null : (
-        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <UserOutlined style={{ color: "#f43f5e", fontSize: 16 }} />
-                <div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>Thông tin nhân sự</div>
-                    <div style={{ marginTop: 3, fontSize: 12, color: "#64748b" }}>Bối cảnh đơn vị và luồng quản lý của hồ sơ đánh giá</div>
-                </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                <div style={{ background: "#f9fafb", border: "1px solid #eef2f7", borderRadius: 12, padding: "16px 18px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                        <div style={{ width: 42, height: 42, borderRadius: 999, background: "#fff1f2", color: "#f43f5e", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, flexShrink: 0 }}>
-                            {(record.employee?.fullName || record.employee?.username || "?").trim().charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 16, color: "#111827", fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {record.employee?.fullName || record.employee?.username || "Chưa cập nhật nhân viên"}
-                            </div>
-                            <div style={{ marginTop: 3, fontSize: 12, color: "#64748b", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {record.employee?.email || "Chưa cập nhật email"}
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
-                        {renderInfoField("Công ty", record.employee?.companyName)}
-                        {renderInfoField("Phòng ban", record.employee?.departmentName)}
-                        {renderInfoField("Bộ phận", record.employee?.sectionName)}
-                        {renderInfoField("Chức danh", record.employee?.jobTitle)}
-                        {renderInfoField("Cấp bậc", record.employee?.positionLevel)}
-                    </div>
-                </div>
-
-                <div style={{ display: "grid", gap: 12 }}>
-                    {renderManagerCard("Quản lý trực tiếp", record.directManager)}
-                    {renderManagerCard("Quản lý gián tiếp phê duyệt", record.indirectManager)}
-                </div>
-            </div>
-        </div>
-    );
 
     return renderInWorkspaceDrawer(
-        <div className="employee-evaluation-detail" style={{ width: "100%", height: "100%", minHeight: 0, boxSizing: "border-box", overflow: "auto", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f8fafc" }}>
+        <div className="employee-evaluation-detail" style={{ width: "100%", height: "100%", minHeight: 0, boxSizing: "border-box", overflowX: "hidden", overflowY: "auto", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f8fafc" }}>
 
             {/* ─── WORKSPACE HEADER ─── */}
             <div className="employee-evaluation-workspace-header">
@@ -831,21 +688,9 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 12 }}>
                     {isEditable && (
-                        <div className="evaluation-header-progress">
-                            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 18 }}>
-                                <span style={{ color: "#64748b", fontSize: 11, fontWeight: 700 }}>Tiến độ</span>
-                                <span style={{ color: "#0f172a", fontSize: 13, fontWeight: 800 }}>{scoredCount}/{allLeafCriteria.length}</span>
-                            </div>
-                            <Progress
-                                percent={progressPct}
-                                showInfo={false}
-                                strokeWidth={5}
-                                strokeColor={progressPct === 100 ? "#16a34a" : "#475569"}
-                                trailColor="#e2e8f0"
-                                style={{ width: 140, margin: 0 }}
-                            />
-                        </div>
+                        <EvaluationProgressIndicator scoredCount={scoredCount} totalCount={allLeafCriteria.length} />
                     )}
+
 
                     {record.employeeTotalScore != null && (
                         <div className="evaluation-score-summary">
@@ -868,619 +713,579 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
                         </div>
                     )}
 
-                    <Tooltip title="Xuất dữ liệu">
-                        <Dropdown
-                            trigger={["click"]}
-                            menu={{
-                                items: [
-                                    { key: "excel", icon: <FileExcelOutlined />, label: "Xuất Excel", onClick: handleExportExcel },
-                                    { key: "pdf", icon: <FileTextOutlined />, label: "Xuất PDF", onClick: handlePrintPDF },
-                                ],
-                            }}
-                        >
-                            <Button aria-label="Xuất dữ liệu" icon={<MoreOutlined />} className="evaluation-header-menu-button" />
-                        </Dropdown>
-                    </Tooltip>
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.GET_ALL_RECORDS} hideChildren>
+                        <Tooltip title="Xuất dữ liệu">
+                            <Dropdown
+                                trigger={["click"]}
+                                menu={{
+                                    items: [
+                                        { key: "excel", icon: <FileExcelOutlined />, label: "Xuất Excel", onClick: handleExportExcel },
+                                        { key: "pdf", icon: <FileTextOutlined />, label: "Xuất PDF", onClick: handlePrintPDF },
+                                    ],
+                                }}
+                            >
+                                <Button aria-label="Xuất dữ liệu" icon={<MoreOutlined />} className="evaluation-header-menu-button" />
+                            </Dropdown>
+                        </Tooltip>
+                    </Access>
                 </div>
             </div>
 
             <div className="employee-evaluation-workspace-body">
-                {renderAdminEmployeeInfo()}
+                {isReadonlyView && <EvaluationUserInfo record={record} />}
 
-            {!isReadonlyView && isCompleted && !hasConfirmed && (() => {
-                // T12: Tính số ngày còn lại trước khi auto-acknowledge (7 ngày từ approvedAt)
-                const approvedAt = record.approvedAt ? dayjs(record.approvedAt) : null;
-                const daysElapsed = approvedAt ? dayjs().diff(approvedAt, "day") : 0;
-                const daysRemaining = Math.max(0, 7 - daysElapsed);
-                const isUrgent = daysRemaining <= 2;
-                return (
-                    <div style={{
-                        background: isUrgent
-                            ? "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)"
-                            : "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
-                        border: `1px solid ${isUrgent ? "#fb923c" : "#fecdd3"}`,
-                        borderRadius: 12, padding: "16px 20px", marginBottom: 16,
-                        boxShadow: isUrgent ? "0 2px 12px rgba(251,146,60,0.15)" : "0 1px 4px rgba(0,0,0,0.03)"
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                            <TrophyOutlined style={{ fontSize: 26, color: isUrgent ? "#ea580c" : "#f43f5e", flexShrink: 0 }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, color: "#111827", fontSize: 15, marginBottom: 3 }}>
-                                    Kết quả đã được phê duyệt — cần xác nhận đã xem!
+                {!isReadonlyView && isCompleted && !hasConfirmed && (() => {
+                    // T12: Tính số ngày còn lại trước khi auto-acknowledge (7 ngày từ approvedAt)
+                    const approvedAt = record.approvedAt ? dayjs(record.approvedAt) : null;
+                    const daysElapsed = approvedAt ? dayjs().diff(approvedAt, "day") : 0;
+                    const daysRemaining = Math.max(0, 7 - daysElapsed);
+                    const isUrgent = daysRemaining <= 2;
+                    return (
+                        <div style={{
+                            background: isUrgent
+                                ? "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)"
+                                : "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
+                            border: `1px solid ${isUrgent ? "#fb923c" : "#fecdd3"}`,
+                            borderRadius: 12, padding: "16px 20px", marginBottom: 16,
+                            boxShadow: isUrgent ? "0 2px 12px rgba(251,146,60,0.15)" : "0 1px 4px rgba(0,0,0,0.03)"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                                <TrophyOutlined style={{ fontSize: 26, color: isUrgent ? "#ea580c" : "#f43f5e", flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, color: "#111827", fontSize: 15, marginBottom: 3 }}>
+                                        Kết quả đã được phê duyệt — cần xác nhận đã xem!
+                                    </div>
+                                    <div style={{ fontSize: 13, color: isUrgent ? "#c2410c" : "#6b7280", lineHeight: 1.5 }}>
+                                        {daysRemaining > 0 ? (
+                                            <>Vui lòng xem kết quả và nhấn "Xác nhận đã xem". Hệ thống sẽ tự xác nhận sau{" "}
+                                                <strong style={{ color: isUrgent ? "#ea580c" : "#f43f5e" }}>
+                                                    {daysRemaining} ngày nữa
+                                                </strong> nếu bạn không phản hồi.</>
+                                        ) : (
+                                            <>Hệ thống sẽ tự động xác nhận trong hôm nay.</>
+                                        )}
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: 13, color: isUrgent ? "#c2410c" : "#6b7280", lineHeight: 1.5 }}>
-                                    {daysRemaining > 0 ? (
-                                        <>Vui lòng xem kết quả và nhấn "Xác nhận đã xem". Hệ thống sẽ tự xác nhận sau{" "}
-                                            <strong style={{ color: isUrgent ? "#ea580c" : "#f43f5e" }}>
-                                                {daysRemaining} ngày nữa
-                                            </strong> nếu bạn không phản hồi.</>
-                                    ) : (
-                                        <>Hệ thống sẽ tự động xác nhận trong hôm nay.</>
-                                    )}
-                                </div>
+                                <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_CONFIRM} hideChildren>
+                                    <Popconfirm title="Xác nhận đã xem kết quả?" onConfirm={handleConfirm} okText="Xác nhận" cancelText="Hủy">
+                                        <Button loading={confirming} icon={<CheckCircleOutlined />}
+                                            style={{
+                                                borderRadius: 8, fontWeight: 600, height: 38, flexShrink: 0,
+                                                background: isUrgent ? "#ea580c" : "#f43f5e",
+                                                border: "none", color: "#fff"
+                                            }}>
+                                            Xác nhận đã xem
+                                        </Button>
+                                    </Popconfirm>
+                                </Access>
+
                             </div>
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_CONFIRM} hideChildren>
-                                <Popconfirm title="Xác nhận đã xem kết quả?" onConfirm={handleConfirm} okText="Xác nhận" cancelText="Hủy">
-                                    <Button loading={confirming} icon={<CheckCircleOutlined />}
-                                        style={{
-                                            borderRadius: 8, fontWeight: 600, height: 38, flexShrink: 0,
-                                            background: isUrgent ? "#ea580c" : "#f43f5e",
-                                            border: "none", color: "#fff"
-                                        }}>
-                                        Xác nhận đã xem
-                                    </Button>
-                                </Popconfirm>
-                            </Access>
-
                         </div>
+                    );
+                })()}
+
+                {isCompleted && hasConfirmed && (
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+                        <CheckCircleOutlined style={{ color: "#f43f5e" }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Đã xác nhận kết quả vào {dayjs(record.completedAt).format("DD/MM/YYYY HH:mm")}</span>
                     </div>
-                );
-            })()}
+                )}
 
-            {isCompleted && hasConfirmed && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                    <CheckCircleOutlined style={{ color: "#f43f5e" }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Đã xác nhận kết quả vào {dayjs(record.completedAt).format("DD/MM/YYYY HH:mm")}</span>
-                </div>
-            )}
-
-            {isReadonlyView && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
-                        <div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>Timeline xử lý</div>
-                            <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>Theo dõi các mốc nhân viên, quản lý và phê duyệt đã thực hiện</div>
+                {isReadonlyView && (
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 18, flexWrap: "wrap" }}>
+                            <div>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>Timeline xử lý</div>
+                                <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>Theo dõi các mốc nhân viên, quản lý và phê duyệt đã thực hiện</div>
+                            </div>
+                            <Tag color={completedTimelineSteps === 4 ? "success" : "processing"} style={{ borderRadius: 999, padding: "4px 12px", fontWeight: 700 }}>
+                                {completedTimelineSteps}/4 mốc hoàn tất
+                            </Tag>
                         </div>
-                        <Tag color={completedTimelineSteps === 4 ? "success" : "processing"} style={{ borderRadius: 999, padding: "4px 12px", fontWeight: 700 }}>
-                            {completedTimelineSteps}/4 mốc hoàn tất
-                        </Tag>
-                    </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-                        {adminTimelineSteps.map((step) => {
-                            const done = !!step.value;
-                            return (
-                                <div key={step.key} style={{ border: `1px solid ${done ? `${step.color}33` : "#e5e7eb"}`, background: done ? `${step.color}0f` : "#f8fafc", borderRadius: 12, padding: "14px 16px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                        <div style={{ width: 34, height: 34, borderRadius: 999, background: done ? step.color : "#e2e8f0", color: done ? "#fff" : "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-                                            {step.icon}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+                            {adminTimelineSteps.map((step) => {
+                                const done = !!step.value;
+                                return (
+                                    <div key={step.key} style={{ border: `1px solid ${done ? `${step.color}33` : "#e5e7eb"}`, background: done ? `${step.color}0f` : "#f8fafc", borderRadius: 12, padding: "14px 16px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                            <div style={{ width: 34, height: 34, borderRadius: 999, background: done ? step.color : "#e2e8f0", color: done ? "#fff" : "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                                                {step.icon}
+                                            </div>
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>{step.label}</div>
+                                                <div style={{ fontSize: 13, color: done ? step.color : "#94a3b8", fontWeight: 800, marginTop: 2 }}>{formatDateTime(step.value)}</div>
+                                            </div>
                                         </div>
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>{step.label}</div>
-                                            <div style={{ fontSize: 13, color: done ? step.color : "#94a3b8", fontWeight: 800, marginTop: 2 }}>{formatDateTime(step.value)}</div>
+                                        <div style={{ marginTop: 10, fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                            {step.description}
                                         </div>
                                     </div>
-                                    <div style={{ marginTop: 10, fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {step.description}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
 
-                    {history.length > 0 && (
-                        <Collapse
-                            ghost
-                            style={{ marginTop: 16, borderTop: "1px solid #f1f5f9", paddingTop: 6 }}
-                            items={[
-                                {
-                                    key: "history",
-                                    label: (
-                                        <span style={{ fontSize: 13, fontWeight: 800, color: "#334155" }}>
-                                            Lịch sử trạng thái ({history.length})
-                                        </span>
-                                    ),
-                                    children: (
-                                        <div style={{ display: "grid", gap: 8, paddingTop: 2 }}>
-                                            {history.map((item) => (
-                                                <div key={item.id} style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 12, alignItems: "start", fontSize: 12 }}>
-                                                    <div style={{ color: "#64748b", fontWeight: 700 }}>{formatDateTime(item.performedAt)}</div>
-                                                    <div style={{ color: "#334155" }}>
-                                                        <span style={{ fontWeight: 800 }}>{item.performedBy?.fullName || item.performedBy?.username || "Hệ thống"}</span>
-                                                        <span style={{ color: "#94a3b8" }}> chuyển trạng thái </span>
-                                                        <Tag style={{ marginInlineEnd: 4 }}>{STATUS_CONFIG[item.fromStatus as RecordStatus]?.text || item.fromStatus || "—"}</Tag>
-                                                        <span style={{ color: "#94a3b8" }}>→</span>
-                                                        <Tag color={STATUS_CONFIG[item.toStatus as RecordStatus]?.tagColor} style={{ marginInlineStart: 4 }}>
-                                                            {STATUS_CONFIG[item.toStatus as RecordStatus]?.text || item.toStatus || "—"}
-                                                        </Tag>
-                                                        {item.note && <span style={{ color: "#64748b" }}> {item.note}</span>}
+                        {history.length > 0 && (
+                            <Collapse
+                                ghost
+                                style={{ marginTop: 16, borderTop: "1px solid #f1f5f9", paddingTop: 6 }}
+                                items={[
+                                    {
+                                        key: "history",
+                                        label: (
+                                            <span style={{ fontSize: 13, fontWeight: 800, color: "#334155" }}>
+                                                Lịch sử trạng thái ({history.length})
+                                            </span>
+                                        ),
+                                        children: (
+                                            <div style={{ display: "grid", gap: 8, paddingTop: 2 }}>
+                                                {history.map((item) => (
+                                                    <div key={item.id} style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 12, alignItems: "start", fontSize: 12 }}>
+                                                        <div style={{ color: "#64748b", fontWeight: 700 }}>{formatDateTime(item.performedAt)}</div>
+                                                        <div style={{ color: "#334155" }}>
+                                                            <span style={{ fontWeight: 800 }}>{item.performedBy?.fullName || item.performedBy?.username || "Hệ thống"}</span>
+                                                            <span style={{ color: "#94a3b8" }}> chuyển trạng thái </span>
+                                                            <Tag style={{ marginInlineEnd: 4 }}>{STATUS_CONFIG[item.fromStatus as RecordStatus]?.text || item.fromStatus || "—"}</Tag>
+                                                            <span style={{ color: "#94a3b8" }}>→</span>
+                                                            <Tag color={STATUS_CONFIG[item.toStatus as RecordStatus]?.tagColor} style={{ marginInlineStart: 4 }}>
+                                                                {STATUS_CONFIG[item.toStatus as RecordStatus]?.text || item.toStatus || "—"}
+                                                            </Tag>
+                                                            {item.note && <span style={{ color: "#64748b" }}> {item.note}</span>}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ),
-                                },
-                            ]}
-                        />
-                    )}
-                </div>
-            )}
-
-            {/* ─── CHART ─── */}
-            {shouldShowComparisonChart && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, textAlign: "center" }}>
-                        So sánh nhân viên và quản lý
-                    </div>
-                    <div style={{ height: 350 }}>
-                        {uniqueItems >= 3 ? (
-                            <Radar
-                                {...chartConfig}
-                                shapeField="smooth"
-                                area={{ style: { fillOpacity: 0.2 } }}
-                                axis={{ x: { grid: true }, y: { zIndex: 1, title: false } }}
-                            />
-                        ) : (
-                            <Column
-                                {...chartConfig}
-                                seriesField="user"
-                                isGroup={true}
-                                group={true}
-                                maxColumnWidth={60}
+                                                ))}
+                                            </div>
+                                        ),
+                                    },
+                                ]}
                             />
                         )}
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* ─── HƯỚNG DẪN THỰC HIỆN ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)", display: "flex", flexWrap: "wrap", gap: 24 }}>
-                <div style={{ flex: "2 1 400px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12, borderBottom: "1px solid #f3f4f6", paddingBottom: 8 }}><BookOutlined style={{ color: "#f43f5e", marginRight: 8 }} />Hướng dẫn thực hiện</div>
-                    <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>1. Nội dung đánh giá:</strong> Phản ánh tiêu chí chính cần được xem xét trong kỳ đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>2. Phương pháp đo lường:</strong> Cho biết căn cứ hoặc cách thức dùng để đánh giá tiêu chí.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>3. Mức 1 đến Mức 5:</strong> Đọc mô tả của từng mức trước khi lựa chọn điểm phù hợp.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>4. CBNV đánh giá:</strong> Nhấn số tương ứng để lưu điểm; kết quả quy đổi được hiển thị lớn ngay bên dưới.</div>
-                    </div>
-                </div>
-                <div style={{ flex: "1 1 300px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", padding: "16px 20px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12, textAlign: "center" }}>Thang điểm đánh giá</div>
-                    <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
-                        <tbody>
-                            {[
-                                { score: 5, desc: "Hoàn thành công việc ở mức độ xuất sắc" },
-                                { score: 4, desc: "Hoàn thành công việc ở mức độ tốt" },
-                                { score: 3, desc: "Hoàn thành công việc ở mức độ khá" },
-                                { score: 2, desc: "Hoàn thành công việc ở mức độ trung bình" },
-                                { score: 1, desc: "Chưa đáp ứng được một số yêu cầu" }
-                            ].map(item => (
-                                <tr key={item.score} style={{ borderBottom: item.score > 1 ? "1px solid #e5e7eb" : "none" }}>
-                                    <td style={{ padding: "8px 12px", fontWeight: 800, color: "#f43f5e", textAlign: "center", borderRight: "1px solid #e5e7eb", width: 40 }}>{item.score}</td>
-                                    <td style={{ padding: "8px 12px", color: "#374151", fontWeight: 500 }}>{item.desc}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            {/* ─── BẢNG ĐÁNH GIÁ ─── */}
-            {hasTemplateStructureError && (
-                <Alert
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 12, borderRadius: 8 }}
-                    message="Mẫu đánh giá chưa hoàn chỉnh"
-                    description={(
-                        <div>
-                            {templateStructureIssues.slice(0, 3).map((issue, index) => (
-                                <div key={`${issue.sectionId ?? "template"}-${index}`}>{issue.message}</div>
-                            ))}
-                            <div>Không thể nộp đánh giá cho đến khi quản trị viên xử lý cấu hình này.</div>
-                        </div>
-                    )}
-                />
-            )}
-            <div className="employee-evaluation-table-shell" style={{ position: "relative", isolation: "isolate", overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch", marginBottom: 16, borderRadius: 12, border: "1px solid #dfe5ec", background: "#fff", boxShadow: "0 4px 16px rgba(15,23,42,0.05)" }}>
-                <table className="employee-evaluation-table" style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, minWidth: isCompleted ? 1725 : 1573, tableLayout: "fixed" }}>
-                    <colgroup>
-                        <col style={{ width: 64 }} />
-                        <col style={{ width: CONTENT_WIDTH }} />
-                        <col style={{ width: METHOD_WIDTH }} />
-                        {SCORE_VALUES.map(n => <col key={n} style={{ width: LEVEL_WIDTH }} />)}
-                        <col style={{ width: 80 }} />
-                        <col style={{ width: EMPLOYEE_SCORE_WIDTH }} />
-                        {isCompleted && <col style={{ width: FINAL_SCORE_WIDTH }} />}
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, width: CONTENT_WIDTH, textAlign: "left" }}>Nội dung đánh giá</th>
-                            <th rowSpan={2} style={{ ...thS, width: METHOD_WIDTH, textAlign: "left" }}>Phương pháp đo lường</th>
-                            <th colSpan={5} style={{ ...thG, background: "#f8fafc" }}>Tiêu chí đánh giá theo thang điểm</th>
-                            <th rowSpan={2} style={{ ...thS, width: 80 }}>Trọng số</th>
-                            <th rowSpan={2} style={{ ...thG, color: "#111827", ...getStickyStyle("empScore", isCompleted, true) }}>
-                                <div>CBNV đánh giá<span style={{ color: "#e8637a", marginLeft: 4 }}>*</span></div>
-                                <small className="evaluation-header-helper">Điểm & kết quả</small>
-                            </th>
-                            {isCompleted && <th rowSpan={2} style={{ ...thG, ...getStickyStyle("finalScore", isCompleted, true) }}>
-                                <div>Kết quả cuối</div>
-                                <small className="evaluation-header-helper">Điểm & quy đổi</small>
-                            </th>}
-                        </tr>
-                        <tr>
-                            {SCORE_VALUES.map(n => (
-                                <th key={n} style={{ ...thSub, width: LEVEL_WIDTH, color: "#d94c66" }}>
-                                    <div>Mức {n}</div>
-                                    <small className="evaluation-level-name">{SCORE_DESCRIPTIONS[n]}</small>
+
+
+                {/* ─── HƯỚNG DẪN THỰC HIỆN ─── */}
+                <EvaluationGuidelines />
+
+                {/* ─── BẢNG ĐÁNH GIÁ ─── */}
+                {hasTemplateStructureError && (
+                    <Alert
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 12, borderRadius: 8 }}
+                        message="Mẫu đánh giá chưa hoàn chỉnh"
+                        description={(
+                            <div>
+                                {templateStructureIssues.slice(0, 3).map((issue, index) => (
+                                    <div key={`${issue.sectionId ?? "template"}-${index}`}>{issue.message}</div>
+                                ))}
+                                <div>Không thể nộp đánh giá cho đến khi quản trị viên xử lý cấu hình này.</div>
+                            </div>
+                        )}
+                    />
+                )}
+                <div className="employee-evaluation-table-shell" ref={grabToScrollRef} style={{ position: "relative", isolation: "isolate", width: "100%", maxWidth: "100%", overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", WebkitOverflowScrolling: "touch", marginBottom: 16, borderRadius: 12, border: "1px solid #dfe5ec", background: "#fff", boxShadow: "0 4px 16px rgba(15,23,42,0.05)" }}>
+                    <table
+                        className="employee-evaluation-table"
+                        style={{
+                            width: "max-content",
+                            minWidth: "100%",
+                            borderCollapse: "separate",
+                            borderSpacing: 0,
+                            tableLayout: "fixed"
+                        }}
+                    >
+                        <colgroup>
+                            <col style={{ width: 55 }} />
+                            <col style={{ width: 260 }} />
+                            <col style={{ width: 170 }} />
+                            {SCORE_VALUES.map(n => <col key={n} style={{ width: 140 }} />)}
+                            <col style={{ width: 85 }} />
+                            <col style={{ width: 90 }} />
+                            <col style={{ width: 220 }} />
+                            {isCompleted && <col style={{ width: 150 }} />}
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th rowSpan={2} style={{ ...thS, width: 55 }}>STT</th>
+                                <th rowSpan={2} style={{ ...thS, width: 260, textAlign: "left" }}>Nội dung đánh giá</th>
+                                <th rowSpan={2} style={{ ...thS, width: 170, textAlign: "left" }}>Phương pháp đo lường</th>
+                                <th colSpan={5} style={{ ...thG, background: "#f8fafc" }}>Tiêu chí đánh giá theo thang điểm</th>
+                                <th colSpan={2} style={{ ...thG, background: "#ffffff" }}>Trọng số</th>
+                                <th rowSpan={2} style={{ ...thG, color: "#111827", ...getStickyStyle("empScore", isCompleted, true) }}>
+                                    <div>CBNV đánh giá<span style={{ color: "#e8637a", marginLeft: 4 }}>*</span></div>
+                                    <small className="evaluation-header-helper">Điểm & kết quả</small>
                                 </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(() => {
-                            let dynamicEmpTotal = 0;
-                            let dynamicMgrTotal = 0;
-                            const sectionElements = record.template?.sections?.map((section: any) => {
-                                let empTotal = 0, finalTotal = 0;
-                                const rows: React.ReactNode[] = [];
-                                const sectionIssues = templateStructureIssues.filter(issue => issue.sectionId === section.id);
+                                {isCompleted && <th rowSpan={2} style={{ ...thG, ...getStickyStyle("finalScore", isCompleted, true) }}>
+                                    <div>Kết quả cuối</div>
+                                    <small className="evaluation-header-helper">Điểm & quy đổi</small>
+                                </th>}
+                            </tr>
+                            <tr>
+                                {SCORE_VALUES.map(n => {
+                                    const cfg = LEVEL_HEADER_CONFIG[n];
+                                    return (
+                                        <th key={n} style={{ ...thSub, width: 140, background: "#ffffff" }}>
+                                            <div style={{ fontWeight: 800, fontSize: 12, color: "#0f172a" }}>{cfg.title}</div>
+                                            <span style={{
+                                                display: "inline-block",
+                                                marginTop: 2,
+                                                padding: "1px 6px",
+                                                fontSize: 10,
+                                                fontWeight: 700,
+                                                color: cfg.color,
+                                                background: cfg.bg,
+                                                border: `1px solid ${cfg.border}`,
+                                                borderRadius: 4
+                                            }}>
+                                                {cfg.subtitle}
+                                            </span>
+                                        </th>
+                                    );
+                                })}
+                                <th style={{ ...thSub, width: 85, color: "#0f172a", background: "#ffffff" }}>TS Nhóm</th>
+                                <th style={{ ...thSub, width: 90, color: "#475569", background: "#ffffff" }}>TS Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(() => {
+                                let dynamicEmpTotal = 0;
+                                let dynamicMgrTotal = 0;
+                                const sectionElements = record.template?.sections?.map((section: any) => {
+                                    let empTotal = 0, finalTotal = 0;
+                                    const rows: React.ReactNode[] = [];
+                                    const sectionIssues = templateStructureIssues.filter(issue => issue.sectionId === section.id);
+                                    const isCollapsed = !!collapsedSections[section.id];
 
-                                rows.push(
-                                    <tr key={`sec-${section.id}`}>
-                                        <td colSpan={isCompleted ? 11 : 10} style={{
-                                            padding: "10px 18px",
-                                            background: "#f3f4f6",
-                                            borderTop: "1px solid #e5e7eb",
-                                            borderBottom: "1px solid #e5e7eb",
-                                            borderLeft: "4px solid #f43f5e"
-                                        }}>
-                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Trọng số {(section.weight * 100).toFixed(0)}%</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
+                                    // Precompute totals for collapsed preview
+                                    section.criteria?.forEach((c: any) => {
+                                        const hasSub = c.subCriteria?.length > 0;
+                                        const empScore = localScores[c.id] ?? getScore(record.scores, c.id, "EMPLOYEE");
+                                        const mgrScore = getScore(record.scores, c.id, "MANAGER");
+                                        const apprScore = getScore(record.scores, c.id, "APPROVER");
+                                        const finalScore = apprScore ?? mgrScore;
 
-                                if (!section.criteria?.length) {
+                                        if (hasSub) {
+                                            let weightedSumEmp = 0, weightedSumFinal = 0;
+                                            let cntEmp = 0, cntFinal = 0;
+                                            c.subCriteria.forEach((sub: any) => {
+                                                const e = localScores[sub.id] ?? getScore(record.scores, sub.id, "EMPLOYEE");
+                                                const m = getScore(record.scores, sub.id, "MANAGER");
+                                                const a = getScore(record.scores, sub.id, "APPROVER");
+                                                const f = a ?? m;
+                                                const w = (sub.weight && sub.weight > 0) ? sub.weight : (c.weight / c.subCriteria.length);
+                                                if (e != null) { weightedSumEmp += e * w; cntEmp++; }
+                                                if (f != null) { weightedSumFinal += f * w; cntFinal++; }
+                                            });
+                                            if (cntEmp > 0) empTotal += weightedSumEmp;
+                                            if (cntFinal > 0) finalTotal += weightedSumFinal;
+                                        } else {
+                                            if (empScore != null) empTotal += empScore * c.weight;
+                                            if (finalScore != null) finalTotal += finalScore * c.weight;
+                                        }
+                                    });
+
+                                    const headerEmpTotal = empTotal;
+                                    const headerFinalTotal = finalTotal;
+
+                                    empTotal = 0;
+                                    finalTotal = 0;
+
                                     rows.push(
-                                        <tr key={`invalid-${section.id}`}>
-                                            <td colSpan={isCompleted ? 11 : 10} style={{ padding: "18px 22px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 13 }}>
-                                                Phần này chưa được cấu hình tiêu chí nên chưa thể chấm điểm hoặc tính kết quả. Vui lòng liên hệ quản trị viên.
+                                        <tr key={`sec-${section.id}`}>
+                                            <td colSpan={isCompleted ? 12 : 11} style={{
+                                                padding: "10px 18px",
+                                                background: "#f3f4f6",
+                                                borderTop: "1px solid #e5e7eb",
+                                                borderBottom: "1px solid #e5e7eb",
+                                                borderLeft: "4px solid #f43f5e"
+                                            }}>
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                                        <span
+                                                            style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 4, background: "#fff", border: "1px solid #cbd5e1" }}
+                                                            onClick={() => setCollapsedSections(prev => ({ ...prev, [section.id]: !prev[section.id] }))}
+                                                        >
+                                                            {isCollapsed ? <RightOutlined style={{ fontSize: 11 }} /> : <DownOutlined style={{ fontSize: 11 }} />}
+                                                        </span>
+                                                        {section.name}
+                                                        <Tag style={{
+                                                            margin: 0,
+                                                            marginLeft: 8,
+                                                            fontWeight: 700,
+                                                            color: "#6d28d9",
+                                                            background: "#f5f3ff",
+                                                            border: "1px solid #ddd6fe",
+                                                            borderRadius: "6px",
+                                                            fontSize: "11px",
+                                                            textTransform: "none",
+                                                            letterSpacing: "normal"
+                                                        }}>
+                                                            Trọng số: {formatWeight(section.weight)}
+                                                        </Tag>
+                                                    </span>
+                                                    {isCollapsed && (
+                                                        <div style={{ display: "flex", gap: 6, fontSize: 11 }}>
+                                                            {headerEmpTotal > 0 && (
+                                                                <Tag color="blue" style={{ margin: 0, fontWeight: 600 }}>
+                                                                    Tự đánh giá: {headerEmpTotal.toFixed(2)}
+                                                                </Tag>
+                                                            )}
+                                                            {isCompleted && headerFinalTotal > 0 && (
+                                                                <Tag color="green" style={{ margin: 0, fontWeight: 600 }}>
+                                                                    Điểm cuối: {headerFinalTotal.toFixed(2)}
+                                                                </Tag>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
-                                    return rows;
-                                }
 
-                                if (sectionIssues.length > 0) {
-                                    rows.push(
-                                        <tr key={`warning-${section.id}`}>
-                                            <td colSpan={isCompleted ? 11 : 10} style={{ padding: "12px 18px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 12 }}>
-                                                {sectionIssues[0].message}
-                                            </td>
-                                        </tr>
-                                    );
-                                }
-
-                                section.criteria?.forEach((c: any, cIdx: number) => {
-                                    const hasSub = c.subCriteria?.length > 0;
-                                    const empScore = localScores[c.id] ?? getScore(record.scores, c.id, "EMPLOYEE");
-                                    const mgrScore = getScore(record.scores, c.id, "MANAGER");
-                                    const apprScore = getScore(record.scores, c.id, "APPROVER");
-                                    const finalScore = apprScore ?? mgrScore;
-
-                                    let avgEmp: number | null = null;
-                                    let avgFinal: number | null = null;
-
-                                    if (hasSub) {
-                                        let sumEmp = 0, sumFinal = 0, cntEmp = 0, cntFinal = 0;
-                                        c.subCriteria.forEach((sub: any) => {
-                                            const e = localScores[sub.id] ?? getScore(record.scores, sub.id, "EMPLOYEE");
-                                            const m = getScore(record.scores, sub.id, "MANAGER");
-                                            const a = getScore(record.scores, sub.id, "APPROVER");
-                                            const f = a ?? m;
-                                            if (e != null) { sumEmp += e; cntEmp++; }
-                                            if (f != null) { sumFinal += f; cntFinal++; }
-                                        });
-                                        if (cntEmp > 0) avgEmp = sumEmp / c.subCriteria.length;
-                                        if (cntFinal > 0) avgFinal = sumFinal / c.subCriteria.length;
-
-                                        if (avgEmp != null) empTotal += avgEmp * c.weight;
-                                        if (avgFinal != null) finalTotal += avgFinal * c.weight;
-                                    } else {
-                                        if (empScore != null) empTotal += empScore * c.weight;
-                                        if (finalScore != null) finalTotal += finalScore * c.weight;
+                                    if (!section.criteria?.length) {
+                                        rows.push(
+                                            <tr key={`invalid-${section.id}`}>
+                                                <td colSpan={isCompleted ? 11 : 10} style={{ padding: "18px 22px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 13 }}>
+                                                    Phần này chưa được cấu hình tiêu chí nên chưa thể chấm điểm hoặc tính kết quả. Vui lòng liên hệ quản trị viên.
+                                                </td>
+                                            </tr>
+                                        );
+                                        return rows;
                                     }
 
-                                    rows.push(
-                                        <CriteriaRow
-                                            key={`c-${c.id}`}
-                                            c={c}
-                                            cIdx={cIdx}
-                                            hasSub={hasSub}
-                                            isEditable={isEditable}
-                                            empScore={empScore}
-                                            avgEmp={avgEmp}
-                                            isCompleted={isCompleted}
-                                            avgFinal={avgFinal}
-                                            finalScore={finalScore}
-                                            savingScore={savingScore}
-                                            handleSaveScore={handleSaveScore}
-                                            tdB={tdB}
-                                            tdLvl={tdLvl}
-                                            tdSc={tdSc}
-                                        />
-                                    );
+                                    if (sectionIssues.length > 0) {
+                                        rows.push(
+                                            <tr key={`warning-${section.id}`}>
+                                                <td colSpan={isCompleted ? 11 : 10} style={{ padding: "12px 18px", background: "#fff7f8", color: "#be123c", borderBottom: "1px solid #fecdd3", fontWeight: 650, fontSize: 12 }}>
+                                                    {sectionIssues[0].message}
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
 
-                                    if (hasSub) {
-                                        c.subCriteria?.forEach((sub: any, si: number) => {
-                                            const subEmp = localScores[sub.id] ?? getScore(record.scores, sub.id, "EMPLOYEE");
-                                            const subMgr = getScore(record.scores, sub.id, "MANAGER");
-                                            const subAppr = getScore(record.scores, sub.id, "APPROVER");
-                                            const subFinalScore = subAppr ?? subMgr;
+                                    section.criteria?.forEach((c: any, cIdx: number) => {
+                                        const hasSub = c.subCriteria?.length > 0;
+                                        const empScore = localScores[c.id] ?? getScore(record.scores, c.id, "EMPLOYEE");
+                                        const mgrScore = getScore(record.scores, c.id, "MANAGER");
+                                        const apprScore = getScore(record.scores, c.id, "APPROVER");
+                                        const finalScore = apprScore ?? mgrScore;
 
+                                        let avgEmp: number | null = null;
+                                        let avgFinal: number | null = null;
+
+                                        if (hasSub) {
+                                            let weightedSumEmp = 0, weightedSumFinal = 0;
+                                            let cntEmp = 0, cntFinal = 0;
+                                            c.subCriteria.forEach((sub: any) => {
+                                                const e = localScores[sub.id] ?? getScore(record.scores, sub.id, "EMPLOYEE");
+                                                const m = getScore(record.scores, sub.id, "MANAGER");
+                                                const a = getScore(record.scores, sub.id, "APPROVER");
+                                                const f = a ?? m;
+                                                if (e != null) {
+                                                    weightedSumEmp += e * ((sub.weight && sub.weight > 0) ? sub.weight : (c.weight / c.subCriteria.length));
+                                                    cntEmp++;
+                                                }
+                                                if (f != null) {
+                                                    weightedSumFinal += f * ((sub.weight && sub.weight > 0) ? sub.weight : (c.weight / c.subCriteria.length));
+                                                    cntFinal++;
+                                                }
+                                            });
+                                            if (cntEmp > 0) {
+                                                empTotal += weightedSumEmp;
+                                                avgEmp = weightedSumEmp / c.weight;
+                                            }
+                                            if (cntFinal > 0) {
+                                                finalTotal += weightedSumFinal;
+                                                avgFinal = weightedSumFinal / c.weight;
+                                            }
+                                        } else {
+                                            if (empScore != null) empTotal += empScore * c.weight;
+                                            if (finalScore != null) finalTotal += finalScore * c.weight;
+                                        }
+
+                                        if (!isCollapsed) {
                                             rows.push(
-                                                <SubCriteriaRow
-                                                    key={`sub-${sub.id}`}
-                                                    sub={sub}
+                                                <SharedCriteriaRow
+                                                    key={`c-${c.id}`}
+                                                    role="EMPLOYEE"
+                                                    c={c}
                                                     cIdx={cIdx}
-                                                    si={si}
+                                                    hasSub={hasSub}
                                                     isEditable={isEditable}
-                                                    subEmp={subEmp}
-                                                    subFinalScore={subFinalScore}
                                                     isCompleted={isCompleted}
+                                                    empScore={empScore}
+                                                    avgEmp={avgEmp}
+                                                    finalScore={finalScore}
+                                                    avgFinal={avgFinal}
                                                     savingScore={savingScore}
                                                     handleSaveScore={handleSaveScore}
                                                     tdB={tdB}
                                                     tdLvl={tdLvl}
                                                     tdSc={tdSc}
+                                                    getStickyStyle={(col, isHeader) => getStickyStyle(col as any, isCompleted, isHeader)}
+                                                    hoveredGroupId={hoveredGroupId}
+                                                    onGroupHover={setHoveredGroupId}
                                                 />
                                             );
-                                        });
-                                    }
+                                        }
+
+                                        if (hasSub) {
+                                            c.subCriteria?.forEach((sub: any, si: number) => {
+                                                const subEmp = localScores[sub.id] ?? getScore(record.scores, sub.id, "EMPLOYEE");
+                                                const subMgr = getScore(record.scores, sub.id, "MANAGER");
+                                                const subAppr = getScore(record.scores, sub.id, "APPROVER");
+                                                const subFinalScore = subAppr ?? subMgr;
+
+                                                if (!isCollapsed) {
+                                                    rows.push(
+                                                        <SharedSubCriteriaRow
+                                                            key={`sub-${sub.id}`}
+                                                            role="EMPLOYEE"
+                                                            sub={sub}
+                                                            cIdx={cIdx}
+                                                            si={si}
+                                                            isEditable={isEditable}
+                                                            isCompleted={isCompleted}
+                                                            subEmp={subEmp}
+                                                            subFinalScore={subFinalScore}
+                                                            savingScore={savingScore}
+                                                            handleSaveScore={handleSaveScore}
+                                                            tdB={tdB}
+                                                            tdLvl={tdLvl}
+                                                            tdSc={tdSc}
+                                                            getStickyStyle={(col, isHeader) => getStickyStyle(col as any, isCompleted, isHeader)}
+                                                            parentWeight={c.weight}
+                                                            criteriaCount={c.subCriteria.length}
+                                                            parentCriteriaId={c.id}
+                                                            hoveredGroupId={hoveredGroupId}
+                                                            onGroupHover={setHoveredGroupId}
+                                                        />
+                                                    );
+                                                }
+                                            });
+                                        }
+                                    });
+
+                                    rows.push(
+                                        <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
+                                            <td colSpan={3} style={{ padding: "12px 18px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
+                                                TỔNG KẾT PHẦN ({formatWeight(section.weight)})
+                                            </td>
+                                            <td colSpan={5} style={{ background: "#f9fafb" }} />
+                                            <td colSpan={2} style={{ padding: "12px", textAlign: "center", fontWeight: 750, color: "#475569" }}>{formatWeight(section.weight)}</td>
+                                            <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted), background: "#f9fafb" }}>
+                                                <div className="evaluation-total-cell"><span>CBNV</span><strong>{empTotal.toFixed(2)}</strong></div>
+                                            </td>
+                                            {isCompleted && <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted), background: "#f9fafb" }}>
+                                                <div className="evaluation-total-cell is-final"><span>Điểm cuối</span><strong>{finalTotal.toFixed(2)}</strong></div>
+                                            </td>}
+                                        </tr>
+                                    );
+                                    dynamicEmpTotal += empTotal;
+                                    dynamicMgrTotal += finalTotal;
+                                    return rows;
                                 });
 
-                                rows.push(
-                                    <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                        <td colSpan={8} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
-                                            Tổng kết {section.name}
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center", fontWeight: 750, color: "#475569" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted), background: "#f9fafb" }}>
-                                            <div className="evaluation-total-cell"><span>CBNV</span><strong>{empTotal.toFixed(2)}</strong></div>
-                                        </td>
-                                        {isCompleted && <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted), background: "#f9fafb" }}>
-                                            <div className="evaluation-total-cell is-final"><span>Điểm cuối</span><strong>{finalTotal.toFixed(2)}</strong></div>
-                                        </td>}
-                                    </tr>
+                                return (
+                                    <>
+                                        {sectionElements}
+                                        {/* Grand Total */}
+                                        <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fff" }}>
+                                            <td colSpan={3} style={{ padding: "18px 24px", textAlign: "left", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                                TỔNG ĐIỂM CHUNG (100%)
+                                            </td>
+                                            <td colSpan={5} style={{ background: "#fff" }} />
+                                            <td colSpan={2} style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#475569" }}>{hasTemplateStructureError ? "—" : "100%"}</td>
+                                            <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted) }}>
+                                                <span style={{ fontSize: 22, fontWeight: 900, color: "#e8637a" }}>
+                                                    {!hasTemplateStructureError && dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
+                                                </span>
+                                            </td>
+                                            {isCompleted && <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted) }}>
+                                                <span style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>
+                                                    {!hasTemplateStructureError && dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
+                                                </span>
+                                            </td>}
+                                        </tr>
+                                    </>
                                 );
-                                dynamicEmpTotal += empTotal;
-                                dynamicMgrTotal += finalTotal;
-                                return rows;
-                            });
-
-                            return (
-                                <>
-                                    {sectionElements}
-                                    {/* Grand Total */}
-                                    <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fff" }}>
-                                        <td colSpan={8} style={{ padding: "18px 24px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                            Tổng điểm đánh giá chung
-                                        </td>
-                                        <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#475569" }}>{hasTemplateStructureError ? "—" : "100%"}</td>
-                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empScore", isCompleted) }}>
-                                            <span style={{ fontSize: 22, fontWeight: 900, color: "#e8637a" }}>
-                                                {!hasTemplateStructureError && dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
-                                            </span>
-                                        </td>
-                                        {isCompleted && <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("finalScore", isCompleted) }}>
-                                            <span style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>
-                                                {!hasTemplateStructureError && dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
-                                            </span>
-                                        </td>}
-                                    </tr>
-                                </>
-                            );
-                        })()}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* ─── NHẬN XÉT TỰ ĐÁNH GIÁ ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét của nhân viên</div>
-                {isEditable ? (
-                    <div>
-                        <Input.TextArea rows={4} value={selfReview} onChange={e => { setSelfReview(e.target.value); setIsDirty(true); }}
-                            placeholder="Chia sẻ thành tựu, khó khăn hoặc mong muốn của bạn trong kỳ làm việc vừa qua..."
-                            style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SCORE} hideChildren>
-                                <Button onClick={handleSaveSelfReview} loading={savingComment}
-                                    style={{ borderRadius: 8, fontWeight: 600, color: "#111827", borderColor: "#e5e7eb" }}>
-                                    Lưu nhận xét
-                                </Button>
-                            </Access>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: selfReview ? "#111827" : "#9ca3af", fontStyle: selfReview ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {selfReview || "Chưa có nhận xét nào."}
-                    </div>
-                )}
-            </div>
-
-            {/* ─── NHẬN XÉT QUẢN LÝ ─── */}
-            {record.comments?.some((c: any) => c.commentType === "MANAGER_FEEDBACK") && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Phản hồi từ Quản lý</div>
-                    <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: "#111827", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {getComment(record.comments, "MANAGER_FEEDBACK")}
-                    </div>
+                            })()}
+                        </tbody>
+                    </table>
                 </div>
-            )}
 
-            {/* ─── KẾ HOẠCH ĐÀO TẠO ─── */}
-            {record.trainingPlans?.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Kế hoạch đào tạo & Phát triển</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-                        {record.trainingPlans.map((plan: any) => (
-                            <div key={plan.id} style={{ background: "#f9fafb", borderRadius: 10, padding: "16px", border: "1px solid #f3f4f6", borderLeft: "3px solid #f43f5e" }}>
-                                <div style={{ fontWeight: 700, color: "#111827", fontSize: 14, marginBottom: 8 }}>{plan.content}</div>
-                                {plan.requirements && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Mục tiêu:</strong> {plan.requirements}</div>}
-                                {plan.solution && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Giải pháp:</strong> {plan.solution}</div>}
-                                {plan.completionTimeline && (
-                                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, background: "#f3f4f6", borderRadius: 5, padding: "3px 10px", fontSize: 12, fontWeight: 600, color: "#111827" }}>
-                                        <ClockCircleOutlined /> {plan.completionTimeline}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                {/* Comments / Feedback Section */}
+                <EvaluationCommentsSection
+                    role="EMPLOYEE"
+                    comments={record.comments || []}
+                    isEditable={isEditable}
+                    selfReviewValue={selfReview}
+                    onChangeSelfReview={setSelfReview}
+                    onSaveSelfReview={handleSaveSelfReview}
+                    managerFeedbackValue=""
+                    savingSelfReview={savingComment}
+                />
             </div>
 
             {/* ─── STICKY BOTTOM BAR ─── */}
-            {isEditable && (
-                <div className="employee-evaluation-action-bar">
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                            width: 36, height: 36, borderRadius: 10,
-                            background: canSubmit ? "#166534" : "#f1f5f9",
-                            display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.3s"
-                        }}>
-                            {canSubmit
-                                ? <CheckCircleOutlined style={{ color: "#fff", fontSize: 18 }} />
-                                : <FileTextOutlined style={{ color: "#64748b", fontSize: 16 }} />}
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 0 }}>Tiến độ đánh giá</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>
-                                {scoredCount} / {allLeafCriteria.length} tiêu chí
-                            </div>
-                        </div>
+            {(isEditable || hasScrollbar) && (
+                <div className="employee-evaluation-action-bar" style={{ display: "block", padding: 0 }}>
+                    {/* Synchronized sticky scrollbar at the top edge of the footer */}
+                    <div
+                        className="sticky-horizontal-scrollbar"
+                        ref={topScrollRef}
+                        style={{
+                            overflowX: "auto",
+                            overflowY: "hidden",
+                            width: "100%",
+                            background: "transparent",
+                            borderBottom: isEditable ? "1px solid #e2e8f0" : "none",
+                            display: hasScrollbar ? "block" : "none"
+                        }}
+                    >
+                        <div style={{ width: tableScrollWidth, height: 1 }} />
                     </div>
-                    <div className="evaluation-action-bar-spacer" />
-                    {remainingCount > 0 && (
-                        <Button onClick={handleGoToNextUnscored} style={{ height: 40, borderRadius: 6, fontWeight: 650 }}>
-                            Đi tới mục chưa chấm ({remainingCount})
-                        </Button>
+
+                    {isEditable && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 24px" }}>
+                            {/* Left: spacer to balance centered buttons */}
+                            <div style={{ flex: "1 1 0%", minWidth: 200 }} />
+
+                            {/* Center: Centered Buttons */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flex: "0 0 auto" }}>
+                                {remainingCount > 0 && (
+                                    <Button onClick={handleGoToNextUnscored} icon={<DownOutlined />} style={{ height: 42, borderRadius: 8, fontWeight: 600, color: "#475569", borderColor: "#cbd5e1", background: "#ffffff" }}>
+                                        Tiêu chí chưa đánh giá ({remainingCount})
+                                    </Button>
+                                )}
+                                <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SUBMIT} hideChildren>
+                                    <Button
+                                        type="primary"
+                                        icon={<SendOutlined />}
+                                        loading={submitting}
+                                        disabled={!canSubmit}
+                                        onClick={() => setIsSubmitModalOpen(true)}
+                                        className={canSubmit ? "evaluation-submit-button" : undefined}
+                                        style={{
+                                            borderRadius: 6, fontWeight: 700, height: 42, padding: "0 24px",
+                                            border: "none",
+                                        }}>
+                                        Nộp bản đánh giá
+                                    </Button>
+                                </Access>
+                            </div>
+
+                            {/* Right: Empty spacer to balance center alignment */}
+                            <div style={{ flex: "1 1 0%", display: "flex", justifyContent: "flex-end" }} />
+                        </div>
                     )}
-                    <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_SUBMIT} hideChildren>
-                        <Popconfirm
-                            title="Xác nhận nộp đánh giá?"
-                            description={hasTemplateStructureError ? "Mẫu đánh giá chưa được cấu hình hợp lệ." : progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
-                            onConfirm={canSubmit ? handleSubmit : undefined}
-                            okText={canSubmit ? "Nộp ngay" : "Đã hiểu"}
-                            cancelText="Hủy"
-                            okButtonProps={{ disabled: !canSubmit }}
-                        >
-                            <Button
-                                type="primary"
-                                icon={<SendOutlined />}
-                                loading={submitting}
-                                disabled={!canSubmit}
-                                className={canSubmit ? "evaluation-submit-button" : undefined}
-                                style={{
-                                    borderRadius: 6, fontWeight: 700, height: 42, padding: "0 24px",
-                                    border: "none",
-                                }}>
-                                Nộp bản đánh giá
-                            </Button>
-                        </Popconfirm>
-                    </Access>
                 </div>
             )}
 
             <style>{`
-                .employee-evaluation-workspace-header {
-                    position: sticky;
-                    top: 0;
-                    z-index: 20;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 20px;
-                    padding: 16px 24px;
-                    background: rgba(255, 255, 255, 0.97);
-                    border-bottom: 1px solid #e2e8f0;
-                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
-                    backdrop-filter: blur(10px);
-                }
-                .employee-evaluation-workspace-body {
-                    width: 100%;
-                    max-width: 1680px;
-                    margin: 0 auto;
-                    padding: 20px 24px 28px;
-                    box-sizing: border-box;
-                }
-                .evaluation-meta-pill {
-                    display: inline-flex;
-                    align-items: center;
-                    min-height: 24px;
-                    padding: 2px 9px;
-                    color: #475569;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    font-weight: 700;
-                }
-                .evaluation-header-progress {
-                    padding: 8px 12px;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                }
-                .evaluation-score-summary {
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    min-height: 50px;
-                    padding: 7px 13px;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    text-align: center;
-                }
-                .evaluation-score-summary span {
-                    color: #64748b;
-                    font-size: 10px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                }
-                .evaluation-score-summary strong {
-                    margin-top: 1px;
-                    color: #0f172a;
-                    font-size: 18px;
-                    line-height: 1.2;
-                }
-                .evaluation-grade-summary {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    min-height: 50px;
-                    padding: 7px 13px;
-                    border: 1px solid;
-                    border-radius: 6px;
-                }
-                .evaluation-grade-summary span { font-size: 12px; font-weight: 750; }
-                .evaluation-grade-summary strong { font-size: 24px; line-height: 1; }
                 .evaluation-header-menu-button {
                     width: 40px;
                     height: 40px;
@@ -1488,215 +1293,58 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
                     border-radius: 6px;
                     color: #334155;
                 }
-                .employee-evaluation-action-bar {
-                    position: sticky;
-                    bottom: 0;
-                    z-index: 30;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 11px 24px;
-                    background: rgba(255, 255, 255, 0.96);
-                    border-top: 1px solid #e2e8f0;
-                    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.07);
-                    backdrop-filter: blur(12px);
-                }
-                .evaluation-action-bar-spacer { flex: 1; }
-                .evaluation-submit-button {
-                    background: #e8637a !important;
-                    border-color: #e8637a !important;
-                    box-shadow: 0 4px 12px rgba(232, 99, 122, 0.24) !important;
-                }
-                .evaluation-submit-button:hover,
-                .evaluation-submit-button:focus-visible {
-                    background: #d94c66 !important;
-                    border-color: #d94c66 !important;
-                }
-                .evaluation-submit-button:active {
-                    background: #c94760 !important;
-                    border-color: #c94760 !important;
-                    box-shadow: 0 2px 7px rgba(232, 99, 122, 0.2) !important;
-                }
                 .employee-evaluation-table-shell {
-                    scrollbar-color: #cbd5e1 transparent;
-                    scrollbar-width: thin;
+                    scrollbar-color: #cbd5e1 transparent !important;
+                    scrollbar-width: thin !important;
                 }
-                .employee-evaluation-table-shell::-webkit-scrollbar { height: 9px; }
-                .employee-evaluation-table-shell::-webkit-scrollbar-track { background: #f8fafc; }
+                .employee-evaluation-table-shell::-webkit-scrollbar {
+                    height: 9px !important;
+                    display: block !important;
+                    width: auto !important;
+                }
+                .employee-evaluation-table-shell::-webkit-scrollbar-track {
+                    background: #f8fafc !important;
+                }
                 .employee-evaluation-table-shell::-webkit-scrollbar-thumb {
-                    background: #cbd5e1;
-                    border: 2px solid #f8fafc;
-                    border-radius: 8px;
+                    background: #cbd5e1 !important;
+                    border: 2px solid #f8fafc !important;
+                    border-radius: 8px !important;
                 }
-                .employee-evaluation-table th,
-                .employee-evaluation-table td { box-sizing: border-box; }
-                .evaluation-header-helper {
-                    display: block;
-                    margin-top: 4px;
-                    color: #94a3b8;
-                    font-size: 10px;
-                    font-weight: 650;
+                .sticky-horizontal-scrollbar {
+                    height: 8px !important;
+                    scrollbar-width: thin !important;
+                    scrollbar-color: #cbd5e1 transparent !important;
                 }
-                .evaluation-level-name {
-                    display: block;
-                    margin-top: 2px;
-                    color: #94a3b8;
-                    font-size: 10px;
-                    font-weight: 650;
+                .sticky-horizontal-scrollbar::-webkit-scrollbar {
+                    height: 4px !important;
+                    display: block !important;
                 }
-                .evaluation-criteria-description {
-                    margin-top: 4px;
-                    color: #64748b;
-                    font-size: 11px;
-                    font-style: italic;
-                    font-weight: 400;
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-track {
+                    background: transparent !important;
                 }
-                .evaluation-weight-badge {
-                    flex: 0 0 auto;
-                    padding: 2px 7px;
-                    color: #475569;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 4px;
-                    font-size: 10px;
-                    font-weight: 750;
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-thumb {
+                    background: #cbd5e1 !important;
+                    border-radius: 99px !important;
                 }
-                .evaluation-level-empty {
-                    color: #cbd5e1;
-                    font-style: italic;
-                }
-                .evaluation-score-picker {
-                    width: 160px;
-                    max-width: 100%;
-                    min-width: 0;
-                    margin-left: auto;
-                    padding: 4px;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    overflow: hidden;
-                    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
-                }
-                .evaluation-score-picker.is-empty {
-                    background: #fff8fa;
-                    border-color: #f1b5c0;
-                }
-                .evaluation-score-picker.has-value {
-                    background: #ffffff;
-                    border-color: #ead4d9;
-                }
-                .evaluation-score-picker-options {
-                    display: grid;
-                    grid-template-columns: repeat(5, minmax(0, 1fr));
-                    gap: 3px;
-                }
-                .evaluation-score-option {
-                    width: 100%;
-                    min-width: 0;
-                    height: 30px;
-                    padding: 0;
-                    color: #475569;
-                    background: transparent;
-                    border: 0;
-                    border-radius: 4px;
-                    font: inherit;
-                    font-size: 13px;
-                    font-weight: 750;
-                    line-height: 30px;
-                    cursor: pointer;
-                    transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
-                }
-                .evaluation-score-option:hover:not(:disabled):not(.is-selected) {
-                    color: #c94760;
-                    background: #fff0f3;
-                }
-                .evaluation-score-option:active:not(:disabled) { transform: scale(0.96); }
-                .evaluation-score-option:focus-visible {
-                    outline: 2px solid #e8637a;
-                    outline-offset: 1px;
-                }
-                .evaluation-score-option.is-selected {
-                    color: #ffffff;
-                    background: #e8637a;
-                    box-shadow: 0 2px 5px rgba(232, 99, 122, 0.24);
-                }
-                .evaluation-score-option:disabled { cursor: wait; }
-                .evaluation-score-picker.is-saving .evaluation-score-picker-options { opacity: 0.62; }
-                .evaluation-score-result {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 8px;
-                    min-height: 34px;
-                    margin: 6px -4px -4px;
-                    padding: 5px 10px 6px;
-                    color: #8491a5;
-                    background: #fff7f9;
-                    border-top: 1px solid #f5d4da;
-                    font-size: 10px;
-                    font-weight: 750;
-                    line-height: 1;
-                    text-align: left;
-                    white-space: nowrap;
-                }
-                .evaluation-score-result strong {
-                    color: #d94c66;
-                    font-size: 21px;
-                    font-weight: 900;
-                    line-height: 1;
-                    font-variant-numeric: tabular-nums;
-                }
-                .evaluation-score-result.is-label-only { justify-content: center; }
-                .evaluation-score-picker:focus-within {
-                    border-color: #e8637a;
-                    box-shadow: 0 0 0 2px rgba(232, 99, 122, 0.12);
-                }
-                .evaluation-score-readout {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 2px;
-                    min-height: 58px;
-                }
-                .evaluation-score-readout > span,
-                .evaluation-score-readout > small {
-                    color: #94a3b8;
-                    font-size: 10px;
-                    font-weight: 650;
-                }
-                .evaluation-score-readout > strong {
-                    color: #e8637a;
-                    font-size: 20px;
-                    line-height: 1.15;
-                }
-                .evaluation-score-readout.is-final > strong { color: #0f172a; }
-                .evaluation-total-cell {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 7px;
-                }
-                .evaluation-total-cell span { color: #94a3b8; font-size: 10px; font-weight: 700; }
-                .evaluation-total-cell strong { color: #e8637a; font-size: 16px; }
-                .evaluation-total-cell.is-final strong { color: #0f172a; }
-                @media (max-width: 768px) {
-                    .employee-evaluation-workspace-header {
-                        align-items: flex-start;
-                        padding: 14px 14px;
-                    }
-                    .employee-evaluation-workspace-body { padding: 14px 10px 24px; }
-                    .evaluation-header-progress { display: none; }
-                    .employee-evaluation-action-bar {
-                        flex-wrap: wrap;
-                        padding: 10px 12px;
-                    }
-                    .evaluation-action-bar-spacer { display: none; }
-                    .employee-evaluation-action-bar > button,
-                    .employee-evaluation-action-bar .ant-popconfirm-open + button { flex: 1; }
-                    .employee-evaluation-table-shell { border-radius: 8px !important; }
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8 !important;
                 }
             `}</style>
+
+            <ConfirmModal
+                open={isSubmitModalOpen}
+                variant="success"
+                title="Xác nhận nộp bản tự đánh giá?"
+                description="Sau khi nộp bạn sẽ không thể chỉnh sửa điểm hay nhận xét. Bạn có chắc chắn muốn nộp?"
+                okText="Nộp ngay"
+                cancelText="Hủy"
+                onConfirm={async () => {
+                    setIsSubmitModalOpen(false);
+                    await handleSubmit();
+                }}
+                onCancel={() => setIsSubmitModalOpen(false)}
+                loading={submitting}
+            />
         </div>
     );
 

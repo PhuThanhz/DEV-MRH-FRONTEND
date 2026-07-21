@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-    Col, Row, Button, Select, Table, Popconfirm, message, Typography, Tooltip,
+    Col, Row, Button, Select, Table, Popconfirm, Typography, Tooltip,
 } from "antd";
 import {
     DeleteOutlined, PlusOutlined, ApartmentOutlined,
@@ -8,6 +8,7 @@ import {
 } from "@ant-design/icons";
 
 import type { IUserPosition } from "@/types/backend";
+import { notify } from "@/components/common/notification/notify";
 import {
     useUserPositionsQuery,
     useCreateUserPositionMutation,
@@ -184,11 +185,11 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
     };
 
     const handleAddPosition = () => {
-        if (!selectedCompanyId) { message.warning("Vui lòng chọn công ty"); return; }
-        if (!selectedSource) { message.warning("Vui lòng chọn cấp gán"); return; }
-        if (selectedSource === "DEPARTMENT" && !selectedDepartmentId) { message.warning("Vui lòng chọn phòng ban"); return; }
-        if (selectedSource === "SECTION" && !selectedSectionId) { message.warning("Vui lòng chọn bộ phận"); return; }
-        if (!selectedJobTitleId) { message.warning("Vui lòng chọn chức danh"); return; }
+        if (!selectedCompanyId) { notify.warning("Vui lòng chọn công ty"); return; }
+        if (!selectedSource) { notify.warning("Vui lòng chọn cấp gán"); return; }
+        if (selectedSource === "DEPARTMENT" && !selectedDepartmentId) { notify.warning("Vui lòng chọn phòng ban"); return; }
+        if (selectedSource === "SECTION" && !selectedSectionId) { notify.warning("Vui lòng chọn bộ phận"); return; }
+        if (!selectedJobTitleId) { notify.warning("Vui lòng chọn chức danh"); return; }
         if (!activeUserId) return;
 
         const data: any = { source: selectedSource };

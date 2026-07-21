@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Button, Dropdown } from "antd";
+import { Space, Tag, Dropdown } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
@@ -28,6 +28,7 @@ import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import SectionJobTitleTab from "./tab.section-job-title";
 import { Modal } from "antd";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const SectionPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -199,11 +200,11 @@ const SectionPage = () => {
                     <Space size={4} align="center">
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.GET_BY_ID} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
                                 data-guide-id="section-detail-button"
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                icon={<EyeOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenViewDetail(true);
@@ -213,11 +214,11 @@ const SectionPage = () => {
 
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.SECTIONS.UPDATE} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="edit"
+                                tooltip="Chỉnh sửa"
                                 data-guide-id="section-edit-button"
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                                icon={<EditOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
@@ -232,10 +233,9 @@ const SectionPage = () => {
                                 trigger={["click"]}
                                 placement="bottomRight"
                             >
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
+                                <ActionButton
+                                    tooltip="Thêm thao tác"
+                                    icon={<MoreOutlined style={{ fontSize: 16 }} />}
                                 />
                             </Dropdown>
                         )}

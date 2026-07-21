@@ -1,8 +1,9 @@
-import { Button, Form, Input, message, notification } from "antd";
+import { Button, Form, Input } from "antd";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { KeyOutlined, LockOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { callConfirmResetPassword } from "config/api";
+import { notify } from "@/components/common/notification/notify";
 
 const ConfirmResetPassword = () => {
     const [isSubmit, setIsSubmit] = useState(false);
@@ -32,19 +33,20 @@ const ConfirmResetPassword = () => {
         try {
             const res = await callConfirmResetPassword(email, code, newPassword);
             if (res?.data?.success) {
-                message.success({
-                    content:
-                        mode === "activate"
-                            ? "Kích hoạt tài khoản thành công! Đang chuyển về đăng nhập..."
-                            : "Đặt mật khẩu thành công! Đang chuyển về đăng nhập...", duration: 3,
-                });
+                notify.success(
+                    mode === "activate"
+                        ? "Kích hoạt tài khoản thành công. Đang chuyển về đăng nhập."
+                        : "Đặt mật khẩu thành công. Đang chuyển về đăng nhập.",
+                    { duration: 3000 }
+                );
                 setTimeout(() => navigate("/login"), 2500);
             }
         } catch (error: any) {
-            notification.error({
-                message: "Xác nhận thất bại",
-                description: error?.message || "Mã xác nhận không đúng hoặc đã hết hạn.",
-                duration: 5,
+            notify.error(error?.message || "Mã xác nhận không đúng hoặc đã hết hạn.", {
+                title: mode === "activate"
+                    ? "Không thể kích hoạt tài khoản"
+                    : "Không thể đặt mật khẩu",
+                duration: 5000,
             });
         } finally {
             setIsSubmit(false);

@@ -254,7 +254,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
             }
             handleReset();
         } catch (err: any) {
-            notify.error(err?.message || "Có lỗi xảy ra");
+            notify.error(err?.message || "Không thể lưu lộ trình thăng tiến. Vui lòng thử lại.");
         }
     };
 
@@ -264,7 +264,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
             updateCareerPath({ id: dataInit!.id, ...values, active: activeState });
             handleReset();
         } catch (err: any) {
-            notify.error(err?.message || "Cập nhật thất bại");
+            notify.error(err?.message || "Không thể cập nhật");
         }
     };
 

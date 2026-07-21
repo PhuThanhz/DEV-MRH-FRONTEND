@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Typography, Tooltip, Tag, Badge, Space } from "antd";
+import { Typography, Tag, Badge, Space } from "antd";
 import {
     EyeOutlined,
     EditOutlined,
@@ -25,6 +25,7 @@ import type { IEmployeeCareerPath } from "@/types/backend";
 import ModalAssignCareerPath from "./ModalAssignCareerPath";
 import ModalPromoteEmployee from "./ModalPromoteEmployee";
 import DrawerEmployeeDetail from "./ModalEmployeeDetail";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const { Text } = Typography;
 
@@ -464,33 +465,29 @@ const EmployeeCareerPathTab = ({ viewMode }: Props) => {
             fixed: "right",             // ← sticky bên phải khi cuộn ngang
             render: (_, entity) => (
                 <Space size={8}>
-                    <Tooltip title="Xem chi tiết">
-                        <EyeOutlined
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                            onClick={() => {
-                                setSelected(entity);
-                                setOpenDetail(true);
-                            }}
-                        />
-                    </Tooltip>
+                    <ActionButton
+                        variant="view"
+                        tooltip="Xem chi tiết"
+                        icon={<EyeOutlined style={{ fontSize: 16 }} />}
+                        onClick={() => {
+                            setSelected(entity);
+                            setOpenDetail(true);
+                        }}
+                    />
                     {viewMode !== "own" && (
                         <Access
                             permission={ALL_PERMISSIONS.EMPLOYEE_CAREER_PATHS.UPDATE}
                             hideChildren
                         >
-                            <Tooltip title="Chỉnh sửa">
-                                <EditOutlined
-                                    style={{
-                                        fontSize: 18,
-                                        color: "#fa8c16",
-                                        cursor: "pointer",
-                                    }}
-                                    onClick={() => {
-                                        setSelected(entity);
-                                        setOpenAssign(true);
-                                    }}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="edit"
+                                tooltip="Chỉnh sửa"
+                                icon={<EditOutlined style={{ fontSize: 16 }} />}
+                                onClick={() => {
+                                    setSelected(entity);
+                                    setOpenAssign(true);
+                                }}
+                            />
                         </Access>
                     )}
                     {viewMode !== "own" && entity.nextStep && (

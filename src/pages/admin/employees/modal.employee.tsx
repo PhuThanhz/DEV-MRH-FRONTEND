@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ModalForm } from "@ant-design/pro-components";
 import {
     Form,
-    message,
     Steps,
     Button,
     Typography,
@@ -26,6 +25,7 @@ import {
     CameraOutlined,
     CloseOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import ManagerPickerModal from "@/pages/admin/user/components/ManagerPickerModal";
 
 import type { IEmployee } from "@/types/backend";
@@ -218,7 +218,7 @@ const ModalEmployee = ({
                 });
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra!");
+            notify.error(error?.response?.data?.message || "Không thể lưu hồ sơ nhân viên. Vui lòng thử lại.");
         }
     };
 

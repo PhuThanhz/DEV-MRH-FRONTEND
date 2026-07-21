@@ -57,7 +57,7 @@ export const useCreateOrgNodeMutation = () => {
 
         onSuccess: () => {
 
-            notify.created("Tạo node thành công");
+            notify.created("Tạo vị trí thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]
@@ -90,7 +90,7 @@ export const useCreateOrgNodeBulkTreeMutation = () => {
 
         onSuccess: () => {
 
-            notify.created("Tạo hàng loạt node thành công");
+            notify.created("Tạo hàng loạt vị trí thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]
@@ -123,7 +123,7 @@ export const useUpdateOrgNodeMutation = () => {
 
         onSuccess: () => {
 
-            notify.updated("Cập nhật node thành công");
+            notify.updated("Cập nhật vị trí thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]
@@ -187,7 +187,7 @@ export const useDeleteOrgNodeMutation = () => {
 
         onSuccess: () => {
 
-            notify.deleted("Xóa node thành công");
+            notify.deleted("Xóa vị trí thành công");
 
             queryClient.invalidateQueries({
                 queryKey: ["orgNodes"]

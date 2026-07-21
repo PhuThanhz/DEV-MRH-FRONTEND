@@ -4,13 +4,14 @@ import {
     ProFormText,
     ProFormTextArea,
 } from '@ant-design/pro-components';
-import { Form, message, notification } from 'antd';
+import { Form } from 'antd';
 import { isMobile } from 'react-device-detect';
 import { callCreateRole, callUpdateRole } from '@/config/api';
 import type { IPermission, IRole } from '@/types/backend';
 import ModuleApi from './module.api';
 import { useAppDispatch } from '@/redux/hooks';
 import { useState } from 'react';
+import { notify } from '@/components/common/notification/notify';
 
 interface IProps {
     openModal: boolean;
@@ -48,20 +49,20 @@ const ModalRole = (props: IProps) => {
         if (isEdit) {
             const res = await callUpdateRole(role, singleRole!.id as string);
             if (res.data) {
-                message.success('Cập nhật role thành công');
+                notify.success('Cập nhật vai trò thành công');
                 handleReset();
                 reloadTable();
             } else {
-                notification.error({ message: 'Có lỗi xảy ra', description: res.message });
+                notify.error(res.message || 'Không thể cập nhật vai trò. Vui lòng thử lại.');
             }
         } else {
             const res = await callCreateRole(role);
             if (res.data) {
-                message.success('Thêm mới role thành công');
+                notify.success('Tạo vai trò thành công');
                 handleReset();
                 reloadTable();
             } else {
-                notification.error({ message: 'Có lỗi xảy ra', description: res.message });
+                notify.error(res.message || 'Không thể tạo vai trò. Vui lòng thử lại.');
             }
         }
     };

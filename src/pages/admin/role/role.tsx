@@ -19,6 +19,7 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { sfLike } from "spring-filter-query-builder";
 import { groupByPermission } from "@/config/utils";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 // ← khai báo type ngoài component
 type PermissionGroup = { module: string; permissions: IPermission[] };
@@ -184,11 +185,11 @@ const RolePage = () => {
                             placement="topRight"
                             onConfirm={() => handleDeleteRole(entity.id)}
                         >
-                            <Button
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xoá vai trò"
                                 data-guide-id="role-delete-button"
-                                type="text"
-                                size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                                icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

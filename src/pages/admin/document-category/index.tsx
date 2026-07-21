@@ -24,6 +24,7 @@ import {
 
 import ModalDocumentCategory from "./modal.document-category";
 import ViewDetailDocumentCategory from "./view.document-category";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const DocumentCategoryPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -226,13 +227,16 @@ const DocumentCategoryPage = () => {
                         permission={ALL_PERMISSIONS.DOCUMENT_CATEGORIES.GET_BY_ID}
                         hideChildren
                     >
-                        <EyeOutlined
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined />}
                             data-guide-id="document-category-detail-button"
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenViewDetail(true);
                             }}
+                            aria-label="Xem chi tiết"
                         />
                     </Access>
 
@@ -240,13 +244,16 @@ const DocumentCategoryPage = () => {
                         permission={ALL_PERMISSIONS.DOCUMENT_CATEGORIES.UPDATE}
                         hideChildren
                     >
-                        <EditOutlined
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
+                            icon={<EditOutlined />}
                             data-guide-id="document-category-edit-button"
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
                             }}
+                            aria-label="Chỉnh sửa"
                         />
                     </Access>
 
@@ -267,13 +274,12 @@ const DocumentCategoryPage = () => {
                                 entity.id && toggleMutation.mutate(entity.id)
                             }
                         >
-                            <PoweroffOutlined
+                            <ActionButton
+                                variant={entity.active ? "danger" : "success"}
+                                tooltip={entity.active ? "Ngừng hoạt động" : "Kích hoạt"}
+                                icon={<PoweroffOutlined />}
                                 data-guide-id="document-category-status-button"
-                                style={{
-                                    fontSize: 18,
-                                    color: entity.active ? "#52c41a" : "#d9d9d9",
-                                    cursor: "pointer",
-                                }}
+                                aria-label={entity.active ? "Ngừng hoạt động" : "Kích hoạt"}
                             />
                         </Popconfirm>
                     </Access>

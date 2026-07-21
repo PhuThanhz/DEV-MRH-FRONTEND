@@ -44,7 +44,7 @@ export const useCreateSectionJobTitleMutation = () => {
         },
 
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi khi gán chức danh");
+            notify.error(err?.response?.data?.message || "Không thể gán chức danh");
         },
     });
 };
@@ -65,7 +65,7 @@ export const useDeleteSectionJobTitleMutation = () => {
         },
 
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi khi hủy gán chức danh");
+            notify.error(err?.response?.data?.message || "Không thể hủy gán chức danh");
         },
     });
 };
@@ -87,7 +87,7 @@ export const useRestoreSectionJobTitleMutation = () => {
         },
 
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi khi khôi phục chức danh");
+            notify.error(err?.response?.data?.message || "Không thể khôi phục chức danh");
         },
     });
 };

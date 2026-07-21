@@ -39,11 +39,11 @@ export const useCreateCareerPathTemplateMutation = () => {
             return res;
         },
         onSuccess: (res) => {
-            notify.created(res?.message || "Tạo template thành công");
+            notify.created(res?.message || "Tạo mẫu thành công");
             queryClient.invalidateQueries({ queryKey: ["career-path-templates"] });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi tạo template");
+            notify.error(err.message || "Không thể tạo mẫu");
         },
     });
 };
@@ -58,11 +58,11 @@ export const useUpdateCareerPathTemplateMutation = () => {
             return res;
         },
         onSuccess: (res) => {
-            notify.updated(res?.message || "Cập nhật template thành công");
+            notify.updated(res?.message || "Cập nhật mẫu thành công");
             queryClient.invalidateQueries({ queryKey: ["career-path-templates"] });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi cập nhật template");
+            notify.error(err.message || "Không thể cập nhật mẫu");
         },
     });
 };
@@ -75,11 +75,11 @@ export const useDeactivateCareerPathTemplateMutation = () => {
             return callDeactivateCareerPathTemplate(id);
         },
         onSuccess: () => {
-            notify.updated("Đã tắt template");
+            notify.updated("Đã tắt mẫu");
             queryClient.invalidateQueries({ queryKey: ["career-path-templates"] });
         },
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi khi tắt template");
+            notify.error(err?.response?.data?.message || "Không thể tắt mẫu");
         },
     });
 };
@@ -92,11 +92,11 @@ export const useActivateCareerPathTemplateMutation = () => {
             return callActivateCareerPathTemplate(id);
         },
         onSuccess: () => {
-            notify.updated("Đã bật lại template");
+            notify.updated("Đã bật lại mẫu");
             queryClient.invalidateQueries({ queryKey: ["career-path-templates"] });
         },
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi khi bật template");
+            notify.error(err?.response?.data?.message || "Không thể bật mẫu");
         },
     });
 };

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Typography, Modal, message, Skeleton } from "antd";
+import { Typography, Modal, Skeleton } from "antd";
 import { FilterOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
+import { notify } from "@/components/common/notification/notify";
 
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import {
@@ -85,7 +86,7 @@ const CareerPathTab = () => {
             content: `Xóa lộ trình "${r.jobTitleName}"?`,
             okText: "Xóa", okType: "danger", cancelText: "Hủy",
             onOk: () => {
-                message.success("Đã xóa thành công");
+                notify.success("Đã xóa thành công");
                 deptQuery.refetch();
                 bandQuery.refetch();
             },

@@ -50,7 +50,7 @@ export const useCreateRoleMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["roles"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo vai trò");
+            notify.error(error.message || "Không thể tạo vai trò");
         },
     });
 };
@@ -72,7 +72,7 @@ export const useUpdateRoleMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["role", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật vai trò");
+            notify.error(error.message || "Không thể cập nhật vai trò");
         },
     });
 };
@@ -94,7 +94,7 @@ export const useDeleteRoleMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["roles"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa vai trò");
+            notify.error(error.message || "Không thể xóa vai trò");
         },
     });
 };

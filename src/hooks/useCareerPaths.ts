@@ -132,7 +132,7 @@ export const useCreateCareerPathMutation = () => {
             qc.invalidateQueries({ queryKey: ["career-paths-department"] });
         },
         onError: (err: any) =>
-            notify.error(err.message || "Lỗi khi tạo lộ trình"),
+            notify.error(err.message || "Không thể tạo lộ trình"),
     });
 };
 
@@ -159,7 +159,7 @@ export const useUpdateCareerPathMutation = () => {
             qc.invalidateQueries({ queryKey: ["career-paths-department"] });
         },
         onError: (err: any) =>
-            notify.error(err.message || "Lỗi khi cập nhật lộ trình"),
+            notify.error(err.message || "Không thể cập nhật lộ trình"),
     });
 };
 
@@ -228,7 +228,7 @@ export const usePreviewBulkCareerPathMutation = () => {
             return res.data!;
         },
         onError: (err: any) =>
-            notify.error(err.message || "Lỗi khi preview"),
+            notify.error(err.message || "Không thể xem trước"),
     });
 };
 /* =========================================================
@@ -254,6 +254,6 @@ export const useBulkCreateCareerPathMutation = () => {
             qc.invalidateQueries({ queryKey: ["career-paths-department"] });
             qc.invalidateQueries({ queryKey: ["career-paths-band"] });
         },
-        onError: (err: any) => notify.error(err.message || "Lỗi khi bulk create"),
+        onError: (err: any) => notify.error(err.message || "Không thể tạo hàng loạt"),
     });
 };

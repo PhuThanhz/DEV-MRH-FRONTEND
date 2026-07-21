@@ -1,8 +1,9 @@
 import { memo, useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Button, message, Tooltip, Dropdown } from "antd";
+import { Button, Tooltip, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, ApartmentOutlined, SaveOutlined, AppstoreOutlined, BarsOutlined, FullscreenOutlined, FullscreenExitOutlined, SettingOutlined, EyeOutlined, EyeInvisibleOutlined, CloseOutlined } from "@ant-design/icons";
 import { createPortal, unstable_batchedUpdates } from "react-dom";
+import { notify } from "@/components/common/notification/notify";
 
 import ReactFlow, {
     Background,
@@ -590,7 +591,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             const id = (res as any)?.id ?? (res as any)?.data?.id ?? (res as any)?.result?.id;
             if (id) { setChartId(id); setNodes([]); setEdges([]); }
         } catch {
-            message.error("Không thể tạo sơ đồ tổ chức.");
+            notify.error("Không thể tạo sơ đồ tổ chức.");
         }
     }, [ownerType, ownerId]);
 
@@ -672,7 +673,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                             setJdRecord({ id: jdId } as EnrichedJD);
                             setJdOpen(true);
                         } else {
-                            message.info("Vị trí này chưa được gắn JD nào.");
+                            notify.info("Vị trí này chưa được gắn JD nào.");
                         }
                     },
                     onSelect: () => {
@@ -732,7 +733,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             await updateNodePositions.mutateAsync(payload);
             setPendingSaves(new Map());
         } catch {
-            message.error("Lưu vị trí thất bại, thử lại nhé!");
+            notify.error("Không thể lưu vị trí, thử lại nhé.");
         } finally {
             setIsSaving(false);
         }
@@ -742,7 +743,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         if (!chartId) return;
         setPendingSaves(new Map());
         await loadNodes(chartId);
-        message.success("Đã khôi phục vị trí đã lưu!");
+        notify.success("Đã khôi phục vị trí đã lưu.");
     }, [chartId, loadNodes]);
 
     const handleAutoLayout = useCallback(() => {
@@ -759,7 +760,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         setNodes(laid.map((node) => ({ ...node, data: nodesRef.current.find((n) => n.id === node.id)?.data ?? node.data })));
         setPendingSaves((prev) => { const next = new Map(prev); laid.forEach((n) => next.set(n.id, { x: n.position.x, y: n.position.y })); return next; });
         scheduleFitView();
-        message.success("Đã căn chỉnh sơ đồ!");
+        notify.success("Đã căn chỉnh sơ đồ.");
     }, [nodes, edges, scheduleFitView, layoutNodeW, layoutNodeH, compactLayoutNodeW, compactLayoutNodeH]);
 
     const handleConnect = useCallback(async (connection: Connection) => {
@@ -768,16 +769,16 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         // Chặn tạo vòng lặp ngay tại UI
         const ancestors = getAncestorIds(connection.source, edgesRef.current);
         if (ancestors.has(connection.target) || connection.source === connection.target) {
-            message.error("Không thể tạo vòng lặp! Node đích không thể là tổ tiên của node nguồn.");
+            notify.error("Không thể tạo vòng lặp. vị trí đích không thể là tổ tiên của vị trí nguồn.");
             return;
         }
 
         setEdges((eds) => addEdge({ ...connection, ...EDGE_DEFAULTS }, eds));
         try {
             await updateNode.mutateAsync({ id: Number(connection.target), parentId: Number(connection.source) });
-            message.success("Đã kết nối node!");
+            notify.success("Đã kết nối vị trí.");
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Kết nối thất bại!");
+            notify.error(error?.response?.data?.message || "Không thể kết nối.");
             loadNodes(chartId); // Reload để xóa edge vừa nối tạm trên UI
         }
     }, [chartId, updateNode, loadNodes]);
@@ -838,7 +839,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             setEditingNode(null);
             loadNodes(chartId);
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Lưu thất bại!");
+            notify.error(error?.response?.data?.message || "Không thể lưu.");
         }
     }, [chartId, editingNode, createNode, updateNode, loadNodes]);
 
@@ -898,7 +899,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             await bulkTreeNode.mutateAsync(payload);
             loadNodes(chartId);
         } catch {
-            message.error("Tạo hàng loạt thất bại, thử lại nhé!");
+            notify.error("Không thể tạo hàng loạt, thử lại nhé.");
         }
     }, [chartId, bulkTreeNode, loadNodes]);
 
@@ -952,9 +953,9 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         else if (e.key === "lock") {
             setIsDragLocked(!isDragLocked);
             if (isDragLocked) {
-                message.info("Đã mở khóa di chuyển. Bạn có thể kéo thả để sắp xếp các vị trí!");
+                notify.info("Đã mở khóa di chuyển. Bạn có thể kéo thả để sắp xếp các vị trí.");
             } else {
-                message.success("Đã khóa di chuyển. Vị trí các node hiện đã được cố định!");
+                notify.success("Đã khóa di chuyển. Vị trí các vị trí hiện đã được cố định.");
             }
         }
         else if (e.key === "viewMode") setViewMode((v) => (v === "full" ? "compact" : "full"));

@@ -75,7 +75,7 @@ export const useUpsertSalaryStructureMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi lưu cấu trúc lương");
+            notify.error(error?.message || "Không thể lưu cấu trúc lương");
         },
     });
 };

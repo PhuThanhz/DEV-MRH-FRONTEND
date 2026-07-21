@@ -48,6 +48,7 @@ import type { IResNotificationDTO,
     IEvaluationRecord,
     IEvaluationTaskCounts,
     IResScoreDTO,
+    IResScoreUpdateDTO,
     IResCommentDTO,
     IResTrainingPlanDTO,
     IEvaluationHistory,
@@ -2399,6 +2400,9 @@ export const callAddTemplateToPeriod = (periodId: number, templateId: number) =>
 export const callFetchTemplatesInPeriod = (periodId: number) =>
     axios.get<IBackendRes<any[]>>(`/api/v1/evaluation/periods/${periodId}/templates`);
 
+export const callRemoveTemplateFromPeriod = (periodId: number, templateId: number) =>
+    axios.delete<IBackendRes<void>>(`/api/v1/evaluation/periods/${periodId}/templates/${templateId}`);
+
 export const callAddEmployeeToPeriod = (periodId: number, data: any) =>
     axios.post<IBackendRes<any>>(`/api/v1/evaluation/periods/${periodId}/employees`, data);
 
@@ -2413,6 +2417,9 @@ export const callActivateEvaluationPeriod = (id: number) =>
 
 export const callCloseEvaluationPeriod = (id: number) =>
     axios.patch<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}/close`);
+
+export const callAdjustEvaluationPeriodStartDate = (id: number, data: { employeeStartDate: string }) =>
+    axios.patch<IBackendRes<IEvaluationPeriod>>(`/api/v1/evaluation/periods/${id}/adjust-start-date`, data);
 
 export const callFetchPeriodProgress = (periodId: number) =>
     axios.get<IBackendRes<IPeriodProgress>>(`/api/v1/evaluation/periods/${periodId}/progress`);
@@ -2454,7 +2461,7 @@ export const callFetchPendingApprovalRecords = () =>
 
 // WORKFLOW ACTIONS
 export const callEmployeeSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/employee-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreUpdateDTO>>(`/api/v1/evaluation/records/${recordId}/employee-scores`, { criteriaId, score });
 
 export const callEmployeeSubmitRecord = (recordId: number) =>
     axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/employee-submit`);
@@ -2463,7 +2470,7 @@ export const callEmployeeSaveSelfReview = (recordId: number, content: string) =>
     axios.post<IBackendRes<IResCommentDTO>>(`/api/v1/evaluation/records/${recordId}/self-review`, { content });
 
 export const callManagerSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/manager-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreUpdateDTO>>(`/api/v1/evaluation/records/${recordId}/manager-scores`, { criteriaId, score });
 
 export const callManagerSubmitRecord = (recordId: number) =>
     axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/manager-submit`);
@@ -2475,7 +2482,7 @@ export const callSaveTrainingPlan = (recordId: number, data: any) =>
     axios.post<IBackendRes<IResTrainingPlanDTO>>(`/api/v1/evaluation/records/${recordId}/training-plans`, data);
 
 export const callApproverSaveScore = (recordId: number, criteriaId: number, score: number) =>
-    axios.post<IBackendRes<IResScoreDTO>>(`/api/v1/evaluation/records/${recordId}/approver-scores`, { criteriaId, score });
+    axios.post<IBackendRes<IResScoreUpdateDTO>>(`/api/v1/evaluation/records/${recordId}/approver-scores`, { criteriaId, score });
 
 export const callApproveRecord = (recordId: number, overrideReason?: string) =>
     axios.post<IBackendRes<IEvaluationRecord>>(`/api/v1/evaluation/records/${recordId}/approve`, overrideReason ? { overrideReason } : undefined);
@@ -2490,6 +2497,8 @@ export const callExtendEvaluationRecordDeadline = (data: {
     recordIds: number[];
     phase: "EMPLOYEE" | "MANAGER" | "APPROVAL";
     deadline: string;
+    recordDeadlines?: { recordId: number; deadline: string }[];
+    phaseDeadlines?: { phase: "EMPLOYEE" | "MANAGER" | "APPROVAL"; deadline: string }[];
     reason?: string;
     cascade?: boolean;
 }) =>

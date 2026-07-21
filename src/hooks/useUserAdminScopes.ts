@@ -31,7 +31,7 @@ export const useUpdateUserAdminScopesMutation = (userId?: string) => {
             client.invalidateQueries({ queryKey: ["user-admin-scopes", userId] });
         },
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || err?.message || "Lỗi cập nhật phạm vi quản trị");
+            notify.error(err?.response?.data?.message || err?.message || "Không thể cập nhật phạm vi quản trị");
         },
     });
 };

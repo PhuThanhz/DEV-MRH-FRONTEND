@@ -1,0 +1,392 @@
+/* Shared shell + scoring styles for the 3 evaluation detail pages
+   (My / Manager / Approval). Extracted from the per-page <style> blocks
+   so the shell and the shared row/picker components render consistently
+   regardless of which page mounts them. */
+
+/* ── Workspace shell ── */
+.employee-evaluation-workspace-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.97);
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    backdrop-filter: blur(10px);
+}
+.employee-evaluation-workspace-body {
+    width: 100%;
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 20px 24px 28px;
+    box-sizing: border-box;
+}
+.employee-evaluation-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 24px;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.07);
+    backdrop-filter: blur(12px);
+}
+.evaluation-action-bar-spacer { flex: 1; }
+
+/* ── Submit button ── */
+.evaluation-submit-button {
+    background: #e8637a !important;
+    border-color: #e8637a !important;
+    box-shadow: 0 4px 12px rgba(232, 99, 122, 0.24) !important;
+}
+.evaluation-submit-button:hover,
+.evaluation-submit-button:focus-visible {
+    background: #d94c66 !important;
+    border-color: #d94c66 !important;
+}
+.evaluation-submit-button:active {
+    background: #c94760 !important;
+    border-color: #c94760 !important;
+    box-shadow: 0 2px 7px rgba(232, 99, 122, 0.2) !important;
+}
+
+/* ── Header pills / summaries ── */
+.evaluation-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 9px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.evaluation-header-progress {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 50px;
+    padding: 7px 13px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+.evaluation-score-summary {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 50px;
+    padding: 7px 13px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-align: center;
+}
+.evaluation-score-summary span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.evaluation-score-summary strong {
+    margin-top: 1px;
+    color: #0f172a;
+    font-size: 18px;
+    line-height: 1.2;
+}
+.evaluation-grade-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 7px 13px;
+    border: 1px solid;
+    border-radius: 6px;
+}
+.evaluation-grade-summary span { font-size: 12px; font-weight: 750; }
+.evaluation-grade-summary strong { font-size: 24px; line-height: 1; }
+
+/* ── Table helpers ── */
+.employee-evaluation-table th,
+.employee-evaluation-table td { box-sizing: border-box; }
+.evaluation-header-helper {
+    display: block;
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 650;
+}
+.evaluation-level-name {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 650;
+}
+.evaluation-criteria-description {
+    margin-top: 4px;
+    color: #475569;
+    font-size: 11px;
+    font-style: italic;
+    font-weight: 500;
+}
+.evaluation-weight-badge {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 750;
+}
+.evaluation-group-weight-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    color: #1e3a8a;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    box-shadow: 0 1px 2px rgba(30, 58, 138, 0.05);
+}
+.evaluation-sub-weight-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+.evaluation-level-empty {
+    color: #94a3b8;
+    font-style: italic;
+    font-weight: 500;
+}
+.eval-row:hover td { background-color: #f8fafc !important; }
+
+/* ── Parent criteria row styling ── */
+.eval-parent-row {
+    background-color: #ffffff;
+}
+.eval-parent-row td {
+    background-color: #ffffff;
+}
+.evaluation-parent-indicator-badge {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 1px 6px;
+    background: #e2e8f0;
+    color: #334155;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ── Score picker ── */
+.evaluation-score-picker {
+    width: 160px;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: auto;
+    padding: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.evaluation-score-picker.is-empty {
+    background: #fff8fa;
+    border-color: #f1b5c0;
+}
+.evaluation-score-picker.has-value {
+    background: #ffffff;
+    border-color: #ead4d9;
+}
+.evaluation-score-picker-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+}
+.evaluation-score-option {
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding: 0;
+    color: #475569;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 30px;
+    cursor: pointer;
+    transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+}
+.evaluation-score-option:hover:not(:disabled):not(.is-selected) {
+    color: #c94760;
+    background: #fff0f3;
+}
+.evaluation-score-option:active:not(:disabled) { transform: scale(0.96); }
+.evaluation-score-option:focus-visible {
+    outline: 2px solid #e8637a;
+    outline-offset: 1px;
+}
+.evaluation-score-option.is-selected {
+    color: #ffffff;
+    background: #e8637a;
+    box-shadow: 0 2px 5px rgba(232, 99, 122, 0.24);
+}
+.evaluation-score-option:disabled { cursor: wait; }
+.evaluation-score-picker.is-saving .evaluation-score-picker-options { opacity: 0.62; }
+.evaluation-score-picker:focus-within {
+    border-color: #e8637a;
+    box-shadow: 0 0 0 2px rgba(232, 99, 122, 0.12);
+}
+
+/* ── Score result / readout ── */
+.evaluation-score-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    margin: 6px -4px -4px;
+    padding: 5px 10px 6px;
+    color: #8491a5;
+    background: #fff7f9;
+    border-top: 1px solid #f5d4da;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+}
+.evaluation-score-result strong {
+    color: #d94c66;
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.evaluation-score-result.is-label-only { justify-content: center; }
+.evaluation-score-readout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 58px;
+}
+.evaluation-score-readout > span,
+.evaluation-score-readout > small {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 650;
+}
+.evaluation-score-readout > strong {
+    color: #e8637a;
+    font-size: 20px;
+    line-height: 1.15;
+}
+.evaluation-score-readout.is-final > strong { color: #0f172a; }
+.evaluation-total-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.evaluation-total-cell span { color: #94a3b8; font-size: 10px; font-weight: 700; }
+.evaluation-total-cell strong { color: #e8637a; font-size: 16px; }
+.evaluation-total-cell.is-final strong { color: #0f172a; }
+
+/* ── Native table shell horizontal scrollbar — VISIBLE & styled ── */
+.employee-evaluation-table-shell {
+    scrollbar-color: #cbd5e1 transparent !important;
+    scrollbar-width: thin !important;
+}
+.employee-evaluation-table-shell::-webkit-scrollbar {
+    height: 9px !important;
+    display: block !important;
+    width: auto !important;
+}
+.employee-evaluation-table-shell::-webkit-scrollbar-track {
+    background: #f8fafc !important;
+}
+.employee-evaluation-table-shell::-webkit-scrollbar-thumb {
+    background: #cbd5e1 !important;
+    border: 2px solid #f8fafc !important;
+    border-radius: 8px !important;
+}
+
+/* ── Sticky horizontal scrollbar (footer-edge sync bar) — thin & subtle ── */
+.sticky-horizontal-scrollbar {
+    height: 8px !important;
+    scrollbar-width: thin !important;
+    scrollbar-color: #cbd5e1 transparent !important;
+    cursor: grab;
+}
+.sticky-horizontal-scrollbar:active {
+    cursor: grabbing;
+}
+.sticky-horizontal-scrollbar::-webkit-scrollbar {
+    height: 4px !important;
+    display: block !important;
+}
+.sticky-horizontal-scrollbar::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+.sticky-horizontal-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1 !important;
+    border-radius: 99px !important;
+}
+.sticky-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8 !important;
+}
+
+
+/* ── Unfilled select (validation hint) ── */
+.unfilled-select .ant-select-selector {
+    border-color: #fecdd3 !important;
+    background-color: #fff1f2 !important;
+}
+.unfilled-select:hover .ant-select-selector {
+    border-color: #f43f5e !important;
+}
+.unfilled-select .ant-select-selection-placeholder {
+    color: #f43f5e !important;
+    font-weight: 500;
+}
+
+/* ── Responsive (laptop / tablet) ── */
+@media (max-width: 768px) {
+    .employee-evaluation-workspace-header {
+        align-items: flex-start;
+        padding: 14px 14px;
+    }
+    .employee-evaluation-workspace-body { padding: 14px 10px 24px; }
+    .evaluation-header-progress { display: none; }
+    .employee-evaluation-action-bar {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+    }
+    .evaluation-action-bar-spacer { display: none; }
+    .employee-evaluation-action-bar > button,
+    .employee-evaluation-action-bar .ant-popconfirm-open + button { flex: 1; }
+    .employee-evaluation-table-shell { border-radius: 8px !important; }
+}

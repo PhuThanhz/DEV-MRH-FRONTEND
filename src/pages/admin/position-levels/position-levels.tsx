@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Tag, Popconfirm, Button } from "antd";
+import { Space, Tag, Popconfirm } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
@@ -22,6 +22,7 @@ import ModalPositionLevel from "./modal.position-level";
 import ViewDetailPositionLevel from "./view.position-level";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import Access from "@/components/share/access";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const PositionLevelPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -143,11 +144,11 @@ const PositionLevelPage = () => {
                 <Space size={4} align="center">
                     {/* Xem chi tiết */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.GET_BY_ID} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
                             data-guide-id="position-level-detail-button"
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenViewDetail(true);
@@ -157,11 +158,11 @@ const PositionLevelPage = () => {
 
                     {/* Chỉnh sửa */}
                     <Access permission={ALL_PERMISSIONS.POSITION_LEVELS.UPDATE} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="position-level-edit-button"
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenModal(true);
@@ -180,11 +181,11 @@ const PositionLevelPage = () => {
                             okButtonProps={{ danger: true }}
                             placement="topRight"
                         >
-                            <Button
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xoá bậc chức danh"
                                 data-guide-id="position-level-delete-button"
-                                type="text"
-                                size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                                icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

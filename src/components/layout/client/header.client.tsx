@@ -4,7 +4,7 @@ import {
     FireOutlined,
     LogoutOutlined,
 } from "@ant-design/icons";
-import { Avatar, Drawer, Dropdown, Menu, Space, message, Button } from "antd";
+import { Avatar, Drawer, Dropdown, Menu, Space, Button } from "antd";
 import type { MenuProps } from "antd";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -12,6 +12,7 @@ import { callLogout } from "@/config/api";
 import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
+import { notify } from "@/components/common/notification/notify";
 
 const getAccountDropdownWidth = (triggerWidth = 0) => {
     const viewportWidth = window.innerWidth;
@@ -74,7 +75,7 @@ const Header = () => {
             localStorage.removeItem("access_token");
             sessionStorage.clear();
             dispatch(setLogoutAction());
-            message.success("Đăng xuất thành công");
+            notify.success("Đăng xuất thành công");
         }, 0);
 
         void logoutRequest.catch(() => undefined);

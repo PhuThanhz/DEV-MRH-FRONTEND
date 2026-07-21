@@ -47,9 +47,16 @@ const LoginPage = () => {
       if (res?.data) {
         localStorage.setItem("access_token", res.data.access_token);
         dispatch(setUserLoginInfo(res.data.user));
-        notify.created("Đăng nhập thành công");
+        notify.success("Bạn đã đăng nhập vào Lotus HRM.", {
+          id: "login-status",
+          title: "Đăng nhập thành công",
+        });
       } else {
-        notify.error("Đăng nhập thất bại");
+        cooldownUntilRef.current = Date.now() + LOGIN_COOLDOWN_MS;
+        notify.error("Không nhận được thông tin phiên đăng nhập. Vui lòng thử lại.", {
+          id: "login-status",
+          title: "Đăng nhập không thành công",
+        });
       }
     } catch (error: any) {
       const status = error?.statusCode ?? error?.status ?? error?.response?.status;
@@ -72,7 +79,14 @@ const LoginPage = () => {
         ? LOGIN_ERROR_COOLDOWN_MS
         : LOGIN_COOLDOWN_MS;
       cooldownUntilRef.current = Date.now() + cooldownMs;
-      notify.error(msg);
+      const title = status === undefined || status === null
+        ? "Không thể kết nối hệ thống"
+        : status === 429
+          ? "Tạm thời chưa thể đăng nhập"
+          : status >= 500
+            ? "Dịch vụ đăng nhập gián đoạn"
+            : "Đăng nhập không thành công";
+      notify.error(msg, { id: "login-status", title });
     } finally {
       const remainingCooldown = Math.max(0, cooldownUntilRef.current - Date.now());
       unlockTimerRef.current = window.setTimeout(() => {
@@ -85,7 +99,12 @@ const LoginPage = () => {
 
   const onFinishFailed = ({ errorFields }: any) => {
     const firstError = errorFields[0]?.errors[0];
-    if (firstError) notify.error(firstError);
+    if (firstError) {
+      notify.warning(firstError, {
+        toastId: "login-validation",
+        title: "Thông tin đăng nhập chưa đầy đủ",
+      });
+    }
   };
 
   return (
@@ -101,7 +120,7 @@ const LoginPage = () => {
             <Form.Item
               label="Email"
               name="username"
-              rules={[{ required: true, message: "Email không được để trống!" }]}
+              rules={[{ required: true, message: "Vui lòng nhập email." }]}
               help=""
             >
               <Input
@@ -116,7 +135,7 @@ const LoginPage = () => {
             <Form.Item
               label="Mật khẩu"
               name="password"
-              rules={[{ required: true, message: "Mật khẩu không được để trống!" }]}
+              rules={[{ required: true, message: "Vui lòng nhập mật khẩu." }]}
               help=""
             >
               <Input.Password

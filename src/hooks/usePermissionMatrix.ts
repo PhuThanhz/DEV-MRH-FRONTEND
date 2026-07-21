@@ -45,7 +45,7 @@ export const useAssignPermissionMutation = (contentId: number) => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi gán quyền");
+            notify.error(err.message || "Không thể gán quyền");
         },
     });
 };

@@ -17,7 +17,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
         onOpenChange ? onOpenChange(val) : setOpenInternal(val);
     };
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const { items, unreadCount, markAllRead, markAllReadByModules, markOneRead, isLoading, soundEnabled, toggleSound } = useNotifications();
+    const { items, unreadCount, markAllRead, markAllReadByModules, markOneRead, deleteOne, isLoading, soundEnabled, toggleSound } = useNotifications();
 
     return (
         <>
@@ -33,6 +33,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                         items={items}
                         onClose={() => setOpen(false)}
                         markOneRead={markOneRead}
+                        deleteOne={deleteOne}
                         markAllRead={markAllRead}
                         markAllReadByModules={markAllReadByModules}
                         isLoading={isLoading}

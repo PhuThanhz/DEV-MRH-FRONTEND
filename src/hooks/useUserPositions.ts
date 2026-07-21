@@ -43,7 +43,7 @@ export const useCreateUserPositionMutation = () => {
             client.invalidateQueries({ queryKey: ["user-positions", variables.userId] });
         },
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi gán chức danh");
+            notify.error(err?.response?.data?.message || "Không thể gán chức danh");
         },
     });
 };
@@ -60,7 +60,7 @@ export const useDeleteUserPositionMutation = (userId?: string) => {  // ✅ stri
             client.invalidateQueries({ queryKey: ["user-positions", userId] });
         },
         onError: (err: any) => {
-            notify.error(err?.response?.data?.message || "Lỗi xóa chức danh");
+            notify.error(err?.response?.data?.message || "Không thể xóa chức danh");
         },
     });
 };

@@ -1,6 +1,7 @@
 import { Button, Input, Popconfirm } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { LocalAuthorityItem } from "./DepartmentMissionDetail";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const ACCENT = "#e8637a";
 
@@ -66,10 +67,12 @@ const AuthoritiesSection = ({ authorities, editMode, onChange }: Props) => {
                                 okText="Xoá" cancelText="Huỷ"
                                 okButtonProps={{ danger: true }}
                             >
-                                <Button
-                                    type="text" danger size="small"
+                                <ActionButton
+                                    variant="danger"
+                                    tooltip="Xóa quyền hạn"
                                     icon={<DeleteOutlined />}
                                     className="mt-0.5"
+                                    aria-label="Xóa quyền hạn"
                                 />
                             </Popconfirm>
                         )}

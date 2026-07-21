@@ -143,7 +143,7 @@ export const useCreateProcedureMutation = (type: ProcedureType) => {
             queryClient.invalidateQueries({ queryKey: ["procedures", type] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo quy trình");
+            notify.error(error.message || "Không thể tạo quy trình");
         },
     });
 };
@@ -167,7 +167,7 @@ export const useUpdateProcedureMutation = (type: ProcedureType) => {
             queryClient.invalidateQueries({ queryKey: ["procedure-history", type, variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật quy trình");
+            notify.error(error.message || "Không thể cập nhật quy trình");
         },
     });
 };
@@ -189,7 +189,7 @@ export const useDeleteProcedureMutation = (type: ProcedureType) => {
             queryClient.invalidateQueries({ queryKey: ["procedures", type] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xoá quy trình");
+            notify.error(error.message || "Không thể xoá quy trình");
         },
     });
 };
@@ -211,7 +211,7 @@ export const useToggleActiveProcedureMutation = (type: ProcedureType) => {
             queryClient.invalidateQueries({ queryKey: ["procedures", type], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };
@@ -293,7 +293,7 @@ export const useReviseProcedureMutation = (type: ProcedureType) => {
             queryClient.invalidateQueries({ queryKey: ["procedure-history", type, variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo phiên bản mới");
+            notify.error(error.message || "Không thể tạo phiên bản mới");
         },
     });
 };
@@ -317,7 +317,7 @@ export const useShareProcedureMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["procedure-access", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi chia sẻ quy trình");
+            notify.error(error.message || "Không thể chia sẻ quy trình");
         },
     });
 };
@@ -355,7 +355,7 @@ export const useRevokeProcedureAccessMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["procedure-access", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Thu hồi thất bại");
+            notify.error(error?.message || "Không thể thu hồi");
         },
     });
 };
@@ -430,13 +430,13 @@ export const useCreateShareTokenMutation = () => {
             return res.data as IResShareTokenDTO;
         },
         onSuccess: (_, variables) => {
-            notify.created("Tạo link chia sẻ thành công");
+            notify.created("Tạo liên kết chia sẻ thành công");
             queryClient.invalidateQueries({
                 queryKey: ["share-tokens", variables.procedureId],
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo link chia sẻ");
+            notify.error(error.message || "Không thể tạo liên kết chia sẻ");
         },
     });
 };
@@ -454,13 +454,13 @@ export const useRevokeShareTokenMutation = (procedureId?: number) => {
             return res;
         },
         onSuccess: () => {
-            notify.deleted("Thu hồi link chia sẻ thành công");
+            notify.deleted("Thu hồi liên kết chia sẻ thành công");
             queryClient.invalidateQueries({
                 queryKey: ["share-tokens", procedureId],
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi thu hồi link chia sẻ");
+            notify.error(error.message || "Không thể thu hồi liên kết chia sẻ");
         },
     });
 };
@@ -523,10 +523,10 @@ export const useSendShareEmailMutation = () => {
             return res;
         },
         onSuccess: () => {
-            notify.updated("Gửi email thành công!");
+            notify.updated("Gửi email thành công.");
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi gửi email");
+            notify.error(error.message || "Không thể gửi email");
         },
     });
 };

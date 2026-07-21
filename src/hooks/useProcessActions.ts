@@ -39,7 +39,7 @@ export const useCreateProcessActionMutation = () => {
     return useMutation({
         mutationFn: callCreateProcessAction,
         onSuccess: () => {
-            notify.created("Tạo Process Action thành công");
+            notify.created("Tạo hành động quy trình thành công");
             qc.invalidateQueries({ queryKey: ["process-actions"] });
         },
         onError: (e: any) => notify.error(e.message),
@@ -51,7 +51,7 @@ export const useUpdateProcessActionMutation = () => {
     return useMutation({
         mutationFn: callUpdateProcessAction,
         onSuccess: () => {
-            notify.updated("Cập nhật Process Action thành công");
+            notify.updated("Cập nhật hành động quy trình thành công");
             qc.invalidateQueries({ queryKey: ["process-actions"] });
         },
         onError: (e: any) => notify.error(e.message),
@@ -63,7 +63,7 @@ export const useDeleteProcessActionMutation = () => {
     return useMutation({
         mutationFn: callDeleteProcessAction,
         onSuccess: () => {
-            notify.deleted("Xóa Process Action thành công");
+            notify.deleted("Xóa hành động quy trình thành công");
             qc.invalidateQueries({ queryKey: ["process-actions"] });
         },
         onError: (e: any) => notify.error(e.message),

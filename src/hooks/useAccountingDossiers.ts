@@ -123,7 +123,7 @@ export const useCreateAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: [ACCOUNTING_DOSSIERS_KEY], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi tạo bộ chứng từ");
+            notify.error(error?.message || "Không thể tạo bộ chứng từ");
         },
     });
 };
@@ -143,7 +143,7 @@ export const useUpdateAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi cập nhật bộ chứng từ");
+            notify.error(error?.message || "Không thể cập nhật bộ chứng từ");
         },
     });
 };
@@ -164,7 +164,7 @@ export const useDeleteAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: [ACCOUNTING_DOSSIERS_KEY], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi xoá bộ chứng từ");
+            notify.error(error?.message || "Không thể xoá bộ chứng từ");
         },
     });
 };
@@ -184,7 +184,7 @@ export const useSubmitAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi chuyển xử lý bộ chứng từ");
+            notify.error(error?.message || "Không thể chuyển xử lý bộ chứng từ");
         },
     });
 };
@@ -205,7 +205,7 @@ export const useRequestReturnAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi gửi yêu cầu hoàn chứng từ");
+            notify.error(error?.message || "Không thể gửi yêu cầu hoàn chứng từ");
         },
     });
 };
@@ -227,7 +227,7 @@ export const useApproveAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi phê duyệt bộ chứng từ");
+            notify.error(error?.message || "Không thể phê duyệt bộ chứng từ");
         },
     });
 };
@@ -249,7 +249,7 @@ export const useRejectAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi từ chối bộ chứng từ");
+            notify.error(error?.message || "Không thể từ chối bộ chứng từ");
         },
     });
 };
@@ -271,7 +271,7 @@ export const useTerminateAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi chấm dứt bộ chứng từ");
+            notify.error(error?.message || "Không thể chấm dứt bộ chứng từ");
         },
     });
 };
@@ -293,7 +293,7 @@ export const useHandleReturnResponseAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi phản hồi yêu cầu hoàn trả");
+            notify.error(error?.message || "Không thể phản hồi yêu cầu hoàn trả");
         },
     });
 };
@@ -324,7 +324,7 @@ export const useBulkApproveAccountingDossiersMutation = () => {
             queryClient.invalidateQueries({ queryKey: [ACCOUNTING_DOSSIERS_KEY], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi duyệt hàng loạt");
+            notify.error(error?.message || "Không thể duyệt hàng loạt");
         },
     });
 };
@@ -351,7 +351,7 @@ export const useBulkCheckDossierDocumentsMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["dossier-documents", variables.dossierId] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi kiểm tra hàng loạt chứng từ");
+            notify.error(error?.message || "Không thể kiểm tra hàng loạt chứng từ");
         },
     });
 };
@@ -371,7 +371,7 @@ export const useArchiveAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi lưu trữ bộ chứng từ");
+            notify.error(error?.message || "Không thể lưu trữ bộ chứng từ");
         },
     });
 };
@@ -393,7 +393,7 @@ export const useRefreshExpiredAccountingDossierStorageMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-storage-summary"] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi làm mới trạng thái lưu trữ");
+            notify.error(error?.message || "Không thể làm mới trạng thái lưu trữ");
         },
     });
 };
@@ -497,7 +497,7 @@ export const useRejectAccountingDossierTemplateSyncMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi từ chối đồng bộ mẫu");
+            notify.error(error?.message || "Không thể từ chối đồng bộ mẫu");
         },
     });
 };
@@ -536,7 +536,7 @@ export const useClaimAccountingDossierMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-approval-steps", id] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi nhận xử lý bộ chứng từ");
+            notify.error(error?.message || "Không thể nhận xử lý bộ chứng từ");
         },
     });
 };
@@ -579,7 +579,7 @@ export const useCreateWorkflowTemplateMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(getWorkflowMutationError(error, "Lỗi khi tạo mẫu luồng duyệt"));
+            notify.error(getWorkflowMutationError(error, "Không thể tạo mẫu luồng duyệt"));
         },
     });
 };
@@ -598,7 +598,7 @@ export const useUpdateWorkflowTemplateDraftMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(getWorkflowMutationError(error, "Lỗi khi cập nhật bản nháp"));
+            notify.error(getWorkflowMutationError(error, "Không thể cập nhật bản nháp"));
         },
     });
 };
@@ -619,7 +619,7 @@ export const usePublishWorkflowTemplateMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(getWorkflowMutationError(error, "Lỗi khi kích hoạt mẫu luồng duyệt"));
+            notify.error(getWorkflowMutationError(error, "Không thể kích hoạt mẫu luồng duyệt"));
         },
     });
 };
@@ -640,7 +640,7 @@ export const useDeactivateWorkflowTemplateMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi ngưng hiệu lực mẫu luồng duyệt");
+            notify.error(error?.message || "Không thể ngưng hiệu lực mẫu luồng duyệt");
         },
     });
 };
@@ -659,7 +659,7 @@ export const useReactivateWorkflowTemplateMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(getWorkflowMutationError(error, "Lỗi khi kích hoạt lại luồng duyệt"));
+            notify.error(getWorkflowMutationError(error, "Không thể kích hoạt lại luồng duyệt"));
         },
     });
 };
@@ -678,7 +678,7 @@ export const useCopyWorkflowTemplateToDraftMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-workflow-templates"] });
         },
         onError: (error: any) => {
-            notify.error(getWorkflowMutationError(error, "Lỗi khi sao chép luồng duyệt"));
+            notify.error(getWorkflowMutationError(error, "Không thể sao chép luồng duyệt"));
         },
     });
 };
@@ -707,7 +707,7 @@ export const useCreateDelegationMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi tạo ủy quyền");
+            notify.error(error?.message || "Không thể tạo ủy quyền");
         },
     });
 };
@@ -728,7 +728,7 @@ export const useActivateDelegationMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi kích hoạt ủy quyền");
+            notify.error(error?.message || "Không thể kích hoạt ủy quyền");
         },
     });
 };
@@ -749,7 +749,7 @@ export const useRevokeDelegationMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-approval-delegations"] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi thu hồi ủy quyền");
+            notify.error(error?.message || "Không thể thu hồi ủy quyền");
         },
     });
 };

@@ -1932,6 +1932,7 @@ export interface ITemplateCriteria {
     measurementMethod?: string;
     description?: string;
     weight: number;
+    effectiveWeight?: number;
     displayOrder: number;
     subCriteria?: ITemplateCriteria[];
     levels?: ITemplateCriteriaLevel[];
@@ -2011,6 +2012,7 @@ export interface IEvaluationRecord {
     approverTotalScore?: number;
     finalGrade?: string;
     scores?: IResScoreDTO[];
+    scoringSummary?: IEvaluationScoringSummary;
     comments?: IResCommentDTO[];
     trainingPlans?: IResTrainingPlanDTO[];
 
@@ -2068,7 +2070,25 @@ export interface IResScoreDTO {
     criteriaId: number;
     scoredBy: "EMPLOYEE" | "MANAGER" | "APPROVER";
     score: number;
+    effectiveWeight: number;
     weightedScore: number;
+}
+
+export interface IEvaluationScoringSummary {
+    employeeTotalScore?: number;
+    managerTotalScore?: number;
+    approverTotalScore?: number;
+    sections: {
+        sectionId: number;
+        employeeScore?: number;
+        managerScore?: number;
+        approverScore?: number;
+    }[];
+}
+
+export interface IResScoreUpdateDTO {
+    scores: IResScoreDTO[];
+    scoringSummary: IEvaluationScoringSummary;
 }
 
 export interface IResCommentDTO {

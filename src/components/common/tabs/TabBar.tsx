@@ -23,6 +23,8 @@ type Props<T extends string> = {
 };
 
 const getTabStyle = (active: boolean, variant: "default" | "subtle" | "line"): React.CSSProperties => ({
+    position: "relative",
+    overflow: "visible",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -34,8 +36,8 @@ const getTabStyle = (active: boolean, variant: "default" | "subtle" | "line"): R
     border: variant === "line"
         ? "none"
         : variant === "subtle"
-        ? `1px solid ${active ? "#cbd5e1" : "transparent"}`
-        : "1px solid transparent",
+            ? `1px solid ${active ? "#cbd5e1" : "transparent"}`
+            : "1px solid transparent",
     borderBottom: variant === "line" ? `2px solid ${active ? "#E8356D" : "transparent"}` : undefined,
     cursor: "pointer",
     fontSize: 13,
@@ -49,8 +51,8 @@ const getTabStyle = (active: boolean, variant: "default" | "subtle" | "line"): R
         ? (variant === "default"
             ? "inset 0 0 0 1.5px #E8356D"
             : variant === "subtle"
-            ? "0 1px 2px rgba(15, 23, 42, 0.06)"
-            : "none")
+                ? "0 1px 2px rgba(15, 23, 42, 0.06)"
+                : "none")
         : "none",
     transition: "color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
     letterSpacing: 0,
@@ -63,7 +65,7 @@ const getTabStyle = (active: boolean, variant: "default" | "subtle" | "line"): R
 function TabBar<T extends string>({ tabs, activeKey, onChange, variant = "default" }: Props<T>) {
     return (
         <>
-        <style>{`
+            <style>{`
             .tab-bar__item:not(.tab-bar__item--active):hover {
                 color: #334155 !important;
                 background: rgba(255, 255, 255, 0.72) !important;
@@ -80,54 +82,54 @@ function TabBar<T extends string>({ tabs, activeKey, onChange, variant = "defaul
                 color: #0f172a !important;
             }
         `}</style>
-        <div
-            style={{
-                overflowX: "auto",
-                overflowY: "visible",
-                padding: variant === "default" ? "2px 0" : 0,
-                WebkitOverflowScrolling: "touch",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-            }}
-            className="hide-scrollbar"
-        >
             <div
                 style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    background: variant === "line" ? "transparent" : variant === "subtle" ? "#f8fafc" : "#f2f2f7",
-                    border: variant === "line" ? "none" : variant === "subtle" ? "1px solid #e2e8f0" : "none",
-                    borderBottom: variant === "line" ? "1px solid #e2e8f0" : undefined,
-                    borderRadius: variant === "line" ? 0 : variant === "subtle" ? 8 : 12,
-                    padding: variant === "line" ? 0 : 3,
-                    gap: variant === "line" ? 24 : variant === "default" ? 3 : 2,
-                    minWidth: "max-content",
+                    overflowX: "auto",
+                    overflowY: "visible",
+                    padding: "10px 0",
+                    WebkitOverflowScrolling: "touch",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
                 }}
+                className="hide-scrollbar"
             >
-                {tabs.map((tab) => {
-                    if (tab.hidden) return null;
+                <div
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        background: variant === "line" ? "transparent" : variant === "subtle" ? "#f8fafc" : "#f2f2f7",
+                        border: variant === "line" ? "none" : variant === "subtle" ? "1px solid #e2e8f0" : "none",
+                        borderBottom: variant === "line" ? "1px solid #e2e8f0" : undefined,
+                        borderRadius: variant === "line" ? 0 : variant === "subtle" ? 8 : 12,
+                        padding: variant === "line" ? 0 : 3,
+                        gap: variant === "line" ? 24 : variant === "default" ? 3 : 2,
+                        minWidth: "max-content",
+                    }}
+                >
+                    {tabs.map((tab) => {
+                        if (tab.hidden) return null;
 
-                    const button = (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            className={`tab-bar__item tab-bar__item--${variant}${activeKey === tab.key ? " tab-bar__item--active" : ""}`}
-                            onClick={() => onChange(tab.key)}
-                            style={getTabStyle(activeKey === tab.key, variant)}
-                        >
-                            {tab.icon}
-                            {tab.label}
-                        </button>
-                    );
+                        const button = (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                className={`tab-bar__item tab-bar__item--${variant}${activeKey === tab.key ? " tab-bar__item--active" : ""}`}
+                                onClick={() => onChange(tab.key)}
+                                style={getTabStyle(activeKey === tab.key, variant)}
+                            >
+                                {tab.icon}
+                                {tab.label}
+                            </button>
+                        );
 
-                    return tab.permission ? (
-                        <Access key={tab.key} permission={tab.permission} hideChildren>
-                            {button}
-                        </Access>
-                    ) : button;
-                })}
+                        return tab.permission ? (
+                            <Access key={tab.key} permission={tab.permission} hideChildren>
+                                {button}
+                            </Access>
+                        ) : button;
+                    })}
+                </div>
             </div>
-        </div>
         </>
     );
 }

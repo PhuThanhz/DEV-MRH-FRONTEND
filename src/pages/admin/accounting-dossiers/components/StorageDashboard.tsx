@@ -528,11 +528,11 @@ const StorageDashboard = () => {
                 type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
             });
             saveAs(blob, `Bao_cao_chung_tu_ke_toan_${dayjs().format("YYYYMMDD_HHmmss")}.xlsx`);
-            notify.success("Đã xuất file báo cáo Excel thành công!");
+            notify.success("Đã xuất tệp báo cáo Excel thành công.");
 
         } catch (err) {
             console.error(err);
-            notify.error("Lỗi khi xuất file Excel báo cáo.");
+            notify.error("Không thể xuất tệp Excel báo cáo.");
         } finally {
             setExportLoading(false);
         }

@@ -61,15 +61,13 @@ const WorkflowTemplatesPage = lazy(() => import("@/pages/admin/accounting-workfl
 const DelegationsPage = lazy(() => import("@/pages/admin/accounting-delegations"));
 const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/EvaluationProcessPage"));
 const TemplatePage = lazy(() => import("@/pages/admin/evaluation/templates/TemplatePage"));
-const TemplateDetailPage = lazy(() => import("@/pages/admin/evaluation/templates/TemplateDetailPage"));
 const PeriodPage = lazy(() => import("@/pages/admin/evaluation/periods/PeriodPage"));
 const PeriodProgressDashboard = lazy(() => import("@/pages/evaluation/process/PeriodProgressDashboard"));
 const MyEvaluationPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationPage"));
 const MyEvaluationDetailPage = lazy(() => import("@/pages/evaluation/my-records/MyEvaluationDetailPage"));
 const PendingManagerEvaluationPage = lazy(() => import("@/pages/evaluation/manager/PendingManagerEvaluationPage"));
-const ManagerEvaluationDetailPage = lazy(() => import("@/pages/evaluation/manager/ManagerEvaluationDetailPage"));
 const PendingApprovalPage = lazy(() => import("@/pages/evaluation/approval/PendingApprovalPage"));
-const ApprovalDetailPage = lazy(() => import("@/pages/evaluation/approval/ApprovalDetailPage"));
+const EvaluationDetailRouteRedirect = lazy(() => import("@/pages/evaluation/process/EvaluationDetailRouteRedirect"));
 const CompletedEvaluationsPage = lazy(() => import("@/pages/evaluation/summary/CompletedEvaluationsPage"));
 const LookupPortalPage = lazy(() => import("@/pages/accounting/LookupPortalPage"));
 
@@ -525,7 +523,7 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES}>
-                <TemplateDetailPage />
+                <TemplatePage />
               </Access>
             </ProtectedRoute>
           ),
@@ -607,7 +605,7 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_BY_ID}>
-                <ManagerEvaluationDetailPage />
+                <EvaluationDetailRouteRedirect role="MANAGER" />
               </Access>
             </ProtectedRoute>
           ),
@@ -628,7 +626,7 @@ export default function App() {
           element: (
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_BY_ID}>
-                <ApprovalDetailPage />
+                <EvaluationDetailRouteRedirect role="APPROVER" />
               </Access>
             </ProtectedRoute>
           ),

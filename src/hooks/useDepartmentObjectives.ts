@@ -71,7 +71,7 @@ export const useCreateDepartmentObjectiveMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo mục tiêu phòng ban");
+            notify.error(error.message || "Không thể tạo mục tiêu phòng ban");
         },
     });
 };
@@ -109,7 +109,7 @@ export const useDeleteDepartmentObjectiveMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa mục tiêu");
+            notify.error(error.message || "Không thể xóa mục tiêu");
         },
     });
 };
@@ -159,7 +159,7 @@ export const usePublishDepartmentObjectiveMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi ban hành mục tiêu phòng ban");
+            notify.error(error.message || "Không thể ban hành mục tiêu phòng ban");
         },
     });
 };

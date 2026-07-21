@@ -49,7 +49,7 @@ export const useNotificationHistory = (enabled: boolean) => {
             setPage(nextPage);
             setHasMore(meta ? nextPage < meta.pages - 1 : nextItems.length === PAGE_SIZE);
         } catch {
-            notify.error("Không tải được lịch sử thông báo, thử lại.");
+            notify.error("Không thể tải lịch sử thông báo. Vui lòng thử lại.");
         } finally {
             isFetchingRef.current = false;
             setIsInitialLoading(false);
@@ -68,13 +68,18 @@ export const useNotificationHistory = (enabled: boolean) => {
         [realtimeItems]
     );
 
-    const items = useMemo(
-        () => [
-            ...jdItems,
-            ...appNotifs.map(mapAppNotificationToUnified),
-        ].sort(sortByCreatedAtDesc),
-        [appNotifs, jdItems]
-    );
+    const items = useMemo(() => {
+        const jdInboxIds = new Set(jdItems.map(item => item.rawId));
+        const appItems = appNotifs
+            .filter(item => {
+                if (item.module !== "JD_FLOW") return true;
+                const viewId = Number(item.actionLink?.match(/[?&]viewId=(\d+)/)?.[1]);
+                return !Number.isInteger(viewId) || !jdInboxIds.has(viewId);
+            })
+            .map(mapAppNotificationToUnified);
+
+        return [...jdItems, ...appItems].sort(sortByCreatedAtDesc);
+    }, [appNotifs, jdItems]);
 
     const loadMore = useCallback(() => {
         if (isInitialLoading || isLoadingMore || !hasMore) return;

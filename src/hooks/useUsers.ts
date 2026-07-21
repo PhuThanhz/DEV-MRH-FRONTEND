@@ -58,7 +58,7 @@ export const useCreateUserMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["users"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo người dùng");
+            notify.error(error.message || "Không thể tạo người dùng");
         },
     });
 };
@@ -84,7 +84,7 @@ export const useUpdateUserMutation = () => {
             }
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật người dùng");
+            notify.error(error.message || "Không thể cập nhật người dùng");
         },
     });
 };
@@ -107,7 +107,7 @@ export const useDeleteUserMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["users"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa người dùng");
+            notify.error(error.message || "Không thể xóa người dùng");
         },
     });
 };

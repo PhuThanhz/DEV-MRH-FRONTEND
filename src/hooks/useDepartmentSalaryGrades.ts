@@ -44,12 +44,12 @@ export const useCreateDepartmentSalaryGradeMutation = () => {
             return res.data;
         },
         onSuccess: (_res, payload) => {
-            notify.created("Tạo bậc lương phòng ban thành công!");
+            notify.created("Tạo bậc lương phòng ban thành công.");
             queryClient.invalidateQueries({
                 queryKey: ["department-salary-grades", payload.departmentJobTitleId],
             });
         },
-        onError: (err: any) => notify.error(err?.message || "Lỗi tạo bậc lương"),
+        onError: (err: any) => notify.error(err?.message || "Không thể tạo bậc lương"),
     });
 };
 
@@ -77,7 +77,7 @@ export const useUpdateDepartmentSalaryGradeMutation = () => {
                 queryKey: ["department-salary-grades", payload.departmentJobTitleId],
             });
         },
-        onError: (err: any) => notify.error(err?.message || "Lỗi cập nhật"),
+        onError: (err: any) => notify.error(err?.message || "Không thể cập nhật"),
     });
 };
 

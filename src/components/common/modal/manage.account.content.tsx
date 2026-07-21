@@ -4,12 +4,13 @@
  */
 
 import { useEffect, useState } from "react";
-import { Form, Input, Button, Upload, message, Spin, Modal } from "antd";
+import { Form, Input, Button, Upload, Spin, Modal } from "antd";
 import { CloseOutlined, EditOutlined } from "@ant-design/icons";
 
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { callUploadSingleFile, callUpdateProfile } from "@/config/api";
 import { updateUserProfile } from "@/redux/slice/accountSlide";
+import { notify } from "@/components/common/notification/notify";
 import type { IUserInfo } from "@/redux/slice/accountSlide";
 import type { IReqUpdateProfileDTO } from "@/types/backend";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
@@ -444,8 +445,8 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
     }, [previewUrl, currentAvatar]);
 
     const handleFileSelect = (file: File): false => {
-        if (!file.type.startsWith("image/")) { message.error("Vui lòng chọn file ảnh!"); return false; }
-        if (file.size > 5 * 1024 * 1024) { message.error("Kích thước tối đa 5MB!"); return false; }
+        if (!file.type.startsWith("image/")) { notify.warning("Vui lòng chọn tệp ảnh."); return false; }
+        if (file.size > 5 * 1024 * 1024) { notify.warning("Kích thước tối đa 5MB."); return false; }
         setAvatarFile(file);
         setPreviewUrl(URL.createObjectURL(file));
         return false;
@@ -459,22 +460,22 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                 const uploadRes = await callUploadSingleFile(avatarFile, "avatar");
                 const fileName = uploadRes?.data?.fileName;
                 if (fileName) finalAvatar = fileName;
-                else { message.error("Upload ảnh thất bại!"); return; }
+                else { notify.error("Không thể tải ảnh lên."); return; }
             }
             const payload: IReqUpdateProfileDTO = { name: values.name ?? user?.name ?? "", avatar: finalAvatar };
             const res = await callUpdateProfile(payload);
             if (res?.data) {
                 dispatch(updateUserProfile(res.data));
-                message.success("Cập nhật thành công!");
+                notify.success("Cập nhật thành công.");
                 setIsEditing(false);
                 setAvatarFile(null);
                 setPreviewUrl("");
                 onClose(false);
             } else {
-                message.error("Cập nhật thất bại!");
+                notify.error("Không thể cập nhật.");
             }
         } catch (err: any) {
-            message.error(err?.response?.data?.message || "Đã xảy ra lỗi!");
+            notify.error(err?.response?.data?.message || "Không thể hoàn tất thao tác. Vui lòng thử lại.");
         } finally {
             setSubmitting(false);
         }
@@ -631,6 +632,22 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                 .manage-account-hero-card {
                     display: none;
                 }
+                .manage-account-content-shell {
+                    width: 100%;
+                    max-width: 90rem;
+                    margin-inline: auto;
+                }
+                .manage-account-bitrix-grid {
+                    display: grid;
+                    grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 2fr);
+                    gap: clamp(1rem, 2vw, 1.5rem);
+                    align-items: start;
+                }
+                @media (max-width: 60rem) {
+                    .manage-account-bitrix-grid {
+                        grid-template-columns: minmax(0, 1fr);
+                    }
+                }
             `}</style>
 
             <Form
@@ -649,7 +666,9 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                 <div
                     className="manage-account-hero"
                     style={{
-                        padding: isMobile ? "16px 20px 14px" : "32px 30px 24px",
+                        padding: isMobile
+                            ? "1rem 1.25rem 0.875rem"
+                            : "clamp(1.25rem, 2.4vw, 2rem) clamp(1.25rem, 2.5vw, 2rem) clamp(1rem, 2vw, 1.5rem)",
                         backgroundImage: `url(${backgroundTrangCaNhan})`,
                         color: "#ffffff",
                         boxShadow: "inset 0 -1px 0 rgba(255,255,255,0.12)",
@@ -736,25 +755,13 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
                         minHeight: 0,
                         flex: 1,
                         overflowY: "auto",
-                        padding: "24px 28px 24px",
+                        padding: isMobile
+                            ? "1rem"
+                            : "clamp(1rem, 2.2vw, 1.75rem)",
                         background: "#f8fafc",
                     }}
                 >
-                    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-                            <style>{`
-                                .manage-account-bitrix-grid {
-                                    display: grid;
-                                    grid-template-columns: 310px minmax(0, 1fr);
-                                    gap: 20px;
-                                    align-items: start;
-                                }
-
-                                @media (max-width: 900px) {
-                                    .manage-account-bitrix-grid {
-                                        grid-template-columns: 1fr;
-                                    }
-                                }
-                            `}</style>
+                    <div className="manage-account-content-shell">
                             <div className="manage-account-bitrix-grid">
                                 {/* Left Column: Avatar & Position */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>

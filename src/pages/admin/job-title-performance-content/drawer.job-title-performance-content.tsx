@@ -13,7 +13,6 @@ import {
     Empty,
     Spin,
     Typography,
-    Tooltip,
 } from "antd";
 import { EyeOutlined, EditOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons";
 
@@ -33,6 +32,7 @@ import {
 import { useSalaryGradesByOwnerLevel } from "@/hooks/useSalaryGradesByOwnerLevel";
 
 import Access from "@/components/share/access";
+import ActionButton from "@/components/common/ui/ActionButton";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 
 import type {
@@ -161,55 +161,52 @@ const DrawerJobTitlePerformanceContent = ({
             render: (_, record) => (
                 <Space size={4}>
                     <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.UPDATE} hideChildren>
-                        <Tooltip title="Chỉnh sửa">
-                            <Button
-                                type="text"
-                                icon={<EditOutlined />}
-                                style={{ color: "#fa8c16" }}
-                                onClick={() => {
-                                    setSelected(record);
-                                    setOpenUpdate(true);
-                                }}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
+                            icon={<EditOutlined />}
+                            aria-label="Chỉnh sửa"
+                            onClick={() => {
+                                setSelected(record);
+                                setOpenUpdate(true);
+                            }}
+                        />
                     </Access>
 
                     {record.active ? (
                         <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.DISABLE} hideChildren>
-                            <Tooltip title="Vô hiệu hoá">
-                                <Popconfirm
-                                    title="Xác nhận vô hiệu hoá tiêu chí này?"
-                                    okText="Vô hiệu"
-                                    cancelText="Huỷ"
-                                    okButtonProps={{ danger: true }}
-                                    onConfirm={() => handleDisable(record.id)}
-                                >
-                                    <Button
-                                        type="text"
-                                        icon={<DeleteOutlined />}
-                                        danger
-                                        loading={disabling}
-                                    />
-                                </Popconfirm>
-                            </Tooltip>
+                            <Popconfirm
+                                title="Xác nhận vô hiệu hoá tiêu chí này?"
+                                okText="Vô hiệu"
+                                cancelText="Huỷ"
+                                okButtonProps={{ danger: true }}
+                                onConfirm={() => handleDisable(record.id)}
+                            >
+                                <ActionButton
+                                    variant="danger"
+                                    tooltip="Vô hiệu hoá"
+                                    icon={<DeleteOutlined />}
+                                    loading={disabling}
+                                    aria-label="Vô hiệu hoá"
+                                />
+                            </Popconfirm>
                         </Access>
                     ) : (
                         <Access permission={ALL_PERMISSIONS.JOB_TITLE_PERFORMANCE_CONTENT.RESTORE} hideChildren>
-                            <Tooltip title="Khôi phục">
-                                <Popconfirm
-                                    title="Khôi phục tiêu chí này?"
-                                    okText="Khôi phục"
-                                    cancelText="Huỷ"
-                                    onConfirm={() => handleRestore(record.id)}
-                                >
-                                    <Button
-                                        type="text"
-                                        icon={<RedoOutlined />}
-                                        style={{ color: "#52c41a" }}
-                                        loading={restoring}
-                                    />
-                                </Popconfirm>
-                            </Tooltip>
+                            <Popconfirm
+                                title="Khôi phục tiêu chí này?"
+                                okText="Khôi phục"
+                                cancelText="Huỷ"
+                                onConfirm={() => handleRestore(record.id)}
+                            >
+                                <ActionButton
+                                    variant="success"
+                                    tooltip="Khôi phục"
+                                    icon={<RedoOutlined />}
+                                    loading={restoring}
+                                    aria-label="Khôi phục"
+                                />
+                            </Popconfirm>
                         </Access>
                     )}
                 </Space>
@@ -271,15 +268,13 @@ const DrawerJobTitlePerformanceContent = ({
                             rowClassName={(record) => (!record.active ? "row-disabled" : "")}
                             expandable={{
                                 expandIcon: ({ expanded, onExpand, record }) => (
-                                    <Tooltip title={expanded ? "Ẩn nội dung" : "Xem nội dung"}>
-                                        <Button
-                                            type="text"
-                                            size="small"
-                                            icon={<EyeOutlined />}
-                                            style={{ color: expanded ? "#1677ff" : "#8c8c8c" }}
-                                            onClick={(e) => onExpand(record, e)}
-                                        />
-                                    </Tooltip>
+                                    <ActionButton
+                                        variant={expanded ? "view" : "default"}
+                                        tooltip={expanded ? "Ẩn nội dung" : "Xem nội dung"}
+                                        icon={<EyeOutlined />}
+                                        aria-label={expanded ? "Ẩn nội dung" : "Xem nội dung"}
+                                        onClick={(e) => onExpand(record, e)}
+                                    />
                                 ),
                                 expandedRowRender: (record) => (
                                     <div style={{ padding: "20px 32px", background: "#fafbfc" }}>

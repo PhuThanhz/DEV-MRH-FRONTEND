@@ -23,15 +23,15 @@ const STATUS_CONFIG: Record<
     { text: string; color: string; icon: React.ReactNode }
 > = {
     NOT_STARTED: { text: "Chưa bắt đầu", color: "default", icon: <StopOutlined /> },
-    EMPLOYEE_DRAFTING: { text: "Nhân viên đang đánh giá", color: "processing", icon: <SyncOutlined spin /> },
-    PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "warning", icon: <ClockCircleOutlined /> },
-    MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "purple", icon: <SyncOutlined spin /> },
-    PENDING_APPROVAL: { text: "Chờ duyệt cuối", color: "cyan", icon: <ClockCircleOutlined /> },
-    COMPLETED: { text: "Hoàn tất", color: "success", icon: <CheckCircleOutlined /> },
-    REVISION_NEEDED: { text: "Yêu cầu chỉnh sửa", color: "error", icon: <ClockCircleOutlined /> },
+    EMPLOYEE_DRAFTING: { text: "Đang tự đánh giá", color: "processing", icon: <SyncOutlined spin /> },
+    PENDING_MANAGER_REVIEW: { text: "Chờ Quản lý đánh giá", color: "warning", icon: <ClockCircleOutlined /> },
+    MANAGER_REVIEWING: { text: "Quản lý đang đánh giá", color: "purple", icon: <SyncOutlined spin /> },
+    PENDING_APPROVAL: { text: "Chờ phê duyệt kết quả", color: "cyan", icon: <ClockCircleOutlined /> },
+    COMPLETED: { text: "Hoàn tất đánh giá", color: "success", icon: <CheckCircleOutlined /> },
+    REVISION_NEEDED: { text: "Yêu cầu điều chỉnh", color: "error", icon: <ClockCircleOutlined /> },
     OVERDUE_EMPLOYEE: { text: "Quá hạn tự đánh giá", color: "error", icon: <ClockCircleOutlined /> },
-    OVERDUE_MANAGER: { text: "Quá hạn chấm điểm", color: "error", icon: <ClockCircleOutlined /> },
-    OVERDUE_APPROVAL: { text: "Quá hạn phê duyệt", color: "error", icon: <ClockCircleOutlined /> },
+    OVERDUE_MANAGER: { text: "Quá hạn Quản lý đánh giá", color: "error", icon: <ClockCircleOutlined /> },
+    OVERDUE_APPROVAL: { text: "Quá hạn phê duyệt kết quả", color: "error", icon: <ClockCircleOutlined /> },
 };
 
 interface EvaluationStatusTagProps {

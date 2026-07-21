@@ -1317,6 +1317,7 @@ export const ALL_PERMISSIONS = {
         GET_PERIODS: { method: "GET", apiPath: "/api/v1/evaluation/periods", module: "EVALUATION_PERIOD" },
         ADD_TEMPLATE_TO_PERIOD: { method: "POST", apiPath: "/api/v1/evaluation/periods/{periodId}/templates", module: "EVALUATION_PERIOD" },
         GET_TEMPLATES_IN_PERIOD: { method: "GET", apiPath: "/api/v1/evaluation/periods/{periodId}/templates", module: "EVALUATION_PERIOD" },
+        REMOVE_TEMPLATE_FROM_PERIOD: { method: "DELETE", apiPath: "/api/v1/evaluation/periods/{periodId}/templates/{templateId}", module: "EVALUATION_PERIOD" },
         ADD_EMPLOYEE_TO_PERIOD: { method: "POST", apiPath: "/api/v1/evaluation/periods/{periodId}/employees", module: "EVALUATION_PERIOD" },
         CANCEL_PERIOD_EMPLOYEE: { method: "PATCH", apiPath: "/api/v1/evaluation/period-employees/{id}/cancel", module: "EVALUATION_PERIOD" },
         GET_EMPLOYEES_IN_PERIOD: { method: "GET", apiPath: "/api/v1/evaluation/periods/{periodId}/employees", module: "EVALUATION_PERIOD" },

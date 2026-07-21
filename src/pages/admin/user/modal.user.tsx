@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ModalForm } from "@ant-design/pro-components";
-import { Form, message, Steps, Button, Typography, ConfigProvider } from "antd";
+import { Form, Steps, Button, Typography, ConfigProvider } from "antd";
 import dayjs from "dayjs";
 import { CheckOutlined, ArrowLeftOutlined, ArrowRightOutlined } from "@ant-design/icons";
 
@@ -11,6 +11,7 @@ import { callUploadSingleFile } from "@/config/api";
 import UserInfoForm, { type IRoleSelect } from "./components/modal.user-info";
 import UserPositionForm from "./components/modal.user-position";
 import UserAdminScopeForm from "./components/modal.user-admin-scope";
+import { notify } from "@/components/common/notification/notify";
 
 const { Text } = Typography;
 
@@ -123,11 +124,11 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
 
     const handleFileSelect = (file: File): false => {
         if (!file.type.startsWith("image/")) {
-            message.error("Vui lòng chọn file ảnh!");
+            notify.warning("Vui lòng chọn tệp ảnh.");
             return false;
         }
         if (file.size > 5 * 1024 * 1024) {
-            message.error("Kích thước file không vượt quá 5MB!");
+            notify.warning("Kích thước tệp không vượt quá 5MB.");
             return false;
         }
         setAvatarFile(file);
@@ -190,7 +191,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
                 });
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra!");
+            notify.error(error?.response?.data?.message || "Không thể lưu tài khoản người dùng. Vui lòng thử lại.");
         }
     };
 

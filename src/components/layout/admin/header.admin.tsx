@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Button, Dropdown, Avatar, message } from "antd";
+import { Button, Dropdown, Avatar } from "antd";
 import {
     LogoutOutlined,
     HomeOutlined,
@@ -13,6 +13,7 @@ import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
 import NotificationBell from "@/components/common/notification/NotificationBell";
+import { notify } from "@/components/common/notification/notify";
 
 const getAccountDropdownWidth = (triggerWidth = 0) => {
     const viewportWidth = window.innerWidth;
@@ -61,7 +62,7 @@ const HeaderAdmin: React.FC<IProps> = ({
             localStorage.removeItem("access_token");
             sessionStorage.clear();
             dispatch(setLogoutAction());
-            message.success("Đăng xuất thành công");
+            notify.success("Đăng xuất thành công");
         }, 0);
 
         void logoutRequest.catch(() => undefined);

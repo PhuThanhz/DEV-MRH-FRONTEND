@@ -49,6 +49,7 @@ import queryString from "query-string";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import DataTable from "@/components/common/data-table";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 import type { IAccountingDossier, IAccountingDossierDocument, IDocument, IDocumentFolder } from "@/types/backend";
 import useAccess from "@/hooks/useAccess";
@@ -578,28 +579,26 @@ const AccountingDocumentPage = () => {
             hideInSearch: true,
             render: (dom, entity) => (
                 <Space size={4} align="center">
-                    <Tooltip title="Xem nguyên bộ chứng từ">
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<FileDoneOutlined style={{ color: "#722ed1", fontSize: 16 }} />}
-                            onClick={() => {
-                                if (entity.dossierId) {
-                                    setViewDossierId(entity.dossierId);
-                                    setOpenDossierModal(true);
-                                }
-                            }}
-                        />
-                    </Tooltip>
+                    <ActionButton
+                        variant="settings"
+                        tooltip="Xem nguyên bộ chứng từ"
+                        icon={<FileDoneOutlined />}
+                        aria-label="Xem nguyên bộ chứng từ"
+                        onClick={() => {
+                            if (entity.dossierId) {
+                                setViewDossierId(entity.dossierId);
+                                setOpenDossierModal(true);
+                            }
+                        }}
+                    />
                     {canView && (
-                        <Tooltip title="Xem chi tiết chứng từ">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                                onClick={() => setDetailDossierDocument(entity)}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết chứng từ"
+                            icon={<EyeOutlined />}
+                            aria-label="Xem chi tiết chứng từ"
+                            onClick={() => setDetailDossierDocument(entity)}
+                        />
                     )}
                 </Space>
             ),

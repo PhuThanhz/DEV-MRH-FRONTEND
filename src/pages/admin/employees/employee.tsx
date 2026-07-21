@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Space, Tag, Button, Popconfirm } from "antd";  // ← thêm Button, Popconfirm
+import { Space, Tag, Popconfirm } from "antd";
 import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -23,6 +23,7 @@ import { useEmployeesQuery, useDeleteEmployeeMutation } from "@/hooks/useEmploye
 
 import ModalEmployee from "@/pages/admin/employees/modal.employee";
 import ViewDetailEmployee from "@/pages/admin/employees/view.employee";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const getBackendData = <T,>(res: any): T => {
     return res?.data ?? res;
@@ -296,11 +297,11 @@ const EmployeePage = () => {
             render: (_, entity) => (
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.GET_BY_ID} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
                             data-guide-id="employee-detail-button"
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenViewDetail(true);
@@ -309,11 +310,11 @@ const EmployeePage = () => {
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.EMPLOYEES.UPDATE} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="employee-edit-button"
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
@@ -330,11 +331,11 @@ const EmployeePage = () => {
                             okButtonProps={{ danger: true }}
                             placement="topRight"
                             onConfirm={() => handleDelete(entity.id as string)}                        >
-                            <Button
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xoá nhân viên"
                                 data-guide-id="employee-delete-button"
-                                type="text"
-                                size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                                icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

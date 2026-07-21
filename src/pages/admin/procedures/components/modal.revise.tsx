@@ -6,11 +6,12 @@ import {
 } from "@ant-design/pro-components";
 
 import {
-    Col, Form, Row, message, Upload, Button, Input, Tag, DatePicker,
+    Col, Form, Row, Upload, Button, Input, Tag, DatePicker,
 } from "antd";
 
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
+import { notify } from "@/components/common/notification/notify";
 
 import {
     callFetchDepartmentsByCompany,
@@ -128,7 +129,7 @@ const ModalRevise: React.FC<IProps> = ({
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ];
             if (!allowed.includes(file.type)) {
-                message.error("Chỉ chấp nhận file PDF, Word, Excel!");
+                notify.warning("Chỉ chấp nhận tệp PDF, Word, Excel.");
                 return Upload.LIST_IGNORE;
             }
             // ← XOÁ check 20MB, không giới hạn size
@@ -157,10 +158,10 @@ const ModalRevise: React.FC<IProps> = ({
 
                 const current: string[] = form.getFieldValue("fileUrls") ?? [];
                 form.setFieldValue("fileUrls", [...current, fileName]);
-                message.success(`Upload ${file.name} thành công!`);
+                notify.success(`Tải tệp ${file.name} thành công.`);
             } catch {
                 setFileList((prev) => prev.filter((f) => f.uid !== tempUid));
-                message.error("Upload file thất bại!");
+                notify.error("Không thể tải tệp lên.");
             } finally {
                 setUploading(false);
             }

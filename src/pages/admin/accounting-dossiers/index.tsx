@@ -18,7 +18,6 @@ import {
     Tooltip,
     Timeline,
     Upload,
-    message,
     Dropdown,
     Alert,
     Spin,
@@ -54,12 +53,14 @@ import {
     DownloadOutlined,
     ArrowRightOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import dayjs, { type Dayjs } from "dayjs";
 import { useSearchParams } from "react-router-dom";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { DetailModal } from "@/components/common/modal/detail";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import TabBar from "@/components/common/tabs/TabBar";
+import ActionButton from "@/components/common/ui/ActionButton";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 import Access from "@/components/share/access";
@@ -116,7 +117,6 @@ import type {
     ICompany,
     IUser,
 } from "@/types/backend";
-import { notify } from "@/components/common/notification/notify";
 import {
     type DossierFormValues,
     type SubmitApprovalStep,
@@ -418,11 +418,11 @@ const AccountingDossierPage = () => {
         const { type, dossierId } = actionModal;
 
         if ((type === "REJECT" || type === "TERMINATE") && !actionNote.trim()) {
-            notify.error("Lý do thực hiện hành động này là bắt buộc.");
+            notify.warning("Lý do thực hiện hành động này là bắt buộc.");
             return;
         }
         if (type === "APPROVE" && shouldChooseNextApprover && !selectedNextApproverId) {
-            notify.error("Vui lòng chọn người tiếp nhận bước kế tiếp.");
+            notify.warning("Vui lòng chọn người tiếp nhận bước kế tiếp.");
             return;
         }
 
@@ -1043,33 +1043,32 @@ const AccountingDossierPage = () => {
                 return (
                     <Space size="small">
                         {canViewDossierDetail && (
-                            <Tooltip title={record.qrToken ? "Xem mã QR bộ chứng từ" : "Mã QR được cấp khi chuyển xử lý bộ chứng từ"}>
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    disabled={!record.qrToken}
-                                    icon={<QrcodeOutlined style={{ color: record.qrToken ? "#722ed1" : undefined, fontSize: 16 }} />}
-                                    onClick={() => setQrDossier(record)}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="settings"
+                                tooltip={record.qrToken ? "Xem mã QR bộ chứng từ" : "Mã QR được cấp khi chuyển xử lý bộ chứng từ"}
+                                disabled={!record.qrToken}
+                                icon={<QrcodeOutlined />}
+                                aria-label="Xem mã QR bộ chứng từ"
+                                onClick={() => setQrDossier(record)}
+                            />
                         )}
                         {canViewDossierDetail && (
-                            <Tooltip title="Xem chi tiết">
-                                <Button
-                                    data-guide-id="accounting-dossier-detail-button"
-                                    type="text"
-                                    size="small"
-                                    icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
-                                    onClick={() => setViewDossier(record)}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
+                                data-guide-id="accounting-dossier-detail-button"
+                                icon={<EyeOutlined />}
+                                aria-label="Xem chi tiết"
+                                onClick={() => setViewDossier(record)}
+                            />
                         )}
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<MoreOutlined style={{ fontSize: 16, color: "#595959" }} />}
+                                <ActionButton
+                                    variant="default"
+                                    tooltip="Thao tác khác"
+                                    icon={<MoreOutlined />}
+                                    aria-label="Thao tác khác"
                                 />
                             </Dropdown>
                         )}
@@ -2022,7 +2021,7 @@ const AccountingDossierPage = () => {
                                     return step.required && !step.approverUserId && !canBeClaimed;
                                 });
                                 if (hasMissingRequiredApprover) {
-                                    message.warning("Vui lòng chọn đủ người duyệt cho các bước bắt buộc");
+                                    notify.warning("Vui lòng chọn đủ người duyệt cho các bước bắt buộc");
                                     return;
                                 }
                                 const hasDocuments = await ensureDossierHasDocuments(submitDossierId);

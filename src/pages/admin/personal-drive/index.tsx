@@ -18,7 +18,6 @@ import {
     Card,
     Empty,
     Spin,
-    message,
     Dropdown,
     Radio,
     Row,
@@ -28,6 +27,7 @@ import {
     Drawer,
     Descriptions
 } from "antd";
+import ActionButton from "@/components/common/ui/ActionButton";
 import {
     FolderOutlined,
     FolderOpenOutlined,
@@ -64,6 +64,7 @@ import {
 import type { UploadFile, MenuProps } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useAppSelector } from "@/redux/hooks";
+import { notify } from "@/components/common/notification/notify";
 import {
     callFetchFolderTree,
     callCreateFolder,
@@ -257,7 +258,7 @@ const PersonalDrivePage: React.FC = () => {
                 }
             }
         } catch (err) {
-            message.error("Không thể tải cấu trúc thư mục");
+            notify.error("Không thể tải cấu trúc thư mục");
         } finally {
             setLoadingTree(false);
         }
@@ -279,7 +280,7 @@ const PersonalDrivePage: React.FC = () => {
                 setDocuments([]);
             }
         } catch (err) {
-            message.error("Lỗi khi lấy danh sách tài liệu");
+            notify.error("Không thể lấy danh sách tài liệu");
         } finally {
             setLoadingDocs(false);
         }
@@ -308,13 +309,13 @@ const PersonalDrivePage: React.FC = () => {
                 note: docToMove.note,
                 fileUrls: docToMove.fileUrls
             });
-            message.success("Di chuyển tệp thành công!");
+            notify.success("Di chuyển tệp thành công.");
 
             if (selectedFolderId) {
                 loadFolderDocuments(selectedFolderId);
             }
         } catch (err: any) {
-            message.error(err.message || "Lỗi khi di chuyển tài liệu");
+            notify.error(err.message || "Không thể di chuyển tài liệu");
         }
     };
 
@@ -420,14 +421,14 @@ const PersonalDrivePage: React.FC = () => {
                                                             onOk: async () => {
                                                                 try {
                                                                     await callDeleteFolder(f.id!);
-                                                                    message.success("Xóa thư mục thành công");
+                                                                    notify.success("Xóa thư mục thành công");
                                                                     if (selectedFolderId === f.id) {
                                                                         setSelectedFolderId(null);
                                                                         setActiveFolderPath([]);
                                                                     }
                                                                     loadFolderTree(activeOwnerId);
                                                                 } catch (err: any) {
-                                                                    message.error(err.message || "Xóa thư mục thất bại");
+                                                                    notify.error(err.message || "Không thể xóa thư mục");
                                                                 }
                                                             }
                                                         });
@@ -510,26 +511,26 @@ const PersonalDrivePage: React.FC = () => {
                     folderName: values.folderName,
                     parentId: parentFolderId
                 });
-                message.success("Đổi tên thư mục thành công");
+                notify.success("Đổi tên thư mục thành công");
             } else {
                 await callCreateFolder({
                     folderName: values.folderName,
                     parentId: parentFolderId,
                     ownerId: activeOwnerId
                 });
-                message.success("Tạo thư mục thành công");
+                notify.success("Tạo thư mục thành công");
             }
             setFolderModalOpen(false);
             loadFolderTree(activeOwnerId);
         } catch (err: any) {
-            message.error(err.message || "Thao tác thư mục thất bại");
+            notify.error(err.message || "Không thể thao tác thư mục");
         }
     };
 
     const customUploadRequest = async (options: any) => {
         const { file, onSuccess, onError } = options;
         setUploading(true);
-        const hideLoading = message.loading(`Đang tải tệp "${file.name}" lên máy chủ...`, 0);
+        const hideLoading = notify.loading(`Đang tải tệp "${file.name}" lên máy chủ.`);
         try {
             const res = await callUploadSingleFile(file, "documents");
             if (res?.data?.fileName) {
@@ -553,17 +554,17 @@ const PersonalDrivePage: React.FC = () => {
                     note: ""
                 });
                 hideLoading();
-                message.success(`Tải tệp "${file.name}" lên thành công!`);
+                notify.success(`Tải tệp "${file.name}" lên thành công.`);
                 setDocModalOpen(true);
             } else {
                 hideLoading();
                 onError(new Error("Upload thất bại"));
-                message.error("Tải tệp lên thất bại");
+                notify.error("Không thể tải tệp lên");
             }
         } catch (err) {
             hideLoading();
             onError(err);
-            message.error("Lỗi khi tải file lên hệ thống");
+            notify.error("Không thể tải tệp lên hệ thống");
         } finally {
             setUploading(false);
         }
@@ -571,17 +572,17 @@ const PersonalDrivePage: React.FC = () => {
 
     const handleDirectFileUpload = async (file: File) => {
         if (!selectedFolderId) {
-            message.warning("Vui lòng chọn thư mục trước khi tải tệp lên!");
+            notify.warning("Vui lòng chọn thư mục trước khi tải tệp lên.");
             return;
         }
         const isRoot = treeData.some(root => root.key === selectedFolderId);
         if (isRoot) {
-            message.warning("Vui lòng chọn thư mục con để tải tệp lên!");
+            notify.warning("Vui lòng chọn thư mục con để tải tệp lên.");
             return;
         }
 
         setUploading(true);
-        const hideLoading = message.loading(`Đang tải tệp "${file.name}" lên máy chủ...`, 0);
+        const hideLoading = notify.loading(`Đang tải tệp "${file.name}" lên máy chủ.`);
         try {
             const res = await callUploadSingleFile(file, "documents");
             if (res?.data?.fileName) {
@@ -604,15 +605,15 @@ const PersonalDrivePage: React.FC = () => {
                     note: ""
                 });
                 hideLoading();
-                message.success(`Tải tệp "${file.name}" lên thành công!`);
+                notify.success(`Tải tệp "${file.name}" lên thành công.`);
                 setDocModalOpen(true);
             } else {
                 hideLoading();
-                message.error("Tải tệp lên thất bại");
+                notify.error("Không thể tải tệp lên");
             }
         } catch (err) {
             hideLoading();
-            message.error("Lỗi khi tải file lên hệ thống");
+            notify.error("Không thể tải tệp lên hệ thống");
         } finally {
             setUploading(false);
         }
@@ -620,14 +621,14 @@ const PersonalDrivePage: React.FC = () => {
 
     const handleCreateDocumentSubmit = async (values: any) => {
         if (uploadedFiles.length === 0 || !uploadedFiles[0].response) {
-            message.warning("Vui lòng tải lên file đính kèm trước!");
+            notify.warning("Vui lòng tải lên tệp đính kèm trước.");
             return;
         }
 
         const isAccountingDoc = values.documentKind === "ACCOUNTING";
 
         if (isAccountingDoc && !accountingSystemCategoryId) {
-            message.error("Chưa cấu hình danh mục hệ thống ACCOUNTING_DOC cho chứng từ kế toán");
+            notify.error("Chưa cấu hình danh mục hệ thống ACCOUNTING_DOC cho chứng từ kế toán");
             return;
         }
 
@@ -644,7 +645,7 @@ const PersonalDrivePage: React.FC = () => {
 
         try {
             await callCreateDocument(payload);
-            message.success("Tải tài liệu và lưu hồ sơ thành công");
+            notify.success("Tải tài liệu và lưu hồ sơ thành công");
             setDocModalOpen(false);
             docForm.resetFields();
             setUploadedFiles([]);
@@ -652,7 +653,7 @@ const PersonalDrivePage: React.FC = () => {
                 loadFolderDocuments(selectedFolderId);
             }
         } catch (err: any) {
-            message.error(err.message || "Không thể tạo hồ sơ tài liệu");
+            notify.error(err.message || "Không thể tạo hồ sơ tài liệu");
         }
     };
 
@@ -673,14 +674,14 @@ const PersonalDrivePage: React.FC = () => {
                 folderId: selectedFolderId!,
                 status: editingDoc.status,
             });
-            message.success("Cập nhật tài liệu thành công");
+            notify.success("Cập nhật tài liệu thành công");
             setEditDocModalOpen(false);
             setEditingDoc(null);
             if (selectedFolderId) {
                 loadFolderDocuments(selectedFolderId);
             }
         } catch (err: any) {
-            message.error(err.message || "Lỗi khi cập nhật tài liệu");
+            notify.error(err.message || "Không thể cập nhật tài liệu");
         }
     };
 
@@ -688,16 +689,16 @@ const PersonalDrivePage: React.FC = () => {
         try {
             if (record.isShortcut) {
                 await callDeleteDocumentShortcut(record.id!, selectedFolderId!);
-                message.success("Xóa lối tắt thành công");
+                notify.success("Xóa lối tắt thành công");
             } else {
                 await callDeleteDocument(record.id!);
-                message.success("Xóa tài liệu khỏi kho thành công");
+                notify.success("Xóa tài liệu khỏi kho thành công");
             }
             if (selectedFolderId) {
                 loadFolderDocuments(selectedFolderId);
             }
         } catch (err: any) {
-            message.error(err.message || "Xóa tài liệu thất bại");
+            notify.error(err.message || "Không thể xóa tài liệu");
         }
     }, [loadFolderDocuments, selectedFolderId]);
 
@@ -802,44 +803,47 @@ const PersonalDrivePage: React.FC = () => {
             render: (_: any, record: IDocument) => {
                 return (
                     <Space size={4}>
-                        <Tooltip title="Xem chi tiết">
-                            <Button
-                                type="text"
-                                icon={<EyeOutlined style={{ color: "#3b82f6" }} />}
-                                size="small"
-                                onClick={() => {
-                                    setSelectedDocDetails(record);
-                                    setDetailsDrawerOpen(true);
-                                }}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined />}
+                            aria-label="Xem chi tiết"
+                            onClick={() => {
+                                setSelectedDocDetails(record);
+                                setDetailsDrawerOpen(true);
+                            }}
+                        />
                         {!isReadOnly ? (
                             <>
-                                <Tooltip title="Chỉnh sửa">
-                                    <Button
-                                        type="text"
-                                        icon={<EditOutlined style={{ color: "#d97706" }} />}
-                                        size="small"
-                                        onClick={() => {
-                                            setEditingDoc(record);
-                                            editDocForm.setFieldsValue({
-                                                documentName: record.documentName,
-                                                documentCode: record.documentCode,
-                                                categoryId: record.category?.id,
-                                                accountingCategoryId: record.accountingCategory?.id,
-                                                note: record.note
-                                            });
-                                            setEditDocModalOpen(true);
-                                        }}
-                                    />
-                                </Tooltip>
+                                <ActionButton
+                                    variant="edit"
+                                    tooltip="Chỉnh sửa"
+                                    icon={<EditOutlined />}
+                                    aria-label="Chỉnh sửa"
+                                    onClick={() => {
+                                        setEditingDoc(record);
+                                        editDocForm.setFieldsValue({
+                                            documentName: record.documentName,
+                                            documentCode: record.documentCode,
+                                            categoryId: record.category?.id,
+                                            accountingCategoryId: record.accountingCategory?.id,
+                                            note: record.note
+                                        });
+                                        setEditDocModalOpen(true);
+                                    }}
+                                />
                                 <Popconfirm
                                     title={record.isShortcut ? "Xác nhận xóa lối tắt này khỏi thư mục?" : "Xác nhận xóa tài liệu này?"}
                                     onConfirm={() => handleDeleteDoc(record)}
                                     okText="Xóa"
                                     cancelText="Huỷ"
                                 >
-                                    <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                                    <ActionButton
+                                        variant="danger"
+                                        tooltip="Xóa tài liệu"
+                                        icon={<DeleteOutlined />}
+                                        aria-label="Xóa tài liệu"
+                                    />
                                 </Popconfirm>
                             </>
                         ) : (

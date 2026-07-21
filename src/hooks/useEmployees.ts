@@ -69,7 +69,7 @@ export const useCreateEmployeeMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["employees"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo nhân viên");
+            notify.error(error.message || "Không thể tạo nhân viên");
         },
     });
 };
@@ -99,7 +99,7 @@ export const useUpdateEmployeeMutation = () => {
             }
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật nhân viên");
+            notify.error(error.message || "Không thể cập nhật nhân viên");
         },
     });
 };
@@ -129,7 +129,7 @@ export const useDeleteEmployeeMutation = () => {
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa nhân viên");
+            notify.error(error.message || "Không thể xóa nhân viên");
         },
     });
 };

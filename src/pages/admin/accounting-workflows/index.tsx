@@ -34,6 +34,7 @@ import { notify } from "@/components/common/notification/notify";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import dayjs from "dayjs";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 interface IWorkflowTemplate {
     id: number;
@@ -478,43 +479,39 @@ const WorkflowTemplatesPage = () => {
             fixed: "right",
             render: (_, record) => (
                 <Space size={2} align="center">
-                    <Button
+                    <ActionButton
+                        variant="view"
+                        tooltip="Xem cấu hình"
                         aria-label={`Xem cấu hình ${record.name}`}
-                        title="Xem cấu hình"
-                        type="text"
-                        size="small"
-                        icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                        icon={<EyeOutlined />}
                         onClick={() => setViewingRecord(record)}
                     />
                     {record.status === "DRAFT" && canUpdateDraft && (
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Sửa nháp"
                             aria-label={`Sửa nháp ${record.name}`}
-                            title="Sửa nháp"
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined />}
                             onClick={() => handleOpenEdit(record)}
                         />
                     )}
                     {record.status === "DRAFT" && canValidate && (
-                        <Button
+                        <ActionButton
+                            variant="progress"
+                            tooltip="Kiểm tra cấu hình"
                             aria-label={`Kiểm tra ${record.name}`}
-                            title="Kiểm tra cấu hình"
-                            type="text"
-                            size="small"
                             loading={validatingTemplateId === record.id}
-                            icon={<FileSearchOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            icon={<FileSearchOutlined />}
                             onClick={() => void handleValidate(record.id)}
                         />
                     )}
                     {record.status !== "DRAFT" && canCopyDraft && (
-                        <Button
+                        <ActionButton
+                            variant="settings"
+                            tooltip="Sao chép thành nháp"
                             aria-label={`Sao chép ${record.name} thành nháp`}
-                            title="Sao chép thành nháp"
-                            type="text"
-                            size="small"
                             loading={copyToDraftMutation.isPending}
-                            icon={<CopyOutlined style={{ color: "#7c3aed", fontSize: 16 }} />}
+                            icon={<CopyOutlined />}
                             onClick={() => void handleCopyToDraft(record)}
                         />
                     )}
@@ -530,13 +527,12 @@ const WorkflowTemplatesPage = () => {
                                 refetch();
                             }}
                         >
-                            <Button
+                            <ActionButton
+                                variant="success"
+                                tooltip="Áp dụng"
                                 aria-label={`Áp dụng ${record.name}`}
-                                title="Áp dụng"
-                                type="text"
-                                size="small"
                                 loading={publishMutation.isPending}
-                                icon={<CheckCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />}
+                                icon={<CheckCircleOutlined />}
                             />
                         </Popconfirm>
                     )}
@@ -553,14 +549,12 @@ const WorkflowTemplatesPage = () => {
                                 refetch();
                             }}
                         >
-                            <Button
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Ngưng áp dụng"
                                 aria-label={`Ngưng áp dụng ${record.name}`}
-                                title="Ngưng áp dụng"
-                                type="text"
-                                size="small"
-                                danger
                                 loading={deactivateMutation.isPending}
-                                icon={<StopOutlined style={{ fontSize: 16 }} />}
+                                icon={<StopOutlined />}
                             />
                         </Popconfirm>
                     )}
@@ -576,13 +570,12 @@ const WorkflowTemplatesPage = () => {
                                 refetch();
                             }}
                         >
-                            <Button
+                            <ActionButton
+                                variant="success"
+                                tooltip="Kích hoạt lại"
                                 aria-label={`Kích hoạt lại ${record.name}`}
-                                title="Kích hoạt lại"
-                                type="text"
-                                size="small"
                                 loading={reactivateMutation.isPending}
-                                icon={<RedoOutlined style={{ color: "#16794c", fontSize: 16 }} />}
+                                icon={<RedoOutlined />}
                             />
                         </Popconfirm>
                     )}

@@ -7,6 +7,7 @@ import type { ProColumns } from "@ant-design/pro-components";
 import dayjs from "dayjs";
 
 import type { IProcedure, ProcedureType } from "@/types/backend";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 export const statusMap: Record<string, { label: string; color: string }> = {
     NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
@@ -49,20 +50,6 @@ const EMAIL_STYLE: React.CSSProperties = {
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
     maxWidth: 140,
-};
-
-const QR_BTN_STYLE: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    cursor: "pointer",
-    background: "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)",
-    border: "1.5px solid #ff85c0",
-    transition: "all 0.2s ease",
-    boxShadow: "0 1px 4px rgba(255,133,192,0.15)",
 };
 
 const CONTAINER_GAP_STYLE: React.CSSProperties = {
@@ -253,28 +240,14 @@ export const buildProcedureColumns = ({
             align: "center",
             width: 60,
             render: (_, record) => (
-                <Tooltip title="Xem mã QR nội bộ" placement="top">
-                    <div
-                        onClick={() => onQrClick(record)}
-                        style={QR_BTN_STYLE}
-                        onMouseEnter={e => {
-                            const el = e.currentTarget;
-                            el.style.background = "linear-gradient(135deg, #ff4d94 0%, #eb2f7a 100%)";
-                            el.style.boxShadow = "0 4px 12px rgba(235,47,122,0.35)";
-                            el.style.transform = "scale(1.1)";
-                            (el.querySelector("span") as HTMLElement).style.color = "#fff";
-                        }}
-                        onMouseLeave={e => {
-                            const el = e.currentTarget;
-                            el.style.background = "linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%)";
-                            el.style.boxShadow = "0 1px 4px rgba(255,133,192,0.15)";
-                            el.style.transform = "scale(1)";
-                            (el.querySelector("span") as HTMLElement).style.color = "#eb2f7a";
-                        }}
-                    >
-                        <QrcodeOutlined style={{ fontSize: 18, color: "#eb2f7a", transition: "color 0.2s ease" }} />
-                    </div>
-                </Tooltip>
+                <ActionButton
+                    variant="settings"
+                    tooltip="Xem mã QR nội bộ"
+                    tooltipPlacement="top"
+                    icon={<QrcodeOutlined />}
+                    aria-label="Xem mã QR nội bộ"
+                    onClick={() => onQrClick(record)}
+                />
             ),
         },
         {
@@ -349,17 +322,24 @@ export const buildProcedureColumns = ({
                 return (
                     <Space size="small">
                         {canView && (
-                            <Tooltip title="Xem chi tiết">
-                                <EyeOutlined
-                                    data-guide-id={`${guideKey}-detail-button`}
-                                    style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                    onClick={() => onView(record)}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
+                                icon={<EyeOutlined />}
+                                data-guide-id={`${guideKey}-detail-button`}
+                                aria-label="Xem chi tiết"
+                                onClick={() => onView(record)}
+                            />
                         )}
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                                <MoreOutlined data-guide-id={`${guideKey}-more-button`} style={{ fontSize: 20, cursor: "pointer" }} />
+                                <ActionButton
+                                    variant="default"
+                                    tooltip="Thao tác khác"
+                                    icon={<MoreOutlined />}
+                                    data-guide-id={`${guideKey}-more-button`}
+                                    aria-label="Thao tác khác"
+                                />
                             </Dropdown>
                         )}
                     </Space>

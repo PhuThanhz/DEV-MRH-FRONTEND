@@ -59,7 +59,7 @@ export const useCreatePermissionCategoryMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi tạo danh mục");
+            notify.error(err.message || "Không thể tạo danh mục");
         },
     });
 };
@@ -90,7 +90,7 @@ export const useUpdatePermissionCategoryMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi cập nhật danh mục");
+            notify.error(err.message || "Không thể cập nhật danh mục");
         },
     });
 };
@@ -115,7 +115,7 @@ export const useDeletePermissionCategoryMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi ngưng danh mục");
+            notify.error(err.message || "Không thể ngưng danh mục");
         },
     });
 };

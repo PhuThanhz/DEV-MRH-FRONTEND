@@ -18,7 +18,7 @@ const LotusDetailDrawer = ({
     open,
     onClose,
     children,
-    height = "calc(100vh - 16px)",
+    height = "calc(100dvh - 16px)",
     destroyOnClose = true,
     keyboard = true,
     closeAriaLabel = "Đóng",

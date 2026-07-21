@@ -141,7 +141,7 @@ const DrawerAssignCompanyJobTitle = ({
 
             onClose();
         } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Lỗi khi gán chức danh");
+            notify.error(err?.response?.data?.message || "Không thể gán chức danh");
         } finally {
             setAssigning(false);
         }

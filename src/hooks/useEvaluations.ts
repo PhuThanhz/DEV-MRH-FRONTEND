@@ -194,7 +194,7 @@ export const useEmployeeSubmitMutation = () => {
     return useMutation({
         mutationFn: (recordId: number) => callEmployeeSubmitRecord(recordId),
         onSuccess: (_, recordId) => {
-            notify.success("Nộp bản tự đánh giá thành công!");
+            notify.success("Nộp bản tự đánh giá thành công.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
@@ -222,7 +222,7 @@ export const useManagerSubmitMutation = () => {
     return useMutation({
         mutationFn: (recordId: number) => callManagerSubmitRecord(recordId),
         onSuccess: (_, recordId) => {
-            notify.success("Đã gửi bản đánh giá lên bước chấm & duyệt cuối!");
+            notify.success("Đã gửi bản đánh giá lên bước quản lý gián tiếp duyệt.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["manager-evaluation-records"] });
@@ -245,7 +245,7 @@ export const useSaveTrainingPlanMutation = () => {
         mutationFn: (variables: { recordId: number; data: any }) =>
             callSaveTrainingPlan(variables.recordId, variables.data),
         onSuccess: (_, variables) => {
-            notify.success("Lưu kế hoạch đào tạo thành công!");
+            notify.success("Lưu kế hoạch đào tạo thành công.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", variables.recordId] });
         },
     });
@@ -264,7 +264,7 @@ export const useApproveRecordMutation = () => {
         mutationFn: (variables: { recordId: number; overrideReason?: string }) =>
             callApproveRecord(variables.recordId, variables.overrideReason),
         onSuccess: (_, variables) => {
-            notify.success("Chấm & duyệt cuối và hoàn tất bản đánh giá thành công!");
+            notify.success("Đã phê duyệt và hoàn tất bản đánh giá.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", variables.recordId] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["approval-evaluation-records"] });
@@ -281,7 +281,7 @@ export const useRejectRecordMutation = () => {
         mutationFn: (variables: { recordId: number; reason: string }) =>
             callRejectRecord(variables.recordId, variables.reason),
         onSuccess: (_, variables) => {
-            notify.success("Đã trả lại bản đánh giá thành công!");
+            notify.success("Đã trả lại bản đánh giá thành công.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", variables.recordId] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
@@ -311,11 +311,13 @@ export const useExtendRecordDeadlineMutation = () => {
             recordIds: number[];
             phase: "EMPLOYEE" | "MANAGER" | "APPROVAL";
             deadline: string;
+            recordDeadlines?: { recordId: number; deadline: string }[];
+            phaseDeadlines?: { phase: "EMPLOYEE" | "MANAGER" | "APPROVAL"; deadline: string }[];
             reason?: string;
             cascade?: boolean;
         }) => callExtendEvaluationRecordDeadline(data),
         onSuccess: () => {
-            notify.success("Đã gia hạn hạn xử lý");
+            notify.success("Đã gia hạn thời gian xử lý");
             qc.invalidateQueries({ queryKey: ["evaluation-record"] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
@@ -325,7 +327,7 @@ export const useExtendRecordDeadlineMutation = () => {
         },
         onError: (error: any) => {
             const message = Array.isArray(error?.message) ? error.message.join(". ") : error?.message;
-            notify.error(message || "Không thể gia hạn hạn xử lý");
+            notify.error(message || "Không thể gia hạn thời gian xử lý");
         },
     });
 };
@@ -359,7 +361,7 @@ export const useEmployeeConfirmRecordMutation = () => {
     return useMutation({
         mutationFn: (recordId: number) => callEmployeeConfirmRecord(recordId),
         onSuccess: (_, recordId) => {
-            notify.success("Đã xác nhận kết quả đánh giá!");
+            notify.success("Đã xác nhận kết quả đánh giá.");
             qc.invalidateQueries({ queryKey: ["evaluation-record", recordId] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });

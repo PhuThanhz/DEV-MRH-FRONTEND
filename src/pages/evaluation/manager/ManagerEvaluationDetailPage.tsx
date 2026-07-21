@@ -1,11 +1,12 @@
 import React from "react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate, useBlocker } from "react-router-dom";
-import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Progress, Breadcrumb, Switch } from "antd";
+import { Button, Spin, Tag, Popconfirm, Input, Select, Alert, Empty, Breadcrumb, Switch, Tooltip, Dropdown } from "antd";
 import {
     ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined,
     SendOutlined, LockOutlined, UserOutlined, TeamOutlined, BookOutlined,
-    FileTextOutlined, TrophyOutlined, FileExcelOutlined,
+    FileTextOutlined, TrophyOutlined, FileExcelOutlined, MoreOutlined,
+    RightOutlined, DownOutlined
 } from "@ant-design/icons";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -14,13 +15,22 @@ import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
-import { Radar, Column } from "@/components/common/chart/LazyChart";
+import EvaluationScorePicker from "../components/EvaluationScorePicker";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+import { EvaluationUserInfo } from "../components/shared/EvaluationUserInfo";
+import { EvaluationGuidelines } from "../components/shared/EvaluationGuidelines";
+import { EvaluationCommentsSection } from "../components/shared/EvaluationCommentsSection";
+import { SharedCriteriaRow, SharedSubCriteriaRow } from "../components/shared/EvaluationTableRows";
+import { EvaluationProgressIndicator } from "../components/shared/EvaluationProgressIndicator";
+import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import { getLeafCriteria, getSectionScore, getTotalScore, getWeightedScore, formatScoreResult, formatWeight } from "../components/evaluationScoring";
+import "../components/shared/evaluation-shell.css";
+import { useGrabToScroll } from "@/hooks/useGrabToScroll";
 import {
     callFetchEvaluationRecordById,
     callManagerSaveScore,
     callManagerSubmitRecord,
     callManagerSaveFeedback,
-    callSaveTrainingPlan,
     callFetchRecordHistory,
 } from "@/config/api";
 
@@ -28,11 +38,11 @@ type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIE
 
 const STATUS_CONFIG: Record<RecordStatus, { text: string; tagColor: string }> = {
     NOT_STARTED: { text: "Chưa bắt đầu", tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "Quản lý đang chấm", tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt", tagColor: "cyan" },
-    COMPLETED: { text: "Hoàn tất", tagColor: "success" },
+    EMPLOYEE_DRAFTING: { text: "Đang tự đánh giá", tagColor: "processing" },
+    PENDING_MANAGER_REVIEW: { text: "Chờ Quản lý đánh giá", tagColor: "warning" },
+    MANAGER_REVIEWING: { text: "Quản lý đang đánh giá", tagColor: "purple" },
+    PENDING_APPROVAL: { text: "Chờ phê duyệt kết quả", tagColor: "cyan" },
+    COMPLETED: { text: "Hoàn tất đánh giá", tagColor: "success" },
 };
 
 const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
@@ -42,16 +52,6 @@ const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }>
     D: { color: "#b91c1c", bg: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)", label: "Trung bình" },
     E: { color: "#be123c", bg: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", label: "Yếu" },
 };
-
-const SCORE_DESCRIPTIONS: Record<number, string> = {
-    1: "Yếu",
-    2: "Trung bình",
-    3: "Khá",
-    4: "Tốt",
-    5: "Xuất sắc"
-};
-
-const SCORE_OPTIONS = [1, 2, 3, 4, 5].map(v => ({ label: `${v} điểm - ${SCORE_DESCRIPTIONS[v]}`, value: v }));
 
 const TRAINING_GROUP_OPTIONS = [
     { label: "Kiến thức sản phẩm", value: "PRODUCT_KNOWLEDGE" },
@@ -66,160 +66,91 @@ const getScore = (scores: any[], criteriaId: number, by: "EMPLOYEE" | "MANAGER")
 const getComment = (comments: any[], type: string) =>
     comments?.find(c => c.commentType === type)?.content ?? "";
 
-const getStickyStyle = (col: "empScore" | "empResult" | "mgrScore" | "mgrResult", isHeader = false): React.CSSProperties => {
-    let right = 0;
-    if (col === "mgrResult") right = 0;
-    else if (col === "mgrScore") right = 120;
-    else if (col === "empResult") right = 240;
-    else if (col === "empScore") right = 360;
-    
+const getStickyStyle = (col: "empScore" | "mgrScore", isHeader = false): React.CSSProperties => {
+    const width = col === "mgrScore" ? 220 : 150;
+    const right = col === "mgrScore" ? 0 : 220;
     const isLeftmost = col === "empScore";
-    
+
     return {
         position: "sticky",
         right,
-        width: 120,
-        minWidth: 120,
-        zIndex: isHeader ? 2 : 1,
-        background: isHeader ? "#f8fafc" : "#fff",
+        width,
+        minWidth: width,
+        boxSizing: "border-box",
+        zIndex: isHeader ? 3 : 2,
+        background: "#ffffff",
         borderLeft: isLeftmost ? "1.5px solid #cbd5e1" : undefined,
-        boxShadow: isLeftmost ? "-3px 0 6px -2px rgba(0,0,0,0.15)" : undefined,
+        boxShadow: isLeftmost ? "-4px 0 8px -2px rgba(15,23,42,0.08)" : undefined,
         backgroundClip: "padding-box",
     };
 };
 
-interface IManagerCriteriaRowProps {
-    c: any;
-    cIdx: number;
-    hasSub: boolean;
-    isEditable: boolean;
-    empScore: number | null;
-    avgEmp: number | null;
-    mgrScore: number | null;
-    avgMgr: number | null;
-    savingScore: number | null;
-    handleSaveScore: (id: number, score: number) => void;
-    tdB: any;
-    tdLvl: any;
-    tdSc: any;
-    showCriteria: boolean;
+const SCORE_DESCRIPTIONS: Record<number, string> = {
+    1: "Yếu",
+    2: "Trung bình",
+    3: "Khá",
+    4: "Tốt",
+    5: "Xuất sắc"
+};
+
+const LEVEL_HEADER_CONFIG: Record<number, { title: string; subtitle: string; color: string; bg: string; border: string }> = {
+    1: { title: "Mức 1", subtitle: "Yếu", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+    2: { title: "Mức 2", subtitle: "Trung bình", color: "#ea580c", bg: "#fff7ed", border: "#ffddc1" },
+    3: { title: "Mức 3", subtitle: "Khá", color: "#b45309", bg: "#fefbeb", border: "#fef08a" },
+    4: { title: "Mức 4", subtitle: "Tốt", color: "#65a30d", bg: "#f7fee7", border: "#d9f99d" },
+    5: { title: "Mức 5", subtitle: "Xuất sắc", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+};
+const SCORE_VALUES = [1, 2, 3, 4, 5] as const;
+
+const thS: React.CSSProperties = {
+    padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#0f172a",
+    background: "#ffffff", borderBottom: "2px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
+    textAlign: "left", whiteSpace: "nowrap", verticalAlign: "middle"
+};
+const thG: React.CSSProperties = {
+    padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#0f172a",
+    background: "#ffffff", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1", textAlign: "center", verticalAlign: "middle"
+};
+const thSub: React.CSSProperties = {
+    padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#0f172a",
+    background: "#ffffff", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
+    textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
+};
+const tdB: React.CSSProperties = {
+    padding: "14px 14px", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
+    fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#1e293b",
+    textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
+};
+const tdLvl: React.CSSProperties = {
+    padding: "12px 10px", borderBottom: "1px solid #cbd5e1",
+    borderRight: "1px solid #cbd5e1", fontSize: 12, color: "#334155",
+    verticalAlign: "top", lineHeight: 1.5, minWidth: 140, width: 140,
+    textAlign: "left", overflowWrap: "break-word", wordBreak: "break-word",
+    whiteSpace: "normal"
+};
+const tdSc: React.CSSProperties = {
+    padding: "14px 12px", borderBottom: "1px solid #cbd5e1", borderRight: "1px solid #cbd5e1",
+    textAlign: "center", verticalAlign: "middle", background: "#ffffff"
+};
+
+
+
+interface ManagerEvaluationDetailPageProps {
+    recordId?: number;
+    onClose?: () => void;
 }
 
-const ManagerCriteriaRow = React.memo(({
-    c, cIdx, hasSub, isEditable, empScore, avgEmp, mgrScore, avgMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc, showCriteria
-}: IManagerCriteriaRowProps) => {
-    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
-    return (
-        <tr className="eval-row">
-            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 13 }}>{cIdx + 1}</td>
-            <td style={{ ...tdB, color: "#111827" }}>
-                <div style={{ fontWeight: hasSub ? 700 : 500 }}>{c.name}</div>
-                {c.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{c.description}</div>}
-            </td>
-            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{c.measurementMethod}</td>
-            {showCriteria && [1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getL(lvl)}</td>)}
-            <td style={{ ...tdB, textAlign: "center" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", background: "#f3f4f6", borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap", display: "inline-block" }}>
-                    {(c.weight * 100).toFixed(0)}%
-                </span>
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
-                {hasSub ? (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: avgEmp != null ? "#f43f5e" : "#e5e7eb" }}>{avgEmp != null ? avgEmp.toFixed(2) : "—"}</span>
-                ) : (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: empScore != null ? "#f43f5e" : "#e5e7eb" }}>{empScore ?? "—"}</span>
-                )}
-            </td>
-            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
-                {hasSub ? (
-                    avgEmp != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(avgEmp * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                ) : (
-                    empScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#f43f5e" }}>{(empScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                )}
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
-                {hasSub ? (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: avgMgr != null ? "#111827" : "#e5e7eb" }}>{avgMgr != null ? avgMgr.toFixed(2) : "—"}</span>
-                ) : isEditable ? (
-                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                        popupMatchSelectWidth={false}
-                        className={mgrScore == null ? "unfilled-select" : ""}
-                        value={mgrScore ?? undefined} loading={savingScore === c.id}
-                        onChange={(val) => handleSaveScore(c.id, val)} options={SCORE_OPTIONS} />
-                ) : (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: mgrScore != null ? "#111827" : "#e5e7eb" }}>{mgrScore ?? "—"}</span>
-                )}
-            </td>
-            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
-                {hasSub ? (
-                    avgMgr != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(avgMgr * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                ) : (
-                    mgrScore != null ? <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{(mgrScore * c.weight).toFixed(2)}</span> : <span style={{ color: "#e5e7eb" }}>—</span>
-                )}
-            </td>
-        </tr>
-    );
-});
+const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDetailPageProps) => {
+    const grabToScrollRef = useGrabToScroll();
+    const topScrollRef = useRef<HTMLDivElement>(null);
+    const [tableScrollWidth, setTableScrollWidth] = useState(0);
+    const [hasScrollbar, setHasScrollbar] = useState(false);
 
-interface IManagerSubCriteriaRowProps {
-    sub: any;
-    cIdx: number;
-    si: number;
-    isEditable: boolean;
-    subEmp: number | null;
-    subMgr: number | null;
-    savingScore: number | null;
-    handleSaveScore: (id: number, score: number) => void;
-    tdB: any;
-    tdLvl: any;
-    tdSc: any;
-    showCriteria: boolean;
-}
-
-const ManagerSubCriteriaRow = React.memo(({
-    sub, cIdx, si, isEditable, subEmp, subMgr, savingScore, handleSaveScore, tdB, tdLvl, tdSc, showCriteria
-}: IManagerSubCriteriaRowProps) => {
-    const getSL = (lvl: number) => sub.levels?.find((l: any) => l.level === lvl)?.description || "";
-    return (
-        <tr className="eval-row">
-            <td style={{ ...tdB, textAlign: "center", color: "#475569", fontWeight: 800, fontSize: 12 }}>{cIdx + 1}.{si + 1}</td>
-            <td style={{ ...tdB, paddingLeft: 14, color: "#111827", borderLeft: "none" }}>
-                <div style={{ fontWeight: 500 }}>{sub.name}</div>
-                {sub.description && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic", fontWeight: "normal" }}>{sub.description}</div>}
-            </td>
-            <td style={{ ...tdB, color: "#6b7280", fontSize: 12 }}>{sub.measurementMethod}</td>
-            {showCriteria && [1, 2, 3, 4, 5].map(lvl => <td key={lvl} style={tdLvl}>{getSL(lvl)}</td>)}
-            <td style={{ ...tdB, textAlign: "center" }}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("empScore") }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: subEmp != null ? "#f43f5e" : "#e5e7eb" }}>{subEmp ?? "—"}</span>
-            </td>
-            <td style={{ ...tdSc, ...getStickyStyle("empResult") }}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
-            </td>
-            <td style={{ ...tdSc, borderLeft: "none", ...getStickyStyle("mgrScore") }}>
-                {isEditable ? (
-                    <Select size="middle" style={{ width: 120 }} placeholder="Chọn..."
-                        popupMatchSelectWidth={false}
-                        className={subMgr == null ? "unfilled-select" : ""}
-                        value={subMgr ?? undefined} loading={savingScore === sub.id}
-                        onChange={(val) => handleSaveScore(sub.id, val)} options={SCORE_OPTIONS} />
-                ) : (
-                    <span style={{ fontSize: 18, fontWeight: 800, color: subMgr != null ? "#111827" : "#e5e7eb" }}>{subMgr ?? "—"}</span>
-                )}
-            </td>
-            <td style={{ ...tdSc, ...getStickyStyle("mgrResult") }}>
-                <span style={{ color: "#e5e7eb" }}>—</span>
-            </td>
-        </tr>
-    );
-});
-
-const ManagerEvaluationDetailPage = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id: routeId } = useParams<{ id: string }>();
+    const id = recordId != null ? String(recordId) : routeId;
     const navigate = useNavigate();
     const showCriteria = true;
+    const [drawerOpen, setDrawerOpen] = useState(true);
 
     const [record, setRecord] = useState<any>(null);
     const [history, setHistory] = useState<any[]>([]);
@@ -230,10 +161,91 @@ const ManagerEvaluationDetailPage = () => {
     const [managerFeedback, setManagerFeedback] = useState("");
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
+    const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
     const [isDirty, setIsDirty] = useState(false);
     const [isError, setIsError] = useState(false);
-    const [savingPlan, setSavingPlan] = useState(false);
-    const [planForm, setPlanForm] = useState<{ trainingGroup?: string; content: string; requirements: string; solution: string; completionTimeline: string }>({ content: "", requirements: "", solution: "", completionTimeline: "" });
+    const [hoveredGroupId, setHoveredGroupId] = useState<string | number | null>(null);
+    const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+
+    useEffect(() => {
+        const top = topScrollRef.current;
+        const bottom = grabToScrollRef.current;
+        if (!top || !bottom) return;
+
+        let activeScroll: 'top' | 'bottom' | null = null;
+
+        const syncTop = () => {
+            if (activeScroll === 'bottom') return;
+            activeScroll = 'top';
+            const topMax = top.scrollWidth - top.clientWidth;
+            if (topMax <= 0) { activeScroll = null; return; }
+            const ratio = top.scrollLeft / topMax;
+            const bottomMax = bottom.scrollWidth - bottom.clientWidth;
+            bottom.scrollLeft = ratio * bottomMax;
+            activeScroll = null;
+        };
+
+        const syncBottom = () => {
+            if (activeScroll === 'top') return;
+            activeScroll = 'bottom';
+            const bottomMax = bottom.scrollWidth - bottom.clientWidth;
+            if (bottomMax <= 0) { activeScroll = null; return; }
+            const ratio = bottom.scrollLeft / bottomMax;
+            const topMax = top.scrollWidth - top.clientWidth;
+            top.scrollLeft = ratio * topMax;
+            activeScroll = null;
+        };
+
+        top.addEventListener('scroll', syncTop);
+        bottom.addEventListener('scroll', syncBottom);
+
+        return () => {
+            top.removeEventListener('scroll', syncTop);
+            bottom.removeEventListener('scroll', syncBottom);
+        };
+    }, [grabToScrollRef, loading, record]);
+
+    useEffect(() => {
+        const bottom = grabToScrollRef.current;
+        if (!bottom) return;
+
+        const checkScroll = () => {
+            setTableScrollWidth(bottom.scrollWidth);
+            setHasScrollbar(bottom.scrollWidth > bottom.clientWidth);
+        };
+
+        // Double rAF ensures layout is fully computed after render
+        let rafId = requestAnimationFrame(() => {
+            rafId = requestAnimationFrame(checkScroll);
+        });
+        window.addEventListener("resize", checkScroll);
+
+        const observer = new ResizeObserver(checkScroll);
+        observer.observe(bottom);
+
+        const timer1 = setTimeout(checkScroll, 100);
+        const timer2 = setTimeout(checkScroll, 400);
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            window.removeEventListener("resize", checkScroll);
+            observer.disconnect();
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
+    }, [loading, record, grabToScrollRef]);
+
+    const allLeafCriteria = useMemo(() => getLeafCriteria(record?.template?.sections), [record?.template?.sections]);
+    const scoredCount = useMemo(() => allLeafCriteria.filter(c => localScores[c.id] != null).length, [allLeafCriteria, localScores]);
+    const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0;
+    const handleGoToNextUnscored = () => {
+        const nextCriteria = allLeafCriteria.find(criteria => localScores[criteria.id] == null);
+        if (!nextCriteria) return;
+        document.getElementById(`evaluation-criteria-${nextCriteria.id}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+        });
+    };
 
     const canScore = useAccess(ALL_PERMISSIONS.EVALUATION.MANAGER_SCORE);
     const canFeedback = useAccess(ALL_PERMISSIONS.EVALUATION.MANAGER_FEEDBACK);
@@ -269,7 +281,7 @@ const ManagerEvaluationDetailPage = () => {
             if (histRes?.data) setHistory(histRes.data);
         } catch {
             setIsError(true);
-            notify.error("Lỗi tải dữ liệu đánh giá");
+            notify.error("Không thể tải dữ liệu đánh giá");
         } finally {
             setLoading(false);
         }
@@ -283,10 +295,18 @@ const ManagerEvaluationDetailPage = () => {
         const originalScore = localScores[criteriaId];
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            await callManagerSaveScore(record.id, criteriaId, score);
+            const response = await callManagerSaveScore(record.id, criteriaId, score);
+            const update = response.data;
+            if (update) {
+                setRecord((current: any) => ({
+                    ...current,
+                    scores: update.scores,
+                    scoringSummary: update.scoringSummary,
+                }));
+            }
             notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
-            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu điểm");
+            notify.error(err?.message || err?.response?.data?.message || "Không thể lưu điểm");
             setLocalScores(prev => ({ ...prev, [criteriaId]: originalScore }));
         } finally { setSavingScore(null); }
     };
@@ -299,7 +319,7 @@ const ManagerEvaluationDetailPage = () => {
             setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
-            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu nhận xét");
+            notify.error(err?.message || err?.response?.data?.message || "Không thể lưu nhận xét");
         } finally { setSavingComment(false); }
     };
 
@@ -311,32 +331,15 @@ const ManagerEvaluationDetailPage = () => {
             await callManagerSaveFeedback(record.id, managerFeedback);
             setIsDirty(false);
             await callManagerSubmitRecord(record.id);
-            notify.success("Đã nộp phê duyệt!");
-            fetchRecord();
+            notify.success("Đã nộp phê duyệt.");
+            if (onClose) {
+                handleClose();
+            } else {
+                fetchRecord();
+            }
         } catch (err: any) {
-            notify.error(err?.message || err?.response?.data?.message || "Lỗi nộp bản đánh giá");
+            notify.error(err?.message || err?.response?.data?.message || "Không thể nộp bản đánh giá");
         } finally { setSubmitting(false); }
-    };
-
-    const handleSavePlan = async () => {
-        if (!record?.id) return;
-        if (!planForm.trainingGroup) { notify.warning("Vui lòng chọn nhóm đào tạo"); return; }
-        if (!planForm.content.trim()) { notify.warning("Vui lòng nhập nội dung đào tạo"); return; }
-        setSavingPlan(true);
-        try {
-            await callSaveTrainingPlan(record.id, {
-                trainingGroup: planForm.trainingGroup,
-                content: planForm.content.trim(),
-                requirements: planForm.requirements.trim() || undefined,
-                solution: planForm.solution.trim() || undefined,
-                completionTimeline: planForm.completionTimeline.trim() || undefined,
-            });
-            notify.success("Đã thêm kế hoạch đào tạo");
-            setPlanForm({ content: "", requirements: "", solution: "", completionTimeline: "" });
-            fetchRecord();
-        } catch (err: any) {
-            notify.error(err?.message || err?.response?.data?.message || "Lỗi lưu kế hoạch đào tạo");
-        } finally { setSavingPlan(false); }
     };
 
     const handleExportExcel = () => {
@@ -351,18 +354,51 @@ const ManagerEvaluationDetailPage = () => {
         }
     };
 
-    if (loading) return (
+    const handleClose = () => {
+        if (isDirty && !window.confirm("Bạn có nhận xét chưa lưu. Bạn có chắc muốn đóng bản đánh giá?")) {
+            return;
+        }
+        setDrawerOpen(false);
+        setTimeout(() => {
+            if (onClose) {
+                onClose();
+            } else {
+                navigate("/admin/evaluation/process?tab=PENDING_EVAL");
+            }
+        }, 300);
+    };
+
+    const renderInWorkspaceDrawer = (content: React.ReactNode) => {
+        if (!onClose) return content;
+        return (
+            <>
+                <div style={{ minHeight: "80vh", background: "#f8fafc" }} />
+                <LotusDetailDrawer
+                    open={drawerOpen}
+                    onClose={handleClose}
+                    destroyOnClose={false}
+                    keyboard={false}
+                    maskClosable={false}
+                    closeAriaLabel="Đóng bản đánh giá"
+                >
+                    {content}
+                </LotusDetailDrawer>
+            </>
+        );
+    };
+
+    if (loading) return renderInWorkspaceDrawer(
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Spin size="large" />
         </div>
     );
-    if (isError) return (
+    if (isError) return renderInWorkspaceDrawer(
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
             <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
         </div>
     );
-    if (!record) return (
+    if (!record) return renderInWorkspaceDrawer(
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
             <Empty description="Không tìm thấy bản đánh giá" />
         </div>
@@ -374,733 +410,502 @@ const ManagerEvaluationDetailPage = () => {
     const statusCfg = STATUS_CONFIG[record.status as RecordStatus] ?? STATUS_CONFIG.NOT_STARTED;
     const gradeCfg = record.finalGrade ? GRADE_CONFIG[record.finalGrade] : null;
 
-    const allLeafCriteria: any[] = [];
-    record.template?.sections?.forEach((sec: any) => {
-        sec.criteria?.forEach((c: any) => {
-            if (!c.subCriteria?.length) allLeafCriteria.push(c);
-            else c.subCriteria?.forEach((sub: any) => allLeafCriteria.push(sub));
-        });
-    });
-    const scoredCount = allLeafCriteria.filter(c => localScores[c.id] != null).length;
-    const progressPct = allLeafCriteria.length ? Math.round((scoredCount / allLeafCriteria.length) * 100) : 0
 
-    const thS: React.CSSProperties = {
-        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
-        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
-    };
-    const thG: React.CSSProperties = {
-        padding: "12px 14px", fontWeight: 800, fontSize: 12, color: "#111827",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0", textAlign: "center", verticalAlign: "middle"
-    };
-    const thSub: React.CSSProperties = {
-        padding: "10px 10px", fontWeight: 800, fontSize: 11, color: "#334155",
-        background: "#f8fafc", borderBottom: "1px solid #dbe3ef", borderRight: "1px solid #e2e8f0",
-        textAlign: "center", whiteSpace: "nowrap", verticalAlign: "middle"
-    };
-    const tdB: React.CSSProperties = {
-        padding: "14px 14px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
-        fontSize: 13, verticalAlign: "top", lineHeight: 1.55, color: "#334155",
-        textAlign: "left", overflowWrap: "break-word", wordBreak: "normal"
-    };
-    const tdLvl: React.CSSProperties = {
-        padding: "10px 8px", borderBottom: "1px solid #e2e8f0",
-        borderRight: "1px dashed #dbe3ef", fontSize: 11.5, color: "#4b5563",
-        verticalAlign: "top", lineHeight: 1.5, minWidth: 155, width: 155,
-        textAlign: "justify", overflowWrap: "break-word", wordBreak: "normal"
-    };
-    const tdSc: React.CSSProperties = {
-        padding: "14px 12px", borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0",
-        textAlign: "center", verticalAlign: "middle", background: "#ffffff"
-    };
 
-    // ── Table style helpers ──
-    const thStyle: React.CSSProperties = {
-        padding: "14px 12px",
-        fontWeight: 700,
-        fontSize: 12,
-        color: "#64748b",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        background: "#f8fafc",
-        borderBottom: "1.5px solid #e2e8f0",
-        textAlign: "center",
-        whiteSpace: "nowrap"
-    };
-    const thGroupStyle: React.CSSProperties = {
-        padding: "12px",
-        fontWeight: 700,
-        fontSize: 12,
-        color: "#64748b",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        borderBottom: "1.5px solid #e2e8f0",
-        textAlign: "center"
-    };
-    const thSubStyle: React.CSSProperties = {
-        padding: "10px 8px",
-        fontWeight: 600,
-        fontSize: 11,
-        color: "#94a3b8",
-        background: "#fafafa",
-        borderBottom: "1.5px solid #e2e8f0",
-        textAlign: "center",
-        whiteSpace: "nowrap"
-    };
-    const tdBase: React.CSSProperties = {
-        padding: "14px 12px",
-        borderBottom: "1px solid #fce7eb",
-        fontSize: 13,
-        verticalAlign: "top",
-        lineHeight: 1.5
-    };
-    const tdLevel: React.CSSProperties = {
-        padding: "14px 10px",
-        borderBottom: "1px solid #fce7eb",
-        borderRight: "1px dashed #fce7eb",
-        fontSize: 12,
-        color: "#64748b",
-        verticalAlign: "top",
-        lineHeight: 1.5,
-        minWidth: 110
-    };
-    const tdScore: React.CSSProperties = {
-        padding: "14px 12px",
-        borderBottom: "1px solid #fce7eb",
-        textAlign: "center",
-        verticalAlign: "middle",
-        background: "#fffbfc"
-    };
+    // Local style declarations removed, now using hoisted module-level styling objects
 
-    // ── Prepare Radar Chart Data ──
-    const radarData: any[] = [];
-    if (record.template?.sections && (record.status !== "NOT_STARTED" && record.status !== "EMPLOYEE_DRAFTING")) {
-        record.template.sections.forEach((section: any) => {
-            let empTotal = 0, mgrTotal = 0;
-            section.criteria?.forEach((c: any) => {
-                const hasSub = c.subCriteria?.length > 0;
-                if (hasSub) {
-                    let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
-                    c.subCriteria.forEach((sub: any) => {
-                        const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
-                        const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                        if (subEmp != null) { sumEmp += subEmp; cntEmp++; }
-                        if (subMgr != null) { sumMgr += subMgr; cntMgr++; }
-                    });
-                    if (cntEmp > 0) empTotal += (sumEmp / c.subCriteria.length) * c.weight;
-                    if (cntMgr > 0) mgrTotal += (sumMgr / c.subCriteria.length) * c.weight;
-                } else {
-                    const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
-                    if (empScore != null) empTotal += empScore * c.weight;
-                    if (mgrScore != null) mgrTotal += mgrScore * c.weight;
-                }
-            });
-            // Convert to 0-5 scale for the radar chart
-            const empAvg = section.weight > 0 ? empTotal / section.weight : 0;
-            const mgrAvg = section.weight > 0 ? mgrTotal / section.weight : 0;
+    return renderInWorkspaceDrawer(
+        <div className="employee-evaluation-detail" style={{ width: "100%", height: "100%", minHeight: 0, boxSizing: "border-box", overflowX: "hidden", overflowY: "auto", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f8fafc" }}>
 
-            radarData.push({
-                item: section.name,
-                user: "Nhân viên",
-                score: Number(empAvg.toFixed(2))
-            });
-            radarData.push({
-                item: section.name,
-                user: "Quản lý",
-                score: Number(mgrAvg.toFixed(2))
-            });
-        });
-    }
-
-    const uniqueItems = new Set(radarData.map(d => d.item)).size;
-
-    const chartConfig = {
-        data: radarData,
-        xField: 'item',
-        yField: 'score',
-        colorField: 'user',
-        scale: {
-            y: { domain: [0, 5] },
-        },
-    };
-
-    return (
-        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 16px 100px", fontFamily: "'Inter', -apple-system, sans-serif", background: "#f9fafb", minHeight: "100vh" }}>
-
-            {/* ─── HEADER ─── */}
-            <div style={{
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: 16,
-                padding: "24px 28px",
-                marginBottom: 16,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
-            }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <button
-                            onClick={() => navigate("/admin/evaluation/process?tab=PENDING_EVAL")}
-                            style={{
-                                width: 40, height: 40, borderRadius: 10,
-                                border: "1px solid #e5e7eb", background: "#fff",
-                                color: "#111827", display: "flex", alignItems: "center",
-                                justifyContent: "center", cursor: "pointer", fontSize: 16,
-                                flexShrink: 0, transition: "all 0.15s"
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#f9fafb"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#d1d5db"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#fff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb"; }}
-                        >
-                            <ArrowLeftOutlined />
-                        </button>
-                        <div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>{record.template?.name}</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                                <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 500 }}>Kỳ đánh giá:</span>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: "#f43f5e", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 6, padding: "2px 10px" }}>
-                                    {record.period?.name || `Đợt ${record.periodId}`}
-                                </span>
-                            </div>
-                        </div>
+            {/* ─── WORKSPACE HEADER ─── */}
+            <div className="employee-evaluation-workspace-header">
+                <div style={{ minWidth: 0, flex: "1 1 440px" }}>
+                    <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0 }}>
+                        Đánh giá của Quản lý
                     </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "stretch", flexWrap: "wrap" }}>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <Button
-                                icon={<FileExcelOutlined />}
-                                onClick={handleExportExcel}
-                                style={{ borderRadius: 6, color: "#047857", borderColor: "#34d399", background: "#ecfdf5" }}
-                            >
-                                Xuất Excel
-                            </Button>
-                            <Button
-                                icon={<FileTextOutlined />}
-                                onClick={handlePrintPDF}
-                                style={{ borderRadius: 6, color: "#1d4ed8", borderColor: "#60a5fa", background: "#eff6ff" }}
-                            >
-                                Xuất PDF
-                            </Button>
-                        </div>
-                        {/* Nhân viên đánh giá */}
-                        {record.employeeTotalScore != null && (
-                            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>NV đánh giá</div>
-                                <div style={{ fontSize: 20, fontWeight: 900, color: "#475569", marginTop: 2 }}>{record.employeeTotalScore.toFixed(2)}</div>
-                            </div>
-                        )}
-
-                        {/* Điểm Quản lý & Xếp loại */}
-                        {isCompleted && gradeCfg && record.managerTotalScore != null && (
-                            <>
-                                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 16px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                                    <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý chấm</div>
-                                    <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{record.managerTotalScore.toFixed(2)}</div>
-                                </div>
-                                <div style={{ background: gradeCfg.bg, border: `1px solid ${gradeCfg.color}30`, borderRadius: 12, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, boxShadow: `0 4px 12px ${gradeCfg.color}20` }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center" }}>
-                                        <div style={{ fontSize: 11, color: gradeCfg.color, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", opacity: 0.8 }}>Xếp loại</div>
-                                        <div style={{ fontSize: 16, fontWeight: 800, color: gradeCfg.color }}>{gradeCfg.label}</div>
-                                    </div>
-                                    <div style={{ width: 1.5, height: 36, background: `${gradeCfg.color}30`, borderRadius: 2 }}></div>
-                                    <div style={{ fontSize: 36, fontWeight: 900, color: gradeCfg.color, lineHeight: 1 }}>{record.finalGrade}</div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Nếu chưa complete mà quản lý đang chấm thì vẫn hiện thẻ điểm quản lý đơn giản */}
-                        {!isCompleted && record.managerTotalScore != null && (
-                            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "10px 20px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                                <div style={{ fontSize: 11, color: "#1e293b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>Quản lý chấm</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: "#0f172a", marginTop: 2 }}>{record.managerTotalScore.toFixed(2)}</div>
-                            </div>
+                    <h1 style={{ margin: "4px 0 0", color: "#0f172a", fontSize: 21, lineHeight: 1.35, fontWeight: 800, letterSpacing: 0 }}>
+                        {record.template?.name}
+                    </h1>
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 9 }}>
+                        <Tag color={statusCfg.tagColor} style={{ margin: 0, borderRadius: 5, fontWeight: 650 }}>
+                            {statusCfg.text}
+                        </Tag>
+                        <span className="evaluation-meta-pill">
+                            {record.period?.name || `Đợt ${record.periodId}`}
+                        </span>
+                        {record.period?.managerDeadline && (
+                            <span style={{ color: "#64748b", fontSize: 12, fontWeight: 600 }}>
+                                Hạn đánh giá {dayjs(record.period.managerDeadline).format("DD/MM/YYYY")}
+                            </span>
                         )}
                     </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 12 }}>
+                    {isEditable && (
+                        <EvaluationProgressIndicator scoredCount={scoredCount} totalCount={allLeafCriteria.length} />
+                    )}
+
+                    {record.employeeTotalScore != null && (
+                        <div className="evaluation-score-summary">
+                            <span>Nhân viên đánh giá</span>
+                            <strong>{record.employeeTotalScore.toFixed(2)}</strong>
+                        </div>
+                    )}
+
+                    {record.managerTotalScore != null && (
+                        <div className="evaluation-score-summary">
+                            <span>Quản lý đánh giá</span>
+                            <strong>{record.managerTotalScore.toFixed(2)}</strong>
+                        </div>
+                    )}
+
+                    {isCompleted && gradeCfg && record.managerTotalScore != null && (
+                        <div className="evaluation-grade-summary" style={{ color: gradeCfg.color, borderColor: `${gradeCfg.color}35`, background: gradeCfg.bg }}>
+                            <span>{gradeCfg.label}</span>
+                            <strong>{record.finalGrade}</strong>
+                        </div>
+                    )}
+
+                    <Access permission={ALL_PERMISSIONS.EVALUATION.GET_ALL_RECORDS} hideChildren>
+                        <Tooltip title="Xuất dữ liệu">
+                            <Dropdown
+                                trigger={["click"]}
+                                menu={{
+                                    items: [
+                                        { key: "excel", icon: <FileExcelOutlined />, label: "Xuất Excel", onClick: handleExportExcel },
+                                        { key: "pdf", icon: <FileTextOutlined />, label: "Xuất PDF", onClick: handlePrintPDF },
+                                    ],
+                                }}
+                            >
+                                <Button aria-label="Xuất dữ liệu" icon={<MoreOutlined />} className="evaluation-header-menu-button" />
+                            </Dropdown>
+                        </Tooltip>
+                    </Access>
                 </div>
             </div>
 
-            {/* 3.6: Cảnh báo chênh lệch điểm Nhân viên vs Quản lý > 1.0 */}
-            {record.employeeTotalScore != null && record.managerTotalScore != null && Math.abs(record.employeeTotalScore - record.managerTotalScore) > 1.0 && (
-                <Alert
-                    message="Cảnh báo chênh lệch điểm số"
-                    description="Điểm đánh giá của bạn đang chênh lệch lớn (> 1.0 điểm) so với tự đánh giá của nhân viên. Vui lòng cân nhắc xem xét kỹ hoặc ghi nhận xét giải thích."
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 16, borderRadius: 12 }}
-                />
-            )}
-
-            {/* ─── PROGRESS ─── */}
-            {isEditable && (
-                <div style={{ background: "linear-gradient(to right, #fff, #fff8f9)", border: "1px solid #fce7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, display: "flex", alignItems: "center", gap: 20, boxShadow: "0 4px 20px rgba(244,63,94,0.04)" }}>
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff1f2", color: "#f43f5e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, border: "1px solid #fecdd3" }}>
-                        <TrophyOutlined />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
-                                Tiến độ đánh giá của Quản lý
-                                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: "#6b7280" }}>(<span style={{ color: "#f43f5e", fontWeight: 700 }}>{scoredCount}</span> / {allLeafCriteria.length} tiêu chí)</span>
-                            </div>
-                            <span style={{ fontSize: 22, fontWeight: 900, color: progressPct === 100 ? "#f43f5e" : "#111827" }}>{progressPct}%</span>
-                        </div>
-                        <Progress percent={progressPct} showInfo={false} strokeWidth={8} strokeColor={{ '0%': '#f43f5e', '100%': '#be123c' }} trailColor="#f3f4f6" status={progressPct === 100 ? "success" : "active"} style={{ margin: 0 }} />
-                    </div>
-                </div>
-            )}
+            <div className="employee-evaluation-workspace-body">
+                {/* 3.6: Cảnh báo chênh lệch điểm Nhân viên vs Quản lý > 1.0 */}
+                {record.employeeTotalScore != null && record.managerTotalScore != null && Math.abs(record.employeeTotalScore - record.managerTotalScore) > 1.0 && (
+                    <Alert
+                        message="Cảnh báo chênh lệch điểm số"
+                        description="Điểm đánh giá của bạn đang chênh lệch lớn (> 1.0 điểm) so với tự đánh giá của nhân viên. Vui lòng cân nhắc xem xét kỹ hoặc ghi nhận xét giải thích."
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16, borderRadius: 12 }}
+                    />
+                )}
 
 
-            {/* ─── CHART ─── */}
-            {radarData.length > 0 && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16, textAlign: "center" }}>
-                        Biểu đồ so sánh đánh giá năng lực
-                    </div>
-                    <div style={{ height: 350 }}>
-                        {uniqueItems >= 3 ? (
-                            <Radar
-                                {...chartConfig}
-                                shapeField="smooth"
-                                area={{ style: { fillOpacity: 0.2 } }}
-                                axis={{ x: { grid: true }, y: { zIndex: 1, title: false } }}
-                            />
-                        ) : (
-                            <Column
-                                {...chartConfig}
-                                seriesField="user"
-                                isGroup={true}
-                                group={true}
-                                maxColumnWidth={60}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
+                {/* ─── NHÂN SỰ ─── */}
+                <EvaluationUserInfo record={record} />
 
-            {/* ─── NHÂN SỰ ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}><UserOutlined style={{ color: "#f43f5e", marginRight: 8 }} />Thông tin nhân sự</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-                    {[
-                        { label: "Nhân viên", info: record.employee },
-                        { label: "Quản lý trực tiếp", info: record.directManager },
-                        { label: "Quản lý gián tiếp", info: record.indirectManager },
-                    ].map(({ label, info }) => info?.id ? (
-                        <div key={label} style={{ background: "#f9fafb", borderRadius: 10, padding: "12px 14px", border: "1px solid #f3f4f6" }}>
-                            <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 6 }}>{label}</div>
-                            <div style={{ fontWeight: 700, color: "#111827", fontSize: 14 }}>{info.fullName || info.username}</div>
-                            <div style={{ fontSize: 12, color: "#374151", fontWeight: 500, marginTop: 4 }}>
-                                {info.jobTitle || "Chưa cập nhật chức danh"} {info.positionLevel ? `(${info.positionLevel})` : ""}
-                            </div>
-                        </div>
-                    ) : null)}
-                </div>
-            </div>
+                {/* ─── HƯỚNG DẪN THỰC HIỆN ─── */}
+                <EvaluationGuidelines />
 
-            {/* ─── HƯỚNG DẪN THỰC HIỆN ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)", display: "flex", flexWrap: "wrap", gap: 24 }}>
-                <div style={{ flex: "2 1 400px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12, borderBottom: "1px solid #f3f4f6", paddingBottom: 8 }}><BookOutlined style={{ color: "#f43f5e", marginRight: 8 }} />Hướng dẫn thực hiện</div>
-                    <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>1. Cột Nội dung đánh giá:</strong> Phản ánh các nội dung đánh giá chính liên quan đến người lao động.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>2. Cột Phương pháp đo lường:</strong> Thể hiện phương pháp được sử dụng để đo lường nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>3. Tiêu chí đánh giá theo thang điểm:</strong> Định nghĩa cụ thể, phù hợp với từng nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>4. Cột trọng số:</strong> Tổng trọng số của mỗi phần là 100%, trọng số cao thể hiện mức độ quan trọng.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>5. Cột chấm điểm:</strong> Cá nhân, cán bộ ghi số điểm chi tiết cho từng nội dung đánh giá.</div>
-                        <div style={{ marginBottom: 4 }}><strong style={{ color: "#111827" }}>6. Cột kết quả:</strong> Là điểm qui đổi = Điểm chấm × Trọng số.</div>
-                    </div>
-                </div>
-                <div style={{ flex: "1 1 300px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb", padding: "16px 20px" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 12, textAlign: "center" }}>Thang điểm đánh giá</div>
-                    <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse", background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                {/* ─── BẢNG ĐÁNH GIÁ ─── */}
+                <div className="employee-evaluation-table-shell" ref={grabToScrollRef} style={{ width: "100%", maxWidth: "100%", overflowX: "auto", overflowY: "hidden", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                    <table
+                        className="employee-evaluation-table"
+                        style={{
+                            width: "max-content",
+                            minWidth: "100%",
+                            borderCollapse: "separate",
+                            borderSpacing: 0,
+                            tableLayout: "fixed"
+                        }}
+                    >
+                        <colgroup>
+                            <col style={{ width: 55 }} />
+                            <col style={{ width: 260 }} />
+                            <col style={{ width: 170 }} />
+                            {showCriteria && SCORE_VALUES.map(n => <col key={n} style={{ width: 140 }} />)}
+                            <col style={{ width: 85 }} />
+                            <col style={{ width: 90 }} />
+                            <col style={{ width: 150 }} />
+                            <col style={{ width: 220 }} />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th rowSpan={2} style={{ ...thS, width: 55 }}>STT</th>
+                                <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 260 }}>Nội dung đánh giá</th>
+                                <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 170 }}>Phương pháp đo lường</th>
+                                {showCriteria && <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>}
+                                <th colSpan={2} style={{ ...thG, background: "#ffffff" }}>Trọng số</th>
+                                <th rowSpan={2} style={{ ...thG, ...getStickyStyle("empScore", true) }}>
+                                    <div>Nhân viên đánh giá</div>
+                                    <small className="evaluation-header-helper">Điểm & kết quả</small>
+                                </th>
+                                <th rowSpan={2} style={{ ...thG, ...getStickyStyle("mgrScore", true) }}>
+                                    <div>Quản lý đánh giá</div>
+                                    <small className="evaluation-header-helper">Điểm & quy đổi</small>
+                                </th>
+                            </tr>
+                            <tr>
+                                {showCriteria && SCORE_VALUES.map(n => {
+                                    const cfg = LEVEL_HEADER_CONFIG[n];
+                                    return (
+                                        <th key={n} style={{ ...thSub, width: 140, background: "#ffffff" }}>
+                                            <div style={{ fontWeight: 800, fontSize: 12, color: "#0f172a" }}>{cfg.title}</div>
+                                            <span style={{
+                                                display: "inline-block",
+                                                marginTop: 2,
+                                                padding: "1px 6px",
+                                                fontSize: 10,
+                                                fontWeight: 700,
+                                                color: cfg.color,
+                                                background: cfg.bg,
+                                                border: `1px solid ${cfg.border}`,
+                                                borderRadius: 4
+                                            }}>
+                                                {cfg.subtitle}
+                                            </span>
+                                        </th>
+                                    );
+                                })}
+                                <th style={{ ...thSub, width: 85, color: "#0f172a", background: "#ffffff" }}>TS Nhóm</th>
+                                <th style={{ ...thSub, width: 90, color: "#475569", background: "#ffffff" }}>TS Chi tiết</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            {[
-                                { score: 5, desc: "Hoàn thành công việc ở mức độ xuất sắc" },
-                                { score: 4, desc: "Hoàn thành công việc ở mức độ tốt" },
-                                { score: 3, desc: "Hoàn thành công việc ở mức độ khá" },
-                                { score: 2, desc: "Hoàn thành công việc ở mức độ trung bình" },
-                                { score: 1, desc: "Chưa đáp ứng được một số yêu cầu" }
-                            ].map(item => (
-                                <tr key={item.score} style={{ borderBottom: item.score > 1 ? "1px solid #e5e7eb" : "none" }}>
-                                    <td style={{ padding: "8px 12px", fontWeight: 800, color: "#f43f5e", textAlign: "center", borderRight: "1px solid #e5e7eb", width: 40 }}>{item.score}</td>
-                                    <td style={{ padding: "8px 12px", color: "#374151", fontWeight: 500 }}>{item.desc}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            {(() => {
+                                const dynamicEmpTotal = getTotalScore(record.scoringSummary, "EMPLOYEE");
+                                const dynamicMgrTotal = getTotalScore(record.scoringSummary, "MANAGER");
 
-            {/* ─── BẢNG ĐÁNH GIÁ ─── */}
-            <div style={{ overflowX: "auto", marginBottom: 16, borderRadius: 14, border: "1px solid #e5e7eb", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1780, tableLayout: "fixed" }}>
-                    <colgroup>
-                        <col style={{ width: 64 }} />
-                        <col />
-                        <col style={{ width: 190 }} />
-                        {showCriteria && [1, 2, 3, 4, 5].map(n => <col key={n} style={{ width: 155 }} />)}
-                        <col style={{ width: 80 }} />
-                        <col style={{ width: 120 }} />
-                        <col style={{ width: 120 }} />
-                        <col style={{ width: 120 }} />
-                        <col style={{ width: 120 }} />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th rowSpan={2} style={{ ...thS, width: 64 }}>STT</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left" }}>Nội dung đánh giá</th>
-                            <th rowSpan={2} style={{ ...thS, textAlign: "left", width: 190 }}>Phương pháp đo lường</th>
-                            {showCriteria && <th colSpan={5} style={{ ...thG, background: "#f9fafb" }}>Tiêu chí đánh giá theo thang điểm</th>}
-                            <th rowSpan={2} style={{ ...thS, width: 80 }}>Trọng số</th>
-                            <th colSpan={2} style={{
-                                ...thG,
-                                position: "sticky",
-                                right: 240,
-                                zIndex: 2,
-                                background: "#f8fafc",
-                                borderLeft: "1.5px solid #cbd5e1",
-                                boxShadow: "-3px 0 6px -2px rgba(0,0,0,0.15)",
-                                backgroundClip: "padding-box"
-                            }}>
-                                <span style={{ color: "#111827" }}>CBNV đánh giá</span>
-                            </th>
-                            <th colSpan={2} style={{
-                                ...thG,
-                                borderLeft: "none",
-                                position: "sticky",
-                                right: 0,
-                                zIndex: 2,
-                                background: "#f8fafc",
-                                backgroundClip: "padding-box"
-                            }}>Đánh giá của Quản lý</th>
-                        </tr>
-                        <tr>
-                            {showCriteria && [1, 2, 3, 4, 5].map(n => <th key={n} style={{ ...thSub, width: 155, color: "#e11d48" }}>Mức {n}</th>)}
-                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empScore", true) }}>Điểm<span style={{ color: "#f43f5e", marginLeft: 4 }}>*</span></th>
-                            <th style={{ ...thSub, color: "#374151", ...getStickyStyle("empResult", true) }}>Kết quả</th>
-                            <th style={{ ...thSub, ...getStickyStyle("mgrScore", true) }}>Điểm</th>
-                            <th style={{ ...thSub, ...getStickyStyle("mgrResult", true) }}>Kết quả</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(() => {
-                            let dynamicEmpTotal = 0;
-                            let dynamicMgrTotal = 0;
-
-                            const sectionElements = record.template?.sections?.map((section: any) => {
-                                let empTotal = 0, mgrTotal = 0;
-                                const rows: React.ReactNode[] = [];
-
-                                rows.push(
-                                    <tr key={`sec-${section.id}`}>
-                                        <td colSpan={showCriteria ? 13 : 8} style={{
-                                            padding: "10px 18px",
-                                            background: "#f3f4f6",
-                                            borderTop: "1px solid #e5e7eb",
-                                            borderBottom: "1px solid #e5e7eb",
-                                            borderLeft: "4px solid #f43f5e"
-                                        }}>
-                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>{section.name}</span>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Trọng số {(section.weight * 100).toFixed(0)}%</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-
-                                section.criteria?.forEach((c: any, cIdx: number) => {
-                                    const hasSub = c.subCriteria?.length > 0;
-                                    const empScore = getScore(record.scores, c.id, "EMPLOYEE");
-                                    const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
-                                    const getL = (lvl: number) => c.levels?.find((l: any) => l.level === lvl)?.description || "";
-
-                                    let avgEmp: number | null = null;
-                                    let avgMgr: number | null = null;
-
-                                    if (hasSub) {
-                                        let sumEmp = 0, sumMgr = 0, cntEmp = 0, cntMgr = 0;
-                                        c.subCriteria.forEach((sub: any) => {
-                                            const e = getScore(record.scores, sub.id, "EMPLOYEE");
-                                            const m = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
-                                            if (e != null) { sumEmp += e; cntEmp++; }
-                                            if (m != null) { sumMgr += m; cntMgr++; }
-                                        });
-                                        if (cntEmp > 0) avgEmp = sumEmp / c.subCriteria.length;
-                                        if (cntMgr > 0) avgMgr = sumMgr / c.subCriteria.length;
-
-                                        if (avgEmp != null) empTotal += avgEmp * c.weight;
-                                        if (avgMgr != null) mgrTotal += avgMgr * c.weight;
-                                    } else {
-                                        if (empScore != null) empTotal += empScore * c.weight;
-                                        if (mgrScore != null) mgrTotal += mgrScore * c.weight;
-                                    }
+                                const sectionElements = record.template?.sections?.map((section: any) => {
+                                    const empTotal = getSectionScore(record.scoringSummary, section.id, "EMPLOYEE");
+                                    const mgrTotal = getSectionScore(record.scoringSummary, section.id, "MANAGER");
+                                    const isCollapsed = !!collapsedSections[section.id];
+                                    const rows: React.ReactNode[] = [];
 
                                     rows.push(
-                                        <ManagerCriteriaRow
-                                            key={`c-${c.id}`}
-                                            c={c}
-                                            cIdx={cIdx}
-                                            hasSub={hasSub}
-                                            isEditable={isEditable && canScore}
-                                            empScore={empScore}
-                                            avgEmp={avgEmp}
-                                            mgrScore={mgrScore}
-                                            avgMgr={avgMgr}
-                                            savingScore={savingScore}
-                                            handleSaveScore={handleSaveScore}
-                                            tdB={tdB}
-                                            tdLvl={tdLvl}
-                                            tdSc={tdSc}
-                                            showCriteria={showCriteria}
-                                        />
+                                        <tr
+                                            key={`sec-${section.id}`}
+                                            onClick={() => setCollapsedSections(prev => ({ ...prev, [section.id]: !prev[section.id] }))}
+                                            style={{ cursor: "pointer", transition: "background 0.2s" }}
+                                            className="evaluation-section-header-row"
+                                        >
+                                            <td colSpan={showCriteria ? 12 : 7} style={{
+                                                padding: "12px 18px",
+                                                background: isCollapsed ? "#f1f5f9" : "#f8fafc",
+                                                borderTop: "1px solid #d1d5db",
+                                                borderBottom: "1px solid #d1d5db",
+                                                borderLeft: "4px solid #f43f5e"
+                                            }}>
+                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                        <span style={{ color: "#4b5563", fontSize: 13, display: "inline-flex" }}>
+                                                            {isCollapsed ? <RightOutlined style={{ fontSize: 11 }} /> : <DownOutlined style={{ fontSize: 11 }} />}
+                                                        </span>
+                                                        <span style={{ fontWeight: 800, fontSize: 13, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                                                            {section.name}
+                                                        </span>
+                                                        <Tag style={{
+                                                            margin: 0,
+                                                            marginLeft: 8,
+                                                            fontWeight: 700,
+                                                            color: "#6d28d9",
+                                                            background: "#f5f3ff",
+                                                            border: "1px solid #ddd6fe",
+                                                            borderRadius: "6px",
+                                                            fontSize: "11px"
+                                                        }}>
+                                                            Trọng số: {formatWeight(section.weight)}
+                                                        </Tag>
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                                        {isCollapsed && (
+                                                            <div style={{ display: "flex", gap: 6, marginRight: 4, flexWrap: "nowrap" }}>
+                                                                {empTotal != null && (
+                                                                    <Tag color="blue" style={{ margin: 0, fontWeight: 600 }}>
+                                                                        Tự đánh giá: {empTotal.toFixed(2)}
+                                                                    </Tag>
+                                                                )}
+                                                                {mgrTotal != null && (
+                                                                    <Tag color="orange" style={{ margin: 0, fontWeight: 600 }}>
+                                                                        Quản lý đánh giá: {mgrTotal.toFixed(2)}
+                                                                    </Tag>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     );
 
-                                    if (hasSub) {
-                                        c.subCriteria?.forEach((sub: any, si: number) => {
-                                            const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
-                                            const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
 
+
+                                    section.criteria?.forEach((c: any, cIdx: number) => {
+                                        const hasSub = c.subCriteria?.length > 0;
+                                        const empScore = getScore(record.scores, c.id, "EMPLOYEE");
+                                        const mgrScore = localScores[c.id] ?? getScore(record.scores, c.id, "MANAGER");
+                                        const scoredMgrCount = hasSub
+                                            ? c.subCriteria.filter((sub: any) => (localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER")) != null).length
+                                            : 0;
+                                        const empResult = hasSub
+                                            ? (c.subCriteria.filter((sub: any) => getScore(record.scores, sub.id, "EMPLOYEE") != null).length > 0
+                                                ? c.subCriteria.reduce((sum: number, sub: any) => sum + (getWeightedScore(record.scores, sub.id, "EMPLOYEE") || 0), 0)
+                                                : null)
+                                            : getWeightedScore(record.scores, c.id, "EMPLOYEE");
+                                        const mgrResult = hasSub
+                                            ? (scoredMgrCount > 0 ? c.subCriteria.reduce((sum: number, sub: any) => sum + (getWeightedScore(record.scores, sub.id, "MANAGER") || 0), 0) : null)
+                                            : getWeightedScore(record.scores, c.id, "MANAGER");
+
+
+                                        if (!isCollapsed) {
                                             rows.push(
-                                                <ManagerSubCriteriaRow
-                                                    key={`sub-${sub.id}`}
-                                                    sub={sub}
+                                                <SharedCriteriaRow
+                                                    key={`c-${c.id}`}
+                                                    role="MANAGER"
+                                                    c={c}
                                                     cIdx={cIdx}
-                                                    si={si}
+                                                    hasSub={hasSub}
                                                     isEditable={isEditable && canScore}
-                                                    subEmp={subEmp}
-                                                    subMgr={subMgr}
+                                                    empScore={empScore}
+                                                    avgEmp={empResult != null ? empResult / c.weight : null}
+                                                    mgrScore={mgrScore}
+                                                    avgMgr={mgrResult != null ? mgrResult / c.weight : null}
                                                     savingScore={savingScore}
                                                     handleSaveScore={handleSaveScore}
                                                     tdB={tdB}
                                                     tdLvl={tdLvl}
                                                     tdSc={tdSc}
-                                                    showCriteria={showCriteria}
+                                                    getStickyStyle={(col, isHeader) => getStickyStyle(col as any, isHeader)}
+                                                    hoveredGroupId={hoveredGroupId}
+                                                    onGroupHover={setHoveredGroupId}
                                                 />
                                             );
-                                        });
-                                    }
+                                        }
+
+                                        if (hasSub) {
+                                            c.subCriteria?.forEach((sub: any, si: number) => {
+                                                const subEmp = getScore(record.scores, sub.id, "EMPLOYEE");
+                                                const subMgr = localScores[sub.id] ?? getScore(record.scores, sub.id, "MANAGER");
+                                                const subEmpResult = getWeightedScore(record.scores, sub.id, "EMPLOYEE");
+                                                const subMgrResult = getWeightedScore(record.scores, sub.id, "MANAGER");
+                                                const subWeight = (sub.weight && sub.weight > 0) ? sub.weight : (c.weight / c.subCriteria.length);
+
+                                                if (!isCollapsed) {
+                                                    rows.push(
+                                                        <SharedSubCriteriaRow
+                                                            key={`sub-${sub.id}`}
+                                                            role="MANAGER"
+                                                            sub={sub}
+                                                            cIdx={cIdx}
+                                                            si={si}
+                                                            isEditable={isEditable && canScore}
+                                                            subEmp={subEmp}
+                                                            subMgr={subMgr}
+                                                            savingScore={savingScore}
+                                                            handleSaveScore={handleSaveScore}
+                                                            tdB={tdB}
+                                                            tdLvl={tdLvl}
+                                                            tdSc={tdSc}
+                                                            getStickyStyle={(col, isHeader) => getStickyStyle(col as any, isHeader)}
+                                                            parentWeight={c.weight}
+                                                            criteriaCount={c.subCriteria.length}
+                                                            parentCriteriaId={c.id}
+                                                            hoveredGroupId={hoveredGroupId}
+                                                            onGroupHover={setHoveredGroupId}
+                                                        />
+                                                    );
+                                                }
+                                            });
+                                        }
+                                    });
+
+                                    // Section subtotal
+                                    rows.push(
+                                        <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
+                                            <td colSpan={3} style={{ padding: "12px 18px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
+                                                TỔNG KẾT PHẦN ({formatWeight(section.weight)})
+                                            </td>
+                                            <td colSpan={5} style={{ background: "#f9fafb" }} />
+                                            <td colSpan={2} style={{ padding: "12px", textAlign: "center", fontWeight: 750, color: "#475569" }}>{formatWeight(section.weight)}</td>
+                                            <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empScore"), background: "#f9fafb" }}>
+                                                <div className="evaluation-total-cell"><span>CBNV</span><strong>{empTotal?.toFixed(2) ?? "—"}</strong></div>
+                                            </td>
+                                            <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("mgrScore"), background: "#f9fafb" }}>
+                                                <div className="evaluation-total-cell"><span>Quản lý</span><strong>{mgrTotal?.toFixed(2) ?? "—"}</strong></div>
+                                            </td>
+                                        </tr>
+                                    );
+
+                                    return rows;
                                 });
 
-                                // Section subtotal
-                                rows.push(
-                                    <tr key={`stot-${section.id}`} style={{ background: "#f9fafb", borderTop: "1px solid #e5e7eb" }}>
-                                        <td colSpan={showCriteria ? 8 : 3} style={{ padding: "12px 18px", textAlign: "right", fontSize: 12, fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.3px", position: "relative", zIndex: 0 }}>
-                                            Tổng kết {section.name}
-                                        </td>
-                                        <td style={{ padding: "12px", textAlign: "center", fontWeight: 700, color: "#111827" }}>{(section.weight * 100).toFixed(0)}%</td>
-                                        <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("empScore"), background: "#f9fafb" }} />
-                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("empResult"), background: "#f9fafb" }}>
-                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{empTotal.toFixed(2)}</span>
-                                        </td>
-                                        <td style={{ padding: "12px", borderLeft: "none", ...getStickyStyle("mgrScore"), background: "#f9fafb" }} />
-                                        <td style={{ padding: "12px", textAlign: "center", ...getStickyStyle("mgrResult"), background: "#f9fafb" }}>
-                                            <span style={{ fontSize: 16, fontWeight: 800, color: "#f43f5e" }}>{mgrTotal.toFixed(2)}</span>
-                                        </td>
-                                    </tr>
+                                return (
+                                    <>
+                                        {sectionElements}
+                                        {/* Grand Total */}
+                                        <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fff" }}>
+                                            <td colSpan={3} style={{ padding: "18px 24px", textAlign: "left", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                                TỔNG ĐIỂM CHUNG (100%)
+                                            </td>
+                                            <td colSpan={5} style={{ background: "#fff" }} />
+                                            <td colSpan={2} style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#475569" }}>100%</td>
+                                            <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empScore") }}>
+                                                <span style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>
+                                                    {dynamicEmpTotal != null ? dynamicEmpTotal.toFixed(2) : "—"}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("mgrScore") }}>
+                                                <span style={{ fontSize: 22, fontWeight: 900, color: "#f43f5e" }}>
+                                                    {dynamicMgrTotal != null ? dynamicMgrTotal.toFixed(2) : "—"}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </>
                                 );
-
-                                dynamicEmpTotal += empTotal;
-                                dynamicMgrTotal += mgrTotal;
-                                return rows;
-                            });
-
-                            return (
-                                <>
-                                    {sectionElements}
-                                    {/* Grand Total */}
-                                    <tr style={{ borderTop: "2px solid #e5e7eb", background: "#fff" }}>
-                                        <td colSpan={showCriteria ? 8 : 3} style={{ padding: "18px 24px", textAlign: "right", fontWeight: 800, fontSize: 14, color: "#111827", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                                            Tổng điểm đánh giá chung
-                                        </td>
-                                        <td style={{ padding: "18px 12px", textAlign: "center", fontWeight: 800, color: "#111827" }}>100%</td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("empScore") }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("empResult") }}>
-                                            <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
-                                                {dynamicEmpTotal > 0 ? dynamicEmpTotal.toFixed(2) : "—"}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: "18px 12px", borderLeft: "none", ...getStickyStyle("mgrScore") }} />
-                                        <td style={{ padding: "18px 12px", textAlign: "center", ...getStickyStyle("mgrResult") }}>
-                                            <span style={{ fontSize: 24, fontWeight: 900, color: "#f43f5e" }}>
-                                                {dynamicMgrTotal > 0 ? dynamicMgrTotal.toFixed(2) : "—"}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </>
-                            );
-                        })()}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* ─── NHẬN XÉT TỰ ĐÁNH GIÁ ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét tự đánh giá của nhân viên</div>
-                <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: getComment(record.comments, "SELF_REVIEW") ? "#111827" : "#9ca3af", fontStyle: getComment(record.comments, "SELF_REVIEW") ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                    {getComment(record.comments, "SELF_REVIEW") || "Nhân viên chưa viết nhận xét tự đánh giá."}
+                            })()}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
 
-            {/* ─── NHẬN XÉT CỦA QUẢN LÝ ─── */}
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Nhận xét / Phản hồi của Quản lý</div>
-                {isEditable && canFeedback ? (
-                    <div>
-                        <Input.TextArea rows={4} value={managerFeedback} onChange={e => { setManagerFeedback(e.target.value); setIsDirty(true); }}
-                            placeholder="Nhập nhận xét, phản hồi về hiệu quả công việc của nhân viên..."
-                            style={{ borderRadius: 8, fontSize: 14, resize: "none", borderColor: "#e5e7eb" }} />
-                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                            <Button onClick={handleSaveFeedback} loading={savingComment}
-                                style={{ borderRadius: 8, fontWeight: 600, color: "#111827", borderColor: "#e5e7eb" }}>
-                                Lưu nhận xét
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ background: "#f9fafb", borderRadius: 8, padding: "14px 16px", fontSize: 14, color: managerFeedback ? "#111827" : "#9ca3af", fontStyle: managerFeedback ? "normal" : "italic", lineHeight: 1.7, border: "1px solid #f3f4f6" }}>
-                        {managerFeedback || "Quản lý chưa viết nhận xét."}
-                    </div>
-                )}
-            </div>
+                {/* Comments / Feedback Section */}
+                <EvaluationCommentsSection
+                    role="MANAGER"
+                    comments={record.comments || []}
+                    isEditable={isEditable}
+                    canFeedback={canFeedback}
+                    selfReviewValue=""
+                    managerFeedbackValue={managerFeedback}
+                    onChangeManagerFeedback={setManagerFeedback}
+                    onSaveManagerFeedback={handleSaveFeedback}
+                    savingManagerFeedback={savingComment}
+                />
 
-            {/* ─── KẾ HOẠCH ĐÀO TẠO ─── */}
-            {(record.trainingPlans?.length > 0 || (isEditable && canFeedback)) && (
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "18px 22px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Kế hoạch đào tạo & Phát triển</div>
-                    {record.trainingPlans?.length > 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: (isEditable && canFeedback) ? 16 : 0 }}>
-                            {record.trainingPlans.map((plan: any) => (
-                                <div key={plan.id} style={{ background: "#f9fafb", borderRadius: 10, padding: "16px", border: "1px solid #f3f4f6", borderLeft: "3px solid #f43f5e" }}>
-                                    <div style={{ fontWeight: 700, color: "#111827", fontSize: 14, marginBottom: 8 }}>{plan.content}</div>
-                                    {plan.requirements && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Mục tiêu:</strong> {plan.requirements}</div>}
-                                    {plan.solution && <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}><strong style={{ color: "#9ca3af" }}>Giải pháp:</strong> {plan.solution}</div>}
-                                    {plan.completionTimeline && (
-                                        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8, background: "#f3f4f6", borderRadius: 5, padding: "3px 10px", fontSize: 12, fontWeight: 600, color: "#111827" }}>
-                                            <ClockCircleOutlined /> {plan.completionTimeline}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {isEditable && canFeedback && (
-                        <div style={{ background: "#fafafa", borderRadius: 10, padding: "16px", border: "1px dashed #d9d9d9" }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 12 }}>Thêm kế hoạch đào tạo</div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
-                                <Select
-                                    placeholder="Nhóm đào tạo"
-                                    value={planForm.trainingGroup}
-                                    onChange={(val) => setPlanForm(prev => ({ ...prev, trainingGroup: val }))}
-                                    options={TRAINING_GROUP_OPTIONS}
-                                    style={{ width: "100%" }}
-                                />
-                                <Input
-                                    placeholder="Thời hạn hoàn thành (VD: Quý 3/2026)"
-                                    value={planForm.completionTimeline}
-                                    onChange={(e) => setPlanForm(prev => ({ ...prev, completionTimeline: e.target.value }))}
-                                />
-                            </div>
-                            <Input
-                                placeholder="Nội dung đào tạo *"
-                                value={planForm.content}
-                                onChange={(e) => setPlanForm(prev => ({ ...prev, content: e.target.value }))}
-                                style={{ marginBottom: 12 }}
-                            />
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
-                                <Input.TextArea
-                                    rows={2}
-                                    placeholder="Mục tiêu / Yêu cầu"
-                                    value={planForm.requirements}
-                                    onChange={(e) => setPlanForm(prev => ({ ...prev, requirements: e.target.value }))}
-                                    style={{ resize: "none" }}
-                                />
-                                <Input.TextArea
-                                    rows={2}
-                                    placeholder="Giải pháp"
-                                    value={planForm.solution}
-                                    onChange={(e) => setPlanForm(prev => ({ ...prev, solution: e.target.value }))}
-                                    style={{ resize: "none" }}
-                                />
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                                <Button type="primary" onClick={handleSavePlan} loading={savingPlan}
-                                    disabled={!planForm.trainingGroup || !planForm.content.trim()}
-                                    style={{ borderRadius: 8, fontWeight: 600 }}>
-                                    Thêm kế hoạch
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+            </div> {/* closes workspace-body */}
 
             {/* ─── STICKY BOTTOM BAR ─── */}
-            {isEditable && (
-                <div style={{
-                    position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-                    background: "rgba(255,255,255,0.92)",
-                    backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-                    borderTop: "1px solid #e5e7eb",
-                    boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
-                    padding: "12px 24px",
-                    display: "flex", justifyContent: "center", alignItems: "center", gap: 20
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                            width: 36, height: 36, borderRadius: 10,
-                            background: progressPct === 100 ? "#f43f5e" : "#f3f4f6",
-                            display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.3s"
-                        }}>
-                            {progressPct === 100
-                                ? <CheckCircleOutlined style={{ color: "#fff", fontSize: 18 }} />
-                                : <FileTextOutlined style={{ color: "#9ca3af", fontSize: 16 }} />}
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Tiến độ</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>
-                                <span style={{ color: "#f43f5e" }}>{scoredCount}</span> / {allLeafCriteria.length} tiêu chí
-                            </div>
-                        </div>
+            {(isEditable || hasScrollbar) && (
+                <div className="employee-evaluation-action-bar" style={{ display: "block", padding: 0 }}>
+                    {/* Synchronized sticky scrollbar at the top edge of the footer */}
+                    <div
+                        className="sticky-horizontal-scrollbar"
+                        ref={topScrollRef}
+                        style={{
+                            overflowX: "auto",
+                            overflowY: "hidden",
+                            width: "100%",
+                            background: "transparent",
+                            borderBottom: isEditable ? "1px solid #e2e8f0" : "none",
+                            display: hasScrollbar ? "block" : "none"
+                        }}
+                    >
+                        <div style={{ width: tableScrollWidth, height: 1 }} />
                     </div>
-                    <div style={{ width: 1, height: 28, background: "#e5e7eb" }} />
-                    <Access permission={ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT} hideChildren>
-                        <Popconfirm
-                            title="Xác nhận nộp đánh giá?"
-                            description={progressPct < 100 ? `Còn ${allLeafCriteria.length - scoredCount} tiêu chí chưa chấm.` : "Sau khi nộp bạn sẽ không thể chỉnh sửa."}
-                            onConfirm={progressPct === 100 ? handleSubmit : undefined}
-                            okText={progressPct === 100 ? "Nộp ngay" : "Đã hiểu"}
-                            cancelText="Hủy"
-                            okButtonProps={{ disabled: progressPct < 100 }}
-                        >
-                            <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
-                                style={{
-                                    borderRadius: 10, fontWeight: 700, height: 42, padding: "0 28px",
-                                    background: progressPct === 100 ? "#f43f5e" : undefined,
-                                    border: "none",
-                                    boxShadow: progressPct === 100 ? "0 4px 14px rgba(244,63,94,0.3)" : undefined
-                                }}>
-                                Nộp bản đánh giá
-                            </Button>
-                        </Popconfirm>
-                    </Access>
+
+                    {/* Action buttons container */}
+                    {isEditable && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 24px" }}>
+                            {/* Left: spacer to balance center alignment */}
+                            <div style={{ flex: "1 1 0%", minWidth: 200 }} />
+
+                            {/* Center: Centered Buttons */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flex: "0 0 auto" }}>
+                                {allLeafCriteria.length - scoredCount > 0 && (
+                                    <Button onClick={handleGoToNextUnscored} icon={<DownOutlined />} style={{ height: 42, borderRadius: 8, fontWeight: 600, color: "#475569", borderColor: "#cbd5e1", background: "#ffffff" }}>
+                                        Tiêu chí chưa đánh giá ({allLeafCriteria.length - scoredCount})
+                                    </Button>
+                                )}
+                                <Access permission={ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT} hideChildren>
+                                    <Button type="primary" icon={<SendOutlined />} loading={submitting} disabled={progressPct < 100}
+                                        onClick={() => setIsSubmitModalOpen(true)}
+                                        className={progressPct === 100 ? "evaluation-submit-button" : undefined}
+                                        style={{
+                                            borderRadius: 6, fontWeight: 700, height: 42, padding: "0 24px",
+                                            border: "none",
+                                        }}>
+                                        Nộp bản đánh giá
+                                    </Button>
+                                </Access>
+                            </div>
+
+                            {/* Right: Empty spacer to balance center alignment */}
+                            <div style={{ flex: "1 1 0%", display: "flex", justifyContent: "flex-end" }} />
+                        </div>
+                    )}
                 </div>
             )}
 
             <style>{`
-                .eval-row:hover td { background-color: #fafafa !important; }
-                .unfilled-select .ant-select-selector {
-                    border-color: #fecdd3 !important;
-                    background-color: #fff1f2 !important;
+                .evaluation-header-menu-button {
+                    width: 40px;
+                    height: 40px;
+                    padding: 0;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                    background: #fff;
+                    color: #64748b;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    font-size: 18px;
+                    transition: all 0.15s;
                 }
-                .unfilled-select:hover .ant-select-selector {
-                    border-color: #f43f5e !important;
+                .evaluation-header-menu-button:hover {
+                    color: #0f172a;
+                    background: #f8fafc;
+                    border-color: #cbd5e1;
                 }
-                .unfilled-select .ant-select-selection-placeholder {
-                    color: #f43f5e !important;
-                    font-weight: 500;
+                .employee-evaluation-table-shell {
+                    scrollbar-color: #cbd5e1 transparent !important;
+                    scrollbar-width: thin !important;
+                }
+                .employee-evaluation-table-shell::-webkit-scrollbar {
+                    height: 9px !important;
+                    display: block !important;
+                    width: auto !important;
+                }
+                .employee-evaluation-table-shell::-webkit-scrollbar-track {
+                    background: #f8fafc !important;
+                }
+                .employee-evaluation-table-shell::-webkit-scrollbar-thumb {
+                    background: #cbd5e1 !important;
+                    border: 2px solid #f8fafc !important;
+                    border-radius: 8px !important;
+                }
+                .sticky-horizontal-scrollbar {
+                    height: 8px !important;
+                    scrollbar-width: thin !important;
+                    scrollbar-color: #cbd5e1 transparent !important;
+                }
+                .sticky-horizontal-scrollbar::-webkit-scrollbar {
+                    height: 4px !important;
+                    display: block !important;
+                }
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-track {
+                    background: transparent !important;
+                }
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-thumb {
+                    background: #cbd5e1 !important;
+                    border-radius: 99px !important;
+                }
+                .sticky-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8 !important;
                 }
             `}</style>
+
+            <ConfirmModal
+                open={isSubmitModalOpen}
+                variant="success"
+                title="Xác nhận nộp kết quả đánh giá?"
+                description="Sau khi nộp bạn sẽ không thể chỉnh sửa điểm hay phản hồi cho nhân viên. Bạn có chắc chắn muốn nộp?"
+                okText="Nộp ngay"
+                cancelText="Hủy"
+                onConfirm={async () => {
+                    setIsSubmitModalOpen(false);
+                    await handleSubmit();
+                }}
+                onCancel={() => setIsSubmitModalOpen(false)}
+                loading={submitting}
+            />
         </div>
     );
-
 };
 
 

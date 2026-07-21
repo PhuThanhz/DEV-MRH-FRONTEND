@@ -50,7 +50,7 @@ export const useCreatePermissionMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["permissions"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo quyền");
+            notify.error(error.message || "Không thể tạo quyền");
         },
     });
 };
@@ -71,7 +71,7 @@ export const useUpdatePermissionMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["permissions"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật quyền");
+            notify.error(error.message || "Không thể cập nhật quyền");
         },
     });
 };
@@ -93,7 +93,7 @@ export const useDeletePermissionMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["permissions"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa quyền");
+            notify.error(error.message || "Không thể xóa quyền");
         },
     });
 };

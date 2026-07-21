@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Modal, Button, Input, message, Spin, Tag, Avatar, Empty, Space } from "antd";
+import { Modal, Button, Input, Spin, Tag, Avatar, Empty, Space } from "antd";
 import {
     UserOutlined, CrownOutlined, ApartmentOutlined,
     SearchOutlined, CheckOutlined, BankOutlined, CloseCircleOutlined,
     UndoOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
+import { notify } from "@/components/common/notification/notify";
 
 import { callFetchJdApprovers, callFetchJdIssuers, callFetchJdFlow } from "@/config/api";
 import {
@@ -276,7 +277,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 }
             } catch (error) {
                 console.error("Load data error:", error);
-                message.error("Không tải được danh sách người duyệt");
+                notify.error("Không tải được danh sách người duyệt");
             }
         };
 
@@ -287,59 +288,59 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
         if (!jdId) return;
         submitMutation.mutate({ jdId, nextUserId: undefined, returnToPrevious }, {
             onSuccess: () => {
-                message.success(returnToPrevious
-                    ? "Đã gửi về người trước đó thành công!"
-                    : "Gửi lại cho người vừa từ chối thành công!");
+                notify.success(returnToPrevious
+                    ? "Đã gửi về người trước đó thành công."
+                    : "Gửi lại cho người vừa từ chối thành công.");
                 onClose();
             },
-            onError: (error: any) => message.error(error?.response?.data?.message || "Gửi lại thất bại"),
+            onError: (error: any) => notify.error(error?.response?.data?.message || "Không thể gửi lại"),
         });
     };
 
     const handleSubmit = () => {
         if (!nextUserId) {
-            message.warning("Vui lòng chọn người nhận duyệt");
+            notify.warning("Vui lòng chọn người nhận duyệt");
             return;
         }
         submitMutation.mutate({ jdId, nextUserId }, {
-            onSuccess: () => { message.success("Gửi duyệt thành công"); onClose(); },
-            onError: (error: any) => message.error(error?.response?.data?.message || "Gửi duyệt thất bại"),
+            onSuccess: () => { notify.success("Gửi duyệt thành công"); onClose(); },
+            onError: (error: any) => notify.error(error?.response?.data?.message || "Không thể gửi duyệt"),
         });
     };
 
     const handleApprove = () => {
         if (isFinalApprover && !nextIssuerId) {
-            message.warning("Vui lòng chọn người ban hành JD");
+            notify.warning("Vui lòng chọn người ban hành JD");
             return;
         }
         if (!isFinalApprover && !nextUserId) {
-            message.warning("Vui lòng chọn người duyệt tiếp theo");
+            notify.warning("Vui lòng chọn người duyệt tiếp theo");
             return;
         }
         approveMutation.mutate({
             jdId,
             nextUserId: isFinalApprover ? nextIssuerId : nextUserId,
         }, {
-            onSuccess: () => { message.success("Duyệt JD thành công"); onClose(); },
-            onError: () => message.error("Duyệt thất bại"),
+            onSuccess: () => { notify.success("Duyệt JD thành công"); onClose(); },
+            onError: () => notify.error("Không thể duyệt"),
         });
     };
 
     const handleReject = (reason: string) => {
         rejectMutation.mutate({ jdId, comment: reason }, {
             onSuccess: () => {
-                message.success("Đã từ chối JD");
+                notify.success("Đã từ chối JD");
                 setOpenReject(false);
                 onClose();
             },
-            onError: () => message.error("Từ chối thất bại"),
+            onError: () => notify.error("Không thể từ chối"),
         });
     };
 
     const handleIssue = () => {
         issueMutation.mutate({ jdId }, {
-            onSuccess: () => { message.success("Ban hành JD thành công"); onClose(); },
-            onError: () => message.error("Ban hành thất bại"),
+            onSuccess: () => { notify.success("Ban hành JD thành công"); onClose(); },
+            onError: () => notify.error("Không thể ban hành"),
         });
     };
 

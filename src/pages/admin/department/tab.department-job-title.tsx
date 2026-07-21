@@ -278,7 +278,7 @@ const DepartmentJobTitleTab = ({
         <PageContainer
             title={departmentName ? `Chức danh phòng ban: ${departmentName}` : "Chức danh phòng ban"}
             fullHeight
-            contentClassName="px-4 sm:px-8 py-4 flex-1 min-h-0 overflow-auto"
+            contentClassName="px-4 py-3 flex-1 min-h-0 overflow-auto"
         >
             <div className="dept-job-title-table">
                 <style>{`

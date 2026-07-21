@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Space, Tag, Button } from "antd";              // ← thêm Button, bỏ Badge
+import { Space, Tag } from "antd";
 import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -20,6 +20,7 @@ import { useJobTitlesQuery } from "@/hooks/useJobTitles";
 import ModalJobTitle from "./modal.job-title";
 import ViewDetailJobTitle from "./view.job-title";
 import Access from "@/components/share/access";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const escapeFilterValue = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
@@ -148,11 +149,11 @@ const JobTitlePage = () => {
             render: (_, record) => (
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.GET_BY_ID} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
                             data-guide-id="job-title-detail-button"
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenViewDetail(true);
@@ -161,11 +162,11 @@ const JobTitlePage = () => {
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.JOB_TITLES.UPDATE} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="job-title-edit-button"
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(record);
                                 setOpenModal(true);

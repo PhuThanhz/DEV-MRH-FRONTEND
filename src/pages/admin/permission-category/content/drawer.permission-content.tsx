@@ -23,6 +23,7 @@ import PermissionMatrixDrawer from "./permission-matrix.drawer";
 
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 interface IProps {
     open: boolean;
@@ -95,10 +96,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
             render: (_: any, record: IPermissionContent) => (
                 <Space size={4}>
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.GET_BY_ID} hideChildren>
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 if (!record.id) return;
                                 setDataView(record as IPermissionContentDetail);
@@ -108,10 +109,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.UPDATE} hideChildren>
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 if (!record.id || !category?.id) return;
                                 setDataForm({
@@ -124,10 +125,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                         />
                     </Access>
 
-                    <Button
-                        type="text"
-                        size="small"
-                        icon={<SafetyOutlined style={{ color: "#52c41a", fontSize: 16 }} />}
+                    <ActionButton
+                        variant="settings"
+                        tooltip="Ma trận phân quyền"
+                        icon={<SafetyOutlined style={{ fontSize: 16 }} />}
                         onClick={() => {
                             if (!record.id) return;
                             setSelectedContentId(record.id);
@@ -144,10 +145,10 @@ const DrawerPermissionContent = ({ open, setOpen, category }: IProps) => {
                             okButtonProps={{ danger: true }}
                             onConfirm={() => record.id && deleteMutation.mutate(record.id)}
                         >
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xoá nội dung"
+                                icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

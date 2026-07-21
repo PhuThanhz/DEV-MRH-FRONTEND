@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Table, Tag, Button, Tooltip, Empty, Popconfirm } from "antd";
-import { useNavigate } from "react-router-dom";
 import {
     FileTextOutlined,
     EyeOutlined,
@@ -20,6 +19,8 @@ import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import ManagerEvaluationDetailPage from "./ManagerEvaluationDetailPage";
+import ConfirmModal from "@/components/common/modal/ConfirmModal";
 
 type RecordStatus =
     | "NOT_STARTED"
@@ -31,11 +32,11 @@ type RecordStatus =
 
 const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: React.ReactNode; tagColor: string }> = {
     NOT_STARTED: { text: "Chưa bắt đầu", color: "#8c8c8c", icon: <StopOutlined />, tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "Quản lý đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ chấm & duyệt cuối", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
-    COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
+    EMPLOYEE_DRAFTING: { text: "Đang tự đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
+    PENDING_MANAGER_REVIEW: { text: "Chờ Quản lý đánh giá", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
+    MANAGER_REVIEWING: { text: "Quản lý đang đánh giá", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
+    PENDING_APPROVAL: { text: "Chờ phê duyệt kết quả", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
+    COMPLETED: { text: "Hoàn tất đánh giá", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
 };
 
 const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
@@ -52,13 +53,14 @@ interface IProps {
 
 const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
     const _isTab = isTab;
-    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("pending");
     const [searchText, setSearchText] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [batchSubmitting, setBatchSubmitting] = useState(false);
+    const [activeDetailRecord, setActiveDetailRecord] = useState<any | null>(null);
+    const [openBatchSubmitModal, setOpenBatchSubmitModal] = useState(false);
 
     const qc = useQueryClient();
     const pendingQuery = usePendingManagerRecordsQuery(activeTab === "pending");
@@ -66,6 +68,14 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
 
     const records: any[] = activeTab === "pending" ? (pendingQuery.data || []) : (managerQuery.data || []);
     const loading = activeTab === "pending" ? pendingQuery.isLoading : managerQuery.isLoading;
+
+    const closeDetailDrawer = () => {
+        setActiveDetailRecord(null);
+        qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["manager-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
+    };
 
     const handleBatchSubmit = async () => {
         if (selectedRowKeys.length === 0) return;
@@ -189,7 +199,7 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
             },
         },
         {
-            title: "Điểm NV đánh giá",
+            title: <div style={{ whiteSpace: "nowrap" }}>Điểm NV đánh giá</div>,
             dataIndex: "employeeTotalScore",
             key: "employeeTotalScore",
             width: 120,
@@ -201,7 +211,7 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
             ),
         },
         {
-            title: "Điểm quản lý",
+            title: <div style={{ whiteSpace: "nowrap" }}>Điểm quản lý</div>,
             dataIndex: "managerTotalScore",
             key: "managerTotalScore",
             width: 120,
@@ -250,10 +260,13 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
                 const fontWeight = isOverdue ? 600 : 400;
                 
                 return (
-                    <span style={{ fontSize: 12, color, fontWeight }}>
-                        {dayjs(deadline).format("DD/MM/YYYY")}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color, fontWeight }}>
+                        <span style={{ fontSize: 13 }}>{dayjs(deadline).format("DD/MM/YYYY")}</span>
+                        <span style={{ fontSize: 11, color: isOverdue ? "#cf1322" : "#8c8c8c", marginTop: 2 }}>
+                            {dayjs(deadline).format("HH:mm")}
+                        </span>
                         {isOverdue && <div style={{ fontSize: 10, marginTop: 2 }}>(Quá hạn)</div>}
-                    </span>
+                    </div>
                 );
             },
         },
@@ -262,23 +275,32 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
             dataIndex: "completedAt",
             key: "completedAt",
             width: 130,
-            render: (val: string | null) => (
-                <span style={{ fontSize: 12, color: val ? "#374151" : "#d9d9d9" }}>
-                    {val ? dayjs(val).format("DD/MM/YYYY") : "—"}
-                </span>
-            ),
+            render: (val: string | null) => {
+                if (!val) {
+                    return <span style={{ fontSize: 12, color: "#d9d9d9" }}>—</span>;
+                }
+                return (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: "#374151" }}>
+                        <span style={{ fontSize: 13 }}>{dayjs(val).format("DD/MM/YYYY")}</span>
+                        <span style={{ fontSize: 11, color: "#8c8c8c", marginTop: 2 }}>
+                            {dayjs(val).format("HH:mm")}
+                        </span>
+                    </div>
+                );
+            },
         },
         {
             title: "Hành động",
             key: "action",
             align: "center" as const,
-            width: 100,
+            width: 120,
+            fixed: "right" as const,
             render: (_: any, record: any) => (
                 <Button
                     type="primary"
                     size="small"
                     icon={<EyeOutlined />}
-                    onClick={() => navigate(`/admin/evaluation/manager/records/${record.id}`)}
+                    onClick={() => setActiveDetailRecord(record)}
                     style={{
                         borderRadius: 6,
                         fontWeight: 600,
@@ -344,7 +366,7 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
     }) : filteredRecords;
 
     const content = (
-        <div style={{ padding: isTab ? "8px 0" : 0 }}>
+        <>
             <style>{`
                 .my-eval-table .ant-table-thead > tr > th {
                     background: #f8fafc !important;
@@ -505,10 +527,10 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
-                                {activeTab === "pending" ? "Hồ sơ chờ chấm điểm" : "Hồ sơ đã tham gia chấm"}
+                                {activeTab === "pending" ? "Hồ sơ chờ đánh giá" : "Hồ sơ đã tham gia đánh giá"}
                             </div>
                             <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>
-                                {activeTab === "pending" ? "Các bản đánh giá thuộc trách nhiệm chấm trực tiếp của người dùng hiện tại" : "Các bản đánh giá đã chấm hoặc đã gửi lên cấp phê duyệt"}
+                                {activeTab === "pending" ? "Các bản đánh giá thuộc trách nhiệm đánh giá của người dùng hiện tại" : "Các bản đánh giá đã đánh giá hoặc đã gửi lên cấp phê duyệt"}
                             </div>
                         </div>
                     </div>
@@ -563,18 +585,9 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
                             Đã chọn <strong style={{ color: "#1677ff" }}>{selectedRowKeys.length}</strong> bản đánh giá
                         </span>
                         <Access permission={ALL_PERMISSIONS.EVALUATION.MANAGER_SUBMIT} hideChildren>
-                            <Popconfirm
-                                title={`Nộp hàng loạt ${selectedRowKeys.length} bản đánh giá?`}
-                                description="Các bản được chọn sẽ được gửi lên phê duyệt. Bản chưa chấm đủ điểm sẽ không nộp được."
-                                onConfirm={handleBatchSubmit}
-                                okText="Nộp"
-                                cancelText="Hủy"
-                                okButtonProps={{ loading: batchSubmitting }}
-                            >
-                                <Button type="primary" loading={batchSubmitting}>
-                                    Nộp hàng loạt
-                                </Button>
-                            </Popconfirm>
+                            <Button type="primary" loading={batchSubmitting} onClick={() => setOpenBatchSubmitModal(true)}>
+                                Nộp hàng loạt
+                            </Button>
                         </Access>
                     </div>
                 )}
@@ -608,13 +621,33 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
                         )
                     }}
                 />
+                {activeDetailRecord && (
+                    <ManagerEvaluationDetailPage
+                        recordId={activeDetailRecord.id}
+                        onClose={closeDetailDrawer}
+                    />
+                )}
             </div>
-        </div>
+
+        <ConfirmModal
+            open={openBatchSubmitModal}
+            variant="warning"
+            title={`Nộp ${selectedRowKeys.length} bản đánh giá?`}
+            description="Các bản được chọn sẽ được gửi lên phê duyệt. Bản chưa hoàn thành đánh giá sẽ không nộp được."
+            okText="Nộp ngay"
+            onConfirm={async () => {
+                setOpenBatchSubmitModal(false);
+                await handleBatchSubmit();
+            }}
+            onCancel={() => setOpenBatchSubmitModal(false)}
+            loading={batchSubmitting}
+        />
+        </>
     );
 
     return isTab ? content : (
         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS}>
-            <PageContainer title="Danh sách đánh giá (Quản lý trực tiếp)">{content}</PageContainer>
+            <PageContainer title="Danh sách đánh giá (Vai trò Quản lý)">{content}</PageContainer>
         </Access>
     );
 };

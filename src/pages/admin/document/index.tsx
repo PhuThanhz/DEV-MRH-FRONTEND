@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { App, Space, Tag, Popconfirm, Modal, Image, Button, Dropdown, Spin } from "antd";
+import { Space, Tag, Popconfirm, Modal, Image, Button, Dropdown, Spin } from "antd";
 import {
     EditOutlined,
     EyeOutlined,
@@ -15,6 +15,7 @@ import {
     ApartmentOutlined,
     FolderAddOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import queryString from "query-string";
 import dayjs from "dayjs";
@@ -25,6 +26,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import DateRangeFilter from "@/components/common/filter/DateRangeFilter";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 import type { IDocument } from "@/types/backend";
 import Access from "@/components/share/access";
@@ -96,7 +98,6 @@ const getDocumentClassifyMeta = (record: IDocument) => {
 };
 
 const DocumentPage = () => {
-    const { message } = App.useApp();
     const location = useLocation();
     const navigate = useNavigate();
     const canShare = useAccess(ALL_PERMISSIONS.DOCUMENTS.CREATE_SHARE_TOKEN);
@@ -140,7 +141,7 @@ const DocumentPage = () => {
                 if (cancelled) return;
                 const document = res?.data as IDocument | undefined;
                 if (!document) {
-                    message.warning("Không tìm thấy văn bản hoặc bạn không có quyền xem.");
+                    notify.warning("Không tìm thấy văn bản hoặc bạn không có quyền xem.");
                     return;
                 }
                 setDataInit(document);
@@ -156,7 +157,7 @@ const DocumentPage = () => {
                 );
             } catch {
                 if (!cancelled) {
-                    message.warning("Không thể mở văn bản từ thông báo.");
+                    notify.warning("Không thể mở văn bản từ thông báo.");
                 }
             }
         };
@@ -165,7 +166,7 @@ const DocumentPage = () => {
         return () => {
             cancelled = true;
         };
-    }, [location.pathname, location.search, message, navigate]);
+    }, [location.pathname, location.search, navigate]);
 
     const tabs = [
         {
@@ -484,15 +485,24 @@ const DocumentPage = () => {
                 return (
                     <Space size="small">
                         <Access permission={ALL_PERMISSIONS.DOCUMENTS.GET_BY_ID} hideChildren>
-                            <EyeOutlined
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
+                                icon={<EyeOutlined />}
                                 data-guide-id="document-detail-button"
-                                style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                                 onClick={() => { setDataInit(entity); setOpenViewDetail(true); }}
+                                aria-label="Xem chi tiết"
                             />
                         </Access>
                         {menuItems.length > 0 && (
                             <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-                                <MoreOutlined data-guide-id="document-more-button" style={{ fontSize: 20, cursor: "pointer" }} />
+                                <ActionButton
+                                    variant="default"
+                                    tooltip="Thao tác khác"
+                                    icon={<MoreOutlined />}
+                                    data-guide-id="document-more-button"
+                                    aria-label="Thao tác khác"
+                                />
                             </Dropdown>
                         )}
                     </Space>

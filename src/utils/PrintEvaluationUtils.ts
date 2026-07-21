@@ -249,13 +249,13 @@ export const printEvaluationDetail = (record: any) => {
                     <div class="summary-title">Kết quả tổng hợp</div>
                     <div class="summary-grid">
                         <div class="summary-col">
-                            <strong>Tổng điểm tự chấm:</strong> ${record.employeeTotalScore != null ? record.employeeTotalScore.toFixed(2) : "—"}
+                            <strong>Tổng điểm tự đánh giá:</strong> ${record.employeeTotalScore != null ? record.employeeTotalScore.toFixed(2) : "—"}
                         </div>
                         <div class="summary-col">
-                            <strong>Tổng điểm quản lý:</strong> ${record.managerTotalScore != null ? record.managerTotalScore.toFixed(2) : "—"}
+                            <strong>Tổng điểm Quản lý đánh giá:</strong> ${record.managerTotalScore != null ? record.managerTotalScore.toFixed(2) : "—"}
                         </div>
                         <div class="summary-col">
-                            <strong>Tổng điểm duyệt cuối:</strong> ${record.approverTotalScore != null ? record.approverTotalScore.toFixed(2) : "—"}
+                            <strong>Tổng điểm phê duyệt:</strong> ${record.approverTotalScore != null ? record.approverTotalScore.toFixed(2) : "—"}
                         </div>
                     </div>
                     <div style="margin-top: 10px;">
@@ -315,11 +315,11 @@ export const printEvaluationDetail = (record: any) => {
                         <div class="sign-sub">(Ký và ghi rõ họ tên)</div>
                     </td>
                     <td>
-                        <div class="sign-title">Quản lý trực tiếp chấm</div>
+                        <div class="sign-title">Quản lý đánh giá</div>
                         <div class="sign-sub">(Ký và ghi rõ họ tên)</div>
                     </td>
                     <td>
-                        <div class="sign-title">Người duyệt cuối cùng</div>
+                        <div class="sign-title">Người phê duyệt kết quả</div>
                         <div class="sign-sub">(Ký và ghi rõ họ tên)</div>
                     </td>
                 </tr>

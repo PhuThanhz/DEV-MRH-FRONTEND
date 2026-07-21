@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Popconfirm, Space } from "antd";
+import { Popconfirm, Space } from "antd";
 import {
     EditOutlined,
     DeleteOutlined,
@@ -23,6 +23,7 @@ import {
 } from "@/hooks/usePermissions";
 import ModalPermission from "@/pages/admin/permission/modal.permission";
 import ViewDetailPermission from "@/pages/admin/permission/view.permission";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const PermissionPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -132,11 +133,11 @@ const PermissionPage = () => {
             render: (_, entity) => (
                 <Space size={4} align="center">
                     <Access permission={ALL_PERMISSIONS.PERMISSIONS.UPDATE} hideChildren>
-                        <Button
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="permission-edit-button"
-                            type="text"
-                            size="small"
-                            icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
@@ -154,11 +155,11 @@ const PermissionPage = () => {
                             placement="topRight"                // ← đồng bộ
                             onConfirm={() => handleDelete(entity.id!)}
                         >
-                            <Button
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xoá quyền"
                                 data-guide-id="permission-delete-button"
-                                type="text"
-                                size="small"
-                                icon={<DeleteOutlined style={{ color: "#ff4d4f", fontSize: 16 }} />}
+                                icon={<DeleteOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

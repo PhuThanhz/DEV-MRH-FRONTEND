@@ -38,8 +38,8 @@ interface SearchFilterProps {
     searchValue?: string;
 }
 
-const BTN_H = 40;
-const BTN_RADIUS = 10;
+const BTN_H = 36;
+const BTN_RADIUS = 9;
 
 const SearchFilter: React.FC<SearchFilterProps> = ({
     searchPlaceholder = "Tìm kiếm...",
@@ -135,9 +135,9 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                 color: "#fff",
                 border: "none",
                 fontWeight: 600,
-                fontSize: 14,
+                fontSize: 13,
                 boxShadow: "0 2px 8px rgba(255, 95, 162, 0.35)",
-                paddingInline: 18,
+                paddingInline: 14,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -163,10 +163,10 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     );
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
 
             {/* Row duy nhất: Search + Reset + Bộ lọc (với badge) + Thêm */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
 
                 {/* Search input — auto-search debounce */}
                 <div
@@ -190,7 +190,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                             height: BTN_H,
                             borderRadius: BTN_RADIUS,
                             width: "100%",
-                            fontSize: 14,
+                            fontSize: 13,
                         }}
                         allowClear
                     />
@@ -208,7 +208,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                             display: "flex",
                             alignItems: "center",
                             gap: 6,
-                            paddingInline: 14,
+                            paddingInline: 12,
                             flexShrink: 0,
                         }}
                     >
@@ -231,10 +231,10 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                                 style={{
                                     height: BTN_H,
                                     borderRadius: BTN_RADIUS,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     display: "flex",
                                     alignItems: "center",
-                                    paddingInline: 14,
+                                    paddingInline: 12,
                                     flexShrink: 0,
                                     ...(activeFilterCount > 0 ? {
                                         borderColor: "#ec4899",

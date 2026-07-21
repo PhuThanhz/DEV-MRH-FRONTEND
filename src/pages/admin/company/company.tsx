@@ -6,7 +6,6 @@ import {
     Space,
     Tag,
     Popconfirm,
-    Button,
     Dropdown,
 } from "antd";
 
@@ -40,6 +39,7 @@ import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 
 import ModalCompany from "./modal.company";
+import ActionButton from "@/components/common/ui/ActionButton";
 import ViewCompany from "./view.company";
 
 import { useNavigate } from "react-router-dom";
@@ -248,11 +248,11 @@ const CompanyPage = () => {
                     <Space size={4} align="center">
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.COMPANIES.GET_BY_ID} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
                                 data-guide-id="company-detail-button"
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                icon={<EyeOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenView(true);
@@ -262,11 +262,11 @@ const CompanyPage = () => {
 
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.COMPANIES.UPDATE} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="edit"
+                                tooltip="Chỉnh sửa"
                                 data-guide-id="company-edit-button"
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                                icon={<EditOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
@@ -281,11 +281,10 @@ const CompanyPage = () => {
                                 trigger={["click"]}
                                 placement="bottomRight"
                             >
-                                <Button
+                                <ActionButton
+                                    tooltip="Thêm thao tác"
                                     data-guide-id="company-more-button"
-                                    type="text"
-                                    size="small"
-                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
+                                    icon={<MoreOutlined style={{ fontSize: 16 }} />}
                                 />
                             </Dropdown>
                         )}

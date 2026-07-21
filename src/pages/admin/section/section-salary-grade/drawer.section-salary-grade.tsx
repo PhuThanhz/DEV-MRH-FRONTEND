@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useSectionSalaryGrades";
 
 import type { ISectionSalaryGrade } from "@/types/backend";
+import ActionButton from "@/components/common/ui/ActionButton";
 import type { ColumnsType } from "antd/es/table";
 import { getModalWidth } from "@/utils/responsive";
 
@@ -166,21 +167,22 @@ const DrawerSectionSalaryGrade = ({
                             onConfirm={() => handleDelete(record)}
                             okButtonProps={{ danger: true }}
                         >
-                            <Button
-                                type="text"
-                                danger
-                                size="small"
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xóa bậc lương"
                                 icon={<DeleteOutlined />}
                                 loading={deleting}
+                                aria-label="Xóa bậc lương"
                             />
                         </Popconfirm>
                     ) : (
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<UndoOutlined style={{ color: "#1677ff" }} />}
+                        <ActionButton
+                            variant="success"
+                            tooltip="Khôi phục bậc lương"
+                            icon={<UndoOutlined />}
                             loading={restoring}
                             onClick={() => handleRestore(record)}
+                            aria-label="Khôi phục bậc lương"
                         />
                     )}
                 </Space>

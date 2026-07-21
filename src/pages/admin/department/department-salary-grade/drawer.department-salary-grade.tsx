@@ -18,6 +18,7 @@ import {
 import { useEffect } from "react";
 import { DeleteOutlined, UndoOutlined } from "@ant-design/icons";
 import AppButton from "@/components/common/ui/AppButton";
+import ActionButton from "@/components/common/ui/ActionButton";
 import { getModalWidth } from "@/utils/responsive";
 import {
     useDepartmentSalaryGradesQuery,
@@ -157,23 +158,24 @@ const DrawerDepartmentSalaryGrade = ({
                                 onConfirm={() => handleDelete(record)}
                                 okButtonProps={{ danger: true }}
                             >
-                                <Button
-                                    type="text"
-                                    danger
-                                    size="small"
+                                <ActionButton
+                                    variant="danger"
+                                    tooltip="Xóa bậc lương"
                                     icon={<DeleteOutlined />}
                                     loading={deleting}
+                                    aria-label="Xóa bậc lương"
                                 />
                             </Popconfirm>
                         </Access>
                     ) : (
                         <Access permission={ALL_PERMISSIONS.DEPARTMENT_SALARY_GRADES.RESTORE} hideChildren>
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<UndoOutlined style={{ color: "#1677ff" }} />}
+                            <ActionButton
+                                variant="success"
+                                tooltip="Khôi phục bậc lương"
+                                icon={<UndoOutlined />}
                                 loading={restoring}
                                 onClick={() => handleRestore(record)}
+                                aria-label="Khôi phục bậc lương"
                             />
                         </Access>
                     )}

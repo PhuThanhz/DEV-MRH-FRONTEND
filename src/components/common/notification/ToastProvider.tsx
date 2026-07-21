@@ -5,8 +5,9 @@ export const ToastProvider = () => {
         <Toaster
             position="top-right"
             toastOptions={{
+                removeDelay: 120,
                 style: {
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily: "var(--ant-font-family), 'Avenir Next', 'Segoe UI', sans-serif",
                     borderRadius: "10px",
                     fontWeight: 500,
                     padding: "10px 16px",

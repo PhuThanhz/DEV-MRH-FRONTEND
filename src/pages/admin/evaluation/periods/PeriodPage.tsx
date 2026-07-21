@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge, Dropdown } from "antd";
+import { Space, Tag, Popconfirm, Button, Typography, Tooltip, Badge } from "antd";
 import { notify } from "@/components/common/notification/notify";
 import {
     EditOutlined,
@@ -13,14 +13,12 @@ import {
     StopOutlined,
     WarningOutlined,
     BarChartOutlined,
-    MoreOutlined,
     EyeOutlined,
     SettingOutlined,
 } from "@ant-design/icons";
 import useAccess from "@/hooks/useAccess";
 import { useAppSelector } from "@/redux/hooks";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
-import type { MenuProps } from "antd";
 import queryString from "query-string";
 import dayjs from "dayjs";
 
@@ -38,6 +36,7 @@ import {
     callFetchEvaluationPeriods,
     callActivateEvaluationPeriod,
     callCloseEvaluationPeriod,
+    callAdjustEvaluationPeriodStartDate,
 } from "@/config/api";
 import PeriodModal from "./PeriodModal";
 import PeriodDetailDrawer from "./PeriodDetailDrawer";
@@ -104,7 +103,7 @@ const getPhaseInfo = (record: IEvaluationPeriod): PhaseInfo => {
         return { activePhase: "manager", phaseLabel: "Quản lý chấm điểm", deadline: mgrDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, mgrDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
     }
     if (now.isBefore(appDeadline)) {
-        return { activePhase: "approval", phaseLabel: "Ban lãnh đạo phê duyệt", deadline: appDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, appDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
+        return { activePhase: "approval", phaseLabel: "Quản lý gián tiếp duyệt", deadline: appDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Còn ${getDiffString(now, appDeadline)}`, badgeType: "intime", badgeText: "Đang diễn ra", isOverdue: false };
     }
     return { activePhase: "all_closed", phaseLabel: "Quá hạn phê duyệt", deadline: appDeadline.format("DD/MM/YYYY HH:mm"), countdown: `Trễ ${getDiffString(appDeadline, now)}`, badgeType: "overdue", badgeText: "Quá hạn", isOverdue: true };
 };
@@ -149,7 +148,7 @@ const PhaseStep = React.memo(({ phase, activePhase, status }: { phase: "employee
     );
 });
 
-const renderTimelineCell = (record: IEvaluationPeriod) => {
+const renderTimelineCell = (record: IEvaluationPeriod, canManagePeriod?: boolean, onReload?: () => void) => {
     const info = getPhaseInfo(record);
 
     const badgeConfig: Record<BadgeType, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
@@ -164,6 +163,19 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
     const badge = badgeConfig[info.badgeType];
 
     const hasTimeline = !!(record.employeeStartDate && record.employeeDeadline && record.managerDeadline && record.approvalDeadline);
+
+    const handleAdjustStartDateNow = async () => {
+        try {
+            const nowIso = dayjs().subtract(1, "minute").toISOString();
+            await callAdjustEvaluationPeriodStartDate(record.id!, { employeeStartDate: nowIso });
+            notify.success("Đã mở cổng tự đánh giá thành công.");
+            onReload?.();
+        } catch (error: any) {
+            notify.error(error?.response?.data?.message || "Không thể mở cổng tự đánh giá");
+        }
+    };
+
+    const showAdjustConfirm = canManagePeriod && info.badgeType === "upcoming";
 
     const tooltipContent = hasTimeline ? (
         <div style={{ fontSize: 12, lineHeight: "22px", color: "#1e293b" }}>
@@ -183,7 +195,7 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
                 { label: "Mở cổng nhân viên đánh giá", date: record.employeeStartDate },
                 { label: "Hạn nhân viên nộp", date: record.employeeDeadline },
                 { label: "Hạn quản lý chấm", date: record.managerDeadline },
-                { label: "Hạn lãnh đạo duyệt", date: record.approvalDeadline },
+                { label: "Hạn QL gián tiếp duyệt", date: record.approvalDeadline },
             ].map(({ label, date }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 20, marginBottom: 4 }}>
                     <span style={{ color: "#64748b" }}>{label}</span>
@@ -224,26 +236,55 @@ const renderTimelineCell = (record: IEvaluationPeriod) => {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: "#262626" }}>{info.phaseLabel}</span>
                     {info.countdown && (
-                        <span style={{
-                            display: "inline-flex", alignItems: "center", gap: 3,
-                            fontSize: 11, fontWeight: 600,
-                            color: badge.color,
-                            background: badge.bg,
-                            border: `1px solid ${badge.border}`,
-                            borderRadius: 4,
-                            padding: "1px 7px",
-                            lineHeight: "18px",
-                        }}>
-                            {badge.icon}
-                            {info.countdown}
-                        </span>
+                        showAdjustConfirm ? (
+                            <Popconfirm
+                                title="Mở cổng tự đánh giá"
+                                description="Bạn có muốn mở cổng tự đánh giá ngay bây giờ không?"
+                                onConfirm={handleAdjustStartDateNow}
+                                okText="Mở ngay"
+                                cancelText="Hủy"
+                                placement="topRight"
+                            >
+                                <span style={{
+                                    display: "inline-flex", alignItems: "center", gap: 3,
+                                    fontSize: 11, fontWeight: 600,
+                                    color: badge.color,
+                                    background: badge.bg,
+                                    border: `1px solid ${badge.border}`,
+                                    borderRadius: 4,
+                                    padding: "1px 7px",
+                                    lineHeight: "18px",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                }}
+                                title="Click để mở cổng ngay bây giờ"
+                                >
+                                    {badge.icon}
+                                    {info.countdown}
+                                </span>
+                            </Popconfirm>
+                        ) : (
+                            <span style={{
+                                display: "inline-flex", alignItems: "center", gap: 3,
+                                fontSize: 11, fontWeight: 600,
+                                color: badge.color,
+                                background: badge.bg,
+                                border: `1px solid ${badge.border}`,
+                                borderRadius: 4,
+                                padding: "1px 7px",
+                                lineHeight: "18px",
+                            }}>
+                                {badge.icon}
+                                {info.countdown}
+                            </span>
+                        )
                     )}
                 </div>
 
                 {/* Deadline line */}
                 {info.deadline && (
                     <span style={{ fontSize: 11, color: "#8c8c8c" }}>
-                        Hạn: {info.deadline}
+                        Hạn gốc kỳ: {info.deadline}
                     </span>
                 )}
             </div>
@@ -329,11 +370,12 @@ const PeriodPage = () => {
         try {
             const res = await callActivateEvaluationPeriod(id);
             if (res?.data) {
-                notify.success("Kích hoạt thành công! Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
+                notify.success("Kích hoạt thành công. Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
                 tableRef.current?.reload();
+                return res.data;
             }
         } catch (error: any) {
-            notify.error(error?.response?.data?.message || "Lỗi kích hoạt kỳ đánh giá");
+            notify.error(error?.response?.data?.message || "Không thể kích hoạt kỳ đánh giá");
         }
     }, []);
 
@@ -345,7 +387,7 @@ const PeriodPage = () => {
                 tableRef.current?.reload();
             }
         } catch (error: any) {
-            notify.error(error?.response?.data?.message || "Lỗi đóng kỳ đánh giá");
+            notify.error(error?.response?.data?.message || "Không thể đóng kỳ đánh giá");
         }
     }, []);
 
@@ -358,6 +400,16 @@ const PeriodPage = () => {
             window.setTimeout(() => tableRef.current?.reload(), 220);
         }
     }, [drawerReadOnly]);
+
+    const handlePeriodCreated = useCallback((period: IEvaluationPeriod) => {
+        setSelectedPeriod(period);
+        setDrawerReadOnly(false);
+        setOpenDrawer(true);
+    }, []);
+
+    const handlePeriodSaved = useCallback((period: IEvaluationPeriod) => {
+        setSelectedPeriod(current => current?.id === period.id ? period : current);
+    }, []);
 
     const columns: ProColumns<IEvaluationPeriod>[] = useMemo(() => [
         {
@@ -418,7 +470,7 @@ const PeriodPage = () => {
             title: "Tiến trình",
             key: "timelineProgress",
             width: 380,
-            render: (_, record) => renderTimelineCell(record),
+            render: (_, record) => renderTimelineCell(record, canManagePeriod, () => tableRef.current?.reload()),
         },
         {
             title: "Hành động",
@@ -428,29 +480,19 @@ const PeriodPage = () => {
             render: (_, entity) => {
                 const isDraft = entity.status === "DRAFT";
                 const isActive = entity.status === "ACTIVE";
-                const menuItems: NonNullable<MenuProps["items"]> = [
-                    isDraft && {
-                        key: "edit",
-                        label: (
-                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD} hideChildren>
-                                <span>Chỉnh sửa kỳ</span>
-                            </Access>
-                        ),
-                        icon: <EditOutlined />,
-                        onClick: () => { setDataInit(entity); setOpenModal(true); },
-                    },
-                ].filter(Boolean) as NonNullable<MenuProps["items"]>;
                 return (
                     <Space size={4}>
-                        <Access permission={ALL_PERMISSIONS.EVALUATION.GET_PERIODS} hideChildren>
-                            <ActionButton
-                                variant="view"
-                                tooltip="Xem chi tiết kỳ đánh giá"
-                                icon={<EyeOutlined style={{ fontSize: 16 }} />}
-                                onClick={() => { setSelectedPeriod(entity); setDrawerReadOnly(true); setOpenDrawer(true); }}
-                                aria-label={`Xem chi tiết kỳ đánh giá ${entity.name}`}
-                            />
-                        </Access>
+                        {isDraft && (
+                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_PERIOD} hideChildren>
+                                <ActionButton
+                                    variant="edit"
+                                    tooltip="Chỉnh sửa kỳ"
+                                    icon={<EditOutlined style={{ fontSize: 16 }} />}
+                                    onClick={() => { setDataInit(entity); setOpenModal(true); }}
+                                    aria-label={`Chỉnh sửa kỳ đánh giá ${entity.name}`}
+                                />
+                            </Access>
+                        )}
 
                         {canManagePeriod && (
                             <ActionButton
@@ -504,15 +546,6 @@ const PeriodPage = () => {
                                 onClick={() => setProgressPeriodId(entity.id!)}
                                 aria-label={`Xem tiến độ kỳ đánh giá ${entity.name}`}
                             />
-                        )}
-
-                        {menuItems.length > 0 && (
-                            <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
-                                <ActionButton
-                                    icon={<MoreOutlined style={{ fontSize: 18 }} />}
-                                    aria-label={`Thao tác khác cho kỳ đánh giá ${entity.name}`}
-                                />
-                            </Dropdown>
                         )}
                     </Space>
                 );
@@ -605,6 +638,8 @@ const PeriodPage = () => {
                     dataInit={dataInit}
                     setDataInit={setDataInit}
                     reloadTable={() => tableRef.current?.reload()}
+                    onCreated={handlePeriodCreated}
+                    onSaved={handlePeriodSaved}
                 />
             )}
 
@@ -614,6 +649,8 @@ const PeriodPage = () => {
                     onClose={handlePeriodDrawerClose}
                     period={selectedPeriod}
                     readOnly={drawerReadOnly}
+                    onActivate={handleActivate}
+                    onEditPeriod={(period) => { setDataInit(period); setOpenModal(true); }}
                 />
             )}
 

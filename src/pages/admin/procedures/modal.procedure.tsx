@@ -5,11 +5,12 @@ import {
     ProFormSelect,
     ProFormSwitch,
 } from "@ant-design/pro-components";
-import { Col, Form, Row, message, Upload, Input, DatePicker } from "antd";
+import { Col, Form, Row, Upload, Input, DatePicker } from "antd";
 import {
     UploadOutlined, BankOutlined, ApartmentOutlined, LockOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
+import { notify } from "@/components/common/notification/notify";
 
 import {
     callFetchCompany,
@@ -332,9 +333,9 @@ const ModalProcedure: React.FC<IProps> = ({
             await createMutation.mutateAsync(payload);
 
             if (newUserIds.length > 0) {
-                message.success(`Tạo và chia sẻ cho ${newUserIds.length} người`);
+                notify.success(`Tạo và chia sẻ cho ${newUserIds.length} người`);
             } else {
-                message.success("Tạo quy trình thành công");
+                notify.success("Tạo quy trình thành công");
             }
 
         }
@@ -373,7 +374,7 @@ const ModalProcedure: React.FC<IProps> = ({
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ];
             if (!allowed.includes(file.type)) {
-                message.error("Chỉ chấp nhận file PDF, Word, Excel!");
+                notify.warning("Chỉ chấp nhận tệp PDF, Word, Excel.");
                 return Upload.LIST_IGNORE;
             }
 
@@ -401,10 +402,10 @@ const ModalProcedure: React.FC<IProps> = ({
 
                 const current: string[] = form.getFieldValue("fileUrls") ?? [];
                 form.setFieldValue("fileUrls", [...current, fileName]);
-                message.success(`Upload ${file.name} thành công!`);
+                notify.success(`Tải tệp ${file.name} thành công.`);
             } catch {
                 setFileList((prev) => prev.filter((f) => f.uid !== tempUid));
-                message.error("Upload file thất bại!");
+                notify.error("Không thể tải tệp lên.");
             } finally {
                 setUploading(false);
             }

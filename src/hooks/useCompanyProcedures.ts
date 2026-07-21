@@ -69,7 +69,7 @@ export const useCreateCompanyProcedureMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo quy trình");
+            notify.error(error.message || "Không thể tạo quy trình");
         },
     });
 
@@ -107,7 +107,7 @@ export const useUpdateCompanyProcedureMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật quy trình");
+            notify.error(error.message || "Không thể cập nhật quy trình");
         },
     });
 
@@ -142,7 +142,7 @@ export const useToggleActiveCompanyProcedureMutation = () => {
         },
 
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 

@@ -7,6 +7,7 @@
     "dev": "vite --force",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:notifications": "node scripts/audit-notification-copy.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

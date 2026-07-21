@@ -1,8 +1,9 @@
-import { Button, Form, Input, message, notification } from "antd";
+import { Button, Form, Input } from "antd";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { MailOutlined, SafetyCertificateOutlined, KeyOutlined } from "@ant-design/icons";
 import { callRequestPasswordCode } from "config/api";
+import { notify } from "@/components/common/notification/notify";
 
 const ForgotPassword = () => {
   const [isSubmit, setIsSubmit] = useState(false);
@@ -42,10 +43,7 @@ const ForgotPassword = () => {
     }
 
     // luôn hiển thị giống nhau
-    message.success({
-      content: "Nếu email tồn tại, mã xác nhận sẽ được gửi!",
-      duration: 4,
-    });
+    notify.success("Nếu email tồn tại, mã xác nhận sẽ được gửi.", { duration: 3500 });
 
     // luôn chuyển trang
     navigate(

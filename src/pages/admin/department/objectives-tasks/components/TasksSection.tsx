@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Button, Input, Popconfirm } from "antd";
 import { PlusOutlined, DeleteOutlined, HolderOutlined } from "@ant-design/icons";
 import type { LocalSectionTask, LocalTaskItem } from "./DepartmentMissionDetail";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const ACCENT = "#e8637a";
 const COLORS = ["#e8637a", "#4a9eff", "#52c41a", "#fa8c16", "#722ed1", "#13c2c2"];
@@ -259,9 +260,11 @@ const TasksSection = ({
                                                             okText="Xoá" cancelText="Huỷ"
                                                             okButtonProps={{ danger: true }}
                                                         >
-                                                            <Button
-                                                                type="text" danger size="small"
+                                                            <ActionButton
+                                                                variant="danger"
+                                                                tooltip="Xóa nhiệm vụ"
                                                                 icon={<DeleteOutlined />}
+                                                                aria-label="Xóa nhiệm vụ"
                                                             />
                                                         </Popconfirm>
                                                     )}
@@ -272,11 +275,10 @@ const TasksSection = ({
                                         {editMode && (
                                             <Button
                                                 type="dashed"
-                                                size="small"
                                                 icon={<PlusOutlined />}
                                                 onClick={() => addTask(sec.sectionId)}
                                                 block
-                                                className="mt-auto h-8 text-gray-500 border-gray-300 hover:text-blue-500 hover:border-blue-500"
+                                                className="mt-auto h-10 text-gray-500 border-gray-300 hover:text-blue-500 hover:border-blue-500"
                                             >
                                                 Thêm nhiệm vụ
                                             </Button>
@@ -361,7 +363,13 @@ const TasksSection = ({
                                             okText="Xoá" cancelText="Huỷ"
                                             okButtonProps={{ danger: true }}
                                         >
-                                            <Button type="text" danger size="small" icon={<DeleteOutlined />} className="mt-0.5" />
+                                            <ActionButton
+                                                variant="danger"
+                                                tooltip="Xóa nhiệm vụ"
+                                                icon={<DeleteOutlined />}
+                                                className="mt-0.5"
+                                                aria-label="Xóa nhiệm vụ"
+                                            />
                                         </Popconfirm>
                                     )}
                                 </div>

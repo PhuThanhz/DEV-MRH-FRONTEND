@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { callFetchUsersByCompany, callFetchUsersCrossCompany, callFetchCompany, callFetchDepartmentsByCompany, callFetchSectionsByDepartment } from "@/config/api";
 
-interface UserOption {
+export interface UserOption {
     value: string;
     name: string;
     email: string;
@@ -20,9 +20,15 @@ interface UserOption {
     positionLevel?: string;
     company?: string;
     avatar?: string;
+    directManagerId?: string;
+    directManagerName?: string;
+    directManagerCompanyIds?: number[];
+    indirectManagerId?: string;
+    indirectManagerName?: string;
+    indirectManagerCompanyIds?: number[];
 }
 
-interface UserPickerModalProps {
+export interface UserPickerModalProps {
     open: boolean;
     onClose: () => void;
     companyId: number | null;
@@ -31,6 +37,15 @@ interface UserPickerModalProps {
     cachedUsers?: Map<string, UserOption>;
     isCrossCompany?: boolean;
     maxSelect?: number;
+    // Khi truyền sẵn danh sách người dùng, modal dùng luôn list này (client-side filter/paginate)
+    // thay vì tự gọi API — dùng cho các màn đã có pool riêng (vd: gán nhân sự vào kỳ đánh giá).
+    sourceUsers?: UserOption[];
+    filterDepartmentIds?: number[];
+    departmentOptions?: { label: string; value: number }[];
+    // Ghi đè tiêu đề header (mặc định "Chọn người được xem").
+    title?: string;
+    confirmText?: string;
+    hasDirectManager?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -92,8 +107,22 @@ const formatOrgUnit = (user: UserOption) =>
     [user.section, user.department || user.company]
         .filter(Boolean)
         .join(" · ");
+const hasCompleteManagerLine = (user: UserOption) => !!user.directManagerId && !!user.indirectManagerId;
 
-const UserPickerModal: React.FC<UserPickerModalProps> = ({
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
+
+export const UserPickerModal: React.FC<UserPickerModalProps> = ({
     open,
     onClose,
     companyId,
@@ -102,8 +131,15 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     cachedUsers, // ← nhận prop nhưng trước đây không dùng → fix ở đây
     isCrossCompany,
     maxSelect,
+    sourceUsers,
+    filterDepartmentIds,
+    departmentOptions,
+    title,
+    confirmText,
+    hasDirectManager,
 }) => {
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 300);
     const [allUsers, setAllUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -117,6 +153,9 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
 
     const [sections, setSections] = useState<any[]>([]);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+    const [managerFilter, setManagerFilter] = useState<'all' | 'hasManager' | 'noManager'>(
+        hasDirectManager === true ? 'hasManager' : 'all'
+    );
 
     const [total, setTotal] = useState(0); // Tổng số kết quả từ backend
     const [totalPages, setTotalPages] = useState(0); // Tổng số trang từ backend
@@ -130,7 +169,8 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         setSelectedCompanyId(null);
         setSelectedDepartmentId(null);
         setSelectedSectionId(null);
-    }, [open]);
+        setManagerFilter(hasDirectManager === true ? "hasManager" : "all");
+    }, [open, hasDirectManager]);
 
     // Load companies when cross-company is true and modal is open
     useEffect(() => {
@@ -146,7 +186,20 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         fetchCompanies();
     }, [open, isCrossCompany]);
 
-    const effectiveCompanyId = isCrossCompany ? selectedCompanyId : companyId;
+    const effectiveCompanyId = selectedCompanyId || companyId;
+    const getBlockedReason = (user: UserOption) => {
+        if (hasDirectManager !== true) return "";
+        if (!user.directManagerId) return "Thiếu QL trực tiếp";
+        if (!user.indirectManagerId) return "Thiếu QL gián tiếp";
+        if (effectiveCompanyId && user.directManagerCompanyIds?.length && !user.directManagerCompanyIds.includes(effectiveCompanyId)) {
+            return "QL trực tiếp khác công ty";
+        }
+        if (effectiveCompanyId && user.indirectManagerCompanyIds?.length && !user.indirectManagerCompanyIds.includes(effectiveCompanyId)) {
+            return "QL gián tiếp khác công ty";
+        }
+        return "";
+    };
+    const isSelectableUser = (user: UserOption) => !getBlockedReason(user);
 
     // Load departments when company changes
     useEffect(() => {
@@ -158,11 +211,15 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         const fetchDepts = async () => {
             try {
                 const res = await callFetchDepartmentsByCompany(effectiveCompanyId);
-                setDepartments(res?.data ?? []);
+                let list = res?.data ?? [];
+                if (filterDepartmentIds && filterDepartmentIds.length > 0) {
+                    list = list.filter((d: any) => filterDepartmentIds.includes(d.id));
+                }
+                setDepartments(list);
             } catch { }
         };
         fetchDepts();
-    }, [open, effectiveCompanyId]);
+    }, [open, effectiveCompanyId, filterDepartmentIds]);
 
     // Load sections when department changes
     useEffect(() => {
@@ -180,23 +237,32 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         fetchSections();
     }, [open, selectedDepartmentId]);
 
-    const loadUsers = async () => {
+    const loadUsers = async (searchTerm: string = "") => {
         setLoading(true);
         try {
             if (isCrossCompany) {
                 // Chuẩn bị query params gửi lên Backend
                 let query = `page=${page}&size=${PAGE_SIZE}`;
-                if (search.trim()) {
-                    query += `&search=${encodeURIComponent(search.trim())}`;
+                if (searchTerm.trim()) {
+                    query += `&search=${encodeURIComponent(searchTerm.trim())}`;
                 }
-                if (selectedCompanyId) {
-                    query += `&companyId=${selectedCompanyId}`;
+                if (effectiveCompanyId) {
+                    query += `&companyId=${effectiveCompanyId}`;
                 }
                 if (selectedDepartmentId) {
                     query += `&departmentId=${selectedDepartmentId}`;
+                } else if (filterDepartmentIds && filterDepartmentIds.length > 0) {
+                    filterDepartmentIds.forEach(id => {
+                        query += `&departmentIds=${id}`;
+                    });
                 }
                 if (selectedSectionId) {
                     query += `&sectionId=${selectedSectionId}`;
+                }
+                if (managerFilter === 'hasManager') {
+                    query += `&hasDirectManager=true`;
+                } else if (managerFilter === 'noManager') {
+                    query += `&hasDirectManager=false`;
                 }
 
                 // Gọi API mới
@@ -212,6 +278,12 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     jobTitle: getUserJobTitle(u),
                     positionLevel: getUserLevel(u),
                     company: getUserCompany(u),
+                    directManagerId: u.directManagerId || u.directManager?.id,
+                    directManagerName: u.directManagerName || u.directManager?.name,
+                    directManagerCompanyIds: u.directManagerCompanyIds || u.directManager?.companyIds,
+                    indirectManagerId: u.indirectManagerId || u.indirectManager?.id,
+                    indirectManagerName: u.indirectManagerName || u.indirectManager?.name,
+                    indirectManagerCompanyIds: u.indirectManagerCompanyIds || u.indirectManager?.companyIds,
                 }));
 
                 setAllUsers(users);
@@ -244,6 +316,12 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         jobTitle: getUserJobTitle(p),
                         positionLevel: getUserLevel(p),
                         company: getUserCompany(p),
+                        directManagerId: p.user?.directManagerId || p.user?.directManager?.id,
+                        directManagerName: p.user?.directManagerName || p.user?.directManager?.name,
+                        directManagerCompanyIds: p.user?.directManagerCompanyIds || p.user?.directManager?.companyIds,
+                        indirectManagerId: p.user?.indirectManagerId || p.user?.indirectManager?.id || p.user?.directManager?.directManager?.id,
+                        indirectManagerName: p.user?.indirectManagerName || p.user?.indirectManager?.name || p.user?.directManager?.directManager?.name,
+                        indirectManagerCompanyIds: p.user?.indirectManagerCompanyIds || p.user?.indirectManager?.companyIds || p.user?.directManager?.directManager?.companyIds,
                     }));
                 setAllUsers(users);
                 setTotal(users.length);
@@ -254,13 +332,39 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         }
     };
 
-    // Load users based on dependencies
-    useEffect(() => {
-        if (!open) return;
-        if (!isCrossCompany && !companyId) return;
+    const sourceDepartments = useMemo(() => {
+        if (!sourceUsers) return [];
+        const map = new Map<number, string>();
+        sourceUsers.forEach(u => {
+            if (u.departmentId && u.department) {
+                map.set(u.departmentId, u.department);
+            }
+        });
+        return Array.from(map.entries()).map(([id, name]) => ({
+            label: name,
+            value: id
+        }));
+    }, [sourceUsers]);
+    const availableDepartmentOptions = useMemo(() => {
+        if (departmentOptions && departmentOptions.length > 0) return departmentOptions;
+        if (sourceDepartments.length > 0) return sourceDepartments;
+        return departments.map(d => ({ label: d.name, value: d.id }));
+    }, [departmentOptions, sourceDepartments, departments]);
 
-        // If not cross-company and cachedUsers is available, use it (avoid duplicate API call)
-        if (!isCrossCompany && cachedUsers && cachedUsers.size > 0 && allUsers.length === 0) {
+    // 1. Nếu màn cha truyền sẵn danh sách (sourceUsers) thì dùng luôn, không gọi API.
+    useEffect(() => {
+        if (!open || !sourceUsers) return;
+        setAllUsers(sourceUsers);
+        setTotal(sourceUsers.length);
+        setTotalPages(Math.ceil(sourceUsers.length / PAGE_SIZE));
+    }, [open, sourceUsers]);
+
+    // 2. Tải danh sách user theo công ty hiện tại (Non cross-company) - chỉ chạy khi mở hoặc đổi công ty/cache
+    useEffect(() => {
+        if (!open || isCrossCompany || sourceUsers) return;
+
+        // Nếu cachedUsers được truyền và đã có dữ liệu, dùng luôn để tránh gọi lại API trùng lặp
+        if (cachedUsers && cachedUsers.size > 0 && allUsers.length === 0) {
             const users = Array.from(cachedUsers.values());
             setAllUsers(users);
             setTotal(users.length);
@@ -268,21 +372,39 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
             return;
         }
 
-        loadUsers();
-    }, [open, page, search, selectedCompanyId, companyId, isCrossCompany, selectedDepartmentId, selectedSectionId]);
+        if (!companyId) return;
+
+        loadUsers("");
+    }, [open, isCrossCompany, companyId, sourceUsers, cachedUsers]);
+
+    // 3. Tải danh sách user cross-company (Server-side search & paginate) - chạy khi đổi page/search/filter
+    useEffect(() => {
+        if (!open || !isCrossCompany || sourceUsers) return;
+
+        loadUsers(debouncedSearch);
+    }, [open, isCrossCompany, page, debouncedSearch, selectedCompanyId, selectedDepartmentId, selectedSectionId, sourceUsers, companyId, filterDepartmentIds, managerFilter]);
 
     const filtered = useMemo(() => {
         let list = allUsers;
-        if (!isCrossCompany) {
+        if (sourceUsers || !isCrossCompany) {
             if (selectedDepartmentId) {
-                list = list.filter((u) => u.departmentId === selectedDepartmentId);
+                const selectedDepartmentLabel = availableDepartmentOptions.find(opt => opt.value === selectedDepartmentId)?.label;
+                list = list.filter((u) =>
+                    u.departmentId === selectedDepartmentId ||
+                    (!!selectedDepartmentLabel && u.department === selectedDepartmentLabel)
+                );
             }
             if (selectedSectionId) {
                 list = list.filter((u) => u.sectionId === selectedSectionId);
             }
+            if (managerFilter === "hasManager") {
+                list = list.filter(hasCompleteManagerLine);
+            } else if (managerFilter === "noManager") {
+                list = list.filter((u) => !hasCompleteManagerLine(u));
+            }
         }
 
-        if (isCrossCompany) {
+        if (isCrossCompany && !sourceUsers) {
             return list;
         }
 
@@ -296,16 +418,16 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                 u.section?.toLowerCase().includes(q) ||
                 u.department?.toLowerCase().includes(q)
         );
-    }, [allUsers, search, isCrossCompany, selectedDepartmentId, selectedSectionId]);
+    }, [allUsers, selectedDepartmentId, selectedSectionId, managerFilter, search, sourceUsers, isCrossCompany, availableDepartmentOptions]);
 
     const paginated = useMemo(() => {
-        if (isCrossCompany) {
+        if (isCrossCompany && !sourceUsers) {
             return filtered;
         }
         return filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-    }, [filtered, page, isCrossCompany]);
+    }, [filtered, page, isCrossCompany, sourceUsers]);
 
-    const displayedTotalPages = isCrossCompany ? totalPages : Math.ceil(filtered.length / PAGE_SIZE);
+    const displayedTotalPages = isCrossCompany && !sourceUsers ? totalPages : Math.ceil(filtered.length / PAGE_SIZE);
 
     const toggle = (id: string) => {
         if (maxSelect === 1) {
@@ -318,7 +440,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     };
 
     const toggleAll = () => {
-        const pageIds = paginated.map((u) => u.value);
+        const pageIds = paginated.filter(isSelectableUser).map((u) => u.value);
         const allSelected = pageIds.every((id) => localSelected.includes(id));
         if (allSelected) {
             setLocalSelected((prev) => prev.filter((id) => !pageIds.includes(id)));
@@ -328,11 +450,20 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
     };
 
     const handleConfirm = () => {
-        onChange(localSelected);
+        const selectableIds = new Set(allUsers.filter(isSelectableUser).map((user) => user.value));
+        onChange(localSelected.filter((id) => selectableIds.has(id)));
         onClose();
     };
 
     const handleClearAll = () => setLocalSelected([]);
+    useEffect(() => {
+        if (!open || hasDirectManager !== true || allUsers.length === 0 || localSelected.length === 0) return;
+        const selectableIds = new Set(allUsers.filter(isSelectableUser).map((user) => user.value));
+        const nextSelected = localSelected.filter((id) => selectableIds.has(id));
+        if (nextSelected.length !== localSelected.length) {
+            setLocalSelected(nextSelected);
+        }
+    }, [open, allUsers, effectiveCompanyId, hasDirectManager, localSelected]);
 
     // ✅ FIX: selectedUsers lấy từ allUsers (đã có tên đầy đủ)
     // Nếu user không có trong allUsers (vd: user bị xoá khỏi công ty)
@@ -345,7 +476,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
         return { value: id, name: `User #${id.slice(0, 6)}`, email: id, department: undefined };
     });
 
-    const pageIds = paginated.map((u) => u.value);
+    const pageIds = paginated.filter(isSelectableUser).map((u) => u.value);
     const allPageSelected = pageIds.length > 0 && pageIds.every((id) => localSelected.includes(id));
     const somePageSelected = pageIds.some((id) => localSelected.includes(id)) && !allPageSelected;
 
@@ -358,6 +489,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
             title={null}
             closable={false}
             mask
+            className="user-picker-drawer"
             styles={{
                 mask: { background: "rgba(15, 23, 42, 0.3)", backdropFilter: "blur(2px)" },
                 content: {
@@ -376,6 +508,56 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                 },
             }}
         >
+            <style>{`
+                .user-picker-drawer .ant-checkbox-checked .ant-checkbox-inner {
+                    background-color: #e8356d !important;
+                    border-color: #e8356d !important;
+                }
+                .user-picker-drawer .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+                .user-picker-drawer .ant-checkbox:hover .ant-checkbox-inner,
+                .user-picker-drawer .ant-checkbox-input:focus + .ant-checkbox-inner {
+                    border-color: #e8356d !important;
+                }
+                .user-picker-drawer .ant-checkbox-indeterminate .ant-checkbox-inner::after {
+                    background-color: #e8356d !important;
+                }
+                .user-picker-drawer .ant-select .ant-select-selector {
+                    border-radius: 8px !important;
+                    border-color: #e2e8f0 !important;
+                    background-color: #f8fafc !important;
+                    transition: all 0.2s !important;
+                }
+                .user-picker-drawer .ant-select-focused .ant-select-selector,
+                .user-picker-drawer .ant-select-selector:hover {
+                    border-color: #e8356d !important;
+                    box-shadow: 0 0 0 2px rgba(232, 53, 109, 0.08) !important;
+                }
+                .ant-select-dropdown .ant-select-item-option-selected {
+                    background-color: #fff1f7 !important;
+                    color: #e8356d !important;
+                    font-weight: 600 !important;
+                }
+                .ant-select-dropdown .ant-select-item-option-active {
+                    background-color: #fff7fa !important;
+                }
+                .user-picker-drawer .ant-input-affix-wrapper:focus,
+                .user-picker-drawer .ant-input-affix-wrapper-focused,
+                .user-picker-drawer .ant-input-affix-wrapper:hover {
+                    border-color: #e8356d !important;
+                    box-shadow: 0 0 0 2px rgba(232, 53, 109, 0.08) !important;
+                }
+                .user-picker-drawer .user-picker-confirm-btn {
+                    background-color: #e8356d !important;
+                    border-color: #e8356d !important;
+                    color: #ffffff !important;
+                }
+                .user-picker-drawer .user-picker-confirm-btn:hover,
+                .user-picker-drawer .user-picker-confirm-btn:focus {
+                    background-color: #d0285d !important;
+                    border-color: #d0285d !important;
+                    color: #ffffff !important;
+                }
+            `}</style>
             {/* Header */}
             <div style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -387,7 +569,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{
                         width: 36, height: 36, borderRadius: 10,
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        background: "linear-gradient(135deg, #f43f5e 0%, #e11d72 100%)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         color: "#fff", fontSize: 16,
                     }}>
@@ -395,10 +577,10 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     </div>
                     <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", lineHeight: 1.2 }}>
-                            Chọn người được xem
+                            {title ?? "Chọn người được xem"}
                         </div>
                         <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                            {isCrossCompany ? total : allUsers.length} người dùng {isCrossCompany ? "trên hệ thống" : "trong công ty"}
+                            {sourceUsers ? `${allUsers.length} người dùng` : `${isCrossCompany ? total : allUsers.length} người dùng ${isCrossCompany ? "trên hệ thống" : "trong công ty"}`}
                         </div>
                     </div>
                 </div>
@@ -432,8 +614,9 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                             size="middle"
                             style={{ borderRadius: 8, borderColor: "#e2e8f0", background: "#f8fafc" }}
                         />
-                        <div style={{ display: "grid", gridTemplateColumns: isCrossCompany ? "1fr 1fr 1fr" : "1fr 1fr", gap: 8, marginTop: 10 }}>
-                            {isCrossCompany && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginTop: 10 }}>
+                            {/* Filter: Company */}
+                            {isCrossCompany && !sourceUsers && (
                                 <Select
                                     placeholder="Công ty"
                                     allowClear
@@ -448,7 +631,35 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                     style={{ width: "100%" }}
                                 />
                             )}
-                            {(isCrossCompany ? selectedCompanyId : companyId) && (
+
+                            {/* Filter: Department & Section */}
+                            {filterDepartmentIds && filterDepartmentIds.length > 0 ? (
+                                <Select
+                                    placeholder="Lọc theo phòng ban"
+                                    allowClear
+                                    value={selectedDepartmentId}
+                                    onChange={(val) => {
+                                        setSelectedDepartmentId(val);
+                                        setSelectedSectionId(null);
+                                        setPage(1);
+                                    }}
+                                    options={availableDepartmentOptions}
+                                    style={{ width: "100%" }}
+                                />
+                            ) : sourceUsers ? (
+                                <Select
+                                    placeholder="Lọc theo phòng ban"
+                                    allowClear
+                                    value={selectedDepartmentId}
+                                    onChange={(val) => {
+                                        setSelectedDepartmentId(val);
+                                        setPage(1);
+                                    }}
+                                    options={availableDepartmentOptions}
+                                    disabled={availableDepartmentOptions.length === 0}
+                                    style={{ width: "100%" }}
+                                />
+                            ) : (!sourceUsers && (isCrossCompany ? selectedCompanyId : companyId)) ? (
                                 <>
                                     <Select
                                         placeholder="Phòng ban"
@@ -472,6 +683,21 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                         style={{ width: "100%" }}
                                     />
                                 </>
+                            ) : null}
+
+                            {/* Filter: Manager Status */}
+                            {(hasDirectManager || isCrossCompany || sourceUsers) && (
+                                <Select
+                                    placeholder="Trạng thái Quản lý"
+                                    value={managerFilter}
+                                    onChange={(val) => { setManagerFilter(val || "all"); setPage(1); }}
+                                    options={[
+                                        { label: "Tất cả tuyến QL", value: "all" },
+                                        { label: "Đã có Quản lý", value: "hasManager" },
+                                        { label: "Chưa gán Quản lý", value: "noManager" }
+                                    ]}
+                                    style={{ width: "100%" }}
+                                />
                             )}
                         </div>
                     </div>
@@ -499,7 +725,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                 fontSize: 11, color: "#94a3b8",
                                 background: "#e2e8f0", borderRadius: 99, padding: "2px 8px", fontWeight: 500,
                             }}>
-                                {isCrossCompany ? total : filtered.length} kết quả
+                                {isCrossCompany && !sourceUsers ? total : filtered.length} kết quả
                             </span>
                         </div>
                     )}
@@ -522,28 +748,38 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                             paginated.map((user) => {
                                 const isSelected = localSelected.includes(user.value);
                                 const orgUnit = formatOrgUnit(user);
+                                const blockedReason = getBlockedReason(user);
+                                const isRowSelectable = !blockedReason;
+                                
                                 return (
                                     <div
                                         key={user.value}
-                                        onClick={() => toggle(user.value)}
+                                        onClick={() => {
+                                            if (isRowSelectable) {
+                                                toggle(user.value);
+                                            }
+                                        }}
                                         style={{
                                             display: "flex", alignItems: "center", gap: 12,
                                             padding: "11px 16px",
-                                            cursor: "pointer",
-                                            background: isSelected ? "#eff6ff" : "#fff",
+                                            cursor: isRowSelectable ? "pointer" : "not-allowed",
+                                            background: isSelected ? "#f8fafc" : "#fff",
                                             borderBottom: "1px solid #f1f5f9",
                                             transition: "background 0.1s",
-                                            borderLeft: isSelected ? "3px solid #3b82f6" : "3px solid transparent",
+                                            borderLeft: isSelected ? "3px solid #e8356d" : "3px solid transparent",
                                         }}
                                         onMouseEnter={(e) => {
-                                            if (!isSelected) (e.currentTarget as HTMLElement).style.background = "#f8fafc";
+                                            if (isRowSelectable && !isSelected) (e.currentTarget as HTMLElement).style.background = "#f8fafc";
                                         }}
                                         onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLElement).style.background = isSelected ? "#eff6ff" : "#fff";
+                                            if (isRowSelectable) {
+                                                (e.currentTarget as HTMLElement).style.background = isSelected ? "#f8fafc" : "#fff";
+                                            }
                                         }}
                                     >
                                         <Checkbox
                                             checked={isSelected}
+                                            disabled={!isRowSelectable}
                                             onChange={() => toggle(user.value)}
                                             onClick={(e) => e.stopPropagation()}
                                         />
@@ -561,7 +797,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                                 {user.positionLevel && (
                                                     <span style={{
                                                         padding: "1px 7px", borderRadius: 99,
-                                                        background: "#eef2ff", color: "#4f46e5",
+                                                        background: "#f1f5f9", color: "#475569",
                                                         fontSize: 10, fontWeight: 700, lineHeight: "17px",
                                                         flexShrink: 0,
                                                     }}>
@@ -578,14 +814,22 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                                 </div>
                                             )}
                                         </div>
-                                        {isSelected && (
-                                            <div style={{
-                                                width: 20, height: 20, borderRadius: 99,
-                                                background: "#3b82f6", display: "flex",
-                                                alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                        {blockedReason ? (
+                                            <span style={{ 
+                                                fontSize: "11px", 
+                                                color: "#ea580c", 
+                                                background: "#fff7ed", 
+                                                border: "1px solid #ffedd5",
+                                                padding: "3px 8px", 
+                                                borderRadius: "6px", 
+                                                fontWeight: 500,
+                                                marginLeft: "auto",
+                                                flexShrink: 0
                                             }}>
-                                                <CheckOutlined style={{ color: "#fff", fontSize: 10 }} />
-                                            </div>
+                                                {blockedReason}
+                                            </span>
+                                        ) : isSelected && (
+                                            <CheckOutlined style={{ color: "#e8356d", fontSize: 15, flexShrink: 0 }} />
                                         )}
                                     </div>
                                 );
@@ -643,7 +887,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                             {localSelected.length > 0 && (
                                 <span style={{
                                     minWidth: 20, height: 20, borderRadius: 99,
-                                    background: "#3b82f6", color: "#fff",
+                                    background: "#e8356d", color: "#fff",
                                     fontSize: 11, fontWeight: 700,
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                     padding: "0 6px",
@@ -713,7 +957,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                                                 {user.positionLevel && (
                                                     <span style={{
                                                         marginLeft: 5, padding: "0 5px", borderRadius: 99,
-                                                        background: "#eef2ff", color: "#4f46e5",
+                                                        background: "#f1f5f9", color: "#475569",
                                                         fontSize: 9, fontWeight: 700, lineHeight: "15px",
                                                         verticalAlign: "middle",
                                                     }}>
@@ -763,7 +1007,7 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                         <>
                             <span style={{
                                 display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                width: 22, height: 22, borderRadius: 99, background: "#3b82f6",
+                                width: 22, height: 22, borderRadius: 99, background: "#475569",
                                 color: "#fff", fontSize: 11, fontWeight: 700,
                             }}>
                                 {localSelected.length}
@@ -785,10 +1029,11 @@ const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     </Button>
                     <Button
                         type="primary"
+                        className="user-picker-confirm-btn"
                         onClick={handleConfirm}
                         style={{ borderRadius: 8, height: 36, paddingInline: 16, fontWeight: 600 }}
                     >
-                        Xác nhận{localSelected.length > 0 ? ` (${localSelected.length})` : ""}
+                        {confirmText ?? "Xác nhận"}{localSelected.length > 0 ? ` (${localSelected.length})` : ""}
                     </Button>
                 </div>
             </div>

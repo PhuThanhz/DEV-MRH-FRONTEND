@@ -69,7 +69,7 @@ export const useCreateAccountingDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo loại chứng từ kế toán");
+            notify.error(error.message || "Không thể tạo loại chứng từ kế toán");
         },
     });
 };
@@ -94,7 +94,7 @@ export const useUpdateAccountingDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật loại chứng từ kế toán");
+            notify.error(error.message || "Không thể cập nhật loại chứng từ kế toán");
         },
     });
 };
@@ -115,7 +115,7 @@ export const useToggleActiveAccountingDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };
@@ -136,7 +136,7 @@ export const useDeleteAccountingDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa loại chứng từ kế toán");
+            notify.error(error.message || "Không thể xóa loại chứng từ kế toán");
         },
     });
 };

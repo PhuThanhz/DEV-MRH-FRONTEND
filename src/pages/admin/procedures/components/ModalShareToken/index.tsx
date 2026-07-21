@@ -16,7 +16,7 @@
 import { useState } from "react";
 import {
     Modal, Form, Button, Table, Tag, Popconfirm,
-    Typography, Tooltip, Flex, Badge, message, Input,
+    Typography, Tooltip, Flex, Badge, Input,
 } from "antd";
 import {
     ShareAltOutlined, StopOutlined,
@@ -24,6 +24,7 @@ import {
     MailOutlined, SendOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { notify } from "@/components/common/notification/notify";
 import type { IProcedure, ProcedureType, IResShareTokenDTO } from "@/types/backend";
 import {
     useShareTokensQuery,
@@ -116,7 +117,7 @@ const ModalShareToken = ({ open, onClose, procedure, procedureType }: IProps) =>
     const handleSendSystemEmail = async (tokenId: number) => {
         const trimmed = emailInput.trim();
         if (!trimmed) {
-            message.warning("Vui lòng nhập email người nhận");
+            notify.warning("Vui lòng nhập email người nhận");
             return;
         }
         await sendEmailMutation.mutateAsync({ tokenId, email: trimmed });

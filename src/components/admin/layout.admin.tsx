@@ -8,7 +8,7 @@ import {
     MenuUnfoldOutlined,
     BugOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu, Dropdown, Space, message, Avatar, Button } from 'antd';
+import { Layout, Menu, Dropdown, Space, Avatar, Button } from 'antd';
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { callLogout } from 'config/api';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
@@ -16,6 +16,7 @@ import { isMobile } from 'react-device-detect';
 import type { MenuProps } from 'antd';
 import { setLogoutAction } from '@/redux/slice/accountSlide';
 import { ALL_PERMISSIONS } from '@/config/permissions';
+import { notify } from '@/components/common/notification/notify';
 
 const { Content, Sider } = Layout;
 
@@ -100,7 +101,7 @@ const LayoutAdmin = () => {
         const res = await callLogout();
         if (res && +res.statusCode === 200) {
             dispatch(setLogoutAction());
-            message.success('Đăng xuất thành công');
+            notify.success('Đăng xuất thành công');
             navigate('/');
         }
     };

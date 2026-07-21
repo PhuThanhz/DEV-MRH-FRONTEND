@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Space, Popconfirm, Button, Dropdown, Tag } from "antd";
+import { Space, Popconfirm, Dropdown, Tag } from "antd";
 import {
     MoreOutlined,
     EyeOutlined,
@@ -39,6 +39,7 @@ import { PATHS } from "@/constants/paths";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const DepartmentPage = () => {
     const navigate = useNavigate();
@@ -319,11 +320,11 @@ const DepartmentPage = () => {
                     <Space size={4} align="center">
                         {/* Xem chi tiết */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.GET_BY_ID} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
                                 data-guide-id="department-detail-button"
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined data-guide-id="department-detail-button" style={{ color: "#1677ff", fontSize: 16 }} />}
+                                icon={<EyeOutlined data-guide-id="department-detail-button" style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenView(true);
@@ -333,11 +334,11 @@ const DepartmentPage = () => {
 
                         {/* Chỉnh sửa */}
                         <Access permission={ALL_PERMISSIONS.DEPARTMENTS.UPDATE} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="edit"
+                                tooltip="Chỉnh sửa"
                                 data-guide-id="department-edit-button"
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                                icon={<EditOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => {
                                     setDataInit(record);
                                     setOpenModal(true);
@@ -352,11 +353,10 @@ const DepartmentPage = () => {
                                 trigger={["click"]}
                                 placement="bottomRight"
                             >
-                                <Button
+                                <ActionButton
+                                    tooltip="Thêm thao tác"
                                     data-guide-id="department-more-button"
-                                    type="text"
-                                    size="small"
-                                    icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />}
+                                    icon={<MoreOutlined style={{ fontSize: 16 }} />}
                                 />
                             </Dropdown>
                         )}

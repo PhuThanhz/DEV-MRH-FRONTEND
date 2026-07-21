@@ -71,50 +71,69 @@ import ActionButton from "@/components/common/ui/ActionButton";
 - [x] `src/pages/admin/company/company-job-title/company-job-title.tab.tsx`
 - [x] `src/pages/admin/section/tab.section-job-title.tsx`
 
-## Danh sách file còn lại (~32)
+## Danh sách triển khai (đã hoàn tất)
 
 ### Cụm 1 — Quản trị nhân sự / tổ chức (ưu tiên cao)
-- [ ] `src/pages/admin/user/user.tsx`
-- [ ] `src/pages/admin/employees/employee.tsx`
-- [ ] `src/pages/admin/company/company.tsx`
-- [ ] `src/pages/admin/department/department.tsx`
-- [ ] `src/pages/admin/section/section.tsx`
-- [ ] `src/pages/admin/role/role.tsx`
-- [ ] `src/pages/admin/permission/permission.tsx`
-- [ ] `src/pages/admin/permission-category/index.tsx`
-- [ ] `src/pages/admin/permission-category/content/drawer.permission-content.tsx`
+- [x] `src/pages/admin/user/user.tsx`
+- [x] `src/pages/admin/employees/employee.tsx`
+- [x] `src/pages/admin/company/company.tsx`
+- [x] `src/pages/admin/department/department.tsx`
+- [x] `src/pages/admin/section/section.tsx`
+- [x] `src/pages/admin/role/role.tsx`
+- [x] `src/pages/admin/permission/permission.tsx`
+- [x] `src/pages/admin/permission-category/index.tsx`
+- [x] `src/pages/admin/permission-category/content/drawer.permission-content.tsx`
 
 ### Cụm 2 — Chức danh / cấp bậc / lộ trình
-- [ ] `src/pages/admin/job-title/job-title.page.tsx`
-- [ ] `src/pages/admin/position-levels/position-levels.tsx`
-- [ ] `src/pages/admin/department/career-path/EmployeeCareerPathTab.tsx`
-- [ ] `src/pages/admin/department/career-path/ModalCareerPath.tsx`
-- [ ] `src/pages/admin/company/org-chart/OrgNodeCard.tsx`
-- [ ] `src/pages/admin/job-description/components/JobDescriptionTable.tsx`
+- [x] `src/pages/admin/job-title/job-title.page.tsx`
+- [x] `src/pages/admin/position-levels/position-levels.tsx`
+- [x] `src/pages/admin/department/career-path/EmployeeCareerPathTab.tsx`
+- [x] `src/pages/admin/department/career-path/ModalCareerPath.tsx` — chỉ có nút kèm chữ, giữ nguyên theo quy tắc.
+- [x] `src/pages/admin/company/org-chart/OrgNodeCard.tsx` — action nổi hình tròn co giãn theo node, không phải action bảng 30px.
+- [x] `src/pages/admin/job-description/components/JobDescriptionTable.tsx`
 
 ### Cụm 3 — Đánh giá (evaluation)
-- [ ] `src/pages/admin/evaluation/periods/PeriodDetailDrawer.tsx`
-- [ ] `src/pages/admin/evaluation/templates/TemplatePage.tsx`
-- [ ] `src/pages/admin/evaluation-criteria/page.evaluation-criteria.tsx`
-- [ ] `src/pages/evaluation/manager/PendingManagerEvaluationPage.tsx`
-- [ ] `src/pages/evaluation/summary/CompletedEvaluationsPage.tsx`
-- [ ] `src/pages/evaluation/my-records/MyEvaluationPage.tsx`
-- [ ] `src/pages/evaluation/process/PendingEvaluationPage.tsx`
-- [ ] `src/pages/evaluation/approval/PendingApprovalPage.tsx`
+- [x] `src/pages/admin/evaluation/periods/PeriodDetailDrawer.tsx`
+- [x] `src/pages/admin/evaluation/templates/TemplatePage.tsx`
+- [x] `src/pages/admin/evaluation-criteria/page.evaluation-criteria.tsx` — không có cột action.
+- [x] `src/pages/evaluation/manager/PendingManagerEvaluationPage.tsx` — nút nghiệp vụ có chữ “Chấm điểm/Xem chi tiết”.
+- [x] `src/pages/evaluation/summary/CompletedEvaluationsPage.tsx` — nút “Chi tiết” có chữ.
+- [x] `src/pages/evaluation/my-records/MyEvaluationPage.tsx`
+- [x] `src/pages/evaluation/process/PendingEvaluationPage.tsx`
+- [x] `src/pages/evaluation/approval/PendingApprovalPage.tsx` — nút nghiệp vụ có chữ “Chấm & duyệt cuối/Xem chi tiết”.
 
 ### Cụm 4 — Tài liệu / kế toán / quy trình
-- [ ] `src/pages/admin/document/index.tsx`
-- [ ] `src/pages/admin/document-category/index.tsx`
-- [ ] `src/pages/admin/personal-drive/index.tsx`
-- [ ] `src/pages/admin/accounting/index.tsx`
-- [ ] `src/pages/admin/accounting-document-category/index.tsx`
-- [ ] `src/pages/admin/accounting-workflows/index.tsx`
-- [ ] `src/pages/admin/accounting-delegations/index.tsx`
-- [ ] `src/pages/admin/process-action/index.tsx`
-- [ ] `src/pages/admin/procedures/components/table/procedureColumns.tsx`
-- [ ] `src/pages/admin/procedures/components/table/ShareLogTable.tsx`
-- [ ] `src/pages/admin/department/mission-console/index.tsx`
-- [ ] `src/pages/admin/dashboard/department-profile.tsx`
+- [x] `src/pages/admin/document/index.tsx`
+- [x] `src/pages/admin/document-category/index.tsx`
+- [x] `src/pages/admin/personal-drive/index.tsx`
+- [x] `src/pages/admin/accounting/index.tsx`
+- [x] `src/pages/admin/accounting-document-category/index.tsx`
+- [x] `src/pages/admin/accounting-workflows/index.tsx`
+- [x] `src/pages/admin/accounting-delegations/index.tsx`
+- [x] `src/pages/admin/process-action/index.tsx`
+- [x] `src/pages/admin/procedures/components/table/procedureColumns.tsx`
+- [x] `src/pages/admin/procedures/components/table/ShareLogTable.tsx`
+- [x] `src/pages/admin/department/mission-console/index.tsx`
+- [x] `src/pages/admin/dashboard/department-profile.tsx`
+
+## Bổ sung sau khi rà soát toàn frontend
+
+Ngoài danh sách ban đầu, toàn bộ file có cột `Hành động`/`Thao tác` trong `src`
+đã được quét lại. Các action icon còn sót đã được chuẩn hoá thêm tại:
+
+- [x] `src/pages/admin/accounting-dossiers/index.tsx`
+- [x] `src/pages/admin/accounting-dossiers/components/DossierDocumentList.tsx`
+- [x] `src/pages/admin/accounting-dossiers/components/DossierTemplateDrawer.tsx`
+- [x] `src/pages/admin/company/company-job-title/company-salary-grade/drawer.company-salary-grade.tsx`
+- [x] `src/pages/admin/department/department-salary-grade/drawer.department-salary-grade.tsx`
+- [x] `src/pages/admin/section/section-salary-grade/drawer.section-salary-grade.tsx`
+- [x] `src/pages/admin/job-title-performance-content/drawer.job-title-performance-content.tsx`
+- [x] `src/pages/admin/department/objectives-tasks/components/ObjectivesSection.tsx`
+- [x] `src/pages/admin/department/objectives-tasks/components/TasksSection.tsx`
+- [x] `src/pages/admin/department/objectives-tasks/components/AuthoritiesSection.tsx`
+
+Các file còn lại trong kết quả quét chỉ dùng nút có chữ (ví dụ `Chọn`, `Chi tiết`,
+`Xử lý`) hoặc cột dữ liệu tên “Thao tác”, nên được giữ nguyên đúng quy tắc số 8.
 
 ## Lưu ý
 

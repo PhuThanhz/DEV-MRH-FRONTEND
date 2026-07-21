@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@keyframes lotus-toast-progress {
+    from {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(0);
+    }
+}
+
 /* TÙY CHỈNH THANH CUỘN (SCROLLBAR) TOÀN HỆ THỐNG - GIÚP BẢNG & TRANG SLEEK HƠN */
 /* Cho tất cả các trình duyệt (Firefox) - Mặc định thanh cuộn trong suốt hoàn toàn, chỉ hiện màu nhẹ khi hover, loại bỏ 100% giật layout */
 * {
@@ -93,12 +103,44 @@
 
 /* ===== PHÂN TRANG DÙNG CHUNG (DataTable / ProTable) ===== */
 /* Scope trong .custom-pro-table nên áp dụng mọi trang list, load 1 lần từ CSS global. */
+.datatable-wrapper .ant-pro-card,
+.custom-pro-table .ant-pro-card {
+    border-radius: 10px;
+}
+
+.custom-pro-table .ant-pro-card-body {
+    padding: 0 !important;
+}
+
+.custom-pro-table .ant-table {
+    font-size: 13px;
+}
+
+.custom-pro-table .ant-table-thead > tr > th {
+    padding: 10px 12px !important;
+    font-size: 12.5px !important;
+    line-height: 18px !important;
+}
+
+.custom-pro-table .ant-table-tbody > tr > td {
+    padding: 9px 12px !important;
+    line-height: 20px !important;
+}
+
+.custom-pro-table .ant-table-cell {
+    vertical-align: middle;
+}
+
+.custom-pro-table .ant-table-container {
+    border-radius: 10px;
+}
+
 .custom-pro-table .ant-pagination {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
-    padding: 10px 4px 2px;
+    padding: 8px 4px 0;
     font-size: 13px;
 }
 
@@ -215,6 +257,115 @@
     border-color: #e8637a;
     box-shadow: 0 0 0 3px rgba(232, 99, 122, 0.12);
     outline: none;
+}
+
+/* ===== EVALUATION SCORE PICKER (shared employee / manager / approver) ===== */
+.evaluation-score-picker {
+    max-width: 100%;
+    min-width: 0;
+    margin-left: auto;
+    padding: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.evaluation-score-picker.is-empty {
+    background: #fff8fa;
+    border-color: #f1b5c0;
+}
+
+.evaluation-score-picker.has-value {
+    background: #ffffff;
+    border-color: #ead4d9;
+}
+
+.evaluation-score-picker-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.evaluation-score-option {
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding: 0;
+    color: #475569;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 30px;
+    cursor: pointer;
+    transition: color 0.14s ease, background-color 0.14s ease, transform 0.14s ease;
+}
+
+.evaluation-score-option:hover:not(:disabled):not(.is-selected) {
+    color: #c94760;
+    background: #fff0f3;
+}
+
+.evaluation-score-option:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.evaluation-score-option:focus-visible {
+    outline: 2px solid #e8637a;
+    outline-offset: 1px;
+}
+
+.evaluation-score-option.is-selected {
+    color: #ffffff;
+    background: #e8637a;
+    box-shadow: 0 2px 5px rgba(232, 99, 122, 0.24);
+}
+
+.evaluation-score-option:disabled {
+    cursor: wait;
+}
+
+.evaluation-score-picker.is-saving .evaluation-score-picker-options {
+    opacity: 0.62;
+}
+
+.evaluation-score-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    margin: 6px -4px -4px;
+    padding: 5px 10px 6px;
+    color: #8491a5;
+    background: #fff7f9;
+    border-top: 1px solid #f5d4da;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.evaluation-score-result strong {
+    color: #d94c66;
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.evaluation-score-result.is-label-only {
+    justify-content: center;
+}
+
+.evaluation-score-picker:focus-within {
+    border-color: #e8637a;
+    box-shadow: 0 0 0 2px rgba(232, 99, 122, 0.12);
 }
 
 /* CUSTOM SIDEBAR */

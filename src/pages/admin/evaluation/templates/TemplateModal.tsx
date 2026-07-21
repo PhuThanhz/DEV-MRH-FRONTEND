@@ -120,7 +120,7 @@ const TemplateModal = (props: IProps) => {
                 if (setDataInit) setDataInit(null);
                 reloadTable();
             } else {
-                notify.error('Có lỗi xảy ra');
+                notify.error('Không thể lưu mẫu đánh giá. Vui lòng thử lại.');
             }
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const msg = error?.message || error?.response?.data?.message || 'Lỗi kết nối máy chủ';

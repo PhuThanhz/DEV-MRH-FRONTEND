@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Input, message } from "antd";
+import { Input } from "antd";
 import { EditOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ISalaryStructure, IReqSalaryStructure } from "@/types/backend";
 import { useUpsertSalaryStructureMutation } from "@/hooks/useSalaryStructure";
+import { notify } from "@/components/common/notification/notify";
 
 interface Props {
     structure: ISalaryStructure | null;
@@ -79,14 +80,14 @@ const EditableRowMonth = ({ structure, ownerLevel, jobTitleId, gradeId, onSaved 
 
         upsert.mutate(payload, {
             onSuccess: (newStruct) => {
-                message.success({ content: "Đã lưu thành công", duration: 2 });
+                notify.success("Đã lưu thành công", { duration: 2000 });
                 onSaved(newStruct as ISalaryStructure);
                 setIsEditing(false);
                 setShowSavedFeedback(true);
                 setTimeout(() => setShowSavedFeedback(false), 2000);
             },
             onError: () => {
-                message.error({ content: "Lưu thất bại, vui lòng thử lại", duration: 3 });
+                notify.error("Không thể lưu, vui lòng thử lại", { duration: 3000 });
             },
         });
     };

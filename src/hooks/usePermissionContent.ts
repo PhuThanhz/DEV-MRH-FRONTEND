@@ -64,7 +64,7 @@ export const useCreatePermissionContentMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi tạo nội dung");
+            notify.error(err.message || "Không thể tạo nội dung");
         },
     });
 };
@@ -95,7 +95,7 @@ export const useUpdatePermissionContentMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi cập nhật nội dung");
+            notify.error(err.message || "Không thể cập nhật nội dung");
         },
     });
 };
@@ -120,7 +120,7 @@ export const useDeletePermissionContentMutation = () => {
             });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi xoá nội dung");
+            notify.error(err.message || "Không thể xoá nội dung");
         },
     });
 };

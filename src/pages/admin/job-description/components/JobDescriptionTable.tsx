@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Space, Tag, Popconfirm, Button, Dropdown, message } from "antd";
+import { Space, Tag, Popconfirm, Dropdown } from "antd";
 import {
     EyeOutlined,
     EditOutlined,
@@ -13,6 +13,7 @@ import {
     ReloadOutlined,
     UndoOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
 import dayjs from "dayjs";
 import DataTable from "@/components/common/data-table";
@@ -29,6 +30,7 @@ import {
     useSubmitJdFlowMutation,
 } from "@/hooks/useJdFlow";
 import { useAppSelector } from "@/redux/hooks"; // ✅ THÊM
+import ActionButton from "@/components/common/ui/ActionButton";
 import ModalJobDescription from "../modal.job-description";
 import ViewJobDescription from "../view.job-description/index";
 import ModalJdFlow from "../modal.jd-flow";
@@ -217,7 +219,7 @@ const JobDescriptionTable = ({
                 },
                 {
                     onSuccess: () => {
-                        message.success("Đã gửi về người trước thành công!");
+                        notify.success("Đã gửi về người trước thành công.");
                         tableRef.current?.reload?.();
                         setOpenRejectModal(false);
                         setRejectRecord(null);
@@ -225,7 +227,7 @@ const JobDescriptionTable = ({
                     },
                     onError: (error: any) => {
                         const msg = error?.response?.data?.message || "Gửi về thất bại";
-                        message.error(msg);
+                        notify.error(msg);
                     },
                 }
             );
@@ -250,7 +252,7 @@ const JobDescriptionTable = ({
         const jdId = record.jdId ?? record.id;
 
         if (!jdId) {
-            message.error("Không tìm thấy ID của JD");
+            notify.error("Không tìm thấy ID của JD");
             return;
         }
 
@@ -271,12 +273,12 @@ const JobDescriptionTable = ({
             },
             {
                 onSuccess: () => {
-                    message.success("Gửi lại cho người từ chối thành công!");
+                    notify.success("Gửi lại cho người từ chối thành công.");
                     tableRef.current?.reload?.();
                 },
                 onError: (error: any) => {
                     const msg = error?.response?.data?.message || "Gửi lại thất bại";
-                    message.error(msg);
+                    notify.error(msg);
                 },
             }
         );
@@ -457,11 +459,11 @@ const JobDescriptionTable = ({
                     <Space size={4} align="center" wrap>
                         {/* Xem */}
                         <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_BY_ID} hideChildren>
-                            <Button
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
                                 data-guide-id="job-description-detail-button"
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                icon={<EyeOutlined style={{ fontSize: 16 }} />}
                                 onClick={() => { setViewRecord(record); setOpenView(true); }}
                             />
                         </Access>
@@ -476,11 +478,11 @@ const JobDescriptionTable = ({
                                 (record as any).creator === true  // ← người tạo trong inbox
                             ) && (
                                 <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.UPDATE} hideChildren>
-                                    <Button
+                                    <ActionButton
+                                        variant="edit"
+                                        tooltip="Chỉnh sửa"
                                         data-guide-id="job-description-edit-button"
-                                        type="text"
-                                        size="small"
-                                        icon={<EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />}
+                                        icon={<EditOutlined style={{ fontSize: 16 }} />}
                                         onClick={() => {
                                             const editData = {
                                                 ...record,
@@ -547,7 +549,7 @@ const JobDescriptionTable = ({
                         {/* Dropdown */}
                         {dropdownItems.length > 0 && (
                             <Dropdown menu={{ items: dropdownItems }} trigger={["click"]} placement="bottomRight">
-                                <Button data-guide-id="job-description-more-button" type="text" size="small" icon={<MoreOutlined style={{ color: "#595959", fontSize: 16 }} />} />
+                                <ActionButton data-guide-id="job-description-more-button" tooltip="Thêm thao tác" icon={<MoreOutlined style={{ fontSize: 16 }} />} />
                             </Dropdown>
                         )}
                     </Space>

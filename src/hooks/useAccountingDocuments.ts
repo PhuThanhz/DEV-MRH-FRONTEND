@@ -75,7 +75,7 @@ export const useCreateAccountingDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-documents"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo chứng từ");
+            notify.error(error.message || "Không thể tạo chứng từ");
         },
     });
 };
@@ -95,7 +95,7 @@ export const useUpdateAccountingDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-document", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật chứng từ");
+            notify.error(error.message || "Không thể cập nhật chứng từ");
         },
     });
 };
@@ -116,7 +116,7 @@ export const useDeleteAccountingDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-documents"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xoá chứng từ");
+            notify.error(error.message || "Không thể xoá chứng từ");
         },
     });
 };
@@ -139,7 +139,7 @@ export const useLockAccountingDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-document", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };
@@ -169,7 +169,7 @@ export const useCreateAccountingFolderMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-folders"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo thư mục");
+            notify.error(error.message || "Không thể tạo thư mục");
         },
     });
 };
@@ -187,7 +187,7 @@ export const useUpdateAccountingFolderMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-folders"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật thư mục");
+            notify.error(error.message || "Không thể cập nhật thư mục");
         },
     });
 };
@@ -207,7 +207,7 @@ export const useDeleteAccountingFolderMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-folders"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xoá thư mục");
+            notify.error(error.message || "Không thể xoá thư mục");
         },
     });
 };

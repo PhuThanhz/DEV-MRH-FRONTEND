@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Space, Tag, Tooltip } from "antd";
+import { Space, Tag, Tooltip } from "antd";
 import {
     EyeOutlined,
     EditOutlined,
@@ -28,6 +28,7 @@ import DepartmentMissionDetail from "../objectives-tasks/components/DepartmentMi
 import { Modal } from "antd";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import useAccess from "@/hooks/useAccess";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const { confirm } = Modal;
 
@@ -463,10 +464,11 @@ const MissionConsolePage: React.FC = () => {
 
                 return (
                     <Space size={4} align="center">
-                        <Button
-                            type="text"
-                            size="small"
-                            icon={<EyeOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined />}
+                            aria-label="Xem chi tiết"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 openDetail(record);
@@ -474,14 +476,14 @@ const MissionConsolePage: React.FC = () => {
                         />
                         {canSetupMission && (
                             <>
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    title={isEmpty ? "Thiết lập" : "Chỉnh sửa"}
+                                <ActionButton
+                                    variant={isEmpty ? "success" : "edit"}
+                                    tooltip={isEmpty ? "Thiết lập" : "Chỉnh sửa"}
+                                    aria-label={isEmpty ? "Thiết lập" : "Chỉnh sửa"}
                                     icon={
                                         isEmpty
-                                            ? <PlusCircleOutlined style={{ color: "#52c41a", fontSize: 16 }} />
-                                            : <EditOutlined style={{ color: "#fa8c16", fontSize: 16 }} />
+                                            ? <PlusCircleOutlined />
+                                            : <EditOutlined />
                                     }
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -489,11 +491,11 @@ const MissionConsolePage: React.FC = () => {
                                     }}
                                 />
                                 {!isEmpty && (
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        title="Tạo version"
-                                        icon={<FileAddOutlined style={{ color: "#1677ff", fontSize: 16 }} />}
+                                    <ActionButton
+                                        variant="progress"
+                                        tooltip="Tạo phiên bản"
+                                        aria-label="Tạo phiên bản"
+                                        icon={<FileAddOutlined />}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             openVersionReview(record);

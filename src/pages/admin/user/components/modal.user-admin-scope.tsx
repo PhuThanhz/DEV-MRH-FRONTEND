@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Empty, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
+import { Alert, Button, Empty, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { BankOutlined, DeleteOutlined, PlusOutlined, SaveOutlined, TeamOutlined } from "@ant-design/icons";
 
 import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
 import { useUpdateUserAdminScopesMutation, useUserAdminScopesQuery } from "@/hooks/useUserAdminScopes";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import type { IReqUserAdminScopeItem, IUserAdminScope, IUserPosition } from "@/types/backend";
+import { notify } from "@/components/common/notification/notify";
 
 const { Text } = Typography;
 
@@ -134,7 +135,7 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
 
     const addCompanyScopes = () => {
         if (selectedCompanyIds.length === 0) {
-            message.warning("Vui lòng chọn công ty");
+            notify.warning("Vui lòng chọn công ty");
             return;
         }
 
@@ -160,11 +161,11 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
 
     const addDepartmentScopes = () => {
         if (!selectedCompanyId) {
-            message.warning("Vui lòng chọn công ty");
+            notify.warning("Vui lòng chọn công ty");
             return;
         }
         if (selectedDepartmentIds.length === 0) {
-            message.warning("Vui lòng chọn phòng ban");
+            notify.warning("Vui lòng chọn phòng ban");
             return;
         }
 
@@ -200,7 +201,7 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
 
     const handleSave = () => {
         if (!activeUserId) {
-            message.warning("Vui lòng lưu thông tin tài khoản trước khi gán phạm vi quản trị");
+            notify.warning("Vui lòng lưu thông tin tài khoản trước khi gán phạm vi quản trị");
             return;
         }
 

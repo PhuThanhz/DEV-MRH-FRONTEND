@@ -27,6 +27,7 @@ import { PAGINATION_CONFIG } from "@/config/pagination";
 import dayjs from "dayjs";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 interface IDelegation {
     id: number;
@@ -265,12 +266,11 @@ const DelegationsPage = () => {
                 return (
                     <Space size={2}>
                     {canActivateDelegation && (
-                        <Button 
-                            type="text" 
-                            size="small" 
-                            title="Kích hoạt"
+                        <ActionButton
+                            variant="success"
+                            tooltip="Kích hoạt"
                             aria-label="Kích hoạt ủy quyền"
-                            icon={<CheckCircleOutlined style={{ color: "#16794c", fontSize: 17 }} />} 
+                            icon={<CheckCircleOutlined />}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleActivate(entity.id);
@@ -278,12 +278,11 @@ const DelegationsPage = () => {
                         />
                     )}
                     {canRevokeDelegation && (
-                        <Button 
-                            type="text"
-                            size="small" 
-                            title="Thu hồi"
+                        <ActionButton
+                            variant="danger"
+                            tooltip="Thu hồi"
                             aria-label="Thu hồi ủy quyền"
-                            icon={<StopOutlined style={{ color: "#dc2626", fontSize: 17 }} />} 
+                            icon={<StopOutlined />}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleRevoke(entity.id);

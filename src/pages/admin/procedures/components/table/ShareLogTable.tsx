@@ -16,6 +16,7 @@ import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import type { FilterField } from "@/components/common/filter/AdvancedFilterSelect";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -250,12 +251,13 @@ const buildColumns = (
                     <Space size="small">
                         {/* Nút Xem — giống ProcedureTable */}
                         {onViewProcedure && (
-                            <Tooltip title="Xem quy trình">
-                                <EyeOutlined
-                                    style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
-                                    onClick={() => onViewProcedure(record.procedureId)}
-                                />
-                            </Tooltip>
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem quy trình"
+                                icon={<EyeOutlined />}
+                                aria-label="Xem quy trình"
+                                onClick={() => onViewProcedure(record.procedureId)}
+                            />
                         )}
 
                         {/* Dropdown ⋯ — chỉ hiện nếu có ít nhất 1 item */}
@@ -265,12 +267,12 @@ const buildColumns = (
                                 trigger={["click"]}
                                 disabled={isRevoking}
                             >
-                                <MoreOutlined
-                                    style={{
-                                        fontSize: 20,
-                                        cursor: isRevoking ? "not-allowed" : "pointer",
-                                        opacity: isRevoking ? 0.5 : 1,
-                                    }}
+                                <ActionButton
+                                    variant="default"
+                                    tooltip="Thao tác khác"
+                                    icon={<MoreOutlined />}
+                                    aria-label="Thao tác khác"
+                                    loading={isRevoking}
                                 />
                             </Dropdown>
                         )}

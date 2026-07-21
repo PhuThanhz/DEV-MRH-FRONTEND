@@ -60,12 +60,12 @@ export const useCreateJobDescriptionMutation = () => {
             return res;
         },
         onSuccess: (res) => {
-            notify.created(res?.message || "Tạo Job Description thành công");
+            notify.created(res?.message || "Tạo mô tả công việc thành công");
             queryClient.invalidateQueries({ queryKey: ["job-descriptions"] });
             queryClient.invalidateQueries({ queryKey: ["my-job-descriptions"] }); // ✅ thêm
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo Job Description");
+            notify.error(error.message || "Không thể tạo mô tả công việc");
         },
     });
 };
@@ -84,7 +84,7 @@ export const useUpdateJobDescriptionMutation = () => {
             return res;
         },
         onSuccess: (res, variables) => {
-            notify.updated(res?.message || "Cập nhật Job Description thành công");
+            notify.updated(res?.message || "Cập nhật mô tả công việc thành công");
             queryClient.invalidateQueries({ queryKey: ["job-descriptions"] });
             queryClient.invalidateQueries({ queryKey: ["my-job-descriptions"] }); // ✅ thêm
             if (variables?.id) {
@@ -92,7 +92,7 @@ export const useUpdateJobDescriptionMutation = () => {
             }
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật Job Description");
+            notify.error(error.message || "Không thể cập nhật mô tả công việc");
         },
     });
 };
@@ -111,12 +111,12 @@ export const useDeleteJobDescriptionMutation = () => {
             return res.data;
         },
         onSuccess: () => {
-            notify.deleted("Xóa Job Description thành công");
+            notify.deleted("Xóa mô tả công việc thành công");
             queryClient.invalidateQueries({ queryKey: ["job-descriptions"], exact: false });
             queryClient.invalidateQueries({ queryKey: ["my-job-descriptions"] }); // ✅ thêm
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xóa Job Description");
+            notify.error(error.message || "Không thể xóa mô tả công việc");
         },
     });
 };

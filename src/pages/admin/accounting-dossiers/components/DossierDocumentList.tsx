@@ -15,7 +15,6 @@ import {
     Tooltip,
     Typography,
     Upload,
-    message,
 } from "antd";
 import {
     CheckCircleOutlined,
@@ -28,6 +27,7 @@ import {
     PaperClipOutlined,
     FileTextOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import type { ColumnsType } from "antd/es/table";
 import type {
     IAccountingDossier,
@@ -47,6 +47,7 @@ import {
 import { useBulkCheckDossierDocumentsMutation } from "@/hooks/useAccountingDossiers";
 import { callFetchAccountingDocumentCategoryActive, callUploadSingleFile } from "@/config/api";
 import FileSection from "../../procedures/components/file-section.procedure";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const { Text } = Typography;
 
@@ -181,7 +182,7 @@ const DossierDocumentList: React.FC<Props> = ({
 
     const handleSaveNote = (docId: number, checkStatus: string, note: string) => {
         if (!note.trim() && (checkStatus === "NEED_SUPPLEMENT" || checkStatus === "INVALID")) {
-            message.warning("Lý do bắt buộc đối với trạng thái Bổ sung / Không hợp lệ");
+            notify.warning("Lý do bắt buộc đối với trạng thái Bổ sung / Không hợp lệ");
             return;
         }
         checkMutation.mutate({
@@ -285,7 +286,7 @@ const DossierDocumentList: React.FC<Props> = ({
                                 okText: "Đã hiểu",
                             });
                         } else {
-                            message.error(error?.message || "Lỗi khi cập nhật chứng từ con");
+                            notify.error(error?.message || "Không thể cập nhật chứng từ con");
                         }
                     }
                 }
@@ -305,7 +306,7 @@ const DossierDocumentList: React.FC<Props> = ({
                             okText: "Đã hiểu",
                         });
                     } else {
-                        message.error(error?.message || "Lỗi khi thêm chứng từ con");
+                        notify.error(error?.message || "Không thể thêm chứng từ con");
                     }
                 }
             }
@@ -336,14 +337,13 @@ const DossierDocumentList: React.FC<Props> = ({
             {(canUpdateDocument || canDeleteDocument) && (
                 <>
                     {canUpdateDocument && (
-                        <Tooltip title="Sửa">
-                            <Button
-                                size="small"
-                                type="text"
-                                icon={<EditOutlined />}
-                                onClick={() => handleOpenEdit(record)}
-                            />
-                        </Tooltip>
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Sửa chứng từ"
+                            icon={<EditOutlined />}
+                            aria-label="Sửa chứng từ"
+                            onClick={() => handleOpenEdit(record)}
+                        />
                     )}
                     {canDeleteDocument && (
                         <Popconfirm
@@ -353,9 +353,12 @@ const DossierDocumentList: React.FC<Props> = ({
                             okButtonProps={{ danger: true }}
                             onConfirm={() => record.id && handleDelete(record.id)}
                         >
-                            <Tooltip title="Xoá">
-                                <Button danger size="small" type="text" icon={<DeleteOutlined />} />
-                            </Tooltip>
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Xóa chứng từ"
+                                icon={<DeleteOutlined />}
+                                aria-label="Xóa chứng từ"
+                            />
                         </Popconfirm>
                     )}
                 </>
@@ -915,14 +918,14 @@ const DossierDocumentList: React.FC<Props> = ({
                                                 const currentVal = documentForm.getFieldValue("fileUrl") || "";
                                                 const newVal = currentVal ? `${currentVal}, ${res.data.fileName}` : res.data.fileName;
                                                 documentForm.setFieldsValue({ fileUrl: newVal });
-                                                message.success("Tải file thành công!");
+                                                notify.success("Tải tệp thành công.");
                                                 onSuccess?.("ok");
                                             } else {
-                                                message.error("Lỗi tải file");
+                                                notify.error("Không thể tải tệp");
                                                 onError?.(new Error("Lỗi tải file"));
                                             }
                                         } catch (e) {
-                                            message.error("Lỗi tải file");
+                                            notify.error("Không thể tải tệp");
                                             onError?.(e instanceof Error ? e : new Error("Lỗi tải file"));
                                         }
                                     }}

@@ -62,7 +62,7 @@ export const useCreateDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["document-categories-mapping"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo danh mục");
+            notify.error(error.message || "Không thể tạo danh mục");
         },
     });
 };
@@ -83,7 +83,7 @@ export const useUpdateDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["document-categories-mapping"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật danh mục");
+            notify.error(error.message || "Không thể cập nhật danh mục");
         },
     });
 };
@@ -106,7 +106,7 @@ export const useToggleActiveDocumentCategoryMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["document-categories-mapping"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };

@@ -193,7 +193,7 @@ export const useAddDossierDocumentMutation = () => {
             if (error?.error === "DUPLICATE_INVOICE_WARNING") {
                 return;
             }
-            notify.error(error?.message || "Lỗi khi thêm chứng từ con");
+            notify.error(error?.message || "Không thể thêm chứng từ con");
         },
     });
 };
@@ -216,7 +216,7 @@ export const useUpdateDossierDocumentMutation = () => {
             if (error?.error === "DUPLICATE_INVOICE_WARNING") {
                 return;
             }
-            notify.error(error?.message || "Lỗi khi cập nhật chứng từ con");
+            notify.error(error?.message || "Không thể cập nhật chứng từ con");
         },
     });
 };
@@ -238,7 +238,7 @@ export const useDeleteDossierDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: [ALL_ACCOUNTING_DOSSIER_DOCS_KEY], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi xoá chứng từ con");
+            notify.error(error?.message || "Không thể xoá chứng từ con");
         },
     });
 };
@@ -268,7 +268,7 @@ export const useCheckDossierDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["accounting-dossier-logs", variables.dossierId] });
         },
         onError: (error: any) => {
-            notify.error(error?.message || "Lỗi khi cập nhật trạng thái kiểm tra");
+            notify.error(error?.message || "Không thể cập nhật trạng thái kiểm tra");
         },
     });
 };

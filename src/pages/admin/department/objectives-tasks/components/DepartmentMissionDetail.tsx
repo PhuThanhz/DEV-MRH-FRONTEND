@@ -120,7 +120,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
 
     useEffect(() => {
         if (error) {
-            notify.error((error as any)?.message || "Lỗi khi tải dữ liệu mục tiêu phòng ban");
+            notify.error((error as any)?.message || "Không thể tải dữ liệu mục tiêu phòng ban");
         }
     }, [error]);
     

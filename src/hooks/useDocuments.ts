@@ -125,7 +125,7 @@ export const useCreateDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["documents"] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo văn bản");
+            notify.error(error.message || "Không thể tạo văn bản");
         },
     });
 };
@@ -145,7 +145,7 @@ export const useUpdateDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["document", variables.id] });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật văn bản");
+            notify.error(error.message || "Không thể cập nhật văn bản");
         },
     });
 };
@@ -166,7 +166,7 @@ export const useToggleActiveDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };
@@ -187,7 +187,7 @@ export const useDeleteDocumentMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi xoá văn bản");
+            notify.error(error.message || "Không thể xoá văn bản");
         },
     });
 };
@@ -220,13 +220,13 @@ export const useCreateDocumentShareTokenMutation = () => {
             return res.data as IResShareTokenDTO;
         },
         onSuccess: (_, variables) => {
-            notify.created("Tạo link chia sẻ thành công");
+            notify.created("Tạo liên kết chia sẻ thành công");
             queryClient.invalidateQueries({
                 queryKey: ["document-share-tokens", variables.documentId],
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi tạo link chia sẻ");
+            notify.error(error.message || "Không thể tạo liên kết chia sẻ");
         },
     });
 };
@@ -243,13 +243,13 @@ export const useRevokeDocumentShareTokenMutation = (documentId?: number) => {
             return res;
         },
         onSuccess: () => {
-            notify.deleted("Thu hồi link chia sẻ thành công");
+            notify.deleted("Thu hồi liên kết chia sẻ thành công");
             queryClient.invalidateQueries({
                 queryKey: ["document-share-tokens", documentId],
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi thu hồi link chia sẻ");
+            notify.error(error.message || "Không thể thu hồi liên kết chia sẻ");
         },
     });
 };
@@ -265,10 +265,10 @@ export const useSendDocumentShareEmailMutation = () => {
             return res;
         },
         onSuccess: () => {
-            notify.updated("Gửi email thành công!");
+            notify.updated("Gửi email thành công.");
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi gửi email");
+            notify.error(error.message || "Không thể gửi email");
         },
     });
 };

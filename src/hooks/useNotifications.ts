@@ -7,6 +7,7 @@ import { callDeleteNotification, callFetchEvaluationNotifications, callReadEvalu
 import { notify } from "@/components/common/notification/notify";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { DOCUMENT_NOTIFICATION_MODULES, PROCEDURE_NOTIFICATION_MODULES } from "@/config/notificationModules";
 
 export interface UnifiedNotification {
     id: string;
@@ -47,8 +48,8 @@ const EMPTY_NOTIFICATION_CONTEXT: NotificationContextValue = {
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 const STORAGE_KEY = "notifications_seen_map";
-const NOTIFICATION_SYNC_DELAY_MS = 1200;
-const QUERY_INVALIDATION_DELAY_MS = 1200;
+const NOTIFICATION_SYNC_DELAY_MS = 500;
+const QUERY_INVALIDATION_DELAY_MS = 500;
 
 const EVALUATION_QUERY_KEYS = [
     ["evaluation-period"],
@@ -125,19 +126,21 @@ const isNotificationDTO = (msg: Partial<IResNotificationDTO>): msg is IResNotifi
 export const mapAppNotificationToUnified = (item: IResNotificationDTO): UnifiedNotification => {
     let title = "Thông báo hệ thống";
     if (item.module === "EVALUATION") {
-        title = item.type === 'REMINDER_DEADLINE' ? 'Nhắc nhở Đánh giá' : 'Thông báo Đánh giá';
+        title = item.type === "REMINDER_DEADLINE" ? "Nhắc hạn đánh giá" : "Đánh giá năng lực";
     } else if (item.module === "JD_FLOW") {
-        title = "Thông báo Mô tả công việc";
-    } else if (item.module === "DOCUMENT") {
-        title = "Thông báo Văn bản";
+        title = "Mô tả công việc";
+    } else if (DOCUMENT_NOTIFICATION_MODULES.includes(item.module)) {
+        title = item.module === "ACCOUNTING_DOCUMENTS" ? "Chứng từ kế toán" : "Văn bản";
     } else if (item.module === "ACCOUNTING_DOSSIERS") {
-        title = "Thông báo Bộ chứng từ kế toán";
-    } else if (item.module === "COMPANY_PROCEDURES") {
-        title = "Thông báo Quy trình công ty";
-    } else if (item.module === "DEPARTMENT_PROCEDURES") {
-        title = "Thông báo Quy trình phòng ban";
-    } else if (item.module === "CONFIDENTIAL_PROCEDURES") {
-        title = "Thông báo Quy trình bảo mật";
+        title = "Bộ chứng từ kế toán";
+    } else if (PROCEDURE_NOTIFICATION_MODULES.includes(item.module)) {
+        title = item.module === "DEPARTMENT_PROCEDURES"
+            ? "Quy trình phòng ban"
+            : item.module === "CONFIDENTIAL_PROCEDURES"
+                ? "Quy trình bảo mật"
+                : "Quy trình công ty";
+    } else if (item.module === "CAREER_PATHS") {
+        title = "Lộ trình thăng tiến";
     }
 
     return {
@@ -373,6 +376,7 @@ const useNotificationsState = (): NotificationContextValue => {
 
     const unifiedItems = useMemo<UnifiedNotification[]>(() => {
         const items: UnifiedNotification[] = [];
+        const jdInboxIds = new Set(jdItems.map(item => item.jdId));
 
         jdItems.forEach(item => {
             const currentKey = getItemKey(item);
@@ -381,7 +385,7 @@ const useNotificationsState = (): NotificationContextValue => {
                 id: `jd_${item.jdId}`,
                 type: "jd",
                 module: "JD_FLOW",
-                title: `JD cần duyệt: #${item.code ?? item.jdId}`,
+                title: `Mô tả công việc cần duyệt: #${item.code ?? item.jdId}`,
                 subtitle: `Gửi bởi: ${item.fromUser?.name ?? "—"}`,
                 isRead,
                 rawId: item.jdId,
@@ -391,6 +395,10 @@ const useNotificationsState = (): NotificationContextValue => {
         });
 
         appNotifs.forEach(item => {
+            const jdViewId = item.module === "JD_FLOW"
+                ? Number(item.actionLink?.match(/[?&]viewId=(\d+)/)?.[1])
+                : Number.NaN;
+            if (Number.isInteger(jdViewId) && jdInboxIds.has(jdViewId)) return;
             items.push(mapAppNotificationToUnified(item));
         });
 
@@ -419,7 +427,7 @@ const useNotificationsState = (): NotificationContextValue => {
             saveSeenMap(prevMap);
             setSeenVersion(v => v + 1);
             setAppNotifs(prevAppNotifs);
-            notify.error("Không đánh dấu được đã đọc, thử lại.");
+            notify.error("Không thể đánh dấu thông báo đã đọc. Vui lòng thử lại.");
             throw e;
         }
     };
@@ -437,7 +445,7 @@ const useNotificationsState = (): NotificationContextValue => {
             await Promise.all(targetModules.map(module => callReadAllNotificationsByModule(module)));
         } catch (e) {
             setAppNotifs(prev);
-            notify.error("Không đánh dấu được đã đọc, thử lại.");
+            notify.error("Không thể đánh dấu thông báo đã đọc. Vui lòng thử lại.");
             throw e;
         }
     };
@@ -457,7 +465,7 @@ const useNotificationsState = (): NotificationContextValue => {
                 await callReadEvaluationNotification(item.rawId);
             } catch (e) {
                 setAppNotifs(prev);
-                notify.error("Không đánh dấu được đã đọc, thử lại.");
+                notify.error("Không thể đánh dấu thông báo đã đọc. Vui lòng thử lại.");
                 throw e;
             }
         }
@@ -473,7 +481,7 @@ const useNotificationsState = (): NotificationContextValue => {
             await callDeleteNotification(item.rawId);
         } catch (e) {
             setAppNotifs(prev);
-            notify.error("Không xoá được thông báo, thử lại.");
+            notify.error("Không thể xoá thông báo. Vui lòng thử lại.");
             throw e;
         }
     };

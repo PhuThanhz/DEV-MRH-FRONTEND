@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { MouseEvent } from "react";
-import { Form, Input, Select, DatePicker, Row, Col, Upload, message, ConfigProvider, Tabs, Tag, Tooltip } from "antd";
+import { Form, Input, Select, DatePicker, Row, Col, Upload, ConfigProvider, Tabs, Tag, Tooltip } from "antd";
 import { ModalForm } from "@ant-design/pro-components";
 import {
     FileTextOutlined, LockOutlined, TeamOutlined, BankOutlined, UserOutlined,
@@ -11,6 +11,7 @@ import type { UploadFile, UploadProps } from "antd";
 import dayjs from "dayjs";
 
 import type { IDocument, IDocumentRequest, DocumentProcedureType } from "@/types/backend";
+import { notify } from "@/components/common/notification/notify";
 import {
     useCreateDocumentMutation,
     useUpdateDocumentMutation,
@@ -326,7 +327,7 @@ const ModalDocument = ({
     const handleAudienceChange = (val: AudienceScope) => {
         // Văn bản liên công ty bắt buộc phải có người nhận — không cho phép scope Riêng tư
         if (isCrossCompany && val === "PRIVATE") {
-            message.warning("Văn bản liên công ty phải chọn người nhận hoặc công ty được xem");
+            notify.warning("Văn bản liên công ty phải chọn người nhận hoặc công ty được xem");
             return;
         }
         setAudienceScope(val);
@@ -380,7 +381,7 @@ const ModalDocument = ({
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ];
             if (!allowed.includes(file.type)) {
-                message.error("Chỉ chấp nhận file PDF, Word, Excel!");
+                notify.warning("Chỉ chấp nhận tệp PDF, Word, Excel.");
                 return Upload.LIST_IGNORE;
             }
 
@@ -408,10 +409,10 @@ const ModalDocument = ({
 
                 const current: string[] = form.getFieldValue("fileUrls") ?? [];
                 form.setFieldValue("fileUrls", [...current, fileName]);
-                message.success(`Upload ${file.name} thành công!`);
+                notify.success(`Tải tệp ${file.name} thành công.`);
             } catch {
                 setFileList((prev) => prev.filter((f) => f.uid !== tempUid));
-                message.error("Upload file thất bại!");
+                notify.error("Không thể tải tệp lên.");
             } finally {
                 setUploading(false);
             }
@@ -444,7 +445,7 @@ const ModalDocument = ({
 
         // Guard: văn bản liên công ty không được để scope Riêng tư
         if (isCrossCompany && !showProcedureFields && audienceScope === "PRIVATE") {
-            message.error("Văn bản liên công ty phải chọn người nhận hoặc công ty được xem");
+            notify.error("Văn bản liên công ty phải chọn người nhận hoặc công ty được xem");
             return;
         }
 
@@ -459,21 +460,21 @@ const ModalDocument = ({
         };
 
         if (!showProcedureFields && audienceScope === "SELECTED_USERS" && (!resolvedUserIds || resolvedUserIds.length === 0)) {
-            message.error(isCrossCompany
+            notify.error(isCrossCompany
                 ? "Vui lòng chọn người được xem cho văn bản liên công ty"
                 : "Vui lòng chọn người được xem hoặc đổi phạm vi xem");
             return;
         }
 
         if (!showProcedureFields && audienceScope === "DEPARTMENT" && (!values.departmentIds || values.departmentIds.length === 0)) {
-            message.error("Vui lòng chọn phòng ban được xem");
+            notify.warning("Vui lòng chọn phòng ban được xem");
             return;
         }
 
         if (!showProcedureFields && audienceScope === "COMPANY") {
             if (isCrossCompany) {
                 if (!resolvedTargetCompanyIds || resolvedTargetCompanyIds.length === 0) {
-                    message.error("Vui lòng chọn ít nhất 1 công ty được xem");
+                    notify.warning("Vui lòng chọn ít nhất 1 công ty được xem");
                     return;
                 }
             }
@@ -484,7 +485,7 @@ const ModalDocument = ({
 
             if (procedureType === "COMPANY" || procedureType === "CONFIDENTIAL" || (procedureType === "DEPARTMENT" && !selectedCategory?.mappingProcedure)) {
                 if (!values.departmentId) {
-                    message.error("Vui lòng chọn phòng ban phụ trách / ban hành");
+                    notify.warning("Vui lòng chọn phòng ban phụ trách / ban hành");
                     return;
                 }
                 payload.departmentId = values.departmentId;
@@ -492,7 +493,7 @@ const ModalDocument = ({
 
                 if (procedureType === "COMPANY" && isCrossCompany) {
                     if (!resolvedTargetCompanyIds || resolvedTargetCompanyIds.length === 0) {
-                        message.error("Vui lòng chọn ít nhất 1 công ty được xem");
+                        notify.warning("Vui lòng chọn ít nhất 1 công ty được xem");
                         return;
                     }
                     payload.targetCompanyIds = resolvedTargetCompanyIds;
@@ -501,7 +502,7 @@ const ModalDocument = ({
 
             if (procedureType === "DEPARTMENT" && selectedCategory?.mappingProcedure) {
                 if (!values.departmentId) {
-                    message.error("Vui lòng chọn phòng ban ban hành");
+                    notify.warning("Vui lòng chọn phòng ban ban hành");
                     return;
                 }
                 payload.departmentIds = values.departmentIds || undefined;
@@ -511,7 +512,7 @@ const ModalDocument = ({
 
             if (procedureType === "CONFIDENTIAL") {
                 if (!resolvedUserIds || resolvedUserIds.length === 0) {
-                    message.error("Vui lòng chọn người được xem cho văn bản bảo mật");
+                    notify.warning("Vui lòng chọn người được xem cho văn bản bảo mật");
                     return;
                 }
                 payload.userIds = resolvedUserIds;
@@ -520,7 +521,7 @@ const ModalDocument = ({
             }
         } else {
             if (!values.departmentId) {
-                message.error("Vui lòng chọn phòng ban ban hành");
+                notify.warning("Vui lòng chọn phòng ban ban hành");
                 return;
             }
             payload.departmentId = values.departmentId;

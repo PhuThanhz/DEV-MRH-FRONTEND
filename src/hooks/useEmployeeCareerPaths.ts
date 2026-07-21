@@ -96,7 +96,7 @@ export const useAssignCareerPathMutation = () => {
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi gán lộ trình");
+            notify.error(error.message || "Không thể gán lộ trình");
         },
     });
 };
@@ -121,7 +121,7 @@ export const useUpdateEmployeeCareerPathMutation = () => {
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật lộ trình");
+            notify.error(error.message || "Không thể cập nhật lộ trình");
         },
     });
 };
@@ -146,7 +146,7 @@ export const usePromoteEmployeeMutation = () => {
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi thăng tiến nhân viên");
+            notify.error(error.message || "Không thể thăng tiến nhân viên");
         },
     });
 };
@@ -167,7 +167,7 @@ export const useSetCareerPathStatusMutation = () => {
             });
         },
         onError: (error: any) => {
-            notify.error(error.message || "Lỗi khi cập nhật trạng thái");
+            notify.error(error.message || "Không thể cập nhật trạng thái");
         },
     });
 };

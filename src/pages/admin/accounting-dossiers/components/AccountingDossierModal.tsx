@@ -12,7 +12,6 @@ import {
     Space,
     Switch,
     Upload,
-    message,
     Typography,
     Divider,
     Checkbox,
@@ -28,6 +27,7 @@ import {
     DownloadOutlined,
     PrinterOutlined,
 } from "@ant-design/icons";
+import { notify } from "@/components/common/notification/notify";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import DossierCoverSheet from "./DossierCoverSheet";
@@ -391,13 +391,13 @@ const AccountingDossierModal = ({
                                                                                                                 form.setFieldValue(["documents", name, "documentName"], inferDocumentNameFromFile(uploadedFileName));
                                                                                                             }
                                                                                                         }
-                                                                                                        message.success(`Đã tải: ${getFileDisplayName(uploadedFileName)}`);
+                                                                                                        notify.success(`Đã tải: ${getFileDisplayName(uploadedFileName)}`);
                                                                                                     } else {
-                                                                                                        message.error(`Lỗi tải file: ${selectedFile.name}`);
+                                                                                                        notify.error(`Không thể tải tệp: ${selectedFile.name}`);
                                                                                                     }
                                                                                                 }
                                                                                             } catch (e) {
-                                                                                                message.error("Lỗi tải file");
+                                                                                                notify.error("Không thể tải tệp");
                                                                                             }
                                                                                             return Upload.LIST_IGNORE;
                                                                                         }}

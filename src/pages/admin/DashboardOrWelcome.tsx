@@ -56,6 +56,14 @@ const DashboardOrWelcome = () => {
         return <Navigate to={PATHS.ADMIN.ACCOUNTING_DOCUMENTS} replace />;
     }
 
+    if (hasPermission(ALL_PERMISSIONS.EVALUATION.GET_MY_RECORDS)) {
+        return <Navigate to="/admin/evaluation/my-records" replace />;
+    }
+
+    if (hasPermission(ALL_PERMISSIONS.EVALUATION.GET_PENDING_MANAGER_RECORDS)) {
+        return <Navigate to="/admin/evaluation/manager" replace />;
+    }
+
     const hasOverview = permissions.some(
         (item: any) =>
             item.module === ALL_PERMISSIONS.DASHBOARD.GET_SUMMARY.module

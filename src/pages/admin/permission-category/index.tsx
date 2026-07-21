@@ -28,6 +28,7 @@ import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
 import ModalCategory from "./modal.permission-category";
 import ViewCategory from "./view.permission-category";
 import DrawerPermissionContent from "./content/drawer.permission-content";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const PermissionCategoryPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -252,9 +253,11 @@ const PermissionCategoryPage = () => {
                 <Space size={4}>
                     {/* VIEW */}
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.GET_BY_ID} hideChildren>
-                        <EyeOutlined
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
                             data-guide-id="permission-category-detail-button"
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
+                            icon={<EyeOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenView(true);
@@ -264,8 +267,10 @@ const PermissionCategoryPage = () => {
 
                     {/* CONTENT */}
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CONTENT.GET_PAGINATE} hideChildren>
-                        <FileTextOutlined
-                            style={{ fontSize: 18, color: "#52c41a", cursor: "pointer" }}
+                        <ActionButton
+                            variant="settings"
+                            tooltip="Quản lý nội dung quyền"
+                            icon={<FileTextOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setSelectedCategory(entity);
                                 setOpenContentDrawer(true);
@@ -275,9 +280,11 @@ const PermissionCategoryPage = () => {
 
                     {/* EDIT */}
                     <Access permission={ALL_PERMISSIONS.PERMISSION_CATEGORY.UPDATE} hideChildren>
-                        <EditOutlined
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
                             data-guide-id="permission-category-edit-button"
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
+                            icon={<EditOutlined style={{ fontSize: 16 }} />}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
@@ -294,9 +301,11 @@ const PermissionCategoryPage = () => {
                             cancelText="Huỷ"
                             placement="topRight"
                         >
-                            <StopOutlined
+                            <ActionButton
+                                variant="danger"
+                                tooltip="Ngưng sử dụng"
                                 data-guide-id="permission-category-delete-button"
-                                style={{ fontSize: 18, color: "#ff4d4f", cursor: "pointer" }}
+                                icon={<StopOutlined style={{ fontSize: 16 }} />}
                             />
                         </Popconfirm>
                     </Access>

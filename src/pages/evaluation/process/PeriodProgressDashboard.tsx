@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     Table,
     Button,
@@ -23,6 +23,9 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import { usePeriodProgressQuery } from "@/hooks/useEvaluations";
 import { callFetchEvaluationGradeDistribution, callFetchEvaluationPeriodById } from "@/config/api";
 import dayjs from "dayjs";
+import MyEvaluationDetailPage from "../my-records/MyEvaluationDetailPage";
+import ManagerEvaluationDetailPage from "../manager/ManagerEvaluationDetailPage";
+import ApprovalDetailPage from "../approval/ApprovalDetailPage";
 
 
 
@@ -34,7 +37,9 @@ interface PeriodProgressDashboardProps {
 const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ periodIdOverride, onClose }) => {
     const { periodId: routePeriodId } = useParams<{ periodId: string }>();
     const navigate = useNavigate();
+    const qc = useQueryClient();
     const periodId = periodIdOverride ?? Number(routePeriodId);
+    const [activeDetailRecord, setActiveDetailRecord] = useState<{ id: number; status: string } | null>(null);
 
     const { data: period, isLoading: isPeriodLoading } = useQuery({
         queryKey: ["evaluation-period", periodId],
@@ -60,17 +65,25 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
 
     const isLoading = isPeriodLoading || isProgressLoading;
 
-    const getRecordDetailPath = (recordId: number, status: string) => {
-        if (status === "EMPLOYEE_DRAFTING" || status === "REVISION_NEEDED") {
-            return `/admin/evaluation/my-records/${recordId}?readonly=true&from=progress`;
+    const closeDetailDrawer = () => {
+        setActiveDetailRecord(null);
+        qc.invalidateQueries({ queryKey: ["period-progress", periodId] });
+        qc.invalidateQueries({ queryKey: ["evaluation-grade-distribution", periodId] });
+        qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
+        qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
+        qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
+    };
+
+    const renderActiveDetailDrawer = () => {
+        if (!activeDetailRecord) return null;
+        if (activeDetailRecord.status === "PENDING_MANAGER_REVIEW" || activeDetailRecord.status === "MANAGER_REVIEWING") {
+            return <ManagerEvaluationDetailPage recordId={activeDetailRecord.id} onClose={closeDetailDrawer} />;
         }
-        if (status === "PENDING_MANAGER_REVIEW" || status === "MANAGER_REVIEWING") {
-            return `/admin/evaluation/manager/records/${recordId}`;
+        if (activeDetailRecord.status === "PENDING_APPROVAL") {
+            return <ApprovalDetailPage recordId={activeDetailRecord.id} onClose={closeDetailDrawer} />;
         }
-        if (status === "PENDING_APPROVAL") {
-            return `/admin/evaluation/approval/records/${recordId}`;
-        }
-        return `/admin/evaluation/my-records/${recordId}?readonly=true&from=progress`;
+        return <MyEvaluationDetailPage recordId={activeDetailRecord.id} onClose={closeDetailDrawer} />;
     };
 
     const kpi = progressData?.kpiProgress;
@@ -83,17 +96,17 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
     const overallCompletion = activeRecordCount > 0 ? Math.round(((kpi?.completedCount ?? 0) / activeRecordCount) * 100) : 0;
 
     const statusRows = kpi ? [
-        { label: "Nhân viên đang tự đánh giá", value: kpi.draftingCount, color: "#1F6C9F", bg: "#E1F3FE" },
-        { label: "Chờ quản lý chấm", value: kpi.pendingManagerCount, color: "#6B46C1", bg: "#EDE9FE" },
-        { label: "Chờ chấm & duyệt cuối", value: kpi.pendingApprovalCount, color: "#1F6C9F", bg: "#E1F3FE" },
-        { label: "Đã hoàn thành", value: kpi.completedCount, color: "#346538", bg: "#EDF3EC" },
+        { label: "Đang tự đánh giá", value: kpi.draftingCount, color: "#1F6C9F", bg: "#E1F3FE" },
+        { label: "Chờ Quản lý đánh giá", value: kpi.pendingManagerCount, color: "#6B46C1", bg: "#EDE9FE" },
+        { label: "Chờ phê duyệt kết quả", value: kpi.pendingApprovalCount, color: "#1F6C9F", bg: "#E1F3FE" },
+        { label: "Hoàn tất đánh giá", value: kpi.completedCount, color: "#346538", bg: "#EDF3EC" },
         { label: "Đã hủy", value: kpi.cancelledCount, color: "#6B7280", bg: "#F3F4F6" },
     ].filter(item => item.value > 0) : [];
 
     const phaseRows = kpi ? [
-        { label: "Nhân viên tự đánh giá", caption: "Hoàn thành phần tự đánh giá", done: selfReviewCompleted, total: activeRecordCount },
-        { label: "Quản lý chấm điểm", caption: "Hoàn thành phần quản lý chấm điểm", done: managerReviewCompleted, total: managerReviewEligible },
-        { label: "Chấm & duyệt cuối", caption: "Hoàn thành bước chấm và duyệt cuối", done: kpi.completedCount, total: approvalEligible },
+        { label: "Tự đánh giá", caption: "Hoàn thành phần tự đánh giá", done: selfReviewCompleted, total: activeRecordCount },
+        { label: "Quản lý đánh giá", caption: "Hoàn thành phần Quản lý đánh giá", done: managerReviewCompleted, total: managerReviewEligible },
+        { label: "Phê duyệt kết quả", caption: "Hoàn thành bước phê duyệt kết quả", done: kpi.completedCount, total: approvalEligible },
     ] : [];
 
     const departmentWatchList = useMemo(() => {
@@ -117,9 +130,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
             const grade = row?.[0] || "Chưa xếp loại";
             counts.set(grade, Number(row?.[1] || 0));
         });
-        return gradeOrder
-            .filter(grade => counts.has(grade))
-            .map(grade => ({ grade, count: counts.get(grade) || 0 }));
+        return gradeOrder.map(grade => ({ grade, count: counts.get(grade) || 0 }));
     }, [gradeDistribution]);
 
     const totalGraded = normalizedGradeDistribution.reduce((sum, item) => sum + item.count, 0);
@@ -178,13 +189,13 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
             align: "center" as const
         },
         {
-            title: "Chờ QL chấm",
+            title: "Chờ QL đánh giá",
             dataIndex: "pendingManagerCount",
             key: "pendingManagerCount",
             align: "center" as const
         },
         {
-            title: "Chờ duyệt cuối",
+            title: "Chờ phê duyệt",
             dataIndex: "pendingApprovalCount",
             key: "pendingApprovalCount",
             align: "center" as const
@@ -263,7 +274,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
             render: (_: any, record: any) => (
                 <button
                     className="pd-btn-action"
-                    onClick={() => navigate(getRecordDetailPath(record.recordId, record.status))}
+                    onClick={() => setActiveDetailRecord({ id: record.recordId, status: record.status })}
                 >
                     Xử lý
                 </button>
@@ -747,7 +758,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                                 </span>
                                 {period.approvalDeadline && (
                                     <span className="pd-hero__meta-item">
-                                        Hạn duyệt cuối: {dayjs(period.approvalDeadline).format("DD/MM/YYYY")}
+                                        Hạn phê duyệt: {dayjs(period.approvalDeadline).format("DD/MM/YYYY")}
                                     </span>
                                 )}
                             </div>
@@ -918,7 +929,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                                             ? normalizedGradeDistribution.map(item => {
                                                 const pct = totalGraded ? Math.round((item.count / totalGraded) * 100) : 0;
                                                 const gColors: Record<string, { bg: string; color: string; border: string }> = {
-                                                    A: { bg: "#EDF3EC", color: "#346538", border: "rgba(52,101,56,0.25)" },
+                                                    A: { bg: "#F0F6F1", color: "#2F6540", border: "rgba(47,101,64,0.24)" },
                                                     B: { bg: "#E1F3FE", color: "#1F6C9F", border: "rgba(31,108,159,0.25)" },
                                                     C: { bg: "#FBF3DB", color: "#956400", border: "rgba(149,100,0,0.25)" },
                                                     D: { bg: "#FDEBEC", color: "#9F2F2D", border: "rgba(159,47,45,0.25)" },
@@ -1021,6 +1032,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                     </>
                 )}
             </div>
+            {renderActiveDetailDrawer()}
             </Spin>
         </PageContainer>
     );

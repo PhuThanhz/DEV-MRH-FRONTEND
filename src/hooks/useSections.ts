@@ -61,7 +61,7 @@ export const useCreateSectionMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["sections"] });
         },
         onError: (err: any) => {
-            notify.error(err.message || "Lỗi khi tạo bộ phận");
+            notify.error(err.message || "Không thể tạo bộ phận");
         },
     });
 };
@@ -86,7 +86,7 @@ export const useUpdateSectionMutation = () => {
                 queryClient.invalidateQueries({ queryKey: ["section", payload.id] });
         },
         onError: (err: any) =>
-            notify.error(err.message || "Lỗi khi cập nhật bộ phận"),
+            notify.error(err.message || "Không thể cập nhật bộ phận"),
     });
 };
 
@@ -109,7 +109,7 @@ export const useDeleteSectionMutation = () => {
             queryClient.invalidateQueries({ queryKey: ["sections"], exact: false });
         },
         onError: (err: any) =>
-            notify.error(err.message || "Lỗi khi xóa bộ phận"),
+            notify.error(err.message || "Không thể xóa bộ phận"),
     });
 };
 

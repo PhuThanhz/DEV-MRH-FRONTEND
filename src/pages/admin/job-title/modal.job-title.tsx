@@ -5,7 +5,7 @@ import {
     ProFormSelect,
     ProFormSwitch,
 } from "@ant-design/pro-components";
-import { Col, Form, Row, message, Button, Input, Select, Tooltip, Divider, Typography } from "antd";
+import { Col, Form, Row, Button, Input, Select, Tooltip, Divider, Typography } from "antd";
 import { PlusOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 
 import type { IJobTitle, IPositionLevel, ICompany } from "@/types/backend";
@@ -14,6 +14,7 @@ import {
     useCreateJobTitleMutation,
     useUpdateJobTitleMutation,
 } from "@/hooks/useJobTitles";
+import { notify } from "@/components/common/notification/notify";
 import { callFetchCompany, callFetchPositionLevel } from "@/config/api";
 import { useIsMobile, useModalWidth } from "@/components/common/modal/detail";
 
@@ -187,7 +188,7 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
             handleClose();
             return true;
         } catch (err: any) {
-            message.error(err?.response?.data?.message || "Có lỗi khi cập nhật chức danh");
+            notify.error(err?.response?.data?.message || "Không thể cập nhật chức danh");
             return false;
         }
     };
@@ -196,8 +197,8 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
     const submitCreate = async (): Promise<void> => {
         setSubmitted(true);
         for (const row of rows) {
-            if (!row.nameVi.trim()) { message.warning("Vui lòng nhập tên VI cho tất cả chức danh"); return; }
-            if (!row.positionLevelId) { message.warning("Vui lòng chọn bậc cho tất cả chức danh"); return; }
+            if (!row.nameVi.trim()) { notify.warning("Vui lòng nhập tên VI cho tất cả chức danh"); return; }
+            if (!row.positionLevelId) { notify.warning("Vui lòng chọn bậc cho tất cả chức danh"); return; }
         }
         const results = await Promise.allSettled(
             rows.map(async (row) => {
@@ -216,9 +217,9 @@ const ModalJobTitle = ({ openModal, setOpenModal, dataInit, setDataInit }: IProp
         );
         const succeeded = results.filter((r) => r.status === "fulfilled").length;
         const failed    = results.filter((r) => r.status === "rejected");
-        if (succeeded > 0) message.success(`Đã tạo ${succeeded} chức danh`);
+        if (succeeded > 0) notify.success(`Đã tạo ${succeeded} chức danh`);
         failed.forEach((r) => {
-            if (r.status === "rejected") message.error(r.reason?.response?.data?.message || "Có lỗi khi tạo chức danh");
+            if (r.status === "rejected") notify.error(r.reason?.response?.data?.message || "Không thể tạo chức danh");
         });
         if (failed.length === 0) handleClose();
     };

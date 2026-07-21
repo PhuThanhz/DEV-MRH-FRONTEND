@@ -17,6 +17,7 @@ import { useProcessActionsQuery } from "@/hooks/useProcessActions";
 
 import ModalProcessAction from "./modal.process-action";
 import ViewProcessAction from "./view.process-action";
+import ActionButton from "@/components/common/ui/ActionButton";
 
 const ProcessActionPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -164,24 +165,30 @@ const ProcessActionPage = () => {
             render: (_, entity) => (
                 <Space>
                     <Access permission={ALL_PERMISSIONS.PROCESS_ACTIONS.GET_BY_ID} hideChildren>
-                        <EyeOutlined
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined />}
                             data-guide-id="process-action-detail-button"
-                            style={{ fontSize: 18, color: "#1677ff", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenView(true);
                             }}
+                            aria-label="Xem chi tiết"
                         />
                     </Access>
 
                     <Access permission={ALL_PERMISSIONS.PROCESS_ACTIONS.UPDATE} hideChildren>
-                        <EditOutlined
+                        <ActionButton
+                            variant="edit"
+                            tooltip="Chỉnh sửa"
+                            icon={<EditOutlined />}
                             data-guide-id="process-action-edit-button"
-                            style={{ fontSize: 18, color: "#fa8c16", cursor: "pointer" }}
                             onClick={() => {
                                 setDataInit(entity);
                                 setOpenModal(true);
                             }}
+                            aria-label="Chỉnh sửa"
                         />
                     </Access>
                 </Space>

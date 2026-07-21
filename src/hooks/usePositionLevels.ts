@@ -52,7 +52,7 @@ export const useCreatePositionLevelMutation = () => {
             client.invalidateQueries({ queryKey: ["position-levels"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi tạo bậc chức danh");
+            notify.error(err?.message || "Không thể tạo bậc chức danh");
         },
     });
 };
@@ -69,7 +69,7 @@ export const useUpdatePositionLevelMutation = () => {
             client.invalidateQueries({ queryKey: ["position-levels"] });
         },
         onError: (err: any) => {
-            notify.error(err?.message || "Lỗi khi cập nhật bậc chức danh");
+            notify.error(err?.message || "Không thể cập nhật bậc chức danh");
         },
     });
 };
