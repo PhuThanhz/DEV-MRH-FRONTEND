@@ -62,7 +62,6 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     searchValue: externalSearchValue = "",
 }) => {
     const [open, setOpen] = useState(false);
-    const [form] = Form.useForm();
     const [searchValue, setSearchValue] = useState(externalSearchValue);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,15 +94,14 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     }, [onSearch]);
 
     // ── Filter popover ────────────────────────────────────────────────────
-    const handleApply = () => {
-        const values = form.getFieldsValue();
+    const handleApply = (values: Record<string, any>) => {
         onFilterApply?.(values);
         setOpen(false);
     };
 
     const filterPopoverContent = (
         <div style={{ width: 256 }}>
-            <Form layout="vertical" form={form}>
+            <Form layout="vertical" onFinish={handleApply}>
                 {filterFields.map((f) => (
                     <Form.Item
                         key={f.name}
@@ -115,8 +113,8 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
                     </Form.Item>
                 ))}
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <Button onClick={onReset} style={{ flex: 1 }}>Đặt lại</Button>
-                    <Button type="primary" onClick={handleApply} style={{ flex: 1 }}>Áp dụng</Button>
+                    <Button htmlType="reset" onClick={onReset} style={{ flex: 1 }}>Đặt lại</Button>
+                    <Button type="primary" htmlType="submit" style={{ flex: 1 }}>Áp dụng</Button>
                 </div>
             </Form>
         </div>

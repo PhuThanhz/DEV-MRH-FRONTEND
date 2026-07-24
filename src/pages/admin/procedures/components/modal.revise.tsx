@@ -14,8 +14,6 @@ import type { UploadFile, UploadProps } from "antd";
 import { notify } from "@/components/common/notification/notify";
 
 import {
-    callFetchDepartmentsByCompany,
-    callFetchSectionsByDepartment,
     callUploadSingleFile,
 } from "@/config/api";
 
@@ -103,19 +101,7 @@ const ModalRevise: React.FC<IProps> = ({
         handleReset();
     };
 
-    const loadDepartments = async ({ companyId }: any) => {
-        if (!companyId) return [];
-        const res = await callFetchDepartmentsByCompany(companyId);
-        const departments: IDepartment[] = res?.data ?? [];
-        return departments.map((d) => ({ label: d.name, value: d.id }));
-    };
 
-    const loadSections = async ({ departmentId }: any) => {
-        if (!departmentId) return [];
-        const res = await callFetchSectionsByDepartment(departmentId);
-        const sections: ISection[] = res?.data ?? [];
-        return sections.map((s) => ({ label: s.name, value: s.id }));
-    };
 
     const uploadProps: UploadProps = {
         fileList,

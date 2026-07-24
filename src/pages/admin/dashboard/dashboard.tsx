@@ -1,14 +1,14 @@
 import { useMemo } from "react";
-import { Skeleton, Button, Tooltip } from "antd";
+import { Skeleton } from "antd";
 import { Pie } from "@/components/common/chart/LazyChart";
 import { useNavigate } from "react-router-dom";
-import { TrophyOutlined, CheckCircleFilled } from "@ant-design/icons";
+import { TrophyOutlined } from "@ant-design/icons";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import { useDashboardSummaryQuery, useDepartmentCompletenessOverviewQuery } from "@/hooks/useDashboard";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { getScoreStyle, PIE_COLORS, CRITERIA_MAP, BADGE_BASE_STYLE } from "./departmentProfileCriteria";
+import { getScoreStyle, PIE_COLORS, CRITERIA_MAP, PRIORITIZED_KEYS, BADGE_BASE_STYLE } from "./departmentProfileCriteria";
 
 /* ─────────────────────────── THEME PRESETS ─────────────────────────── */
 const THEME_PRESETS: Record<string, { primary: string; bg: string; gradient: string; shadow: string; icon: React.ReactNode }> = {
@@ -522,7 +522,22 @@ const DashboardPage = () => {
         ],
     }), [pieData, totalDept]);
 
-    const maxMissing = missingCriteriaStats[0]?.count ?? 0;
+    /* Độ phủ hồ sơ: số phòng ban ĐÃ hoàn thành mỗi hạng mục (thanh ngang) */
+    const coverageStats = useMemo(() => {
+        if (!completenessOverview || totalDept === 0) return [];
+        return PRIORITIZED_KEYS.map(key => {
+            const missing = missingCriteriaStats.find(s => s.key === key)?.count ?? 0;
+            const done = totalDept - missing;
+            return {
+                key,
+                label: CRITERIA_MAP[key].label,
+                done,
+                pct: Math.round((done / totalDept) * 100),
+                color: THEME_PRESETS[key]?.primary ?? THEME_PRESETS.default.primary,
+                onClick: () => navigate(`/admin/department-profiles?missing=${key}`),
+            };
+        });
+    }, [completenessOverview, missingCriteriaStats, totalDept, navigate]);
 
     /* ── Render ── */
     return (
@@ -703,53 +718,38 @@ const DashboardPage = () => {
             {/* Bottom row of bottom section: Missing Criteria Stats Card (spanning full width) */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
 
-                {/* Missing Criteria Stats Card */}
+                {/* Profile coverage – thanh ngang theo hạng mục */}
                 <div className="db-card">
                     <div className="db-card-head">
-                        <span className="db-card-title">Hạng mục thiếu nhiều nhất</span>
-                        <span className="db-card-badge">Toàn hệ thống</span>
+                        <span className="db-card-title">Độ phủ hồ sơ theo hạng mục</span>
+                        <span className="db-card-badge">
+                            {isLoadingComplete ? "—" : `${totalDept} phòng ban`}
+                        </span>
                     </div>
                     <div className="db-card-body">
                         {isLoadingComplete ? (
                             <Skeleton active paragraph={{ rows: 5 }} />
-                        ) : missingCriteriaStats.length === 0 || totalDept === 0 ? (
+                        ) : coverageStats.length === 0 || totalDept === 0 ? (
                             <div style={{ textAlign: "center", padding: "32px 0", color: "#bfbfbf", fontSize: 13 }}>
                                 Chưa có dữ liệu
                             </div>
-                        ) : maxMissing === 0 ? (
-                            <div style={{ textAlign: "center", padding: "32px 0", color: "#52c41a", fontSize: 13, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                                <CheckCircleFilled style={{ fontSize: 24, color: "#52c41a" }} />
-                                Không có hạng mục nào bị thiếu
-                            </div>
                         ) : (
                             <div className="db-mc-list">
-                                {missingCriteriaStats.map(item => {
-                                    const pct = maxMissing > 0 ? Math.round((item.count / maxMissing) * 100) : 0;
-                                    const ratio = totalDept > 0 ? item.count / totalDept : 0;
-                                    const barColor =
-                                        ratio >= 0.75 ? "#ff4d4f"
-                                            : ratio >= 0.4 ? "#faad14"
-                                                : "#1677ff";
-                                    return (
-                                        <div
-                                            key={item.key}
-                                            className="db-mc-row"
-                                            onClick={() => navigate(`/admin/department-profiles?missing=${item.key}`)}
-                                        >
-                                            <span className="db-mc-label">{item.label}</span>
-                                            <div className="db-mc-track">
-                                                <div
-                                                    className="db-mc-bar"
-                                                    style={{ width: `${pct}%`, background: barColor }}
-                                                />
-                                            </div>
-                                            <span className="db-mc-count">
-                                                {item.count}
-                                                <span className="db-mc-unit"> phòng ban</span>
-                                            </span>
+                                {coverageStats.map(stat => (
+                                    <div key={stat.key} className="db-mc-row" onClick={stat.onClick}>
+                                        <span className="db-mc-label" title={stat.label}>{stat.label}</span>
+                                        <div className="db-mc-track">
+                                            <div
+                                                className="db-mc-bar"
+                                                style={{ width: `${stat.pct}%`, background: stat.color }}
+                                            />
                                         </div>
-                                    );
-                                })}
+                                        <span className="db-mc-count">
+                                            {stat.done}/{totalDept}
+                                            <span className="db-mc-unit"> ({stat.pct}%)</span>
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

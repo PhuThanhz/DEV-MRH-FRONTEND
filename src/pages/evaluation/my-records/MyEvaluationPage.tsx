@@ -25,6 +25,7 @@ import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelec
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import EvaluationStatusTag, { type EvaluationStatus } from "../components/EvaluationStatusTag";
+import EvaluationHistoryDrawer from "../components/EvaluationHistoryDrawer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import ActionButton from "@/components/common/ui/ActionButton";
@@ -348,29 +349,50 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
                     }
                     navigate(`/admin/evaluation/${record.status === "PENDING_APPROVAL" ? "approval" : "manager"}/records/${record.id}${isTab ? "?from=process" : ""}`);
                 };
-                const detailButton = (
-                    <Button
-                        type={isActionable ? "primary" : "default"}
-                        size="small"
-                        icon={isActionable ? <EditOutlined /> : <EyeOutlined />}
-                        onClick={openDetail}
-                        disabled={isFuture}
-                        style={{
-                            borderRadius: 6,
-                            fontWeight: 650,
-                            background: isActionable ? "#e8637a" : (isFuture ? "#f1f5f9" : "#ffffff"),
-                            color: isActionable ? "#ffffff" : (isFuture ? "#94a3b8" : "#475569"),
-                            border: isActionable ? "none" : "1px solid #cbd5e1",
-                            fontSize: 12,
-                            height: 28,
-                        }}
-                    >
-                        {isFuture ? "Chưa mở" : (isActionable ? "Chấm điểm" : "Chi tiết")}
-                    </Button>
-                );
+                const renderViewOrActionBtn = () => {
+                    if (isActionable && !isFuture) {
+                        return (
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={openDetail}
+                                style={{
+                                    borderRadius: 6,
+                                    fontWeight: 650,
+                                    background: "#e8256b",
+                                    borderColor: "#e8256b",
+                                    color: "#ffffff",
+                                    fontSize: 12,
+                                    height: 28,
+                                }}
+                            >
+                                Chấm điểm
+                            </Button>
+                        );
+                    }
+                    if (isFuture) {
+                        return (
+                            <Tooltip title="Chưa đến thời gian tự đánh giá">
+                                <Button size="small" disabled style={{ borderRadius: 6, fontSize: 12, height: 28 }}>
+                                    Chưa mở
+                                </Button>
+                            </Tooltip>
+                        );
+                    }
+                    return (
+                        <ActionButton
+                            variant="view"
+                            tooltip="Xem chi tiết"
+                            icon={<EyeOutlined />}
+                            aria-label="Xem chi tiết"
+                            onClick={openDetail}
+                        />
+                    );
+                };
 
-                if (!isAllView) return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "center" }}>
+                return (
+                    <div className="evaluation-action-group" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                         {needsConfirm && (
                             <Access permission={ALL_PERMISSIONS.EVALUATION.EMPLOYEE_CONFIRM} hideChildren>
                                 <Popconfirm
@@ -392,8 +414,6 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
                                             fontSize: 11,
                                             height: 26,
                                             boxShadow: "0 2px 6px rgba(16,185,129,0.35)",
-                                            width: "100%",
-                                            maxWidth: 140,
                                         }}
                                     >
                                         Xác nhận đã xem
@@ -401,13 +421,7 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
                                 </Popconfirm>
                             </Access>
                         )}
-                        {detailButton}
-                    </div>
-                );
-
-                return (
-                    <div className="evaluation-action-group" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                        {detailButton}
+                        {renderViewOrActionBtn()}
                         <Access permission={ALL_PERMISSIONS.EVALUATION.GET_RECORD_HISTORY} hideChildren>
                             <ActionButton
                                 variant="progress"
@@ -765,33 +779,13 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
                 </Suspense>
             )}
 
-            <Drawer
-                title={historyRecord ? `Lịch sử đánh giá - ${historyRecord.employee?.fullName || historyRecord.employee?.username || "Nhân viên"}` : "Lịch sử đánh giá"}
+            <EvaluationHistoryDrawer
                 open={!!historyRecord}
                 onClose={() => setHistoryRecord(null)}
-                width={520}
-                destroyOnHidden
-            >
-                {historyQuery.isLoading ? (
-                    <div style={{ color: "#64748b", padding: "16px 0" }}>Đang tải lịch sử...</div>
-                ) : (historyQuery.data || []).length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lịch sử xử lý" />
-                ) : (
-                    <Timeline items={(historyQuery.data || []).map((item: any) => ({
-                        color: item.toStatus === "COMPLETED" ? "green" : item.toStatus === "REVISION_NEEDED" ? "red" : "blue",
-                        children: (
-                            <div style={{ paddingBottom: 8 }}>
-                                <div style={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>{item.performedBy?.fullName || item.performedBy?.username || "Hệ thống"}</div>
-                                <div style={{ color: "#475569", fontSize: 12, marginTop: 3 }}>
-                                    {item.fromStatus ? (STATUS_LABELS[item.fromStatus] || item.fromStatus) : "Khởi tạo"} → {STATUS_LABELS[item.toStatus] || item.toStatus}
-                                </div>
-                                {item.note && <div style={{ color: "#64748b", fontSize: 12, marginTop: 5 }}>{item.note}</div>}
-                                <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 5 }}>{item.performedAt ? dayjs(item.performedAt).format("DD/MM/YYYY HH:mm") : "—"}</div>
-                            </div>
-                        ),
-                    }))} />
-                )}
-            </Drawer>
+                record={historyRecord}
+                historyData={historyQuery.data || []}
+                loading={historyQuery.isLoading}
+            />
 
         </div>
     );

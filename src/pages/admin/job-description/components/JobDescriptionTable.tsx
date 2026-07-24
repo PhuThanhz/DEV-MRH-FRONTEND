@@ -207,7 +207,7 @@ const JobDescriptionTable = ({
     const handleRejectConfirm = (reason: string) => {
         if (!rejectRecord) return;
 
-        const jdId = rejectRecord.jdId;
+        const jdId = (rejectRecord as any).jdId ?? (rejectRecord as any).id;
         // 🔥 CASE: GỬI VỀ NGƯỜI TRƯỚC
         if (isResubmitReject) {
             submitMutation.mutate(
@@ -442,7 +442,7 @@ const JobDescriptionTable = ({
         {
             title: "Ngày cập nhật",
             dataIndex: "updatedAt",
-            width: 130,
+            width: 140,
             align: "center",
             render: (_, record: any) => record.updatedAt ? dayjs(record.updatedAt).format("DD-MM-YYYY") : "--",
         },
@@ -454,9 +454,13 @@ const JobDescriptionTable = ({
             render: (_, record: any) => {
                 const dropdownItems = buildDropdownItems(record);
                 const isInboxOrAll = mode !== "MY";
+                // Chỉ hiển thị Duyệt/Từ chối khi user đang là currentUser của flow (INBOX)
+                // Với tab ALL, ẩn nút này để tránh người không có quyền nhấn
+                const isCurrentFlowApprover = mode === "INBOX" && String(record.currentUser?.id) === String(currentUserId);
+
 
                 return (
-                    <Space size={4} align="center" wrap>
+                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, whiteSpace: "nowrap" }}>
                         {/* Xem */}
                         <Access permission={ALL_PERMISSIONS.JOB_DESCRIPTIONS.GET_BY_ID} hideChildren>
                             <ActionButton
@@ -467,7 +471,6 @@ const JobDescriptionTable = ({
                                 onClick={() => { setViewRecord(record); setOpenView(true); }}
                             />
                         </Access>
-
 
                         {/* Sửa */}
                         {(record.status === "DRAFT" || record.status === "REJECTED") &&
@@ -494,8 +497,9 @@ const JobDescriptionTable = ({
                                     />
                                 </Access>
                             )}
+
                         {/* Nút Duyệt */}
-                        {isInboxOrAll && record.status === "IN_REVIEW" && (
+                        {isCurrentFlowApprover && record.status === "IN_REVIEW" && (
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.APPROVE} hideChildren>
                                 <ActionBtn
                                     variant="approve"
@@ -512,7 +516,7 @@ const JobDescriptionTable = ({
                         )}
 
                         {/* Nút Từ chối */}
-                        {isInboxOrAll && record.status === "IN_REVIEW" && (
+                        {isCurrentFlowApprover && record.status === "IN_REVIEW" && (
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.REJECT} hideChildren>
                                 <ActionBtn
                                     variant="reject"
@@ -530,7 +534,7 @@ const JobDescriptionTable = ({
                         )}
 
                         {/* Nút Ban hành */}
-                        {isInboxOrAll && record.status === "APPROVED" && (
+                        {isCurrentFlowApprover && record.status === "APPROVED" && (
                             <Access permission={ALL_PERMISSIONS.JD_FLOW.ISSUE} hideChildren>
                                 <ActionBtn
                                     variant="issue"
@@ -552,7 +556,7 @@ const JobDescriptionTable = ({
                                 <ActionButton data-guide-id="job-description-more-button" tooltip="Thêm thao tác" icon={<MoreOutlined style={{ fontSize: 16 }} />} />
                             </Dropdown>
                         )}
-                    </Space>
+                    </div>
                 );
             },
         },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Modal, Spin, Button } from "antd";
+import { Button, Skeleton } from "antd";
 import { FileTextOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { IJobDescription, IOrgNode } from "@/types/backend";
 import { useJobDescriptionByIdQuery } from "@/hooks/useJobDescriptions";
@@ -18,10 +18,8 @@ import { ReactFlowProvider } from "reactflow";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportJdToExcel } from "../components/exportPublishedJd";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
-const ACCENT = "#e8637a";
-const ACCENT_LIGHT = "#fff0f3";
-const ACCENT_BORDER = "#ffd6dd";
 const NODE_W = 200;
 const NODE_H = 120;
 
@@ -69,16 +67,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 const normStr = (s?: string | null) => (s ?? "").toLowerCase().trim();
 
-import { useIsMobile } from "@/hooks/useIsMobile";
-import { getModalWidth } from "@/utils/responsive";
-
 export default function ViewJobDescription({ open, onClose, record }: Props) {
     const [activeTab, setActiveTab] = useState("1");
     const [rfNodes, setRfNodes] = useState<Node[]>([]);
     const [rfEdges, setRfEdges] = useState<Edge[]>([]);
     const [loadingChart, setLoadingChart] = useState(false);
-    const isMobile = useIsMobile();
-
     // ── Permission check ──
     const canViewHistory = useAccess(ALL_PERMISSIONS.JD_FLOW.FETCH_LOGS);
 
@@ -157,7 +150,7 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
         };
 
         run();
-    }, [jd, open]); // eslint-disable-line
+    }, [jd, open]);
 
     const handleClose = () => {
         onClose();
@@ -166,237 +159,125 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
         setRfEdges([]);
     };
 
-    const modalWidth = getModalWidth(900);
-
     return (
-        <Modal
+        <LotusDetailDrawer
             open={open}
-            zIndex={1200}
-            onCancel={handleClose}
-            footer={null}
-            width={modalWidth}
-            style={{
-                top: isMobile ? 16 : 20,   // cách top 16px thay vì 0
-                maxWidth: "calc(100vw - 24px)",
-            }}
-            className="job-description-view-modal"
-            styles={{
-                body: {
-                    padding: 0,
-                    background: "#f5f6fa",
-                    borderRadius: 12,
-                    overflow: "hidden",
-                },
-                content: {
-                    borderRadius: 12,       // luôn có bo góc, kể cả mobile
-                    padding: 0,
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                },
-            }}
-            title={null}
-            destroyOnHidden
-            getContainer={document.body}
+            onClose={handleClose}
+            closeAriaLabel="Đóng chi tiết mô tả công việc"
         >
-            {isLoading ? (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 300 }}>
-                    <Spin size="large" />
-                </div>
-            ) : !jd ? (
-                <div style={{ textAlign: "center", color: "#9ca3af", padding: 60 }}>Không có dữ liệu</div>
-            ) : (
-                <div style={{
-                    fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
-                    background: "#f5f6fa",
-                    borderRadius: 12,
-                }}>
+            <div className="job-description-view-drawer flex h-full flex-col bg-white font-['Outfit','Nunito','Segoe_UI',sans-serif]">
+                {isLoading ? (
+                    <div className="flex-1 overflow-hidden bg-[#f8f9fb] px-5 py-7 sm:px-8">
+                        <div className="mb-7 border-b border-gray-100 bg-white pb-6">
+                            <Skeleton active paragraph={{ rows: 2 }} title={{ width: "34%" }} />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {[1, 2, 3, 4].map((item) => (
+                                <div key={item} className="rounded-xl bg-white p-5">
+                                    <Skeleton active paragraph={{ rows: 3 }} title={{ width: "48%" }} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : !jd ? (
+                    <div className="flex flex-1 flex-col items-center justify-center bg-[#f8f9fb] px-6 text-center text-gray-400">
+                        <FileTextOutlined className="mb-3 text-4xl text-gray-300" />
+                        <span className="text-sm font-medium">Không có dữ liệu mô tả công việc</span>
+                    </div>
+                ) : (
+                    <>
+                        <header className="shrink-0 border-b border-gray-100 bg-white px-5 pb-5 pt-5 sm:px-8 sm:pb-6">
+                            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e8637a]">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-[#e8637a]" />
+                                        Mô tả công việc
+                                    </div>
 
-                    {/* ── HEADER ── */}
-                    <div style={{
-                        background: "#fff",
-                        padding: isMobile ? "14px 14px 12px" : "18px 24px 14px",
-                        borderBottom: "1px solid #eef0f5",
-                    }}>
-                        {/* Badge */}
-                        <span style={{
-                            display: "inline-flex", alignItems: "center", gap: 5,
-                            background: ACCENT_LIGHT, border: `1px solid ${ACCENT_BORDER}`,
-                            borderRadius: 20, padding: "3px 10px",
-                            fontSize: 10, fontWeight: 700, color: ACCENT,
-                            letterSpacing: "0.08em", textTransform: "uppercase",
-                            marginBottom: 8,
-                        }}>
-                            <FileTextOutlined style={{ fontSize: 10 }} /> Mô tả công việc
-                        </span>
+                                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                                        <h2 className="m-0 min-w-0 text-[26px] font-bold leading-8 tracking-[-0.02em] text-gray-950 sm:text-[32px] sm:leading-10">
+                                            {record?.jobTitleName ?? jd.jobTitleName ?? "—"}
+                                        </h2>
+                                        {statusInfo ? (
+                                            <span
+                                                className="shrink-0 rounded-md border px-2.5 py-1 text-xs font-semibold"
+                                                style={{
+                                                    color: statusInfo.color,
+                                                    background: statusInfo.bg,
+                                                    borderColor: statusInfo.border,
+                                                }}
+                                            >
+                                                {statusInfo.label}
+                                            </span>
+                                        ) : null}
+                                    </div>
 
-                        {/* Title */}
-                        <h2 style={{
-                            fontSize: isMobile ? 17 : 20,
-                            fontWeight: 800,
-                            color: "#111827",
-                            margin: "0 0 6px",
-                            lineHeight: 1.3,
-                            wordBreak: "break-word",
-                        }}>
-                            {record?.jobTitleName ?? jd?.jobTitleName ?? "—"}
-                        </h2>
+                                    {(record?.companyName || record?.departmentName) ? (
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-gray-500">
+                                            {record?.companyName ? <span>{record.companyName}</span> : null}
+                                            {record?.companyName && record?.departmentName ? <span className="text-gray-300">/</span> : null}
+                                            {record?.departmentName ? <span className="font-medium text-gray-700">{record.departmentName}</span> : null}
+                                        </div>
+                                    ) : null}
 
-                        {/* Company › Department */}
-                        {(record?.companyName || record?.departmentName) && (
-                            <div style={{
-                                display: "flex", alignItems: "center", gap: 5,
-                                fontSize: 12, flexWrap: "wrap", marginBottom: 8,
-                            }}>
-                                {record?.companyName && (
-                                    <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.companyName}</span>
-                                )}
-                                {record?.companyName && record?.departmentName && (
-                                    <span style={{ color: "#d1d5db" }}>›</span>
-                                )}
-                                {record?.departmentName && (
-                                    <span style={{ color: "#6b7280", fontWeight: 500 }}>{record.departmentName}</span>
-                                )}
+                                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-gray-500">
+                                        <span className="font-mono font-semibold tabular-nums text-[#d94c66]">{jd.code ?? "—"}</span>
+                                        {jd.reportTo ? <span>Báo cáo: <strong className="font-semibold text-gray-800">{jd.reportTo}</strong></span> : null}
+                                        {jd.version != null ? <span>Phiên bản <strong className="font-semibold text-gray-800">{jd.version}</strong></span> : null}
+                                        {jd.effectiveDate ? <span>Hiệu lực <strong className="font-semibold text-gray-800">{dayjs(jd.effectiveDate).format("DD/MM/YYYY")}</strong></span> : null}
+                                        {jd.createdAt ? <span>Tạo {dayjs(jd.createdAt).format("DD/MM/YYYY HH:mm")}</span> : null}
+                                    </div>
+                                </div>
+
+                                <Button
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => exportJdToExcel(jd, logs ?? [])}
+                                    className="!h-10 !shrink-0 !rounded-lg !border-[#e8637a] !bg-[#e8637a] !px-4 !font-semibold !text-white !shadow-sm hover:!border-[#d94c66] hover:!bg-[#d94c66]"
+                                >
+                                    Xuất Excel
+                                </Button>
                             </div>
-                        )}
+                        </header>
 
-                        {/* Code + Status + ReportTo */}
-                        <div style={{
-                            display: "flex", alignItems: "center", gap: 6,
-                            flexWrap: "wrap", marginBottom: 10,
-                        }}>
-                            <span style={{
-                                fontSize: 12, fontWeight: 700, color: "#1677ff",
-                                background: "#e6f4ff", border: "1px solid #91caff",
-                                borderRadius: 20, padding: "2px 10px", fontFamily: "monospace",
-                            }}>
-                                {jd.code ?? "—"}
-                            </span>
-                            {statusInfo && (
-                                <span style={{
-                                    fontSize: 12, fontWeight: 700,
-                                    color: statusInfo.color, background: statusInfo.bg,
-                                    border: `1px solid ${statusInfo.border}`,
-                                    borderRadius: 20, padding: "2px 10px",
-                                }}>
-                                    {statusInfo.label}
-                                </span>
-                            )}
-                            {jd.reportTo && (
-                                <span style={{ fontSize: 12, color: "#6b7280" }}>
-                                    Báo cáo: <b style={{ color: "#374151" }}>{jd.reportTo}</b>
-                                </span>
-                            )}
-                        </div>
+                        <nav className="shrink-0 border-b border-gray-100 bg-white px-3 sm:px-8" aria-label="Nội dung mô tả công việc">
+                            <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                {TABS.map((tab) => {
+                                    const isActive = activeTab === tab.key;
+                                    return (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.key)}
+                                            className={`relative min-w-fit border-0 bg-transparent px-4 py-4 text-[13px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8637a]/30 ${
+                                                isActive
+                                                    ? "font-semibold text-gray-950 after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[#e8637a]"
+                                                    : "font-medium text-gray-500 hover:text-gray-900"
+                                            }`}
+                                            aria-current={isActive ? "page" : undefined}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </nav>
 
-                        {/* Version + Date + Export button */}
-                        <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            flexWrap: "wrap",
-                        }}>
-                            {jd.version != null && (
-                                <span style={{
-                                    fontSize: 11, fontWeight: 600, color: "#9ca3af",
-                                    background: "#f9fafb", border: "1px solid #e5e7eb",
-                                    borderRadius: 8, padding: "3px 10px",
-                                }}>
-                                    Phiên bản: {jd.version}
-                                </span>
-                            )}
-                            {jd.effectiveDate && (
-                                <span style={{ fontSize: 12, color: "#9ca3af" }}>
-                                    Hiệu lực: {dayjs(jd.effectiveDate).format("DD/MM/YYYY")}
-                                </span>
-                            )}
-                            {jd.createdAt && (
-                                <span style={{ fontSize: 11, color: "#d1d5db" }}>
-                                    Tạo: {dayjs(jd.createdAt).format("DD/MM/YYYY HH:mm")}
-                                </span>
-                            )}
-                            <Button
-                                icon={<DownloadOutlined />}
-                                size="small"
-                                onClick={() => exportJdToExcel(jd, logs ?? [])}
-                                style={{
-                                    background: ACCENT,
-                                    borderColor: ACCENT,
-                                    color: "#fff",
-                                    fontWeight: 600,
-                                    borderRadius: 8,
-                                    fontSize: 12,
-                                    marginLeft: "auto", // đẩy button về cuối dòng
-                                }}
-                            >
-                                Xuất Excel
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* ── BODY ── */}
-                    <div style={{ padding: isMobile ? "12px 10px 24px" : "16px 20px 24px" }}>
-
-                        {/* Tab bar — scroll ngang, không bị cắt */}
-                        <div style={{
-                            display: "flex",
-                            gap: 4,
-                            marginBottom: 16,
-                            background: "#fff",
-                            borderRadius: 12,
-                            padding: 5,
-                            border: "1px solid #eef0f5",
-                            boxShadow: "0 1px 4px rgba(0,0,0,.04)",
-                            overflowX: "auto",
-                            WebkitOverflowScrolling: "touch",
-                            // Ẩn scrollbar nhưng vẫn scroll được
-                            scrollbarWidth: "none",          // Firefox
-                            msOverflowStyle: "none",         // IE/Edge
-                        } as React.CSSProperties}>
-                            {TABS.map((tab) => {
-                                const isActive = activeTab === tab.key;
-                                return (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setActiveTab(tab.key)}
-                                        style={{
-                                            // Không dùng flex:1 khi mobile vì sẽ ép tab quá hẹp
-                                            flex: isMobile ? "0 0 auto" : "1",
-                                            padding: isMobile ? "8px 14px" : "9px 10px",
-                                            borderRadius: 8,
-                                            fontSize: isMobile ? 12 : 13,
-                                            fontWeight: isActive ? 700 : 500,
-                                            color: isActive ? "#fff" : "#6b7280",
-                                            background: isActive ? ACCENT : "transparent",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            transition: "all 0.18s ease",
-                                            boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
-                                            whiteSpace: "nowrap",
-                                            minWidth: "fit-content",
-                                        }}
-                                    >
-                                        {tab.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* CSS để ẩn scrollbar trên webkit */}
-                        <style>{`
-                            div::-webkit-scrollbar { display: none; }
-                        `}</style>
-
-                        {activeTab === "1" && <Tab1General jd={jd} statusInfo={statusInfo} />}
-                        {activeTab === "2" && (
-                            <ReactFlowProvider>
-                                <Tab2OrgChart loading={loadingChart} nodes={rfNodes} edges={rfEdges} />
-                            </ReactFlowProvider>
-                        )}
-                        {activeTab === "3" && <Tab3Tasks tasks={jd.tasks} />}
-                        {activeTab === "4" && <Tab4Requirements requirements={jd.requirements} />}
-                        {activeTab === "5" && canViewHistory && <Tab5History logs={logs} />}
-                    </div>
-                </div>
-            )}
-        </Modal>
+                        <main className="min-h-0 flex-1 overflow-auto bg-[#f8f9fb] px-4 pb-14 pt-5 sm:px-8 sm:pt-7">
+                            <div className="mx-auto w-full max-w-[1440px]">
+                                {activeTab === "1" && <Tab1General jd={jd} statusInfo={statusInfo} />}
+                                {activeTab === "2" && (
+                                    <ReactFlowProvider>
+                                        <Tab2OrgChart loading={loadingChart} nodes={rfNodes} edges={rfEdges} />
+                                    </ReactFlowProvider>
+                                )}
+                                {activeTab === "3" && <Tab3Tasks tasks={jd.tasks} />}
+                                {activeTab === "4" && <Tab4Requirements requirements={jd.requirements} />}
+                                {activeTab === "5" && canViewHistory && <Tab5History logs={logs} />}
+                            </div>
+                        </main>
+                    </>
+                )}
+            </div>
+        </LotusDetailDrawer>
     );
 }

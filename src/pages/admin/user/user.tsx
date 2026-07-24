@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Space, Tag } from "antd";
+import { Avatar, Space, Tag } from "antd";
 import type { TablePaginationConfig } from "antd";
 import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ProColumns, ActionType } from "@ant-design/pro-components";
@@ -23,10 +23,40 @@ import { useAppSelector } from "@/redux/hooks";
 import ModalUser from "@/pages/admin/user/modal.user";
 import ViewDetailUser from "@/pages/admin/user/view.user";
 import ActionButton from "@/components/common/ui/ActionButton";
+import { useAvatarSrc } from "@/hooks/useAvatarSrc";
 
 type RoleOption = { label: string; value: string; color?: string };
 
 const escapeFilterValue = (value: string) => value.trim().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+const AVATAR_COLORS = ["#1677ff", "#fa8c16", "#52c41a", "#13c2c2", "#eb2f96"];
+
+const UserAvatarCell = ({ user }: { user: IUser }) => {
+    const { src, onError } = useAvatarSrc(user.avatar);
+    const displayName = user.name || user.email || "";
+    const initials = displayName
+        .split(" ")
+        .filter(Boolean)
+        .map((word) => word[0]?.toUpperCase())
+        .slice(0, 2)
+        .join("");
+    const colorIndex = ((displayName.charCodeAt(0) || 0) + displayName.length) % AVATAR_COLORS.length;
+
+    return (
+        <Avatar
+            size={40}
+            src={src}
+            onError={onError}
+            style={{
+                backgroundColor: src ? "#f8fafc" : AVATAR_COLORS[colorIndex],
+                border: "1px solid #e2e8f0",
+                fontWeight: 600,
+            }}
+        >
+            {!src ? (initials || "U") : null}
+        </Avatar>
+    );
+};
 
 const UserPage = () => {
     const [openModal, setOpenModal] = useState(false);
@@ -133,52 +163,7 @@ const UserPage = () => {
             dataIndex: "avatar",
             width: 90,
             align: "center",
-            render: (_, record) => {
-                const backendURL = import.meta.env.VITE_BACKEND_URL;
-                const avatarUrl = record.avatar
-                    ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(record.avatar)}&folder=avatar`
-                    : null;
-                const displayName = record.name || record.email || "";
-                const initials = displayName
-                    .split(" ")
-                    .filter(Boolean)
-                    .map((w) => w[0]?.toUpperCase())
-                    .slice(0, 2)
-                    .join("");
-
-                if (avatarUrl) {
-                    return (
-                        <img
-                            src={avatarUrl}
-                            alt="avatar"
-                            style={{
-                                width: 40, height: 40,
-                                borderRadius: "50%",
-                                objectFit: "cover",
-                                border: "1px solid #ddd",
-                            }}
-                        />
-                    );
-                }
-
-                const bgColors = ["#1677ff", "#fa8c16", "#52c41a", "#13c2c2", "#eb2f96"];
-                const bg = bgColors[
-                    (displayName.charCodeAt(0) + displayName.length) % bgColors.length
-                ];
-
-                return (
-                    <div style={{
-                        width: 40, height: 40,
-                        borderRadius: "50%",
-                        backgroundColor: bg,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#fff", fontWeight: 600,
-                        textTransform: "uppercase", fontSize: 14,
-                    }}>
-                        {initials || "U"}
-                    </div>
-                );
-            },
+            render: (_, record) => <UserAvatarCell user={record} />,
         },
         { title: "Tên hiển thị", dataIndex: "name", sorter: true },
         { title: "Email", dataIndex: "email", sorter: true },

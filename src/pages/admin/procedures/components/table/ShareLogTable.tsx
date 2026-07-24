@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Tag, Avatar, Space, Tooltip, Button, Empty, Popconfirm, Dropdown } from "antd";
 import { UserOutlined, EyeOutlined, StopOutlined, MoreOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -10,7 +11,8 @@ import {
     useAllShareLogQuery,
     useRevokeProcedureAccessMutation,
 } from "@/hooks/useProcedure";
-import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { callFetchDepartmentsByCompany } from "@/config/api";
 import type { IShareLogDTO, ICompany, IDepartment } from "@/types/backend";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
@@ -290,16 +292,16 @@ const buildColumns = (
 // ─────────────────────────────────────────────
 // FILTER FIELDS BUILDER
 // ─────────────────────────────────────────────
-const buildFilterFields = (includeAction = false): FilterField[] => {
+const buildFilterFields = (
+    includeAction = false,
+    companyOptions: { label: string; value: number; color?: string }[] = [],
+    queryClient?: any,
+): FilterField[] => {
     const fields: FilterField[] = [
         {
             key: "companyId",
             label: "Công ty",
-            asyncOptions: async () => {
-                const res = await callFetchCompany("page=1&size=500&sort=name,asc");
-                const list: ICompany[] = (res?.data as any)?.result ?? [];
-                return list.map((c) => ({ label: c.name, value: c.id, color: "blue" }));
-            },
+            options: companyOptions,
         },
         {
             key: "departmentId",
@@ -307,6 +309,16 @@ const buildFilterFields = (includeAction = false): FilterField[] => {
             dependsOn: "companyId",
             asyncOptions: async (parentCompanyId: number) => {
                 if (!parentCompanyId) return [];
+                if (queryClient) {
+                    const list = await queryClient.fetchQuery({
+                        queryKey: ["departments", "by-company", parentCompanyId],
+                        queryFn: async () => {
+                            const res = await callFetchDepartmentsByCompany(parentCompanyId);
+                            return (res?.data as any) ?? [];
+                        },
+                    });
+                    return list.map((d: IDepartment) => ({ label: d.name, value: d.id, color: "cyan" }));
+                }
                 const res = await callFetchDepartmentsByCompany(parentCompanyId);
                 const list: IDepartment[] = (res?.data as any) ?? [];
                 return list.map((d) => ({ label: d.name, value: d.id, color: "cyan" }));
@@ -355,6 +367,12 @@ const SentReceivedTable: React.FC<{
     const [revokingKey, setRevokingKey] = useState<string | null>(null);
     const pageSize = 10;
 
+    const queryClient = useQueryClient();
+    const { data: companiesData } = useCompaniesQuery("page=1&size=500&sort=name,asc", open);
+    const companyFilterOptions = useMemo(() => {
+        return ((companiesData as any)?.result ?? []).map((c: ICompany) => ({ label: c.name, value: c.id, color: "blue" }));
+    }, [companiesData]);
+
     const sentQuery = useSentShareLogQuery(open && mode === "sent");
     const receivedQuery = useReceivedShareLogQuery(open && mode === "received");
     const revokeMutation = useRevokeProcedureAccessMutation();
@@ -362,7 +380,7 @@ const SentReceivedTable: React.FC<{
     const query = mode === "sent" ? sentQuery : receivedQuery;
     const { data: rawData = [], isFetching } = query;
 
-    const filterFields = useMemo(() => buildFilterFields(false), []);
+    const filterFields = useMemo(() => buildFilterFields(false, companyFilterOptions, queryClient), [companyFilterOptions, queryClient]);
 
     // ─────────────────────────────────────────────
     // REVOKE HANDLER
@@ -521,11 +539,17 @@ const AuditTable: React.FC<{
         return params.toString();
     }, [page, pageSize, searchValue, companyIdFilter, departmentIdFilter, statusFilter, actionFilter]);
 
+    const queryClient = useQueryClient();
+    const { data: companiesData } = useCompaniesQuery("page=1&size=500&sort=name,asc", open);
+    const companyFilterOptions = useMemo(() => {
+        return ((companiesData as any)?.result ?? []).map((c: ICompany) => ({ label: c.name, value: c.id, color: "blue" }));
+    }, [companiesData]);
+
     const { data, isFetching } = useAllShareLogQuery(queryString, open);
     const list = data?.result ?? [];
     const meta = data?.meta ?? { total: 0, page: 1, pageSize: 10 };
 
-    const filterFields = useMemo(() => buildFilterFields(true), []);
+    const filterFields = useMemo(() => buildFilterFields(true, companyFilterOptions, queryClient), [companyFilterOptions, queryClient]);
 
     const columns = useMemo(
         () => buildColumns("audit", page, pageSize, onViewProcedure),

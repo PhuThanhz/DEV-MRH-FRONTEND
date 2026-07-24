@@ -85,6 +85,8 @@ const ModalEmployee = ({
 
     // ========================= INIT =========================
     useEffect(() => {
+        if (!openModal) return;
+
         if (dataInit?.id) {
             setPreviewUrl(
                 dataInit.avatar
@@ -130,7 +132,7 @@ const ModalEmployee = ({
             setCreatedUserId(null);
             setSelectedManager(null);
         }
-    }, [dataInit, form]);
+    }, [openModal, dataInit, form]);
 
     useEffect(() => {
         return () => {
@@ -295,7 +297,6 @@ const ModalEmployee = ({
                 open={openModal}
                 modalProps={{
                     onCancel: handleReset,
-                    afterClose: handleReset,
                     destroyOnHidden: true,
                     width: modalWidth,
                     centered: true,

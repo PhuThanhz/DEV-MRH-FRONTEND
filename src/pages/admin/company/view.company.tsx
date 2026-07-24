@@ -1,6 +1,6 @@
 import { Spin, Empty } from "antd";
 import {
-    BankOutlined, CodeOutlined, GlobalOutlined,
+    BankOutlined, CodeOutlined,
     CalendarOutlined, UserAddOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -46,22 +46,13 @@ const ViewCompany = ({ open, onClose, companyId }: IProps) => {
                         avatarIcon={<BankOutlined />}
                         title={company.name || "--"}
                         badges={[isActive ? <ActiveTag key="s" /> : <InactiveTag key="s" />]}
+                        subtitle={company.englishName || undefined}
                         tags={[
                             company.code
                                 ? <OutlineTag key="code" icon={<CodeOutlined />} label={company.code} />
                                 : null,
-                            company.englishName
-                                ? <OutlineTag key="en" icon={<GlobalOutlined />} label={company.englishName} />
-                                : null,
                         ].filter(Boolean) as React.ReactNode[]}
                     />
-
-                    <InfoCard>
-                        <SectionTitle>Thông tin công ty</SectionTitle>
-                        <InfoRow icon={<CodeOutlined />}   label="Mã công ty"    value={company.code}        highlight />
-                        <InfoRow icon={<BankOutlined />}   label="Tên công ty"   value={company.name} />
-                        <InfoRow icon={<GlobalOutlined />} label="Tên tiếng Anh" value={company.englishName} noBorder />
-                    </InfoCard>
 
                     <InfoCard style={{ marginBottom: 0 }}>
                         <SectionTitle>Lịch sử</SectionTitle>

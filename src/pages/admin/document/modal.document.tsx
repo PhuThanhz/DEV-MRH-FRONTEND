@@ -1,13 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { MouseEvent } from "react";
 import { Form, Input, Select, DatePicker, Row, Col, Upload, ConfigProvider, Tabs, Tag, Tooltip } from "antd";
+import type { UploadFile, UploadProps, FormInstance } from "antd";
 import { ModalForm } from "@ant-design/pro-components";
 import {
     FileTextOutlined, LockOutlined, TeamOutlined, BankOutlined, UserOutlined,
     FilePdfOutlined, FileWordOutlined, FileExcelOutlined, FileUnknownOutlined,
     CloudUploadOutlined, CloseCircleFilled, SyncOutlined
 } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd";
 import dayjs from "dayjs";
 
 import type { IDocument, IDocumentRequest, DocumentProcedureType } from "@/types/backend";
@@ -138,6 +138,38 @@ const FileTileUpload = ({ file, onRemove }: { file: UploadFile; onRemove: () => 
     );
 };
 
+interface AutoFillerProps {
+    form: FormInstance;
+    isEdit: boolean;
+    isDocumentCodeTouched: boolean;
+    selectedCompanyId: number | null;
+}
+
+const DocumentCodeAutoFiller = ({
+    form,
+    isEdit,
+    isDocumentCodeTouched,
+    selectedCompanyId,
+}: AutoFillerProps) => {
+    const selectedCategoryId = Form.useWatch("categoryId");
+    const selectedIssuedDate = Form.useWatch("issuedDate");
+    const issuedYear = selectedIssuedDate ? dayjs(selectedIssuedDate).year() : null;
+
+    const { data: nextDocumentCode } = useGetNextDocumentCodeQuery(
+        selectedCompanyId,
+        selectedCategoryId,
+        issuedYear
+    );
+
+    useEffect(() => {
+        if (!isEdit && nextDocumentCode && !isDocumentCodeTouched) {
+            form.setFieldValue("documentCode", nextDocumentCode);
+        }
+    }, [nextDocumentCode, isEdit, form, isDocumentCodeTouched]);
+
+    return null;
+};
+
 const ModalDocument = ({
     openModal,
     setOpenModal,
@@ -158,25 +190,10 @@ const ModalDocument = ({
     const [uploading, setUploading] = useState(false);
     const [userCount, setUserCount] = useState(0);
     const [excludedUserCount, setExcludedUserCount] = useState(0);
-    const selectedCategoryId = Form.useWatch("categoryId", form);
-    const selectedIssuedDate = Form.useWatch("issuedDate", form);
-    const issuedYear = selectedIssuedDate ? dayjs(selectedIssuedDate).year() : null;
     const [isDocumentCodeTouched, setIsDocumentCodeTouched] = useState(false);
 
     const createMutation = useCreateDocumentMutation();
     const updateMutation = useUpdateDocumentMutation();
-
-    const { data: nextDocumentCode } = useGetNextDocumentCodeQuery(
-        selectedCompanyId,
-        selectedCategoryId,
-        issuedYear
-    );
-
-    useEffect(() => {
-        if (!isEdit && nextDocumentCode && !isDocumentCodeTouched) {
-            form.setFieldValue("documentCode", nextDocumentCode);
-        }
-    }, [nextDocumentCode, isEdit, form, isDocumentCodeTouched]);
 
     const { data: categoriesActive } = useDocumentCategoriesActiveQuery();
     const { data: companies } = useCompaniesQuery("page=1&size=100&sort=name,asc");
@@ -209,7 +226,7 @@ const ModalDocument = ({
             value: s.id!,
         })) ?? [];
 
-    const selectedCategory = categoryOptions.find((c) => c.value === selectedCategoryId);
+    const selectedCategory = categoryOptions.find((c) => c.value === (openModal ? form.getFieldValue("categoryId") : undefined));
 
     const resetCascadeFields = () => {
         // Keep selectedCompanyId and form.companyId intact so auto-generation isn't lost
@@ -242,71 +259,70 @@ const ModalDocument = ({
     };
 
     useEffect(() => {
-        if (openModal) {
-            if (dataInit) {
-                const isCross = dataInit.category?.isCrossCompany ?? false;
-                setShowProcedureFields(dataInit.category?.mappingProcedure ?? false);
-                setIsCrossCompany(isCross);
+        if (!openModal) return;
+        if (dataInit) {
+            const isCross = dataInit.category?.isCrossCompany ?? false;
+            setShowProcedureFields(dataInit.category?.mappingProcedure ?? false);
+            setIsCrossCompany(isCross);
 
-                const pType = dataInit.procedureType ?? null;
-                setProcedureType(pType);
-                setAudienceScope(
-                    pType === "CONFIDENTIAL"
-                        ? "SELECTED_USERS"
-                        : pType === "DEPARTMENT"
-                            ? "DEPARTMENT"
-                            : pType === "COMPANY"
-                                ? "COMPANY"
-                                : (pType == null && (dataInit.userIds?.length ?? 0) > 0)
-                                    ? "SELECTED_USERS"  // procedureType null nhưng có access list
-                                    : "PRIVATE"
-                );
+            const pType = dataInit.procedureType ?? null;
+            setProcedureType(pType);
+            setAudienceScope(
+                pType === "CONFIDENTIAL"
+                    ? "SELECTED_USERS"
+                    : pType === "DEPARTMENT"
+                        ? "DEPARTMENT"
+                        : pType === "COMPANY"
+                            ? "COMPANY"
+                            : (pType == null && (dataInit.userIds?.length ?? 0) > 0)
+                                ? "SELECTED_USERS"  // procedureType null nhưng có access list
+                                : "PRIVATE"
+            );
 
-                const companyId = dataInit.department?.companyId ?? null;
-                const departmentId = dataInit.department?.id ?? null;
-                setSelectedCompanyId(companyId);
-                setSelectedDepartmentId(departmentId);
+            const companyId = dataInit.department?.companyId ?? null;
+            const departmentId = dataInit.department?.id ?? null;
+            setSelectedCompanyId(companyId);
+            setSelectedDepartmentId(departmentId);
 
-                const existingUserIds = dataInit.userIds ?? [];
-                setUserCount(existingUserIds.length);
-                setExcludedUserCount(dataInit.excludedUserIds?.length ?? 0);
+            const existingUserIds = dataInit.userIds ?? [];
+            setUserCount(existingUserIds.length);
+            setExcludedUserCount(dataInit.excludedUserIds?.length ?? 0);
 
-                const urls: string[] = dataInit.fileUrls ?? [];
-                setFileList(
-                    urls.map((name, i) => ({
-                        uid: String(i),
-                        name,
-                        status: "done" as const,
-                        url: `/api/v1/files?fileName=${encodeURIComponent(name)}&folder=documents`,
-                        response: name,
-                    }))
-                );
+            const urls: string[] = dataInit.fileUrls ?? [];
+            setFileList(
+                urls.map((name, i) => ({
+                    uid: String(i),
+                    name,
+                    status: "done" as const,
+                    url: `/api/v1/files?fileName=${encodeURIComponent(name)}&folder=documents`,
+                    response: name,
+                }))
+            );
 
-                form.setFieldsValue({
-                    documentCode: dataInit.documentCode,
-                    documentName: dataInit.documentName,
-                    categoryId: dataInit.category?.id,
-                    procedureType: pType,
-                    companyId: companyId,
-                    departmentId: departmentId,
-                    sectionId: dataInit.section?.id,
-                    departmentIds: dataInit.departmentIds?.length ? dataInit.departmentIds : (pType === "DEPARTMENT" && departmentId ? [departmentId] : undefined),
-                    status: dataInit.status,
-                    issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : undefined,
-                    note: dataInit.note,
-                    fileUrls: urls,
-                    userIds: existingUserIds,
-                    excludedDepartmentIds: dataInit.excludedDepartmentIds,
-                    excludedUserIds: dataInit.excludedUserIds,
-                    targetCompanyIds: dataInit.targetCompanyIds,
-                });
-            } else {
-                resetAll();
-                form.setFieldValue("fileUrls", []);
-                form.setFieldValue("status", "IN_PROGRESS");
-            }
+            form.setFieldsValue({
+                documentCode: dataInit.documentCode,
+                documentName: dataInit.documentName,
+                categoryId: dataInit.category?.id,
+                procedureType: pType,
+                companyId: companyId,
+                departmentId: departmentId,
+                sectionId: dataInit.section?.id,
+                departmentIds: dataInit.departmentIds?.length ? dataInit.departmentIds : (pType === "DEPARTMENT" && departmentId ? [departmentId] : undefined),
+                status: dataInit.status,
+                issuedDate: dataInit.issuedDate ? dayjs(dataInit.issuedDate) : undefined,
+                note: dataInit.note,
+                fileUrls: urls,
+                userIds: existingUserIds,
+                excludedDepartmentIds: dataInit.excludedDepartmentIds,
+                excludedUserIds: dataInit.excludedUserIds,
+                targetCompanyIds: dataInit.targetCompanyIds,
+            });
+        } else {
+            resetAll();
+            form.setFieldValue("fileUrls", []);
+            form.setFieldValue("status", "IN_PROGRESS");
         }
-    }, [openModal, dataInit]);
+    }, [openModal, dataInit?.id]);
 
     const handleCategoryChange = (categoryId: number) => {
         const selected = categoryOptions.find((c) => c.value === categoryId);
@@ -783,7 +799,7 @@ const ModalDocument = ({
         if (!showAdvanced) return null;
 
         const hasExclusions = (excludedUserCount > 0) ||
-            (form.getFieldValue("excludedDepartmentIds")?.length > 0);
+            ((openModal ? form.getFieldValue("excludedDepartmentIds") : undefined)?.length > 0);
 
         return (
             <details
@@ -945,6 +961,12 @@ const ModalDocument = ({
                 <Form.Item name="fileUrls" hidden>
                     <Input />
                 </Form.Item>
+                <DocumentCodeAutoFiller
+                    form={form}
+                    isEdit={isEdit}
+                    isDocumentCodeTouched={isDocumentCodeTouched}
+                    selectedCompanyId={selectedCompanyId}
+                />
 
                 <Tabs
                     activeKey={activeTab}

@@ -1,4 +1,5 @@
-import type { IResNotificationDTO,
+import type {
+    IResNotificationDTO,
     IBackendRes, IAccount, IUser, ICompany, IModelPaginate, IGetAccount, IPermission, IRole,
     IDepartment, ISection, IPositionLevel, IJobTitle, ICompanyProcedure, ICareerPath,
     IDepartmentJobTitle, IResCareerPathBandGroup, ICareerPathRequest,
@@ -47,6 +48,8 @@ import type { IResNotificationDTO,
     ITemplateCriteriaLevel,
     IEvaluationRecord,
     IEvaluationTaskCounts,
+    IManagerDashboard,
+    IApproverDashboard,
     IResScoreDTO,
     IResScoreUpdateDTO,
     IResCommentDTO,
@@ -2439,6 +2442,16 @@ export const callFetchAllEvaluationRecords = () =>
 
 export const callFetchEvaluationTaskCounts = () =>
     axios.get<IBackendRes<IEvaluationTaskCounts>>(`/api/v1/evaluation/task-counts`);
+
+export const callFetchManagerDashboard = (periodId?: number) => {
+    const query = periodId ? `?periodId=${periodId}` : "";
+    return axios.get<IBackendRes<IManagerDashboard>>(`/api/v1/evaluation/dashboard/manager${query}`);
+};
+
+export const callFetchApproverDashboard = (periodId?: number) => {
+    const query = periodId ? `?periodId=${periodId}` : "";
+    return axios.get<IBackendRes<IApproverDashboard>>(`/api/v1/evaluation/dashboard/approver${query}`);
+};
 
 export const callFetchManagerRecordsByPeriod = (periodId: number) =>
     axios.get<IBackendRes<IEvaluationRecord[]>>(`/api/v1/evaluation/manager/periods/${periodId}/records`);

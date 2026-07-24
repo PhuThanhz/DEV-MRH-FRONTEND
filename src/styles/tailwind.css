@@ -10,6 +10,31 @@
     }
 }
 
+.lotus-toast-close {
+    transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.lotus-toast-close:hover {
+    color: #475569 !important;
+    background: rgba(148, 163, 184, 0.13) !important;
+}
+
+.lotus-toast-close:active {
+    transform: scale(0.92);
+}
+
+.lotus-toast-close:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.45);
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    [data-rht-toaster] {
+        left: 12px !important;
+        right: 12px !important;
+    }
+}
+
 /* TÙY CHỈNH THANH CUỘN (SCROLLBAR) TOÀN HỆ THỐNG - GIÚP BẢNG & TRANG SLEEK HƠN */
 /* Cho tất cả các trình duyệt (Firefox) - Mặc định thanh cuộn trong suốt hoàn toàn, chỉ hiện màu nhẹ khi hover, loại bỏ 100% giật layout */
 * {

@@ -962,7 +962,7 @@ const StorageDashboard = () => {
                                 }}
                                 style={{ width: "100%", height: 40 }}
                                 popupMatchSelectWidth={false}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={[
                                     { label: "Tất cả công ty", value: undefined },
                                     ...companies.map(c => ({ label: c.name, value: c.id }))
@@ -988,7 +988,7 @@ const StorageDashboard = () => {
                                 disabled={!selectedCompanyId}
                                 style={{ width: "100%", height: 40 }}
                                 popupMatchSelectWidth={false}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={departments.map(d => ({ label: d.name, value: d.id }))}
                             />
                         </div>
@@ -1010,7 +1010,7 @@ const StorageDashboard = () => {
                                 disabled={!selectedDepartmentId}
                                 style={{ width: "100%", height: 40 }}
                                 popupMatchSelectWidth={false}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={sections.map(s => ({ label: s.name, value: s.id }))}
                             />
                         </div>
@@ -1031,7 +1031,7 @@ const StorageDashboard = () => {
                                 }}
                                 style={{ width: "100%", height: 40 }}
                                 popupMatchSelectWidth={false}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={categories.map(c => ({ label: c.categoryName, value: c.id }))}
                             />
                         </div>
@@ -1049,7 +1049,7 @@ const StorageDashboard = () => {
                                     setPage(1);
                                 }}
                                 style={{ width: "100%", height: 40 }}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={[
                                     { label: "Tất cả trạng thái", value: undefined },
                                     { label: "Nháp", value: "DRAFT" },
@@ -1078,7 +1078,7 @@ const StorageDashboard = () => {
                                     setPage(1);
                                 }}
                                 style={{ width: "100%", height: 40 }}
-                                dropdownStyle={{ borderRadius: 8 }}
+                                styles={{ popup: { root: { borderRadius: 8 } } }}
                                 options={[
                                     { label: "Tất cả tình trạng", value: undefined },
                                     { label: "Trong hạn", value: "EFFECTIVE" },
@@ -1157,7 +1157,7 @@ const StorageDashboard = () => {
                 <Col xs={24} md={12}>
                     <Card 
                         title="Tình trạng xử lý hồ sơ" 
-                        bordered={false} 
+                        variant="borderless" 
                         loading={isLoadingStatus}
                         className="premium-card chart-card"
                     >
@@ -1166,14 +1166,12 @@ const StorageDashboard = () => {
                                 data={statusData}
                                 angleField="value"
                                 colorField="type"
-                                radius={0.8}
                                 innerRadius={0.6}
                                 scale={PIE_COLOR_SCALE}
                                 label={PIE_LABEL_CONFIG}
                                 legend={PIE_LEGEND_CONFIG}
                                 tooltip={CHART_TOOLTIP_CONFIG}
                                 height={280}
-                                animate={false}
                             />
                         ) : statusData.length > 0 ? (
                             <ChartPlaceholder height={280} />
@@ -1188,7 +1186,7 @@ const StorageDashboard = () => {
                 <Col xs={24} md={12}>
                     <Card 
                         title="Hàng đợi phê duyệt theo vai trò" 
-                        bordered={false} 
+                        variant="borderless" 
                         loading={isLoadingPending}
                         className="premium-card chart-card"
                     >
@@ -1217,7 +1215,7 @@ const StorageDashboard = () => {
                 <Col xs={24}>
                     <Card 
                         title="Phòng ban có nhiều chứng từ nhất"
-                        bordered={false} 
+                        variant="borderless" 
                         loading={isLoadingDept}
                         className="premium-card chart-card department-chart-card"
                     >

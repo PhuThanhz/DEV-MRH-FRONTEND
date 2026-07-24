@@ -1,11 +1,16 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useIsMobile } from "@/components/common/modal/detail";
-import { getModalWidth } from "@/utils/responsive";
 import {
     Modal, Form, Input, Select, DatePicker,
-    Button, Spin, Alert, Tag,
+    Button, Spin, Alert, Tag, Popconfirm,
 } from "antd";
-import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import {
+    ArrowLeftOutlined,
+    ArrowRightOutlined,
+    DeleteOutlined,
+    DownOutlined,
+    PlusOutlined,
+} from "@ant-design/icons";
 import type {
     IJobDescription, ICompany, IDepartment,
     IDepartmentJobTitle, IOrgChart, IOrgNode,
@@ -15,18 +20,17 @@ import {
     useUpdateJobDescriptionMutation,
     useJobDescriptionByIdQuery,
 } from "@/hooks/useJobDescriptions";
-import {
-    callFetchCompany,
-    callFetchDepartmentsByCompany,
-    callFetchCompanyJobTitlesOfDepartment,
-    callFetchOrgCharts,
-    callFetchOrgNodes,
-} from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import { useCompanyJobTitlesOfDepartmentQuery } from "@/hooks/useDepartmentJobTitles";
+import { useOrgChartsQuery } from "@/hooks/useOrgCharts";
+import { useOrgNodesQuery } from "@/hooks/useOrgNodes";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useAppSelector } from "@/redux/hooks";
 import dayjs from "dayjs";
 import dagre from "dagre";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
 import ReactFlow, {
     Background,
@@ -48,10 +52,10 @@ const { TextArea } = Input;
 const ACCENT = "#e8637a";
 
 const MODAL_TABS = [
-    { key: "1", label: "I. Thông tin chung" },
-    { key: "2", label: "II. Sơ đồ vị trí" },
-    { key: "3", label: "III. Mô tả công việc" },
-    { key: "4", label: "IV. Yêu cầu vị trí" },
+    { key: "1", label: "Thông tin chung" },
+    { key: "2", label: "Sơ đồ vị trí" },
+    { key: "3", label: "Mô tả công việc" },
+    { key: "4", label: "Yêu cầu vị trí" },
 ];
 
 const NODE_W = 190;
@@ -70,32 +74,17 @@ const TaskItem = ({ name, restField, index, canRemove, onRemove, accent }: TaskI
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <div style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: 10,
-            background: "#fff",
-            overflow: "hidden",
-            transition: "box-shadow 0.18s",
-            boxShadow: collapsed ? "none" : "0 1px 4px rgba(0,0,0,.05)",
-        }}>
-            {/* Header row — luôn hiển thị */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 14px",
-                    cursor: "pointer",
-                    background: collapsed ? "#fafafa" : "#fff",
-                    borderBottom: collapsed ? "none" : "1px solid #f3f4f6",
-                    transition: "background 0.15s",
-                }}
+        <article className={`overflow-hidden rounded-xl border bg-white transition-shadow duration-200 ${collapsed ? "border-gray-200" : "border-gray-200 shadow-sm"}`}>
+            <button
+                type="button"
+                className={`flex w-full items-center justify-between gap-4 border-0 px-4 py-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e8637a]/30 ${collapsed ? "bg-gray-50 hover:bg-gray-100" : "bg-white hover:bg-gray-50"}`}
                 onClick={() => setCollapsed((v) => !v)}
+                aria-expanded={!collapsed}
             >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="flex min-w-0 items-center gap-3">
                     <span style={{
-                        width: 22, height: 22,
-                        borderRadius: "50%",
+                        width: 26, height: 26,
+                        borderRadius: 7,
                         background: accent,
                         color: "#fff",
                         fontSize: 11,
@@ -108,48 +97,20 @@ const TaskItem = ({ name, restField, index, canRemove, onRemove, accent }: TaskI
                     }}>
                         {index + 1}
                     </span>
-                    <span style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#374151",
-                        fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
-                        letterSpacing: "0.03em",
-                        textTransform: "uppercase",
-                    }}>
+                    <span className="truncate text-[13px] font-semibold text-gray-800">
                         Nhiệm vụ {index + 1}
                     </span>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {canRemove && (
-                        <Button
-                            type="text" danger size="small"
-                            icon={<MinusCircleOutlined />}
-                            onClick={onRemove}
-                            style={{ padding: "0 6px" }}
-                        />
-                    )}
-                    <span style={{
-                        fontSize: 16,
-                        color: "#9ca3af",
-                        transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                        transition: "transform 0.2s ease",
-                        display: "inline-flex",
-                        cursor: "pointer",
-                        userSelect: "none",
-                    }}
-                        onClick={(e) => { e.stopPropagation(); setCollapsed((v) => !v); }}
-                    >
-                        ▾
-                    </span>
-                </div>
-            </div>
+                <span className="flex shrink-0 items-center gap-2 text-xs font-medium text-gray-400">
+                    {collapsed ? "Mở rộng" : "Thu gọn"}
+                    <DownOutlined className={`text-[11px] transition-transform duration-200 ${collapsed ? "-rotate-90" : "rotate-0"}`} />
+                </span>
+            </button>
 
-            {/* Body — ẩn/hiện theo collapsed */}
-            {!collapsed && (
-                <div style={{ padding: "12px 14px 4px" }}>
+            {!collapsed ? (
+                <div className="border-t border-gray-100">
+                    <div className="px-4 pb-1 pt-4 sm:px-5">
                     <Form.Item
                         {...restField}
                         name={[name, "title"]}
@@ -171,9 +132,27 @@ const TaskItem = ({ name, restField, index, canRemove, onRemove, accent }: TaskI
                             placeholder="Mô tả chi tiết nhiệm vụ..."
                         />
                     </Form.Item>
+                    </div>
+
+                    {canRemove ? (
+                        <div className="flex justify-end border-t border-gray-100 bg-gray-50/70 px-3 py-2 sm:px-4">
+                            <Popconfirm
+                                title={`Xóa nhiệm vụ ${index + 1}?`}
+                                description="Nội dung của nhiệm vụ này sẽ bị xóa khỏi biểu mẫu."
+                                okText="Xóa nhiệm vụ"
+                                cancelText="Giữ lại"
+                                okButtonProps={{ danger: true }}
+                                onConfirm={onRemove}
+                            >
+                                <Button type="text" danger icon={<DeleteOutlined />}>
+                                    Xóa nhiệm vụ
+                                </Button>
+                            </Popconfirm>
+                        </div>
+                    ) : null}
                 </div>
-            )}
-        </div>
+            ) : null}
+        </article>
     );
 };
 // ─── Org Edge ────────────────────────────────────────────────────────────────
@@ -317,23 +296,31 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         isEdit && open ? jdId : undefined
     );
 
-    const [companies, setCompanies] = useState<ICompany[]>([]);
-    const [departments, setDepartments] = useState<IDepartment[]>([]);
-    const [jobTitles, setJobTitles] = useState<IDepartmentJobTitle[]>([]);
-
-    const [loadingCompanies, setLoadingCompanies] = useState(false);
-    const [loadingDepartments, setLoadingDepartments] = useState(false);
-    const [loadingJobTitles, setLoadingJobTitles] = useState(false);
-
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
     const [selectedJobTitleName, setSelectedJobTitleName] = useState<string | null>(null);
 
-    const [charts, setCharts] = useState<IOrgChart[]>([]);
-    const [rawNodes, setRawNodes] = useState<IOrgNode[]>([]);
-    const [loadingChart, setLoadingChart] = useState(false);
+    const { data: companiesData, isLoading: loadingCompanies } = useCompaniesQuery("page=1&size=500", open);
+    const companies = companiesData?.result ?? [];
+
+    const { data: departments = [], isLoading: loadingDepartments } = useDepartmentsByCompanyQuery(open && selectedCompanyId ? selectedCompanyId : 0);
+
+    const { data: departmentJobTitlesData = [], isLoading: loadingJobTitles } = useCompanyJobTitlesOfDepartmentQuery(open && selectedDepartmentId ? selectedDepartmentId : 0);
+    const jobTitles = departmentJobTitlesData;
+
     const [selectedChartId, setSelectedChartId] = useState<number | null>(null);
     const [selectedNodeIds, setSelectedNodeIds] = useState<number[]>([]);
+
+    const { data: orgChartsRes, isLoading: loadingOrgCharts } = useOrgChartsQuery(
+        open && selectedDepartmentId ? `filter=departmentId='${selectedDepartmentId}'&page=1&pageSize=50` : ""
+    );
+    const charts = useMemo(() => (orgChartsRes as any)?.result ?? [], [orgChartsRes]);
+
+    const { data: rawNodesData, isLoading: loadingNodes } = useOrgNodesQuery(
+        open && selectedChartId ? selectedChartId : 0
+    );
+    const rawNodes = useMemo(() => rawNodesData ?? [], [rawNodesData]);
+    const loadingChart = loadingOrgCharts || loadingNodes;
 
     const [rfNodes, setRfNodes] = useState<Node[]>([]);
     const [rfEdges, setRfEdges] = useState<Edge[]>([]);
@@ -414,34 +401,23 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         );
     }, [selectedNodeIds, selectedJobTitleName, handleToggleNode, rawNodes.length]);
 
-    // Load companies khi mở modal
+    // Reset state khi mở/đóng modal
     useEffect(() => {
-        if (!open) return;
-        setLoadingCompanies(true);
-        callFetchCompany("page=1&size=500")
-            .then((res: any) => setCompanies(res?.data?.result ?? []))
-            .finally(() => setLoadingCompanies(false));
-    }, [open]);
-
-    // Reset state khi đóng modal
-    useEffect(() => {
-        if (!open) {
-            form.resetFields();
+        if (open) {
+            if (!isEdit) {
+                form.resetFields();
+            }
+        } else {
             setActiveTab("1");
             setSelectedCompanyId(null);
             setSelectedDepartmentId(null);
             setSelectedJobTitleName(null);
-            setDepartments([]);
-            setJobTitles([]);
-            setCharts([]);
-            setRawNodes([]);
             setRfNodes([]);
             setRfEdges([]);
             setSelectedChartId(null);
             setSelectedNodeIds([]);
-            setLoadingChart(false);
         }
-    }, [open, form]);
+    }, [open, isEdit, form]);
 
     // Prefill form khi edit
     useEffect(() => {
@@ -468,59 +444,29 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
         if (fullJd.companyId) setSelectedCompanyId(fullJd.companyId);
         if (fullJd.departmentId) setSelectedDepartmentId(fullJd.departmentId);
+        if (fullJd.positions?.length) {
+            setSelectedChartId(fullJd.positions[0].chartId);
+            setSelectedNodeIds(fullJd.positions.map((p) => p.nodeId));
+        }
+    }, [open, isEdit, fullJd]);
 
-        const prefillRelated = async () => {
-            setLoadingChart(true);
-            try {
-                const promises: Promise<any>[] = [];
+    useEffect(() => {
+        if (fullJd?.departmentJobTitleId && departmentJobTitlesData.length > 0) {
+            const matched = departmentJobTitlesData.find((jt) => jt.id === fullJd.departmentJobTitleId);
+            if (matched) setSelectedJobTitleName(matched.jobTitle?.nameVi ?? null);
+        }
+    }, [fullJd?.departmentJobTitleId, departmentJobTitlesData]);
 
-                if (fullJd.companyId) {
-                    promises.push(
-                        callFetchDepartmentsByCompany(fullJd.companyId)
-                            .then((res: any) => setDepartments(res?.data ?? []))
-                    );
-                }
-
-                if (fullJd.departmentId) {
-                    promises.push(
-                        callFetchCompanyJobTitlesOfDepartment(fullJd.departmentId)
-                            .then((res: any) => {
-                                const jts: IDepartmentJobTitle[] = res?.data ?? [];
-                                setJobTitles(jts);
-                                const matched = jts.find((jt) => jt.id === fullJd.departmentJobTitleId);
-                                if (matched) setSelectedJobTitleName(matched.jobTitle?.nameVi ?? null);
-                            })
-                    );
-                    promises.push(
-                        callFetchOrgCharts(
-                            `filter=departmentId='${fullJd.departmentId}'&page=1&pageSize=50`
-                        ).then((res: any) => setCharts(res?.data?.result ?? []))
-                    );
-                }
-
-                await Promise.all(promises);
-
-                if (fullJd.positions?.length) {
-                    const firstChartId = fullJd.positions[0].chartId;
-                    setSelectedChartId(firstChartId);
-                    const preSelectedIds = fullJd.positions.map((p) => p.nodeId);
-                    setSelectedNodeIds(preSelectedIds);
-
-                    const res = await callFetchOrgNodes(firstChartId) as any;
-                    const raw: IOrgNode[] = res?.data ?? [];
-                    setRawNodes(raw);
-
-                    const { nodes: built, edges } = buildRfNodes(raw, preSelectedIds, handleToggleNode);
-                    setRfNodes(built);
-                    setRfEdges(edges);
-                }
-            } finally {
-                setLoadingChart(false);
-            }
-        };
-
-        prefillRelated();
-    }, [open, isEdit, fullJd]); // eslint-disable-line
+    useEffect(() => {
+        if (rawNodes.length > 0) {
+            const { nodes: built, edges } = buildRfNodes(rawNodes as IOrgNode[], selectedNodeIds, handleToggleNode);
+            setRfNodes(built);
+            setRfEdges(edges);
+        } else {
+            setRfNodes((prev) => (prev.length > 0 ? [] : prev));
+            setRfEdges((prev) => (prev.length > 0 ? [] : prev));
+        }
+    }, [rawNodes, buildRfNodes, handleToggleNode]);
 
     // Init form khi tạo mới
     useEffect(() => {
@@ -531,71 +477,27 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     }, [open, isEdit, form]);
 
     // ─── Handlers ────────────────────────────────────────────────────────────
-    const handleCompanyChange = useCallback(async (companyId: number) => {
+    const handleCompanyChange = useCallback((companyId: number) => {
         setSelectedCompanyId(companyId);
         setSelectedDepartmentId(null);
-        setDepartments([]);
-        setJobTitles([]);
-        setCharts([]);
-        setRawNodes([]);
-        setRfNodes([]);
-        setRfEdges([]);
         setSelectedChartId(null);
         setSelectedNodeIds([]);
         setSelectedJobTitleName(null);
         form.setFieldsValue({ departmentId: undefined, departmentJobTitleId: undefined });
-
-        setLoadingDepartments(true);
-        try {
-            const res = await callFetchDepartmentsByCompany(companyId) as any;
-            setDepartments(res?.data ?? []);
-        } finally {
-            setLoadingDepartments(false);
-        }
     }, [form]);
 
-    const handleDepartmentChange = useCallback(async (departmentId: number) => {
+    const handleDepartmentChange = useCallback((departmentId: number) => {
         setSelectedDepartmentId(departmentId);
-        setJobTitles([]);
-        setCharts([]);
-        setRawNodes([]);
-        setRfNodes([]);
-        setRfEdges([]);
         setSelectedChartId(null);
         setSelectedNodeIds([]);
         setSelectedJobTitleName(null);
         form.setFieldsValue({ departmentJobTitleId: undefined });
-
-        setLoadingJobTitles(true);
-        setLoadingChart(true);
-        try {
-            const [jtRes, chartRes] = await Promise.all([
-                callFetchCompanyJobTitlesOfDepartment(departmentId),
-                callFetchOrgCharts(`filter=departmentId='${departmentId}'&page=1&pageSize=50`),
-            ]) as any[];
-            setJobTitles(jtRes?.data ?? []);
-            setCharts(chartRes?.data?.result ?? []);
-        } finally {
-            setLoadingJobTitles(false);
-            setLoadingChart(false);
-        }
     }, [form]);
 
-    const handleChartChange = useCallback(async (chartId: number) => {
+    const handleChartChange = useCallback((chartId: number) => {
         setSelectedChartId(chartId);
-        setRawNodes([]);
-        setRfNodes([]);
-        setRfEdges([]);
         setSelectedNodeIds([]);
-
-        const res = await callFetchOrgNodes(chartId) as any;
-        const raw: IOrgNode[] = res?.data ?? [];
-        setRawNodes(raw);
-
-        const { nodes: built, edges } = buildRfNodes(raw, [], handleToggleNode);
-        setRfNodes(built);
-        setRfEdges(edges);
-    }, [buildRfNodes, handleToggleNode]);
+    }, []);
 
     // ─── Submit ──────────────────────────────────────────────────────────────
     const handleSubmit = async (publishDirectly = false) => {
@@ -664,6 +566,29 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
         }
     };
 
+    const goToPreviousTab = () => {
+        if (currentTabIndex > 0) {
+            setActiveTab(MODAL_TABS[currentTabIndex - 1].key);
+        }
+    };
+
+    const handleRequestClose = () => {
+        if (isPending) return;
+        if (!form.isFieldsTouched()) {
+            onClose();
+            return;
+        }
+
+        Modal.confirm({
+            title: "Rời khỏi biểu mẫu?",
+            content: "Các thông tin chưa lưu sẽ bị mất.",
+            okText: "Rời khỏi",
+            cancelText: "Tiếp tục chỉnh sửa",
+            okButtonProps: { danger: true },
+            onOk: onClose,
+        });
+    };
+
     // ─── Render Tab 2 content ─────────────────────────────────────────────────
     const renderTab2 = () => {
         if (loadingChart) {
@@ -713,7 +638,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             placeholder="Chọn sơ đồ tổ chức"
                             value={selectedChartId ?? undefined}
                             onChange={handleChartChange}
-                            options={charts.map((c) => ({
+                            options={charts.map((c: any) => ({
                                 value: c.id, label: c.name,
                             }))}
                         />
@@ -792,130 +717,150 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     };
 
     // ─── Render ──────────────────────────────────────────────────────────────
-    return (
-        <Modal
-            open={open}
-            onCancel={onClose}
-            title={
-                <span style={{
-                    fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
-                    fontWeight: 700, fontSize: 15,
-                }}>
-                    {isEdit ? "Chỉnh sửa Job Description" : "Tạo Job Description mới"}
-                </span>
-            }
-            width={getModalWidth(1000)}
-            style={{ top: isMobile ? 12 : 20, maxWidth: "calc(100vw - 20px)" }}
-            className="job-description-form-modal"
-            styles={{ body: { padding: isMobile ? "12px 14px 8px" : "20px 24px 8px", background: "#f5f6fa" } }}
-            footer={
-                <div style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "12px 4px 4px",
-                }}>
-                    <Button onClick={onClose} disabled={isPending}>
-                        Hủy
+    const renderActionButtons = () => (
+        <div className="flex flex-wrap items-center gap-2">
+            {currentTabIndex > 0 ? (
+                <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={goToPreviousTab}
+                    disabled={isPending}
+                    className="!h-10 !rounded-lg !border-gray-200 !bg-white !px-4 !font-semibold !text-gray-700 !shadow-none hover:!border-gray-300 hover:!bg-gray-50 hover:!text-gray-950"
+                >
+                    Quay lại
+                </Button>
+            ) : null}
+
+            {!isLastTab ? (
+                <Button
+                    type="primary"
+                    icon={<ArrowRightOutlined />}
+                    iconPosition="end"
+                    onClick={goToNextTab}
+                    disabled={isPending}
+                    className="!h-10 !rounded-lg !border-[#e8637a] !bg-[#e8637a] !px-5 !font-semibold !shadow-[0_4px_12px_rgba(232,99,122,0.22)] hover:!border-[#d94c66] hover:!bg-[#d94c66] active:!translate-y-px"
+                >
+                    Tiếp theo
+                </Button>
+            ) : null}
+
+            {isEdit && isLastTab ? (
+                <>
+                    <Button
+                        type="primary"
+                        onClick={() => handleSubmit(false)}
+                        loading={isPending}
+                        className="!h-10 !rounded-lg !border-[#e8637a] !bg-[#e8637a] !px-5 !font-semibold !shadow-[0_4px_12px_rgba(232,99,122,0.22)] hover:!border-[#d94c66] hover:!bg-[#d94c66] active:!translate-y-px"
+                    >
+                        Cập nhật
                     </Button>
 
-                    {/* Nút Tiếp theo — ẩn ở tab cuối */}
-                    {!isLastTab && (
-                        <button
-                            onClick={goToNextTab}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "0 18px",
-                                height: 32,
-                                borderRadius: 6,
-                                border: `1.5px solid ${ACCENT}`,
-                                background: "#fff",
-                                color: ACCENT,
-                                fontSize: 13,
-                                fontWeight: 600,
-                                fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
-                                cursor: "pointer",
-                                transition: "all 0.18s ease",
-                                letterSpacing: "0.01em",
-                            }}
-                            onMouseEnter={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.background = ACCENT;
-                                (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-                            }}
-                            onMouseLeave={(e) => {
-                                (e.currentTarget as HTMLButtonElement).style.background = "#fff";
-                                (e.currentTarget as HTMLButtonElement).style.color = ACCENT;
-                            }}
+                    {canPublishDirectly ? (
+                        <Button
+                            type="primary"
+                            onClick={() => handleSubmit(true)}
+                            loading={isPending}
+                            className="!h-10 !rounded-lg !border-[#389e0d] !bg-[#389e0d] !px-5 !font-semibold hover:!border-[#237804] hover:!bg-[#237804] active:!translate-y-px"
                         >
-                            Tiếp theo
-                            <svg
-                                width="14" height="14" viewBox="0 0 14 14"
-                                fill="none" xmlns="http://www.w3.org/2000/svg"
-                                style={{ flexShrink: 0 }}
-                            >
-                                <path
-                                    d="M3 7H11M8 4L11 7L8 10"
-                                    stroke="currentColor" strokeWidth="1.6"
-                                    strokeLinecap="round" strokeLinejoin="round"
-                                />
-                            </svg>
-                        </button>
-                    )}
+                            Ban hành ngay
+                        </Button>
+                    ) : null}
+                </>
+            ) : null}
 
-                    {isEdit && (
-                        <>
-                            <Button
-                                type="primary"
-                                onClick={() => handleSubmit(false)}
-                                loading={isPending}
-                                style={{ background: ACCENT, borderColor: ACCENT }}
-                            >
-                                Cập nhật
-                            </Button>
+            {!isEdit && isLastTab ? (
+                <>
+                    <Button
+                        type="primary"
+                        onClick={() => handleSubmit(false)}
+                        loading={isPending}
+                        className="!h-10 !rounded-lg !border-[#e8637a] !bg-[#e8637a] !px-5 !font-semibold !shadow-[0_4px_12px_rgba(232,99,122,0.22)] hover:!border-[#d94c66] hover:!bg-[#d94c66] active:!translate-y-px"
+                    >
+                        Tạo bản nháp
+                    </Button>
 
-                            {isLastTab && canPublishDirectly && (
-                                <Button
-                                    type="primary"
-                                    onClick={() => handleSubmit(true)}
-                                    loading={isPending}
-                                    style={{ background: "#52c41a", borderColor: "#52c41a" }}
-                                >
-                                    Ban hành ngay
-                                </Button>
-                            )}
-                        </>
-                    )}
+                    {canPublishDirectly ? (
+                        <Button
+                            type="primary"
+                            onClick={() => handleSubmit(true)}
+                            loading={isPending}
+                            className="!h-10 !rounded-lg !border-[#389e0d] !bg-[#389e0d] !px-5 !font-semibold hover:!border-[#237804] hover:!bg-[#237804] active:!translate-y-px"
+                        >
+                            Ban hành ngay
+                        </Button>
+                    ) : null}
+                </>
+            ) : null}
+        </div>
+    );
 
-                    {!isEdit && isLastTab && (
-                        <>
-                            <Button
-                                type="primary"
-                                onClick={() => handleSubmit(false)}
-                                loading={isPending}
-                                style={{ background: ACCENT, borderColor: ACCENT }}
-                            >
-                                Tạo bản nháp
-                            </Button>
-
-                            {canPublishDirectly && (
-                                <Button
-                                    type="primary"
-                                    onClick={() => handleSubmit(true)}
-                                    loading={isPending}
-                                    style={{ background: "#52c41a", borderColor: "#52c41a" }}
-                                >
-                                    Ban hành ngay
-                                </Button>
-                            )}
-                        </>
-                    )}
-                </div>
-            }
-            destroyOnHidden
+    return (
+        <LotusDetailDrawer
+            open={open}
+            onClose={handleRequestClose}
+            maskClosable={!isPending}
+            keyboard={!isPending}
+            closeAriaLabel={isEdit ? "Đóng chỉnh sửa mô tả công việc" : "Đóng tạo mô tả công việc"}
         >
+            <div className="job-description-form-drawer flex h-full flex-col bg-white font-['Outfit','Nunito','Segoe_UI',sans-serif]">
+                <header className="shrink-0 border-b border-gray-100 bg-white px-5 pb-5 pt-5 sm:px-8">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e8637a]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#e8637a]" />
+                                Mô tả công việc
+                            </div>
+                            <h2 className="mb-0 mt-2 text-[26px] font-bold leading-8 tracking-[-0.02em] text-gray-950 sm:text-[30px] sm:leading-9">
+                                {isEdit ? "Chỉnh sửa mô tả công việc" : "Tạo mô tả công việc mới"}
+                            </h2>
+                            <p className="mb-0 mt-2 text-[13px] text-gray-500">
+                                Hoàn thiện thông tin qua 4 bước, sau đó lưu bản nháp hoặc ban hành.
+                            </p>
+                        </div>
+                        <div className="rounded-lg bg-[#fff3f5] border border-[#f8d7df] px-3.5 py-2 text-xs font-semibold text-[#c94d66]">
+                            Bước {currentTabIndex + 1} / {MODAL_TABS.length}
+                        </div>
+                    </div>
+                </header>
+
+                <nav className="shrink-0 border-b border-gray-100 bg-white px-4 py-3 sm:px-8" aria-label="Các bước tạo mô tả công việc">
+                    <div className="mx-auto w-full max-w-[1320px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div className="grid min-w-[720px] grid-cols-4 gap-1.5 rounded-xl border border-gray-100 bg-gray-50 p-1.5">
+                            {MODAL_TABS.map((tab, tabIndex) => {
+                                const isActive = activeTab === tab.key;
+                                const isCompleted = tabIndex < currentTabIndex;
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        onClick={() => handleTabClick(tab.key)}
+                                        className={`flex min-w-0 items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8637a]/30 ${
+                                            isActive
+                                                ? "border-[#f3c4cf] bg-white text-gray-950 shadow-[0_3px_12px_rgba(148,80,96,0.10)]"
+                                                : isCompleted
+                                                    ? "border-transparent bg-[#fff3f5] text-[#ad4258] hover:bg-[#ffe9ee]"
+                                                    : "border-transparent bg-transparent text-gray-500 hover:bg-white hover:text-gray-800"
+                                        }`}
+                                        aria-current={isActive ? "step" : undefined}
+                                    >
+                                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${
+                                            isActive
+                                                ? "bg-[#e8637a] text-white"
+                                                : isCompleted
+                                                    ? "bg-[#f8d7df] text-[#ad4258]"
+                                                    : "bg-white text-gray-400 shadow-sm"
+                                        }`}>
+                                            {tabIndex + 1}
+                                        </span>
+                                        <span className="truncate text-[13px] font-semibold">{tab.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </nav>
+
+                <main className="min-h-0 flex-1 overflow-auto bg-[#f8f9fb] px-4 py-5 sm:px-8 sm:py-7">
+                    <div className="mx-auto w-full max-w-[1320px]">
             {isEdit && loadingFullJd ? (
                 <div style={{
                     display: "flex", justifyContent: "center",
@@ -924,55 +869,13 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                     <Spin size="large" tip="Đang tải dữ liệu..." />
                 </div>
             ) : (
-                <>
-                    {/* ── Tab bar ── */}
-                    <div style={{
-                        display: "flex", gap: 4, marginBottom: 16,
-                        background: "#fff", borderRadius: 12, padding: 5,
-                        border: "1px solid #eef0f5",
-                        boxShadow: "0 1px 4px rgba(0,0,0,.04)",
-                        overflowX: "auto",
-                        WebkitOverflowScrolling: "touch",
-                        scrollbarWidth: "none",
-                        msOverflowStyle: "none",
-                    } as React.CSSProperties}>
-                        {MODAL_TABS.map((tab) => {
-                            const isActive = activeTab === tab.key;
-                            return (
-                                <button
-                                    key={tab.key}
-                                    onClick={() => handleTabClick(tab.key)}
-                                    style={{
-                                        flex: isMobile ? "0 0 auto" : 1,
-                                        padding: isMobile ? "8px 12px" : "9px 12px",
-                                        borderRadius: 8,
-                                        fontSize: isMobile ? 12 : 13,
-                                        fontWeight: isActive ? 700 : 500,
-                                        color: isActive ? "#fff" : "#6b7280",
-                                        background: isActive ? ACCENT : "transparent",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        transition: "all 0.18s ease",
-                                        fontFamily: "'Outfit','Nunito','Segoe UI',sans-serif",
-                                        boxShadow: isActive ? "0 2px 8px rgba(232,99,122,.35)" : "none",
-                                        whiteSpace: "nowrap",
-                                        minWidth: "fit-content",
-                                    }}
-                                >
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <style>{`div::-webkit-scrollbar { display: none; }`}</style>
-
                     <Form form={form} layout="vertical">
                         <div style={{
                             background: "#fff", borderRadius: 12,
                             border: "1px solid #eef0f5",
                             boxShadow: "0 2px 8px rgba(0,0,0,.04)",
                             padding: "16px 20px",
-                            minHeight: 500,
+                            minHeight: 520,
                         }}>
 
                             {/* ── TAB 1 ── */}
@@ -1221,8 +1124,25 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
 
                         </div>
                     </Form>
-                </>
             )}
-        </Modal>
+                    </div>
+                </main>
+
+                <footer className="shrink-0 border-t border-gray-100 bg-white px-4 py-3.5 sm:px-8">
+                    <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-3">
+                        <Button
+                            type="text"
+                            onClick={handleRequestClose}
+                            disabled={isPending}
+                            className="!h-10 !rounded-lg !px-4 !font-medium !text-gray-500 hover:!bg-gray-100 hover:!text-gray-800"
+                        >
+                            Hủy
+                        </Button>
+
+                        {renderActionButtons()}
+                    </div>
+                </footer>
+            </div>
+        </LotusDetailDrawer>
     );
 }

@@ -64,6 +64,7 @@ import ActionButton from "@/components/common/ui/ActionButton";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 import Access from "@/components/share/access";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import {
     callAddDossierDocument,
     callCreateAccountingDossierCategory,
@@ -478,14 +479,14 @@ const AccountingDossierPage = () => {
                     approverType: step.approverStrategy === "REQUESTER_MANAGER" || step.stepKey === "REQUESTER_MANAGER" || step.stepKey === "DEPARTMENT_MANAGER"
                         ? "DEPARTMENT_MANAGER"
                         : step.approverStrategy === "COMPANY_DIRECTOR" || step.stepKey === "DIRECTOR"
-                        ? "DIRECTOR"
-                        : step.stepKey === "ACCOUNTANT"
-                        ? "ACCOUNTANT"
-                        : step.stepKey === "CHIEF_ACCOUNTANT"
-                        ? "CHIEF_ACCOUNTANT"
-                        : step.approverStrategy === "USER_SELECTABLE"
-                        ? "USER_SELECTABLE"
-                        : step.approverStrategy,
+                            ? "DIRECTOR"
+                            : step.stepKey === "ACCOUNTANT"
+                                ? "ACCOUNTANT"
+                                : step.stepKey === "CHIEF_ACCOUNTANT"
+                                    ? "CHIEF_ACCOUNTANT"
+                                    : step.approverStrategy === "USER_SELECTABLE"
+                                        ? "USER_SELECTABLE"
+                                        : step.approverStrategy,
                     approverUserId: step.approverUserId || undefined,
                     required: step.required,
                     assigneeLabel: step.assigneeLabel,
@@ -551,8 +552,8 @@ const AccountingDossierPage = () => {
             const docs = Array.isArray(payload)
                 ? payload
                 : Array.isArray(payload?.data)
-                ? payload.data
-                : [];
+                    ? payload.data
+                    : [];
             return Array.isArray(docs) && docs.length > 0;
         } catch {
             setSubmitDossierDocWarning("Chưa kiểm tra được danh sách chứng từ con. Vui lòng tải lại trang hoặc mở chi tiết bộ chứng từ để kiểm tra trước khi gửi.");
@@ -1401,186 +1402,155 @@ const AccountingDossierPage = () => {
                 </Suspense>
             )}
 
-            <Modal
+            <LotusDetailDrawer
                 open={!!viewDossier}
-                onCancel={() => setViewDossier(null)}
-                width={1040}
-                centered
-                destroyOnHidden
-                closeIcon={<CloseOutlined style={{ fontSize: 16 }} />}
-                styles={{
-                    content: { borderRadius: 16, overflow: "hidden", padding: 0 },
-                    body: { padding: 0, maxHeight: "calc(100vh - 180px)", overflowY: "auto" },
-                    header: { padding: "16px 22px 14px", marginBottom: 0, borderBottom: "1px solid #f1f5f9" },
-                    footer: { padding: "10px 20px", borderTop: "0.5px solid #f0f0f0", marginTop: 0 },
-                }}
-                title={
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fff0f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <FileTextOutlined style={{ fontSize: 18, color: "#e8256b" }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
-                                {currentDossier?.dossierCode || viewDossier?.dossierCode || "Chi tiết bộ chứng từ"}
-                            </div>
-                            <div style={{ fontSize: 12, fontWeight: 400, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {currentDossier?.content || viewDossier?.content || "---"}
-                            </div>
-                        </div>
-                    </div>
-                }
-                footer={(() => {
-                    const activeDossier = currentDossier || viewDossier;
-                    if (!activeDossier) return null;
-                    const ctx = getDossierViewerContext(user, activeDossier, approvalSteps, perms);
-
-                    const footerButtons = [];
-
-                    const currentStep = approvalSteps.find((s) => s.status === "CURRENT");
-                    const canClaim = ["SUBMITTED", "IN_REVIEW"].includes(activeDossier.status) &&
-                        currentStep && !currentStep.approverUserId && (
-                            canClaimDossier && (ctx.isSuperAdmin ||
-                            (currentStep.approverType === "ACCOUNTANT" && userHasRoleKeyword(user as any, ["ACCOUNTANT", "KETOAN", "KE_TOAN"])) ||
-                            (currentStep.approverType === "CHIEF_ACCOUNTANT" && userHasRoleKeyword(user as any, ["CHIEF", "KETOAN_TRUONG", "KE_TOAN_TRUONG"])))
-                        );
-
-                    if (canClaim) {
-                        footerButtons.push(
-                            <Button
-                                key="claim"
-                                type="primary"
-                                onClick={() => {
-                                    Modal.confirm({
-                                        title: "Nhận xử lý bộ chứng từ",
-                                        content: "Bạn muốn nhận xử lý bước duyệt này cho tài khoản của bạn chứ?",
-                                        okText: "Nhận việc",
-                                        cancelText: "Hủy",
-                                        onOk: () => claimMutation.mutate(activeDossier.id!),
-                                    });
-                                }}
-                                loading={claimMutation.isPending}
-                                style={{ borderRadius: 3, fontSize: 13, background: "#52c41a", borderColor: "#52c41a" }}
-                            >
-                                Nhận việc (Claim)
-                            </Button>
-                        );
-                    }
-
-                    footerButtons.push(
-                        <Button key="close" onClick={() => setViewDossier(null)} style={{ borderRadius: 3, fontSize: 13 }}>
-                            Đóng
-                        </Button>
-                    );
-
-                    if (ctx.canReject) {
-                        footerButtons.push(
-                            <Button
-                                key="reject"
-                                danger
-                                onClick={() => setActionModal({ open: true, type: "REJECT", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Từ chối
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canApprove) {
-                        footerButtons.push(
-                            <Button
-                                key="approve"
-                                type="primary"
-                                onClick={() => setActionModal({ open: true, type: "APPROVE", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Phê duyệt
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canRequestReturn) {
-                        footerButtons.push(
-                            <Button
-                                key="request-return"
-                                onClick={() => setActionModal({ open: true, type: "REQUEST_RETURN", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Yêu cầu hoàn trả
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canReturnResponse) {
-                        footerButtons.push(
-                            <Button
-                                key="return-reject"
-                                danger
-                                onClick={() => setActionModal({ open: true, type: "RETURN_REJECT", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Từ chối yêu cầu hoàn
-                            </Button>,
-                            <Button
-                                key="return-accept"
-                                type="primary"
-                                onClick={() => setActionModal({ open: true, type: "RETURN_ACCEPT", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Đồng ý hoàn trả
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canTerminate) {
-                        footerButtons.push(
-                            <Button
-                                key="terminate"
-                                danger
-                                type="primary"
-                                onClick={() => setActionModal({ open: true, type: "TERMINATE", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Chấm dứt xử lý
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canArchive) {
-                        footerButtons.push(
-                            <Button
-                                key="archive"
-                                type="primary"
-                                onClick={() => setActionModal({ open: true, type: "ARCHIVE", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 6, fontSize: 13, backgroundColor: "#e8256b", borderColor: "#e8256b" }}
-                            >
-                                Đưa vào lưu trữ
-                            </Button>
-                        );
-                    }
-
-                    if (ctx.canRejectSync) {
-                        footerButtons.push(
-                            <Button
-                                key="reject-sync"
-                                danger
-                                onClick={() => setActionModal({ open: true, type: "REJECT_SYNC", dossierId: activeDossier.id! })}
-                                style={{ borderRadius: 3, fontSize: 13 }}
-                            >
-                                Từ chối đồng bộ mẫu
-                            </Button>
-                        );
-                    }
-
-                    return <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>{footerButtons}</div>;
-                })()}
+                onClose={() => setViewDossier(null)}
+                destroyOnClose
             >
                 {(currentDossier || viewDossier) && (
                     (() => {
                         const activeDossier = currentDossier || viewDossier;
                         if (!activeDossier) return null;
                         const ctx = getDossierViewerContext(user, activeDossier, approvalSteps, perms);
-                        const canReviewChildDocuments = ctx.canReviewChildDocs;
+
+                        const footerButtons = [];
+
                         const currentStep = approvalSteps.find((s) => s.status === "CURRENT");
+                        const canClaim = ["SUBMITTED", "IN_REVIEW"].includes(activeDossier.status) &&
+                            currentStep && !currentStep.approverUserId && (
+                                canClaimDossier && (ctx.isSuperAdmin ||
+                                    (currentStep.approverType === "ACCOUNTANT" && userHasRoleKeyword(user as any, ["ACCOUNTANT", "KETOAN", "KE_TOAN"])) ||
+                                    (currentStep.approverType === "CHIEF_ACCOUNTANT" && userHasRoleKeyword(user as any, ["CHIEF", "KETOAN_TRUONG", "KE_TOAN_TRUONG"])))
+                            );
+
+                        if (canClaim) {
+                            footerButtons.push(
+                                <Button
+                                    key="claim"
+                                    type="primary"
+                                    onClick={() => {
+                                        Modal.confirm({
+                                            title: "Nhận xử lý bộ chứng từ",
+                                            content: "Bạn muốn nhận xử lý bước duyệt này cho tài khoản của bạn chứ?",
+                                            okText: "Nhận việc",
+                                            cancelText: "Hủy",
+                                            onOk: () => claimMutation.mutate(activeDossier.id!),
+                                        });
+                                    }}
+                                    loading={claimMutation.isPending}
+                                    style={{ borderRadius: 3, fontSize: 13, background: "#52c41a", borderColor: "#52c41a" }}
+                                >
+                                    Nhận việc (Claim)
+                                </Button>
+                            );
+                        }
+
+                        footerButtons.push(
+                            <Button key="close" onClick={() => setViewDossier(null)} style={{ borderRadius: 3, fontSize: 13 }}>
+                                Đóng
+                            </Button>
+                        );
+
+                        if (ctx.canReject) {
+                            footerButtons.push(
+                                <Button
+                                    key="reject"
+                                    danger
+                                    onClick={() => setActionModal({ open: true, type: "REJECT", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Từ chối
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canApprove) {
+                            footerButtons.push(
+                                <Button
+                                    key="approve"
+                                    type="primary"
+                                    onClick={() => setActionModal({ open: true, type: "APPROVE", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Phê duyệt
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canRequestReturn) {
+                            footerButtons.push(
+                                <Button
+                                    key="request-return"
+                                    onClick={() => setActionModal({ open: true, type: "REQUEST_RETURN", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Yêu cầu hoàn trả
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canReturnResponse) {
+                            footerButtons.push(
+                                <Button
+                                    key="return-reject"
+                                    danger
+                                    onClick={() => setActionModal({ open: true, type: "RETURN_REJECT", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Từ chối yêu cầu hoàn
+                                </Button>,
+                                <Button
+                                    key="return-accept"
+                                    type="primary"
+                                    onClick={() => setActionModal({ open: true, type: "RETURN_ACCEPT", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Đồng ý hoàn trả
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canTerminate) {
+                            footerButtons.push(
+                                <Button
+                                    key="terminate"
+                                    danger
+                                    type="primary"
+                                    onClick={() => setActionModal({ open: true, type: "TERMINATE", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Chấm dứt xử lý
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canArchive) {
+                            footerButtons.push(
+                                <Button
+                                    key="archive"
+                                    type="primary"
+                                    onClick={() => setActionModal({ open: true, type: "ARCHIVE", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 6, fontSize: 13, backgroundColor: "#e8256b", borderColor: "#e8256b" }}
+                                >
+                                    Đưa vào lưu trữ
+                                </Button>
+                            );
+                        }
+
+                        if (ctx.canRejectSync) {
+                            footerButtons.push(
+                                <Button
+                                    key="reject-sync"
+                                    danger
+                                    onClick={() => setActionModal({ open: true, type: "REJECT_SYNC", dossierId: activeDossier.id! })}
+                                    style={{ borderRadius: 3, fontSize: 13 }}
+                                >
+                                    Từ chối đồng bộ mẫu
+                                </Button>
+                            );
+                        }
+
+                        const canReviewChildDocuments = ctx.canReviewChildDocs;
                         const currentStepHint = currentStep?.approverType === "DEPARTMENT_MANAGER"
                             ? "Bước hiện tại là Trưởng bộ phận: chỉ duyệt/từ chối bộ hồ sơ tổng, chưa kiểm tra từng chứng từ con."
                             : currentStep?.approverType === "ACCOUNTANT"
@@ -1590,192 +1560,220 @@ const AccountingDossierPage = () => {
                                     : currentStep?.approverType === "DIRECTOR"
                                         ? "Bước hiện tại là Giám đốc: duyệt cuối bộ hồ sơ để hoàn thành quy trình."
                                         : undefined;
+
                         return (
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 24, padding: "22px 24px 26px", flexWrap: "wrap" }}>
-                                <div style={{ flex: "1 1 680px", minWidth: 0 }}>
-
-                                    <SectionHeading icon={<ApartmentOutlined />} label="Thông tin chung" />
-
-                                    {/* Tên bộ chứng từ */}
-                                    <div style={{ marginBottom: 12 }}>
-                                        <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500, display: "block", marginBottom: 3 }}>
-                                            Nội dung bộ chứng từ
+                            <div className="flex flex-col h-full bg-[#f8f9fb]">
+                                {/* ── HEADER ── */}
+                                <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between gap-4 shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fff0f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                            <FileTextOutlined style={{ fontSize: 18, color: "#e8256b" }} />
                                         </div>
-                                        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
-                                            {activeDossier.content || "--"}
-                                        </div>
-                                    </div>
-
-                                    {/* Row 1: Trạng thái, Mã, Danh mục */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px 16px", marginBottom: 12 }}>
-                                        <Field label="Trạng thái">
-                                            <Tag color={statusMeta[activeDossier.status]?.color || "default"} style={TAG_STYLE}>
-                                                {statusMeta[activeDossier.status]?.label || activeDossier.status}
-                                            </Tag>
-                                        </Field>
-                                        <Field label="Mã bộ chứng từ">
-                                            {activeDossier.dossierCode ? (
-                                                <Tooltip title={activeDossier.dossierCode}>
-                                                    <Tag color="blue" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
-                                                        {activeDossier.dossierCode}
-                                                    </Tag>
-                                                </Tooltip>
-                                            ) : (
-                                                <span style={{ color: "#9ca3af" }}>--</span>
-                                            )}
-                                        </Field>
-                                        <Field label="Loại chứng từ">
-                                            <Tag color="purple" style={TAG_STYLE}>
-                                                {activeDossier.categoryMode === "TEMPLATE" ? "Theo mẫu" : "Phi cấu trúc"}
-                                            </Tag>
-                                        </Field>
-                                    </div>
-
-                                    {/* Row 2: Công ty, Phòng ban, Danh mục */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px 16px", marginBottom: 16 }}>
-                                        <Field label="Công ty">
-                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={activeDossier.company?.name}>
-                                                {activeDossier.company?.name || "--"}
-                                            </span>
-                                        </Field>
-                                        <Field label="Phòng ban">
-                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={activeDossier.department?.name}>
-                                                {activeDossier.department?.name || "--"}
-                                            </span>
-                                        </Field>
-                                        <Field label="Danh mục">
-                                            {activeDossier.categoryMode === "TEMPLATE" ? activeDossier.dossierCategory?.name : (activeDossier.customCategoryName || "--")}
-                                        </Field>
-                                    </div>
-
-                                    {currentStepHint && ["SUBMITTED", "IN_REVIEW"].includes(activeDossier.status) && (
-                                        <div style={{
-                                            border: "1px solid #c7d2fe",
-                                            background: "linear-gradient(to right, #eff6ff, #f5f3ff)",
-                                            color: "#3730a3",
-                                            borderRadius: 10,
-                                            padding: "10px 14px",
-                                            fontSize: 13,
-                                            fontWeight: 500,
-                                            lineHeight: 1.4,
-                                            marginBottom: 16,
-                                        }}>
-                                            {currentStepHint}
-                                        </div>
-                                    )}
-
-                                    <div style={{ marginBottom: 14 }}>
-                                        <SectionHeading icon={<FileTextOutlined />} label="Tài liệu đính kèm" />
-                                        <div style={{ background: "#fafafa", borderRadius: 8, padding: 12, border: "1px solid #f0f0f0" }}>
-                                            <DossierDocumentList
-                                                dossier={activeDossier}
-                                                editable={editableStatuses.includes(activeDossier.status) && ctx.isCreator}
-                                                canCreate={canCreateDossierDocument}
-                                                canUpdate={canUpdateDossierDocument}
-                                                canDelete={canDeleteDossierDocument}
-                                                reviewable={canReviewChildDocuments}
-                                                variant="compact"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {approvalSteps && approvalSteps.length > 0 && (
-                                        <div style={{ marginBottom: 14, paddingTop: 2 }}>
-                                            <SectionHeading icon={<CheckCircleOutlined />} label="Phê duyệt" />
-                                            <div style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                                gap: 16,
-                                                minHeight: 32,
-                                            }}>
-                                                <div style={{ minWidth: 0, color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>
-                                                    <strong style={{ color: "#0f172a", fontSize: 14 }}>{approvalSteps.length} bước duyệt</strong>
-                                                    {currentStep ? (
-                                                        <span style={{ color: "#64748b" }}> · Đang chờ <strong style={{ color: "#2563eb" }}>{currentStep.stepName || getApproverTypeLabel(currentStep.approverType)}</strong></span>
-                                                    ) : (
-                                                        <span style={{ color: "#64748b" }}> · {['APPROVED', 'ARCHIVED'].includes(activeDossier.status) ? 'Đã hoàn tất' : 'Đã có lịch sử xử lý'}</span>
-                                                    )}
-                                                </div>
-                                                <Button
-                                                    type="text"
-                                                    icon={<HistoryOutlined />}
-                                                    onClick={() => setApprovalHistoryOpen(true)}
-                                                    size="small"
-                                                    style={{ color: "#1677ff", border: "1px solid #bae0ff", background: "#f0f8ff", borderRadius: 7, fontWeight: 650, fontSize: 12, flexShrink: 0, paddingInline: 10, height: 30 }}
-                                                >
-                                                    Xem lịch sử
-                                                </Button>
+                                        <div>
+                                            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+                                                {currentDossier?.dossierCode || viewDossier?.dossierCode || "Chi tiết bộ chứng từ"}
+                                            </h2>
+                                            <div style={{ fontSize: 12, fontWeight: 400, color: "#6b7280", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 600 }}>
+                                                {currentDossier?.content || viewDossier?.content || "---"}
                                             </div>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
-                                <aside
-                                    style={{
-                                        width: 154,
-                                        flexShrink: 0,
-                                        minHeight: 180,
-                                        borderLeft: "1px solid #eef2f7",
-                                        paddingLeft: 20,
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "center",
-                                        gap: 10,
-                                    }}
-                                >
-                                    {activeDossier.qrCode ? (
-                                        <>
-                                            <div style={{ padding: 6, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, lineHeight: 0 }}>
-                                                <Image
-                                                    src={`data:image/png;base64,${activeDossier.qrCode}`}
-                                                    alt={`Mã QR ${activeDossier.dossierCode || "bộ chứng từ"}`}
-                                                    width={112}
-                                                    height={112}
-                                                    preview={{ mask: <EyeOutlined /> }}
-                                                    style={{ borderRadius: 4, objectFit: "contain" }}
-                                                />
+
+                                {/* ── BODY ── */}
+                                <div className="flex-1 overflow-y-auto">
+                                    <div style={{ display: "flex", alignItems: "flex-start", gap: 24, padding: "22px 24px 26px", flexWrap: "wrap" }}>
+                                        <div style={{ flex: "1 1 680px", minWidth: 0 }}>
+
+                                            <SectionHeading icon={<ApartmentOutlined />} label="Thông tin chung" />
+
+                                            {/* Tên bộ chứng từ */}
+                                            <div style={{ marginBottom: 12 }}>
+                                                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500, display: "block", marginBottom: 3 }}>
+                                                    Nội dung bộ chứng từ
+                                                </div>
+                                                <div style={{ fontSize: 15, fontWeight: 600, color: "#111827" }}>
+                                                    {activeDossier.content || "--"}
+                                                </div>
                                             </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                                                <QrcodeOutlined style={{ color: "#e8256b", fontSize: 12 }} /> Mã QR
+
+                                            {/* Row 1: Trạng thái, Mã, Danh mục */}
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px 16px", marginBottom: 12 }}>
+                                                <Field label="Trạng thái">
+                                                    <Tag color={statusMeta[activeDossier.status]?.color || "default"} style={TAG_STYLE}>
+                                                        {statusMeta[activeDossier.status]?.label || activeDossier.status}
+                                                    </Tag>
+                                                </Field>
+                                                <Field label="Mã bộ chứng từ">
+                                                    {activeDossier.dossierCode ? (
+                                                        <Tooltip title={activeDossier.dossierCode}>
+                                                            <Tag color="blue" style={{ ...TAG_STYLE, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
+                                                                {activeDossier.dossierCode}
+                                                            </Tag>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <span style={{ color: "#9ca3af" }}>--</span>
+                                                    )}
+                                                </Field>
+                                                <Field label="Loại chứng từ">
+                                                    <Tag color="purple" style={TAG_STYLE}>
+                                                        {activeDossier.categoryMode === "TEMPLATE" ? "Theo mẫu" : "Phi cấu trúc"}
+                                                    </Tag>
+                                                </Field>
                                             </div>
-                                            <Tooltip title={activeDossier.dossierCode}>
-                                                <Tag color="magenta" style={{ margin: 0, maxWidth: 132, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                    {activeDossier.dossierCode}
-                                                </Tag>
-                                            </Tooltip>
-                                            <span style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", lineHeight: 1.4 }}>
-                                                Quét để tra cứu nhanh bộ chứng từ
-                                            </span>
-                                            <Button
-                                                size="small"
-                                                icon={<DownloadOutlined />}
-                                                onClick={() => {
-                                                    const link = document.createElement("a");
-                                                    link.href = `data:image/png;base64,${activeDossier.qrCode}`;
-                                                    link.download = `QR_${activeDossier.dossierCode || activeDossier.id}.png`;
-                                                    link.click();
-                                                }}
-                                                style={{ borderRadius: 6, fontSize: 11, width: "100%" }}
-                                            >
-                                                Tải QR
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div style={{ width: 112, height: 112, borderRadius: 8, background: "#f8fafc", border: "1px dashed #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                <QrcodeOutlined style={{ color: "#cbd5e1", fontSize: 34 }} />
+
+                                            {/* Row 2: Công ty, Phòng ban, Danh mục */}
+                                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px 16px", marginBottom: 16 }}>
+                                                <Field label="Công ty">
+                                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={activeDossier.company?.name}>
+                                                        {activeDossier.company?.name || "--"}
+                                                    </span>
+                                                </Field>
+                                                <Field label="Phòng ban">
+                                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={activeDossier.department?.name}>
+                                                        {activeDossier.department?.name || "--"}
+                                                    </span>
+                                                </Field>
+                                                <Field label="Danh mục">
+                                                    {activeDossier.categoryMode === "TEMPLATE" ? activeDossier.dossierCategory?.name : (activeDossier.customCategoryName || "--")}
+                                                </Field>
                                             </div>
-                                            <span style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", lineHeight: 1.45 }}>
-                                                Mã QR được tạo khi bộ chứng từ được chuyển xử lý.
-                                            </span>
-                                        </>
-                                    )}
-                                </aside>
+
+                                            {currentStepHint && ["SUBMITTED", "IN_REVIEW"].includes(activeDossier.status) && (
+                                                <div style={{
+                                                    border: "1px solid #c7d2fe",
+                                                    background: "linear-gradient(to right, #eff6ff, #f5f3ff)",
+                                                    color: "#3730a3",
+                                                    borderRadius: 10,
+                                                    padding: "10px 14px",
+                                                    fontSize: 13,
+                                                    fontWeight: 500,
+                                                    lineHeight: 1.4,
+                                                    marginBottom: 16,
+                                                }}>
+                                                    {currentStepHint}
+                                                </div>
+                                            )}
+
+                                            <div style={{ marginBottom: 14 }}>
+                                                <SectionHeading icon={<FileTextOutlined />} label="Tài liệu đính kèm" />
+                                                <div style={{ background: "#fafafa", borderRadius: 8, padding: 12, border: "1px solid #f0f0f0" }}>
+                                                    <DossierDocumentList
+                                                        dossier={activeDossier}
+                                                        editable={editableStatuses.includes(activeDossier.status) && ctx.isCreator}
+                                                        canCreate={canCreateDossierDocument}
+                                                        canUpdate={canUpdateDossierDocument}
+                                                        canDelete={canDeleteDossierDocument}
+                                                        reviewable={canReviewChildDocuments}
+                                                        variant="compact"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {approvalSteps && approvalSteps.length > 0 && (
+                                                <div style={{ marginBottom: 14, paddingTop: 2 }}>
+                                                    <SectionHeading icon={<CheckCircleOutlined />} label="Phê duyệt" />
+                                                    <div style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "space-between",
+                                                        gap: 16,
+                                                        minHeight: 32,
+                                                    }}>
+                                                        <div style={{ minWidth: 0, color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>
+                                                            <strong style={{ color: "#0f172a", fontSize: 14 }}>{approvalSteps.length} bước duyệt</strong>
+                                                            {currentStep ? (
+                                                                <span style={{ color: "#64748b" }}> · Đang chờ <strong style={{ color: "#2563eb" }}>{currentStep.stepName || getApproverTypeLabel(currentStep.approverType)}</strong></span>
+                                                            ) : (
+                                                                <span style={{ color: "#64748b" }}> · {['APPROVED', 'ARCHIVED'].includes(activeDossier.status) ? 'Đã hoàn tất' : 'Đã có lịch sử xử lý'}</span>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            type="text"
+                                                            icon={<HistoryOutlined />}
+                                                            onClick={() => setApprovalHistoryOpen(true)}
+                                                            size="small"
+                                                            style={{ color: "#1677ff", border: "1px solid #bae0ff", background: "#f0f8ff", borderRadius: 7, fontWeight: 650, fontSize: 12, flexShrink: 0, paddingInline: 10, height: 30 }}
+                                                        >
+                                                            Xem lịch sử
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <aside
+                                            style={{
+                                                width: 154,
+                                                flexShrink: 0,
+                                                minHeight: 180,
+                                                borderLeft: "1px solid #eef2f7",
+                                                paddingLeft: 20,
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                gap: 10,
+                                            }}
+                                        >
+                                            {activeDossier.qrCode ? (
+                                                <>
+                                                    <div style={{ padding: 6, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, lineHeight: 0 }}>
+                                                        <Image
+                                                            src={`data:image/png;base64,${activeDossier.qrCode}`}
+                                                            alt={`Mã QR ${activeDossier.dossierCode || "bộ chứng từ"}`}
+                                                            width={112}
+                                                            height={112}
+                                                            preview={{ mask: <EyeOutlined /> }}
+                                                            style={{ borderRadius: 4, objectFit: "contain" }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                                                        <QrcodeOutlined style={{ color: "#e8256b", fontSize: 12 }} /> Mã QR
+                                                    </div>
+                                                    <Tooltip title={activeDossier.dossierCode}>
+                                                        <Tag color="magenta" style={{ margin: 0, maxWidth: 132, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {activeDossier.dossierCode}
+                                                        </Tag>
+                                                    </Tooltip>
+                                                    <span style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", lineHeight: 1.4 }}>
+                                                        Quét để tra cứu nhanh bộ chứng từ
+                                                    </span>
+                                                    <Button
+                                                        size="small"
+                                                        icon={<DownloadOutlined />}
+                                                        onClick={() => {
+                                                            const link = document.createElement("a");
+                                                            link.href = `data:image/png;base64,${activeDossier.qrCode}`;
+                                                            link.download = `QR_${activeDossier.dossierCode || activeDossier.id}.png`;
+                                                            link.click();
+                                                        }}
+                                                        style={{ borderRadius: 6, fontSize: 11, width: "100%" }}
+                                                    >
+                                                        Tải QR
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div style={{ width: 112, height: 112, borderRadius: 8, background: "#f8fafc", border: "1px dashed #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                        <QrcodeOutlined style={{ color: "#cbd5e1", fontSize: 34 }} />
+                                                    </div>
+                                                    <span style={{ color: "#94a3b8", fontSize: 11, textAlign: "center", lineHeight: 1.45 }}>
+                                                        Mã QR được tạo khi bộ chứng từ được chuyển xử lý.
+                                                    </span>
+                                                </>
+                                            )}
+                                        </aside>
+                                    </div>
+                                </div>
+
+                                {/* ── FOOTER ── */}
+                                <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+                                    {footerButtons}
+                                </div>
                             </div>
                         );
                     })()
                 )}
-            </Modal>
+            </LotusDetailDrawer>
 
             <Modal
                 title={`Mã QR bộ chứng từ${qrDossier?.dossierCode ? `: ${qrDossier.dossierCode}` : ""}`}
@@ -1830,7 +1828,7 @@ const AccountingDossierPage = () => {
                     rowKey="id"
                     size="small"
                     pagination={false}
-                    dataSource={approvalSteps}
+                    dataSource={Array.isArray(approvalSteps) ? approvalSteps : []}
                     columns={[
                         {
                             title: "Bước",
@@ -2190,69 +2188,69 @@ const AccountingDossierPage = () => {
                                     </div>
 
                                     {canInspectFullApprovalFlow && (
-                                    <div style={{ display: "grid", gap: 8 }}>
-                                        {visibleSubmitSteps.map((step, index) => {
-                                            const previewStep = getPreviewStep(step);
-                                            const isResolved = !!previewStep?.approverUserId;
-                                            const canBeClaimed = canStepBeClaimed(step);
-                                            const needsManualPick = step.required && !step.approverUserId && !canBeClaimed;
-                                            const statusColor = isResolved ? "#16a34a" : canBeClaimed ? "#2563eb" : needsManualPick ? "#dc2626" : "#6b7280";
-                                            const statusText = isResolved
-                                                ? "Tự động xác định"
-                                                : canBeClaimed
-                                                ? "Vào hàng đợi"
-                                                : needsManualPick
-                                                ? "Cần chọn người"
-                                                : "Tùy chọn";
-                                            
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    style={{
-                                                        display: "grid",
-                                                        gridTemplateColumns: "38px minmax(0, 1fr) 170px",
-                                                        alignItems: "center",
-                                                        gap: 12,
-                                                        background: "#fff",
-                                                        padding: "10px 12px",
-                                                        borderRadius: 8,
-                                                        border: needsManualPick ? "1px solid #fecaca" : "1px solid #e5e7eb"
-                                                    }}
-                                                >
-                                                    <div style={{
-                                                        width: 30,
-                                                        height: 30,
-                                                        borderRadius: 8,
-                                                        background: "#f3f6fb",
-                                                        color: "#1f2937",
-                                                        display: "grid",
-                                                        placeItems: "center",
-                                                        fontWeight: 700
-                                                    }}>
-                                                        {index + 1}
-                                                    </div>
-                                                    <div style={{ minWidth: 0 }}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                                                            <span style={{ fontWeight: 600, fontSize: 15, color: "#1f2937" }}>
-                                                                {step.stepName}
-                                                            </span>
-                                                            {step.slaMinutes && (
-                                                                <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>{step.slaMinutes / 60}h</Tag>
-                                                            )}
-                                                            <span style={{ color: statusColor, fontSize: 12, fontWeight: 650 }}>{statusText}</span>
+                                        <div style={{ display: "grid", gap: 8 }}>
+                                            {visibleSubmitSteps.map((step, index) => {
+                                                const previewStep = getPreviewStep(step);
+                                                const isResolved = !!previewStep?.approverUserId;
+                                                const canBeClaimed = canStepBeClaimed(step);
+                                                const needsManualPick = step.required && !step.approverUserId && !canBeClaimed;
+                                                const statusColor = isResolved ? "#16a34a" : canBeClaimed ? "#2563eb" : needsManualPick ? "#dc2626" : "#6b7280";
+                                                const statusText = isResolved
+                                                    ? "Tự động xác định"
+                                                    : canBeClaimed
+                                                        ? "Vào hàng đợi"
+                                                        : needsManualPick
+                                                            ? "Cần chọn người"
+                                                            : "Tùy chọn";
+
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        style={{
+                                                            display: "grid",
+                                                            gridTemplateColumns: "38px minmax(0, 1fr) 170px",
+                                                            alignItems: "center",
+                                                            gap: 12,
+                                                            background: "#fff",
+                                                            padding: "10px 12px",
+                                                            borderRadius: 8,
+                                                            border: needsManualPick ? "1px solid #fecaca" : "1px solid #e5e7eb"
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: 30,
+                                                            height: 30,
+                                                            borderRadius: 8,
+                                                            background: "#f3f6fb",
+                                                            color: "#1f2937",
+                                                            display: "grid",
+                                                            placeItems: "center",
+                                                            fontWeight: 700
+                                                        }}>
+                                                            {index + 1}
                                                         </div>
-                                                        <div style={{ marginTop: 3, color: "#6b7280", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                            {isResolved
-                                                                ? getSubmitStepRecipientLabel(step)
-                                                                : canBeClaimed
-                                                                ? "Nhóm có quyền sẽ nhận xử lý sau khi gửi"
-                                                                : step.approverStrategy === "USER_SELECTABLE"
-                                                                ? "Người lập chọn người duyệt cho bước này trước khi gửi"
-                                                                : "Chọn người duyệt cho bước này"}
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                                                <span style={{ fontWeight: 600, fontSize: 15, color: "#1f2937" }}>
+                                                                    {step.stepName}
+                                                                </span>
+                                                                {step.slaMinutes && (
+                                                                    <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>{step.slaMinutes / 60}h</Tag>
+                                                                )}
+                                                                <span style={{ color: statusColor, fontSize: 12, fontWeight: 650 }}>{statusText}</span>
+                                                            </div>
+                                                            <div style={{ marginTop: 3, color: "#6b7280", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                {isResolved
+                                                                    ? getSubmitStepRecipientLabel(step)
+                                                                    : canBeClaimed
+                                                                        ? "Nhóm có quyền sẽ nhận xử lý sau khi gửi"
+                                                                        : step.approverStrategy === "USER_SELECTABLE"
+                                                                            ? "Người lập chọn người duyệt cho bước này trước khi gửi"
+                                                                            : "Chọn người duyệt cho bước này"}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div>
-                                                        {!isResolved && (
+                                                        <div>
+                                                            {!isResolved && (
                                                                 <Select
                                                                     showSearch
                                                                     allowClear
@@ -2272,12 +2270,12 @@ const AccountingDossierPage = () => {
                                                                         );
                                                                     }}
                                                                 />
-                                                        )}
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     )}
                                 </>
                             )}

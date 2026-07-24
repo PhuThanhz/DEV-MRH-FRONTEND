@@ -20,6 +20,7 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import ApprovalDetailPage from "./ApprovalDetailPage";
 import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import { ApproverDashboardPanel } from "@/pages/evaluation/components/shared/EvaluationDashboardPanel";
 
 type RecordStatus =
     | "NOT_STARTED"
@@ -417,6 +418,8 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     color: #f472b6 !important;
                 }
             `}</style>
+
+            <ApproverDashboardPanel />
 
             {/* Summary Cards */}
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>

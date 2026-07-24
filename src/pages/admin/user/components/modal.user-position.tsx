@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     Col, Row, Button, Select, Table, Popconfirm, Typography, Tooltip,
 } from "antd";
@@ -14,14 +14,12 @@ import {
     useCreateUserPositionMutation,
     useDeleteUserPositionMutation,
 } from "@/hooks/useUserPositions";
-import {
-    callFetchCompany,
-    callFetchDepartmentsByCompany,
-    callFetchSectionsByDepartment,
-    callFetchCompanyJobTitles,
-    callFetchCompanyJobTitlesOfDepartment,
-    callFetchJobTitlesBySection,
-} from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import { useSectionsByDepartmentQuery } from "@/hooks/useSections";
+import { useCompanyJobTitlesQuery } from "@/hooks/useCompanyJobTitles";
+import { useCompanyJobTitlesOfDepartmentQuery } from "@/hooks/useDepartmentJobTitles";
+import { useSectionJobTitlesQuery } from "@/hooks/useSectionJobTitle";
 
 const { Text } = Typography;
 
@@ -86,20 +84,6 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [selectedJobTitleId, setSelectedJobTitleId] = useState<number | null>(null);
 
-    const [companyOptions, setCompanyOptions] = useState<{ label: string; value: number }[]>([]);
-    const [departmentOptions, setDepartmentOptions] = useState<{ label: string; value: number }[]>([]);
-    const [sectionOptions, setSectionOptions] = useState<{ label: string; value: number }[]>([]);
-    const [jobTitleOptions, setJobTitleOptions] = useState<{ label: string; value: number }[]>([]);
-
-    const [loadingCompanies, setLoadingCompanies] = useState(false);
-    const [loadingDepartments, setLoadingDepartments] = useState(false);
-    const [loadingSections, setLoadingSections] = useState(false);
-    const [loadingJobTitles, setLoadingJobTitles] = useState(false);
-
-    const { data: positions = [], isLoading: loadingPositions } = useUserPositionsQuery(activeUserId);
-    const { mutate: createPosition, isPending: isCreatingPosition } = useCreateUserPositionMutation();
-    const { mutate: deletePosition } = useDeleteUserPositionMutation(activeUserId);
-
     // ── derived state: which steps are "active" ──────────────────────────────
     const showDepartment = selectedSource === "DEPARTMENT" || selectedSource === "SECTION";
     const showSection = selectedSource === "SECTION";
@@ -116,72 +100,40 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                     showSection && !selectedSectionId ? "section" :
                         "jobTitle";
 
-    // ── data fetching ─────────────────────────────────────────────────────────
-    useEffect(() => {
-        setLoadingCompanies(true);
-        callFetchCompany("page=1&size=100&sort=name,asc")
-            .then((res: any) => {
-                const list = res?.data?.result ?? [];
-                setCompanyOptions(list.map((c: any) => ({ label: c.name, value: Number(c.id) })));
-            })
-            .finally(() => setLoadingCompanies(false));
-    }, []);
+    const { data: companiesData, isLoading: loadingCompanies } = useCompaniesQuery("page=1&size=100&sort=name,asc");
+    const companyOptions = (companiesData?.result ?? []).map((c: any) => ({ label: c.name, value: Number(c.id) }));
 
-    useEffect(() => {
-        if (!selectedCompanyId || !selectedSource || selectedSource === "COMPANY") {
-            setDepartmentOptions([]); return;
-        }
-        setSelectedDepartmentId(null); setSelectedSectionId(null); setSelectedJobTitleId(null);
-        setDepartmentOptions([]); setSectionOptions([]); setJobTitleOptions([]);
-        setLoadingDepartments(true);
-        callFetchDepartmentsByCompany(selectedCompanyId)
-            .then((res: any) => {
-                setDepartmentOptions((res?.data ?? []).map((d: any) => ({ label: d.name, value: Number(d.id) })));
-            })
-            .finally(() => setLoadingDepartments(false));
-    }, [selectedCompanyId, selectedSource]);
+    const { data: departmentsData = [], isLoading: loadingDepartments } = useDepartmentsByCompanyQuery(selectedCompanyId && showDepartment ? selectedCompanyId : 0);
+    const departmentOptions = departmentsData.map((d: any) => ({ label: d.name, value: Number(d.id) }));
 
-    useEffect(() => {
-        if (!selectedDepartmentId || selectedSource !== "SECTION") { setSectionOptions([]); return; }
-        setSelectedSectionId(null); setSelectedJobTitleId(null);
-        setSectionOptions([]); setJobTitleOptions([]);
-        setLoadingSections(true);
-        callFetchSectionsByDepartment(selectedDepartmentId)
-            .then((res: any) => {
-                setSectionOptions((res?.data ?? []).map((s: any) => ({ label: s.name, value: Number(s.id) })));
-            })
-            .finally(() => setLoadingSections(false));
-    }, [selectedDepartmentId, selectedSource]);
+    const { data: sectionsData = [], isLoading: loadingSections } = useSectionsByDepartmentQuery(selectedDepartmentId && showSection ? selectedDepartmentId : 0);
+    const sectionOptions = sectionsData.map((s: any) => ({ label: s.name, value: Number(s.id) }));
 
-    useEffect(() => {
-        setSelectedJobTitleId(null); setJobTitleOptions([]);
+    const { data: positions = [], isLoading: loadingPositions } = useUserPositionsQuery(activeUserId);
+    const { mutate: createPosition, isPending: isCreatingPosition } = useCreateUserPositionMutation();
+    const { mutate: deletePosition } = useDeleteUserPositionMutation(activeUserId);
+
+    const { data: companyJts = [], isLoading: loadingCompanyJts } = useCompanyJobTitlesQuery(selectedSource === "COMPANY" && selectedCompanyId ? selectedCompanyId : undefined);
+    const { data: deptJts = [], isLoading: loadingDeptJts } = useCompanyJobTitlesOfDepartmentQuery(selectedSource === "DEPARTMENT" && selectedDepartmentId ? selectedDepartmentId : undefined);
+    const { data: sectionJts = [], isLoading: loadingSectionJts } = useSectionJobTitlesQuery(selectedSource === "SECTION" && selectedSectionId ? selectedSectionId : undefined);
+
+    const loadingJobTitles = loadingCompanyJts || loadingDeptJts || loadingSectionJts;
+
+    const jobTitleOptions = useMemo(() => {
         const map = (item: any) => ({
             label: `${item.jobTitle?.nameVi ?? "--"} (${item.jobTitle?.positionCode ?? ""})`,
             value: Number(item.id),
         });
-        if (selectedSource === "COMPANY" && selectedCompanyId) {
-            setLoadingJobTitles(true);
-            callFetchCompanyJobTitles(`page=1&size=200&filter=company.id:${selectedCompanyId} and active:true`)
-                .then((res: any) => setJobTitleOptions((res?.data?.result ?? []).map(map)))
-                .finally(() => setLoadingJobTitles(false));
-        } else if (selectedSource === "DEPARTMENT" && selectedDepartmentId) {
-            setLoadingJobTitles(true);
-            callFetchCompanyJobTitlesOfDepartment(selectedDepartmentId)
-                .then((res: any) => setJobTitleOptions((res?.data ?? []).map(map)))
-                .finally(() => setLoadingJobTitles(false));
-        } else if (selectedSource === "SECTION" && selectedSectionId) {
-            setLoadingJobTitles(true);
-            callFetchJobTitlesBySection(selectedSectionId)
-                .then((res: any) => setJobTitleOptions((res?.data ?? []).map(map)))
-                .finally(() => setLoadingJobTitles(false));
-        }
-    }, [selectedSource, selectedCompanyId, selectedDepartmentId, selectedSectionId]);
+        if (selectedSource === "COMPANY") return companyJts.map(map);
+        if (selectedSource === "DEPARTMENT") return deptJts.map(map);
+        if (selectedSource === "SECTION") return sectionJts.map(map);
+        return [];
+    }, [selectedSource, companyJts, deptJts, sectionJts]);
 
     // ── actions ───────────────────────────────────────────────────────────────
     const resetCascade = () => {
         setSelectedCompanyId(null); setSelectedSource(null);
         setSelectedDepartmentId(null); setSelectedSectionId(null); setSelectedJobTitleId(null);
-        setDepartmentOptions([]); setSectionOptions([]); setJobTitleOptions([]);
     };
 
     const handleAddPosition = () => {
@@ -504,7 +456,6 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                     setSelectedCompanyId(v ? Number(v) : null);
                                     setSelectedSource(null);
                                     setSelectedDepartmentId(null); setSelectedSectionId(null); setSelectedJobTitleId(null);
-                                    setDepartmentOptions([]); setSectionOptions([]); setJobTitleOptions([]);
                                 }}
                                 loading={loadingCompanies}
                                 showSearch optionFilterProp="label"
@@ -528,7 +479,6 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                 onChange={(v) => {
                                     setSelectedSource(v);
                                     setSelectedDepartmentId(null); setSelectedSectionId(null); setSelectedJobTitleId(null);
-                                    setDepartmentOptions([]); setSectionOptions([]); setJobTitleOptions([]);
                                 }}
                                 disabled={!selectedCompanyId}
                                 style={{ width: "100%" }}
@@ -550,7 +500,6 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                     onChange={(v) => {
                                         setSelectedDepartmentId(v ? Number(v) : null);
                                         setSelectedSectionId(null); setSelectedJobTitleId(null);
-                                        setSectionOptions([]); setJobTitleOptions([]);
                                     }}
                                     loading={loadingDepartments}
                                     showSearch optionFilterProp="label"
@@ -575,7 +524,7 @@ const UserPositionForm = ({ activeUserId }: IProps) => {
                                     value={selectedSectionId ?? undefined}
                                     onChange={(v) => {
                                         setSelectedSectionId(v ? Number(v) : null);
-                                        setSelectedJobTitleId(null); setJobTitleOptions([]);
+                                        setSelectedJobTitleId(null);
                                     }}
                                     loading={loadingSections}
                                     disabled={!selectedDepartmentId}

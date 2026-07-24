@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Empty, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { BankOutlined, DeleteOutlined, PlusOutlined, SaveOutlined, TeamOutlined } from "@ant-design/icons";
 
-import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { useUpdateUserAdminScopesMutation, useUserAdminScopesQuery } from "@/hooks/useUserAdminScopes";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import type { IReqUserAdminScopeItem, IUserAdminScope, IUserPosition } from "@/types/backend";
@@ -43,14 +44,15 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]);
     const [draftScopes, setDraftScopes] = useState<IUserAdminScope[]>([]);
-    const [assignableCompanyOptions, setAssignableCompanyOptions] = useState<{ label: string; value: number }[]>([]);
-    const [departmentOptions, setDepartmentOptions] = useState<{ label: string; value: number }[]>([]);
-    const [loadingCompanies, setLoadingCompanies] = useState(false);
-    const [loadingDepartments, setLoadingDepartments] = useState(false);
-
     const { data: savedScopes = [], isLoading } = useUserAdminScopesQuery(activeUserId);
     const { data: positions = [], isLoading: loadingPositions } = useUserPositionsQuery(activeUserId);
     const { mutate: updateScopes, isPending: isSaving } = useUpdateUserAdminScopesMutation(activeUserId);
+
+    const { data: companiesData, isLoading: loadingCompanies } = useCompaniesQuery("page=1&size=200&sort=name,asc", mode === "COMPANY");
+    const assignableCompanyOptions = (companiesData?.result ?? []).map((c: any) => ({ label: c.name, value: Number(c.id) }));
+
+    const { data: departmentsData = [], isLoading: loadingDepartments } = useDepartmentsByCompanyQuery(mode === "DEPARTMENT" && selectedCompanyId ? selectedCompanyId : 0);
+    const departmentOptions = departmentsData.map((d: any) => ({ label: d.name, value: Number(d.id) }));
 
     useEffect(() => {
         setDraftScopes(savedScopes as IUserAdminScope[]);
@@ -60,21 +62,8 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
         setSelectedCompanyIds([]);
         setSelectedCompanyId(null);
         setSelectedDepartmentIds([]);
-        setDepartmentOptions([]);
         setDraftScopes(savedScopes as IUserAdminScope[]);
     }, [mode, savedScopes]);
-
-    useEffect(() => {
-        if (mode !== "COMPANY") return;
-
-        setLoadingCompanies(true);
-        callFetchCompany("page=1&size=200&sort=name,asc")
-            .then((res: any) => {
-                const list = res?.data?.result ?? [];
-                setAssignableCompanyOptions(list.map((c: any) => ({ label: c.name, value: Number(c.id) })));
-            })
-            .finally(() => setLoadingCompanies(false));
-    }, [mode]);
 
     const positionCompanyOptions = useMemo(() => {
         const map = new Map<number, string>();
@@ -87,24 +76,6 @@ const UserAdminScopeForm = ({ activeUserId, mode }: IProps) => {
     }, [positions]);
 
     const companyOptions = mode === "COMPANY" ? assignableCompanyOptions : positionCompanyOptions;
-
-    useEffect(() => {
-        if (mode !== "DEPARTMENT" || !selectedCompanyId) {
-            setDepartmentOptions([]);
-            setSelectedDepartmentIds([]);
-            return;
-        }
-
-        setSelectedDepartmentIds([]);
-        setDepartmentOptions([]);
-        setLoadingDepartments(true);
-        callFetchDepartmentsByCompany(selectedCompanyId)
-            .then((res: any) => {
-                const list = res?.data ?? [];
-                setDepartmentOptions(list.map((d: any) => ({ label: d.name, value: Number(d.id) })));
-            })
-            .finally(() => setLoadingDepartments(false));
-    }, [mode, selectedCompanyId]);
 
     const companyNameById = useMemo(() => {
         return new Map(companyOptions.map((item) => [item.value, item.label]));

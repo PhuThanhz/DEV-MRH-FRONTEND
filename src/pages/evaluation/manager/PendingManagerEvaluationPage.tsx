@@ -21,6 +21,7 @@ import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import ManagerEvaluationDetailPage from "./ManagerEvaluationDetailPage";
 import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import { ManagerDashboardPanel } from "@/pages/evaluation/components/shared/EvaluationDashboardPanel";
 
 type RecordStatus =
     | "NOT_STARTED"
@@ -424,6 +425,8 @@ const PendingManagerEvaluationPage = ({ isTab }: IProps) => {
                     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
                 }
             `}</style>
+
+            <ManagerDashboardPanel />
 
             {/* Summary Cards */}
             <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>

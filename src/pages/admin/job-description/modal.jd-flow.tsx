@@ -7,21 +7,20 @@ import {
 } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
 import { notify } from "@/components/common/notification/notify";
+import { buildPublicFileUrl } from "@/config/file-utils";
 
-import { callFetchJdApprovers, callFetchJdIssuers, callFetchJdFlow } from "@/config/api";
 import {
     useSubmitJdFlowMutation, useApproveJdFlowMutation,
     useRejectJdFlowMutation, useIssueJdFlowMutation,
-    useRecallJdFlowMutation,
+    useRecallJdFlowMutation, useJdApproversQuery,
+    useJdIssuersQuery, useJdFlowQuery,
 } from "@/hooks/useJdFlow";
 
 import ModalRejectJd from "../job-description/components/modal-reject-jd";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL;
-
 const getAvatarUrl = (avatar?: string) => {
     if (!avatar) return undefined;
-    return `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(avatar)}&folder=avatar&t=${Date.now()}`;
+    return buildPublicFileUrl(avatar, "avatar");
 };
 
 interface Props {
@@ -197,9 +196,6 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
 
     const currentUserId = useAppSelector(state => state.account.user?.id);
 
-    const [isFinalApprover, setIsFinalApprover] = useState(false);
-    const [approvers, setApprovers] = useState<Approver[]>([]);
-    const [issuers, setIssuers] = useState<Approver[]>([]);
     const [nextUserId, setNextUserId] = useState<string | undefined>();
     const [nextIssuerId, setNextIssuerId] = useState<string | undefined>();
     const [openReject, setOpenReject] = useState(false);
@@ -222,6 +218,26 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
 
     const jdId = useMemo(() => record?.id ?? record?.jdId, [record]);
 
+    const { data: rawApprovers = [] } = useJdApproversQuery(open && jdId ? jdId : undefined);
+    const { data: rawIssuers = [] } = useJdIssuersQuery(open && jdId ? jdId : undefined);
+    const { data: flowData } = useJdFlowQuery(open && jdId ? jdId : undefined);
+
+    const mapUser = (u: any): Approver => ({
+        id: String(u.id),
+        name: u.name || "",
+        email: u.email || "",
+        avatar: u.avatar,
+        isFinal: Boolean(u.final || u.isFinal),
+        positions: Array.isArray(u.positions) ? u.positions : [],
+    });
+
+    const filterSelf = (list: Approver[]) =>
+        list.filter(u => u.id !== String(currentUserId));
+
+    const approvers = useMemo(() => filterSelf((rawApprovers as any[]).map(mapUser)), [rawApprovers, currentUserId]);
+    const issuers = useMemo(() => filterSelf((rawIssuers as any[]).map((u: any) => ({ ...mapUser(u), isFinal: false }))), [rawIssuers, currentUserId]);
+    const isFinalApprover = useMemo(() => (flowData as any)?.currentUserIsFinal === true && status === "IN_REVIEW", [flowData, status]);
+
     // ✅ Kiểm tra người hiện tại có phải currentUser của flow không
     const isCurrentUser = useMemo(() =>
         String(record?.currentUser?.id) === String(currentUserId),
@@ -240,49 +256,11 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
     }, [record, status]);
 
     useEffect(() => {
-        if (!open || !jdId) return;
-
-        setNextUserId(undefined);
-        setNextIssuerId(undefined);
-        setIsFinalApprover(false);
-        setApprovers([]);
-        setIssuers([]);
-
-        const loadData = async () => {
-            try {
-                const [resA, resI, resFlow] = await Promise.all([
-                    callFetchJdApprovers(jdId),
-                    callFetchJdIssuers(jdId),
-                    callFetchJdFlow(jdId),
-                ]);
-
-                const mapUser = (u: any): Approver => ({
-                    id: String(u.id),
-                    name: u.name || "",
-                    email: u.email || "",
-                    avatar: u.avatar,
-                    isFinal: Boolean(u.final || u.isFinal),
-                    positions: Array.isArray(u.positions) ? u.positions : [],
-                });
-
-                const filterSelf = (list: Approver[]) =>
-                    list.filter(u => u.id !== String(currentUserId));
-
-                setApprovers(filterSelf(((resA as any)?.data ?? []).map(mapUser)));
-                setIssuers(filterSelf(((resI as any)?.data ?? []).map((u: any) => ({ ...mapUser(u), isFinal: false }))));
-
-                const flowData = (resFlow as any)?.data;
-                if (flowData?.currentUserIsFinal === true && status === "IN_REVIEW") {
-                    setIsFinalApprover(true);
-                }
-            } catch (error) {
-                console.error("Load data error:", error);
-                notify.error("Không tải được danh sách người duyệt");
-            }
-        };
-
-        loadData();
-    }, [open, jdId, status, currentUserId]);
+        if (open) {
+            setNextUserId(undefined);
+            setNextIssuerId(undefined);
+        }
+    }, [open]);
 
     const handleResubmit = (returnToPrevious: boolean) => {
         if (!jdId) return;

@@ -1,6 +1,6 @@
 // src/pages/admin/company/company-job-title/drawer.assign-job-title-company.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Drawer,
     Table,
@@ -15,11 +15,11 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
+import { useJobTitlesQuery } from "@/hooks/useJobTitles";
 import {
-    callFetchJobTitle,
-    callFetchCompanyJobTitlesByCompany,
-    callCreateCompanyJobTitle,
-} from "@/config/api";
+    useAllCompanyJobTitlesQuery,
+    useCreateCompanyJobTitleMutation,
+} from "@/hooks/useCompanyJobTitles";
 import { notify } from "@/components/common/notification/notify";
 import { getModalWidth } from "@/utils/responsive";
 
@@ -49,10 +49,7 @@ const DrawerAssignCompanyJobTitle = ({
     companyId,
     onSuccess,
 }: IProps) => {
-    const [loading, setLoading] = useState(false);
     const [assigning, setAssigning] = useState(false);
-    const [allJobTitles, setAllJobTitles] = useState<JobTitle[]>([]);
-    const [assignedIds, setAssignedIds] = useState<number[]>([]);
     const [selected, setSelected] = useState<number[]>([]);
     const [search, setSearch] = useState("");
 
@@ -60,56 +57,33 @@ const DrawerAssignCompanyJobTitle = ({
     const [openSalaryDrawer, setOpenSalaryDrawer] = useState(false);
     const [lastCompanyJobTitleId, setLastCompanyJobTitleId] = useState<number | null>(null);
 
-    const fetchAllJobTitles = async () => {
-        try {
-            const filters: string[] = [];
-            if (search) filters.push(`nameVi~'${search}'`);
+    const query = search ? `page=1&size=300&filter=nameVi~'${search}'` : `page=1&size=300`;
+    const { data: jobTitleRes, isLoading: loadingJobTitles } = useJobTitlesQuery(query, open);
+    const { data: assignedItems = [], isLoading: loadingAssigned } = useAllCompanyJobTitlesQuery(open ? companyId : undefined);
+    const createMutation = useCreateCompanyJobTitleMutation();
 
-            const query =
-                filters.length > 0
-                    ? `page=1&size=300&filter=${filters.join(" and ")}`
-                    : `page=1&size=300`;
+    const loading = loadingJobTitles || loadingAssigned;
 
-            const res = await callFetchJobTitle(query);
-            const list = res?.data?.result ?? [];
+    const allJobTitles = useMemo(() => {
+        const list = jobTitleRes?.result ?? [];
+        return [...list].sort((a: JobTitle, b: JobTitle) => {
+            const orderA = a.positionLevel?.bandOrder ?? 999;
+            const orderB = b.positionLevel?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.positionLevel?.levelNumber ?? 0) - (b.positionLevel?.levelNumber ?? 0);
+        });
+    }, [jobTitleRes]);
 
-            const sorted = [...list].sort((a: JobTitle, b: JobTitle) => {
-                const orderA = a.positionLevel?.bandOrder ?? 999;
-                const orderB = b.positionLevel?.bandOrder ?? 999;
-                if (orderA !== orderB) return orderA - orderB;
-
-                return (
-                    (a.positionLevel?.levelNumber ?? 0) -
-                    (b.positionLevel?.levelNumber ?? 0)
-                );
-            });
-
-            setAllJobTitles(sorted);
-        } catch {
-            notify.error("Không thể tải danh sách chức danh");
-        }
-    };
-
-    const fetchAssigned = async () => {
-        try {
-            const res = await callFetchCompanyJobTitlesByCompany(companyId);
-            const ids = (res?.data ?? []).map((item: any) => item.jobTitle.id);
-            setAssignedIds(ids);
-        } catch {
-            setAssignedIds([]);
-        }
-    };
+    const assignedIds = useMemo(() => {
+        return (assignedItems ?? []).map((item: any) => item.jobTitle.id);
+    }, [assignedItems]);
 
     useEffect(() => {
-        if (open && companyId) {
+        if (open) {
             setSelected([]);
             setSearch("");
-            setLoading(true);
-            Promise.all([fetchAllJobTitles(), fetchAssigned()]).finally(() =>
-                setLoading(false)
-            );
         }
-    }, [open, companyId, search]);
+    }, [open]);
 
     const unassigned = allJobTitles.filter(
         (jt) => !assignedIds.includes(jt.id)
@@ -126,14 +100,11 @@ const DrawerAssignCompanyJobTitle = ({
         try {
             let lastId: number | null = null;
             for (const jobTitleId of selected) {
-                const res = await callCreateCompanyJobTitle({ companyId, jobTitleId });
-                lastId = res?.data?.id || jobTitleId; // nếu backend trả id mapping mới thì dùng, không thì dùng jobTitleId
+                const res = await createMutation.mutateAsync({ companyId, jobTitleId });
+                lastId = (res as any)?.data?.id || jobTitleId;
             }
-            notify.success(`Đã gán ${selected.length} chức danh thành công`);
-
             onSuccess?.();
 
-            // Mở drawer bậc lương cho chức danh cuối
             if (lastId) {
                 setLastCompanyJobTitleId(lastId);
                 setOpenSalaryDrawer(true);
@@ -147,7 +118,7 @@ const DrawerAssignCompanyJobTitle = ({
         }
     };
 
-    const columns: ColumnsType<JobTitle> = [
+    const columns: ColumnsType<any> = [
         {
             title: (
                 <Checkbox

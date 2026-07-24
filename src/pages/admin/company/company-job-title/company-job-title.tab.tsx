@@ -1,6 +1,6 @@
 // src/pages/admin/company/company-job-title/company.job-title.tab.tsx
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
     Button,
     Popconfirm,
@@ -23,12 +23,11 @@ import type { ActionType, ProColumns } from "@ant-design/pro-components";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
-import { notify } from "@/components/common/notification/notify";
 
 import {
-    callFetchCompanyJobTitlesByCompany,
-    callDeleteCompanyJobTitle,
-} from "@/config/api";
+    useAllCompanyJobTitlesQuery,
+    useDeleteCompanyJobTitleMutation,
+} from "@/hooks/useCompanyJobTitles";
 
 import DrawerAssignCompanyJobTitle from "./drawer.assign-job-title-company";
 import DrawerSalaryGrade from "./company-salary-grade/drawer.company-salary-grade";
@@ -181,10 +180,6 @@ const CompanyJobTitleTab = ({
     companyName?: string;
     hideTitle?: boolean;
 }) => {
-    const [data, setData] = useState<ICompanyJobTitleRow[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
-
     const [searchText, setSearchText] = useState("");
     const [sourceFilter, setSourceFilter] = useState<SourceFilter>("ALL");
 
@@ -198,6 +193,15 @@ const CompanyJobTitleTab = ({
     const tableRef = useRef<ActionType>(null);
     const queryClient = useQueryClient();
 
+    const { data = [], isLoading: loading, isFetching: refreshing } = useAllCompanyJobTitlesQuery(companyId);
+    const deleteMutation = useDeleteCompanyJobTitleMutation();
+
+    const handleRefetch = () => {
+        if (companyId) {
+            queryClient.invalidateQueries({ queryKey: ["company-job-titles-all", companyId] });
+        }
+    };
+
     /* ================= FILTERED DATA ================= */
     const filteredData = data.filter((row) => {
         const matchSearch =
@@ -209,37 +213,10 @@ const CompanyJobTitleTab = ({
         return matchSearch && matchSource;
     });
 
-    /* ================= FETCH DATA ================= */
-    const fetchData = useCallback(
-        async (silent = false) => {
-            if (!companyId || companyId <= 0) return;
-            silent ? setRefreshing(true) : setLoading(true);
-            try {
-                const res = await callFetchCompanyJobTitlesByCompany(companyId);
-                setData(res?.data ?? []);
-            } catch {
-                notify.error("Không thể tải danh sách chức danh công ty");
-            } finally {
-                setLoading(false);
-                setRefreshing(false);
-            }
-        },
-        [companyId]
-    );
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     /* ================= DELETE ================= */
-    const handleDelete = async (id: number) => {
-        try {
-            await callDeleteCompanyJobTitle(id);
-            notify.deleted("Đã xoá chức danh khỏi công ty");
-            fetchData(true);
-        } catch {
-            notify.error("Không thể xoá chức danh");
-        }
+    const handleDelete = (id: number) => {
+        if (!companyId) return;
+        deleteMutation.mutate({ id, companyId });
     };
 
     /* ================= OPEN DRAWER ================= */
@@ -491,7 +468,7 @@ const CompanyJobTitleTab = ({
                 onClose={() => setOpenAssign(false)}
                 companyId={companyId!}
                 onSuccess={() => {
-                    fetchData();
+                    handleRefetch();
                     setOpenAssign(false);
                 }}
             />
@@ -508,7 +485,7 @@ const CompanyJobTitleTab = ({
                 }}
                 companyJobTitleId={selectedCompanyJobTitleId!}
                 jobTitleName={selectedJobTitleName}
-                onSuccess={() => fetchData(true)}
+                onSuccess={handleRefetch}
             />
 
             <DrawerJobTitlePerformanceContent
@@ -520,7 +497,7 @@ const CompanyJobTitleTab = ({
                 ownerLevel="COMPANY"
                 ownerJobTitleId={selectedCompanyJobTitleId!}
                 ownerJobTitleName={selectedJobTitleName}
-                onSuccess={() => fetchData(true)}
+                onSuccess={handleRefetch}
             />
 
         </PageContainer>

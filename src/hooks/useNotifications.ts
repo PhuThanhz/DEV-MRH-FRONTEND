@@ -1,4 +1,4 @@
-import { createContext, createElement, startTransition, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, createElement, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useJdFlowInboxQuery } from "@/hooks/useJdFlow";
 import type { IJdInbox, IResNotificationDTO } from "@/types/backend";
@@ -50,6 +50,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 const STORAGE_KEY = "notifications_seen_map";
 const NOTIFICATION_SYNC_DELAY_MS = 500;
 const QUERY_INVALIDATION_DELAY_MS = 500;
+const WS_FALLBACK_POLL_MS = 20_000;
 
 const EVALUATION_QUERY_KEYS = [
     ["evaluation-period"],
@@ -160,26 +161,31 @@ let _audioCtx: AudioContext | null = null;
 let pendingToastCount = 0;
 let pendingToastTimer: ReturnType<typeof setTimeout> | null = null;
 
+const TOAST_GROUP_WINDOW_MS = 900;
+
 const pushGroupedNotification = (content: string) => {
-    pendingToastCount += 1;
+    // Nếu đang trong cửa sổ gộp thì chỉ tăng bộ đếm, không hiện ngay.
+    if (pendingToastTimer) {
+        pendingToastCount += 1;
+        return;
+    }
 
-    if (pendingToastTimer) return;
+    // Thông báo đầu tiên: hiện ngay lập tức, không chờ.
+    notify.pushNotification("Thông báo mới", content);
 
+    // Mở cửa sổ gộp cho các thông báo đến ngay sau đó.
     pendingToastTimer = setTimeout(() => {
         const count = pendingToastCount;
         pendingToastCount = 0;
         pendingToastTimer = null;
 
-        if (count <= 1) {
-            notify.pushNotification("Thông báo mới", content);
-            return;
+        if (count > 0) {
+            notify.pushNotification(
+                `${count} thông báo mới`,
+                "Mở trung tâm thông báo để xem chi tiết."
+            );
         }
-
-        notify.pushNotification(
-            `${count} thông báo mới`,
-            "Mở trung tâm thông báo để xem chi tiết."
-        );
-    }, 900);
+    }, TOAST_GROUP_WINDOW_MS);
 };
 
 const getAudioContext = (): AudioContext | null => {
@@ -256,6 +262,20 @@ const useNotificationsState = (): NotificationContextValue => {
     const invalidationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const cancelIdleInvalidation = useRef<(() => void) | null>(null);
 
+    const refreshAppNotifs = useCallback(async () => {
+        try {
+            const res = await callFetchEvaluationNotifications();
+            const notifications = Array.isArray(res?.data)
+                ? res.data
+                : Array.isArray((res?.data as any)?.data)
+                    ? (res.data as any).data
+                    : [];
+            setAppNotifs(notifications);
+        } catch (e) {
+            console.error("Failed to fetch notifications", e);
+        }
+    }, []);
+
     useEffect(() => () => {
         if (notificationSyncTimer.current) {
             clearTimeout(notificationSyncTimer.current);
@@ -269,18 +289,11 @@ const useNotificationsState = (): NotificationContextValue => {
     useEffect(() => {
         const fetchInitial = async () => {
             setIsAppFetching(true);
-            try {
-                const res = await callFetchEvaluationNotifications();
-                if (res && Array.isArray(res.data)) {
-                    setAppNotifs(res.data);
-                }
-            } catch (e) {
-                console.error("Failed to fetch notifications", e);
-            }
+            await refreshAppNotifs();
             setIsAppFetching(false);
         };
         fetchInitial();
-    }, []);
+    }, [refreshAppNotifs]);
 
     const scheduleQueryInvalidation = (module: string, documentId?: number) => {
         pendingInvalidationModules.current.add(module);
@@ -332,7 +345,7 @@ const useNotificationsState = (): NotificationContextValue => {
         }, QUERY_INVALIDATION_DELAY_MS);
     };
 
-    useWebSocket((msg) => {
+    const { connected } = useWebSocket((msg) => {
         const isDocumentRealtimeEvent = msg.module === "DOCUMENT" && !!msg.documentId && !msg.id;
         if (isDocumentRealtimeEvent) {
             scheduleQueryInvalidation("DOCUMENT", msg.documentId);
@@ -344,12 +357,11 @@ const useNotificationsState = (): NotificationContextValue => {
         }
         pushGroupedNotification(msg.content ?? "Bạn có thông báo mới");
 
-        startTransition(() => {
-            setAppNotifs((prev) => {
-                if (!isNotificationDTO(msg)) return prev;
-                if (prev.some((n) => n.id === msg.id)) return prev;
-                return [msg, ...prev];
-            });
+        // Cập nhật khẩn cấp: badge + danh sách phải nhảy ngay, không đưa vào transition.
+        setAppNotifs((prev) => {
+            if (!isNotificationDTO(msg)) return prev;
+            if (prev.some((n) => n.id === msg.id)) return prev;
+            return [msg, ...prev];
         });
 
         if (notificationSyncTimer.current) {
@@ -357,22 +369,25 @@ const useNotificationsState = (): NotificationContextValue => {
         }
         notificationSyncTimer.current = setTimeout(() => {
             notificationSyncTimer.current = null;
-            callFetchEvaluationNotifications().then(res => {
-                const notifications = Array.isArray(res?.data)
-                    ? res.data
-                    : Array.isArray((res?.data as any)?.data)
-                        ? (res.data as any).data
-                        : [];
-                startTransition(() => {
-                    setAppNotifs(notifications);
-                });
-            }).catch((e) => {
-                console.error("Failed to sync notifications", e);
+            startTransition(() => {
+                void refreshAppNotifs();
             });
         }, NOTIFICATION_SYNC_DELAY_MS);
 
         scheduleQueryInvalidation(msg.module);
     });
+
+    // Polling dự phòng: khi WS mất kết nối, kéo thông báo định kỳ để không bị trễ.
+    useEffect(() => {
+        if (connected) return;
+
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState === "hidden") return;
+            void refreshAppNotifs();
+        }, WS_FALLBACK_POLL_MS);
+
+        return () => window.clearInterval(intervalId);
+    }, [connected, refreshAppNotifs]);
 
     const unifiedItems = useMemo<UnifiedNotification[]>(() => {
         const items: UnifiedNotification[] = [];

@@ -10,6 +10,7 @@ import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { useUserByIdQuery } from "@/hooks/useUsers";
 import type { IUserPosition } from "@/types/backend";
 import { getModalWidth } from "@/utils/responsive";
+import { buildPublicFileUrl } from "@/config/file-utils";
 
 
 const { Text } = Typography;
@@ -253,7 +254,6 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
     const modalWidth = getModalWidth(760);
-    const backendURL = import.meta.env.VITE_BACKEND_URL;
     const userId = dataInit?.id ? String(dataInit.id) : undefined;
 
     // ← THÊM: fetch GET /users/:id khi modal mở, chỉ fire khi open=true
@@ -268,7 +268,7 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
     const handleClose = () => { onClose(false); setDataInit(null); };
 
     const avatarSrc = user?.avatar
-        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
+        ? buildPublicFileUrl(user.avatar, "avatar")
         : undefined;
 
     const hrFields = [

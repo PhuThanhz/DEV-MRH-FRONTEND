@@ -23,7 +23,13 @@ import {
     callFetchAccountingDossierPendingByRole,
     callFetchAccountingDossierReportByStatus,
     callFetchAccountingDossierReportByDepartment,
+    callFetchDossierByQrToken,
     callFetchAccountingDossierCategoryActive,
+    callFetchAccountingDossierCategories,
+    callCreateAccountingDossierCategory,
+    callUpdateAccountingDossierCategory,
+    callDeleteAccountingDossierCategory,
+    callToggleAccountingDossierCategoryActive,
     callFetchAccountingDossierReportByCategory,
     callRejectAccountingDossierTemplateSync,
     callPreviewWorkflow,
@@ -51,6 +57,7 @@ import type {
     IAccountingDossierStorageSummary,
     IAccountingDossierReportRow,
     IAccountingDossierCategory,
+    IAccountingDossierCategoryRequest,
 } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 
@@ -91,6 +98,19 @@ export const useAccountingDossierByIdQuery = (id?: number) => {
         queryFn: async () => {
             if (!id) throw new Error("Thiếu ID bộ chứng từ");
             const res = await callFetchAccountingDossierById(id);
+            if (!res?.data) throw new Error("Không tìm thấy bộ chứng từ");
+            return res.data as IAccountingDossier;
+        },
+    });
+};
+
+export const useDossierByQrTokenQuery = (token?: string, options?: { enabled?: boolean }) => {
+    return useQuery({
+        queryKey: ["accounting-dossier-qr", token],
+        enabled: !!token && (options?.enabled ?? true),
+        queryFn: async () => {
+            if (!token) throw new Error("Thiếu mã QR token");
+            const res = await callFetchDossierByQrToken(token);
             if (!res?.data) throw new Error("Không tìm thấy bộ chứng từ");
             return res.data as IAccountingDossier;
         },
@@ -305,7 +325,15 @@ export const useAccountingDossierApprovalStepsQuery = (id?: number) => {
         queryFn: async () => {
             if (!id) return [];
             const res = await callFetchAccountingDossierApprovalSteps(id);
-            return (res?.data ?? []) as IAccountingDossierApprovalStep[];
+            const rawData = res?.data;
+            if (Array.isArray(rawData)) return rawData as IAccountingDossierApprovalStep[];
+            if (rawData && typeof rawData === "object" && "result" in rawData && Array.isArray((rawData as any).result)) {
+                return (rawData as any).result as IAccountingDossierApprovalStep[];
+            }
+            if (rawData && typeof rawData === "object" && "content" in rawData && Array.isArray((rawData as any).content)) {
+                return (rawData as any).content as IAccountingDossierApprovalStep[];
+            }
+            return [] as IAccountingDossierApprovalStep[];
         },
     });
 };
@@ -457,6 +485,100 @@ export const useAccountingDossierCategoryActiveQuery = () => {
                 throw new Error("Không thể lấy danh sách danh mục hoạt động");
             }
             return (res.data ?? []) as IAccountingDossierCategory[];
+        },
+    });
+};
+
+export const useAccountingDossierCategoriesQuery = (query: string = "") => {
+    return useQuery({
+        queryKey: ["accounting-dossier-categories", query],
+        queryFn: async () => {
+            const res = await callFetchAccountingDossierCategories(query);
+            const data: any = res?.data;
+            if (Array.isArray(data)) {
+                return data as IAccountingDossierCategory[];
+            }
+            if (Array.isArray(data?.result)) {
+                return data.result as IAccountingDossierCategory[];
+            }
+            if (Array.isArray(data?.items)) {
+                return data.items as IAccountingDossierCategory[];
+            }
+            return [] as IAccountingDossierCategory[];
+        },
+    });
+};
+
+export const useCreateAccountingDossierCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: IAccountingDossierCategoryRequest) => {
+            const res = await callCreateAccountingDossierCategory(data);
+            if (!res?.data) throw new Error(res?.message || "Tạo danh mục thất bại");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.created(res?.message || "Tạo mẫu danh mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories"] });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories-active"] });
+        },
+        onError: (err: any) => {
+            notify.error(err?.message || "Không thể tạo danh mục");
+        },
+    });
+};
+
+export const useUpdateAccountingDossierCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: IAccountingDossierCategoryRequest }) => {
+            const res = await callUpdateAccountingDossierCategory(id, data);
+            if (!res?.data) throw new Error(res?.message || "Cập nhật thất bại");
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.updated(res?.message || "Cập nhật danh mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories"] });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories-active"] });
+        },
+        onError: (err: any) => {
+            notify.error(err?.message || "Không thể cập nhật danh mục");
+        },
+    });
+};
+
+export const useDeleteAccountingDossierCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callDeleteAccountingDossierCategory(id);
+            return res;
+        },
+        onSuccess: () => {
+            notify.deleted("Xóa danh mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories"] });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories-active"] });
+        },
+        onError: (err: any) => {
+            notify.error(err?.message || "Không thể xóa danh mục");
+        },
+    });
+};
+
+export const useToggleAccountingDossierCategoryActiveMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+            const res = await callToggleAccountingDossierCategoryActive(id, active);
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.updated(res?.message || "Cập nhật trạng thái thành công");
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories"] });
+            queryClient.invalidateQueries({ queryKey: ["accounting-dossier-categories-active"] });
+        },
+        onError: (err: any) => {
+            notify.error(err?.message || "Không thể thay đổi trạng thái");
         },
     });
 };

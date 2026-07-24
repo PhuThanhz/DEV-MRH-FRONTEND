@@ -10,9 +10,10 @@ import {
 import { notify } from "@/components/common/notification/notify";
 
 // GET LIST
-export const useCompaniesQuery = (query: string) => {
+export const useCompaniesQuery = (query: string, enabled = true) => {
     return useQuery({
         queryKey: ["companies", query],
+        enabled,
         queryFn: async () => {
             const res = await callFetchCompany(query);
             return res.data as IModelPaginate<ICompany>;

@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo } from "react";
 import { Input, Spin, Tooltip } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import {
-    callFetchPermissionCategoriesByDepartment,
-    callFetchPermissionMatrixByCategory,
-    callFetchProcessActions,
-} from "@/config/api";
+    usePermissionCategoriesByDepartment,
+    usePermissionMatrixByCategory,
+} from "@/hooks/usePermissionMatrixByCategory";
+import { useProcessActionsQuery } from "@/hooks/useProcessActions";
 
 import type {
     IPermissionCategory,
@@ -51,20 +51,8 @@ interface Props {
 }
 
 const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
-    const [categories, setCategories] = useState<IPermissionCategory[]>([]);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [matrix, setMatrix] = useState<IPermissionCategoryMatrix | null>(null);
-    const [processActions, setProcessActions] = useState<IProcessAction[]>([]);
-
-    const [loadingCat, setLoadingCat] = useState(false);
-    const [loadingMatrix, setLoadingMatrix] = useState(false);
-    const [loadingActions, setLoadingActions] = useState(false);
-
-    const [errorCat, setErrorCat] = useState<string | null>(null);
-    const [errorMatrix, setErrorMatrix] = useState<string | null>(null);
-
+    const [selectedIdState, setSelectedIdState] = useState<number | null>(null);
     const [legendOpen, setLegendOpen] = useState(false);
-
     const isMobile = useIsMobile();
 
     // ── Hover column highlight ─────────────────────────────────────────────────
@@ -72,6 +60,31 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
 
     // ── Search filter theo tên chức danh (column) ──────────────────────────────
     const [searchText, setSearchText] = useState("");
+
+    const { data: actionsRes, isLoading: loadingActions } = useProcessActionsQuery("page=1&size=100");
+    const processActions = useMemo(() => actionsRes?.result ?? [], [actionsRes]);
+
+    const { data: categoriesData = [], isLoading: loadingCat, isError: isErrorCat } = usePermissionCategoriesByDepartment(
+        departmentId && !isNaN(departmentId) ? departmentId : undefined
+    );
+
+    const categories = useMemo(() => Array.isArray(categoriesData) ? categoriesData : [], [categoriesData]);
+    const errorCat = isErrorCat ? "Không thể tải danh mục phân quyền." : null;
+
+    const selectedId = selectedIdState ?? (categories.length > 0 && categories[0].id != null ? categories[0].id! : null);
+
+    const { data: matrixData, isLoading: loadingMatrix, isError: isErrorMatrix } = usePermissionMatrixByCategory(selectedId);
+    const matrix = useMemo(() => {
+        if (!matrixData || !Array.isArray(matrixData.rows) || !Array.isArray(matrixData.columns)) return null;
+        return matrixData;
+    }, [matrixData]);
+
+    const errorMatrix = isErrorMatrix ? "Không thể tải ma trận phân quyền." : null;
+
+    const setSelectedId = (id: number | null) => {
+        setSelectedIdState(id);
+        setSearchText("");
+    };
 
     // ── Lọc columns theo searchText ────────────────────────────────────────────
     const filteredColumns = useMemo(() => {
@@ -89,63 +102,6 @@ const PermissionViewModal = ({ departmentId, departmentName }: Props) => {
         });
         return map;
     }, [processActions]);
-
-    useEffect(() => {
-        setLoadingActions(true);
-        callFetchProcessActions("page=1&size=100")
-            .then((res: any) => {
-                const list = res?.data?.result ?? [];
-                setProcessActions(Array.isArray(list) ? list : []);
-            })
-            .catch(() => setProcessActions([]))
-            .finally(() => setLoadingActions(false));
-    }, []);
-
-    useEffect(() => {
-        if (!departmentId || isNaN(departmentId)) return;
-        setLoadingCat(true);
-        setErrorCat(null);
-        setCategories([]);
-        setSelectedId(null);
-        setMatrix(null);
-        setSearchText("");
-
-        callFetchPermissionCategoriesByDepartment(departmentId)
-            .then((res: any) => {
-                const list: IPermissionCategory[] = res?.data ?? [];
-                const safe = Array.isArray(list) ? list : [];
-                setCategories(safe);
-                if (safe.length > 0 && safe[0].id != null) setSelectedId(safe[0].id!);
-            })
-            .catch(() => {
-                setCategories([]);
-                setErrorCat("Không thể tải danh mục phân quyền.");
-            })
-            .finally(() => setLoadingCat(false));
-    }, [departmentId]);
-
-    useEffect(() => {
-        if (selectedId == null) return;
-        setLoadingMatrix(true);
-        setErrorMatrix(null);
-        setMatrix(null);
-        setSearchText(""); // reset search khi đổi category
-
-        callFetchPermissionMatrixByCategory(selectedId)
-            .then((res: any) => {
-                const data: IPermissionCategoryMatrix | null = res?.data ?? null;
-                if (!data || !Array.isArray(data.rows) || !Array.isArray(data.columns)) {
-                    setMatrix(null);
-                    return;
-                }
-                setMatrix(data);
-            })
-            .catch(() => {
-                setMatrix(null);
-                setErrorMatrix("Không thể tải ma trận phân quyền.");
-            })
-            .finally(() => setLoadingMatrix(false));
-    }, [selectedId]);
 
     // ── Badge với Tooltip hiện tên + mô tả ────────────────────────────────────
     const renderBadge = (code: string | null) => {

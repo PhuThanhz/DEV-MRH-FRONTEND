@@ -55,46 +55,52 @@ export interface InfoRowProps {
     style?: React.CSSProperties;
 }
 
-export const InfoRow = ({ icon, label, value, highlight = false, noBorder = false, span, style }: InfoRowProps) => (
-    <div 
-        className={`detail-modal-info-row ${span === 2 ? "info-row-span-2" : ""}`}
-        style={{
-            display: "flex", alignItems: "flex-start", gap: 10,
-            padding: "9px 0",
-            borderBottom: noBorder ? "none" : `1px solid ${DETAIL_BORDER}`,
-            gridColumn: span === 2 ? "1 / -1" : undefined,
-            ...style,
-        }}
-    >
-        <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: DETAIL_BG_SUBTLE, border: `1px solid ${DETAIL_BORDER_MED}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, marginTop: 1,
-        }}>
-            <span style={{ fontSize: 12, color: DETAIL_TEXT_MUTED }}>{icon}</span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{
-                fontSize: 11, color: DETAIL_TEXT_MUTED, display: "block",
-                marginBottom: 2, letterSpacing: "0.02em",
+export const InfoRow = ({ icon, label, value, highlight = false, noBorder = false, span, style }: InfoRowProps) => {
+    const isEmpty = value === undefined || value === null || value === "";
+
+    return (
+        <div
+            className={`detail-modal-info-row ${span === 2 ? "info-row-span-2" : ""}`}
+            style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "7px 0",
+                borderBottom: noBorder ? "none" : `1px solid ${DETAIL_BORDER}`,
+                gridColumn: span === 2 ? "1 / -1" : undefined,
+                ...style,
+            }}
+        >
+            <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: highlight ? `${DETAIL_ACCENT}12` : DETAIL_BG_SUBTLE,
+                border: `1px solid ${highlight ? `${DETAIL_ACCENT}33` : DETAIL_BORDER_MED}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, marginTop: 1,
             }}>
-                {label}
-            </Text>
-            <Text style={{
-                fontSize: 13, color: DETAIL_TEXT_MAIN,
-                fontWeight: highlight ? 600 : 400,
-                wordBreak: "break-word",
-            }}>
-                {value ?? "--"}
-            </Text>
+                <span style={{ fontSize: 12, color: highlight ? DETAIL_ACCENT : DETAIL_TEXT_MUTED }}>{icon}</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{
+                    fontSize: 11, color: DETAIL_TEXT_MUTED, display: "block",
+                    marginBottom: 2, letterSpacing: "0.02em",
+                }}>
+                    {label}
+                </Text>
+                <Text style={{
+                    fontSize: 13,
+                    color: isEmpty ? DETAIL_TEXT_MUTED : DETAIL_TEXT_MAIN,
+                    fontWeight: highlight && !isEmpty ? 600 : 400,
+                    wordBreak: "break-word",
+                }}>
+                    {isEmpty ? "--" : value}
+                </Text>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // ─── SectionTitle ─────────────────────────────────────────────────────────────
 export const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, marginTop: 0 }}>
         <Text style={{
             fontSize: 11, fontWeight: 700, color: DETAIL_TEXT_MUTED,
             textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
@@ -119,8 +125,8 @@ export const InfoCard = ({
             background: "#fff",
             border: `1.5px solid ${DETAIL_BORDER_MED}`,
             borderRadius: 14,
-            padding: "14px 16px",
-            marginBottom: 14,
+            padding: "12px 16px",
+            marginBottom: 12,
             ...style,
         }}
     >
@@ -154,11 +160,11 @@ export const ProfileHeader = ({
 }: ProfileHeaderProps) => (
     <div style={{
         display: "flex", alignItems: "center", gap: 14,
-        padding: "14px 16px",
+        padding: "12px 16px",
         background: DETAIL_BG_SUBTLE,
         border: `1.5px solid ${DETAIL_BORDER_MED}`,
         borderRadius: 14,
-        marginBottom: 14,
+        marginBottom: 12,
         flexWrap: "wrap",
     }}>
         <Avatar

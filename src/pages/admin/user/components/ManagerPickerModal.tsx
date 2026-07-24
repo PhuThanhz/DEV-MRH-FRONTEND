@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Input, Table, Select, Button, Space, Tag, Typography } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
-import { callFetchUsersCrossCompany, callFetchCompany } from "@/config/api";
+import { callFetchUsersCrossCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
 import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 const { Text } = Typography;
@@ -27,22 +28,14 @@ const PAGE_SIZE = 10;
 
 const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, onSelect, title, description }) => {
     const [search, setSearch] = useState("");
-    const [companies, setCompanies] = useState<any[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
 
-    // Fetch company options
-    useEffect(() => {
-        if (!open) return;
-        callFetchCompany("page=1&size=100&sort=name,asc")
-            .then((res: any) => {
-                setCompanies(res?.data?.result ?? []);
-            })
-            .catch(() => { });
-    }, [open]);
+    const { data: companiesData } = useCompaniesQuery("page=1&size=100&sort=name,asc", open);
+    const companies = companiesData?.result ?? [];
 
     // Fetch users
     const loadUsers = async () => {

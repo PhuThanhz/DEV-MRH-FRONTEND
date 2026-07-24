@@ -37,6 +37,18 @@ export const useDepartmentJobTitlesQuery = (departmentId?: number) => {
     });
 };
 
+export const useCompanyJobTitlesOfDepartmentQuery = (departmentId?: number) => {
+    return useQuery({
+        queryKey: ["company-job-titles-of-department", departmentId],
+        enabled: !!departmentId,
+        queryFn: async () => {
+            if (!departmentId) throw new Error("Thiếu ID phòng ban");
+            const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
+            return res.data ?? [];
+        },
+    });
+};
+
 /* =====================================================
    2. GÁN CHỨC DANH VÀO PHÒNG BAN
 ===================================================== */

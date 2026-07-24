@@ -14,19 +14,18 @@ import {
     TrophyOutlined,
     FileExcelOutlined,
     FilterOutlined,
-    DownOutlined
+    DownOutlined,
+    ReloadOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { saveAs } from "file-saver";
 import { notify } from "@/components/common/notification/notify";
-import {
-    callFetchCompletedSummary,
-    callFetchEvaluationPeriods,
-    callFetchCompany,
-    callFetchDepartmentsByCompany,
-    callFetchSectionsByDepartment
-} from "@/config/api";
+import { useCompletedSummaryQuery, useEvaluationPeriodsQuery } from "@/hooks/useEvaluations";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import { useSectionsByDepartmentQuery } from "@/hooks/useSections";
 import PageContainer from "@/components/common/data-table/PageContainer";
+import ActionButton from "@/components/common/ui/ActionButton";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import dayjs from "dayjs";
@@ -215,19 +214,6 @@ const styleFilterWorksheet = (ws: any, rowCount: number) => {
 const CompletedEvaluationsPage = () => {
     const navigate = useNavigate();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [records, setRecords] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [periodLoading, setPeriodLoading] = useState(false);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [periods, setPeriods] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [companies, setCompanies] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [departments, setDepartments] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [sections, setSections] = useState<any[]>([]);
-
     const [selectedPeriod, setSelectedPeriod] = useState<number | undefined>();
     const [selectedCompany, setSelectedCompany] = useState<number | undefined>();
     const [selectedDepartment, setSelectedDepartment] = useState<number | undefined>();
@@ -240,26 +226,18 @@ const CompletedEvaluationsPage = () => {
 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(15);
-    const [total, setTotal] = useState(0);
 
-    const handleCompanyChange = (companyId?: number) => {
-        setSelectedCompany(companyId);
-        setSelectedPeriod(undefined);
-        setSelectedDepartment(undefined);
-        setSelectedSection(undefined);
-        setRecords([]);
-        setSections([]);
-    };
+    // React Query Hooks
+    const { data: companiesData } = useCompaniesQuery("page=1&size=100");
+    const companies = companiesData?.result || [];
 
-    const handleDepartmentChange = (departmentId?: number) => {
-        setSelectedDepartment(departmentId);
-        setSelectedSection(undefined);
-    };
+    const { data: departments = [] } = useDepartmentsByCompanyQuery(selectedCompany || 0);
+    const { data: sections = [] } = useSectionsByDepartmentQuery(selectedDepartment || 0);
 
     const buildPeriodQuery = (searchValue = "", companyId?: number) => {
         const params = new URLSearchParams({
             page: "1",
-            size: "20",
+            size: "100",
             sort: "createdAt,desc",
         });
         const filters: string[] = [];
@@ -270,151 +248,61 @@ const CompletedEvaluationsPage = () => {
         return params.toString();
     };
 
-    const fetchPeriods = async (searchValue = periodSearch, companyId = selectedCompany, autoSelect = false) => {
-        setPeriodLoading(true);
-        try {
-            const res = await callFetchEvaluationPeriods(buildPeriodQuery(searchValue, companyId));
-            if (res?.data?.result) {
-                setPeriods(res.data.result);
-                if (autoSelect && res.data.result.length > 0) {
-                    setSelectedPeriod(res.data.result[0].id);
-                } else if (autoSelect) {
-                    setSelectedPeriod(undefined);
-                    setRecords([]);
-                }
+    const periodQuery = useMemo(() => buildPeriodQuery(periodSearch, selectedCompany), [periodSearch, selectedCompany]);
+    const { data: periodData, isLoading: periodLoading } = useEvaluationPeriodsQuery(periodQuery);
+    const periods = periodData?.result || [];
+
+    const { data: summaryData, isLoading: loading, refetch: fetchSummary } = useCompletedSummaryQuery(
+        selectedPeriod,
+        selectedDepartment,
+        selectedCompany,
+        selectedSection,
+        page,
+        pageSize,
+        searchText,
+        filterGrade
+    );
+    const records = summaryData?.result || [];
+    const total = summaryData?.meta?.total || 0;
+
+    const handleCompanyChange = (companyId?: number) => {
+        setSelectedCompany(companyId);
+        if (selectedPeriod && companyId) {
+            const period = periods.find((p: any) => p.id === selectedPeriod);
+            if (period?.company?.id && period.company.id !== companyId) {
+                setSelectedPeriod(undefined);
             }
-        } catch (error: any) {
-            if (error?.response?.status !== 403) {
-                notify.error("Không thể tải danh sách kỳ đánh giá");
+        }
+        setSelectedDepartment(undefined);
+        setSelectedSection(undefined);
+    };
+
+    const handlePeriodChange = (periodId?: number) => {
+        setSelectedPeriod(periodId);
+        if (periodId) {
+            const period = periods.find((p: any) => p.id === periodId);
+            if (period?.company?.id && period.company.id !== selectedCompany) {
+                setSelectedCompany(period.company.id);
             }
-        } finally {
-            setPeriodLoading(false);
         }
     };
 
-    const fetchCompanies = async () => {
-        try {
-            const res = await callFetchCompany("page=1&size=100");
-            if (res?.data?.result) {
-                setCompanies(res.data.result);
-            }
-        } catch {
-            notify.error("Không thể tải danh sách công ty");
-        }
+    const handleDepartmentChange = (departmentId?: number) => {
+        setSelectedDepartment(departmentId);
+        setSelectedSection(undefined);
     };
-
-    const fetchDepartments = async (companyId: number) => {
-        try {
-            const res = await callFetchDepartmentsByCompany(companyId);
-            if (res?.data) {
-                setDepartments(res.data);
-            }
-        } catch {
-            notify.error("Không thể tải danh sách phòng ban");
-        }
-    };
-
-    const fetchSections = async (departmentId: number) => {
-        try {
-            const res = await callFetchSectionsByDepartment(departmentId);
-            if (res?.data) {
-                setSections(res.data);
-            }
-        } catch {
-            notify.error("Không thể tải danh sách bộ phận");
-        }
-    };
-
-    const fetchSummary = async () => {
-        setLoading(true);
-        try {
-            const res = await callFetchCompletedSummary(
-                selectedPeriod,
-                selectedDepartment,
-                selectedCompany,
-                selectedSection,
-                page,
-                pageSize,
-                searchText,
-                filterGrade
-            );
-            if (res?.data) {
-                setRecords(res.data.result || []);
-                setTotal(res.data.meta?.total || 0);
-            }
-        } catch {
-            notify.error("Không thể tải báo cáo tổng hợp");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const searchRef = useRef(false);
-
-    useEffect(() => {
-        fetchCompanies();
-    }, []);
-
-    useEffect(() => {
-        // Prevent running on mount for search, but run for selectedCompany changes
-        if (searchRef.current) {
-            const timer = window.setTimeout(() => {
-                fetchPeriods(periodSearch, selectedCompany, false);
-            }, 300);
-            return () => window.clearTimeout(timer);
-        } else if (periodSearch !== "") {
-            searchRef.current = true;
-        } else {
-            fetchPeriods("", selectedCompany, true);
-        }
-    }, [periodSearch, selectedCompany]);
-
-    useEffect(() => {
-        if (selectedCompany) {
-            fetchDepartments(selectedCompany);
-            setSelectedDepartment(undefined);
-            setSelectedSection(undefined);
-            setSections([]);
-        } else {
-            setDepartments([]);
-            setSelectedDepartment(undefined);
-            setSelectedSection(undefined);
-            setSections([]);
-        }
-    }, [selectedCompany]);
 
     useEffect(() => {
         setPage(1);
     }, [selectedPeriod, selectedCompany, selectedDepartment, selectedSection, filterGrade, searchText]);
-
-    useEffect(() => {
-        if (selectedPeriod) {
-            const timer = setTimeout(() => {
-                fetchSummary();
-            }, 300);
-            return () => clearTimeout(timer);
-        } else {
-            setRecords([]);
-            setTotal(0);
-        }
-    }, [selectedPeriod, selectedCompany, selectedDepartment, selectedSection, page, pageSize, filterGrade, searchText]);
-
-    useEffect(() => {
-        if (selectedDepartment) {
-            fetchSections(selectedDepartment);
-            setSelectedSection(undefined);
-        } else {
-            setSections([]);
-            setSelectedSection(undefined);
-        }
-    }, [selectedDepartment]);
 
     const matchesSearch = useCallback((record: any) => {
         if (!searchText) return true;
         const keyword = searchText.toLowerCase();
         const empName = record.employee?.username || record.employee?.fullName || "";
         const empEmail = record.employee?.email || "";
-        return empName.toLowerCase().includes(keyword) || empEmail.toLowerCase().includes(keyword);
+        const empCode = record.employee?.employeeCode || "";
+        return empName.toLowerCase().includes(keyword) || empEmail.toLowerCase().includes(keyword) || empCode.toLowerCase().includes(keyword);
     }, [searchText]);
 
     // FILTER LOGIC (Server-side)
@@ -857,7 +745,7 @@ const CompletedEvaluationsPage = () => {
         },
     ]), [filteredRecords.length, handleExportByDepartment, handleExportCurrentScope, handleExportSingleEmployee]);
 
-    const renderUserAvatar = (name: string, email: string, jobTitle?: string, positionLevel?: string) => {
+    const renderUserAvatar = (name: string, email: string, jobTitle?: string, positionLevel?: string, companyDept?: string) => {
         const initial = name ? name.trim().charAt(0).toUpperCase() : "?";
         const colors = ["#3b82f6", "#06b6d4", "#f97316", "#ef4444", "#8b5cf6", "#ec4899"];
         const index = (email || name || "").charCodeAt(0) % colors.length;
@@ -875,9 +763,25 @@ const CompletedEvaluationsPage = () => {
                 <div>
                     <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>{name || "Chưa cập nhật"}</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{subText || email || "—"}</div>
+                    {companyDept && (
+                        <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1, fontWeight: 500 }}>{companyDept}</div>
+                    )}
                 </div>
             </div>
         );
+    };
+
+    const isFiltered = !!(selectedPeriod || selectedCompany || selectedDepartment || selectedSection || filterStatus || filterGrade || searchText);
+
+    const handleResetFilters = () => {
+        setSelectedPeriod(undefined);
+        setSelectedCompany(undefined);
+        setSelectedDepartment(undefined);
+        setSelectedSection(undefined);
+        setFilterStatus(undefined);
+        setFilterGrade(undefined);
+        setSearchText("");
+        setPeriodSearch("");
     };
 
     const columns = [
@@ -892,15 +796,43 @@ const CompletedEvaluationsPage = () => {
             ),
         },
         {
+            title: "Mã NV",
+            key: "employeeCode",
+            width: 110,
+            align: "center" as const,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            render: (_: any, record: any) => {
+                const code = record.employee?.employeeCode;
+                return code ? (
+                    <span style={{
+                        fontFamily: "monospace",
+                        fontWeight: 700,
+                        backgroundColor: "#f1f5f9",
+                        color: "#334155",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                        fontSize: 12,
+                        letterSpacing: "0.5px"
+                    }}>
+                        {code}
+                    </span>
+                ) : (
+                    <span style={{ color: "#cbd5e1" }}>—</span>
+                );
+            },
+        },
+        {
             title: "Nhân sự",
             key: "employee",
-            width: 250,
+            width: 260,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             render: (_: any, record: any) => {
                 const name = record.employee?.username || record.employee?.fullName || "Chưa cập nhật";
                 const email = record.employee?.email || "";
                 const job = record.employee?.jobTitle || "";
-                return renderUserAvatar(name, email, job, record.employee?.positionLevel);
+                const companyDept = [record.employee?.companyName, record.employee?.departmentName].filter(Boolean).join(" • ");
+                return renderUserAvatar(name, email, job, record.employee?.positionLevel, companyDept);
             },
         },
         {
@@ -961,7 +893,7 @@ const CompletedEvaluationsPage = () => {
             dataIndex: "status",
             key: "status",
             align: "center" as const,
-            width: 140,
+            width: 150,
             render: (val: string, record: any) => {
                 const empDeadline = record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline;
                 const isEmpPending = record.status === "EMPLOYEE_DRAFTING" || record.status === "REVISION_NEEDED";
@@ -975,60 +907,69 @@ const CompletedEvaluationsPage = () => {
                 const isAppPending = record.status === "PENDING_APPROVAL";
                 const isAppOverdue = isAppPending && appDeadline && dayjs().isAfter(dayjs(appDeadline));
 
-                if (isEmpOverdue) {
-                    return (
-                        <Tag color="error" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600, borderRadius: 12, padding: "2px 8px" }}>
-                            <ClockCircleOutlined />
-                            Trễ hạn tự đánh giá
-                        </Tag>
-                    );
-                }
-
-                if (isMgrOverdue) {
-                    return (
-                        <Tag color="error" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600, borderRadius: 12, padding: "2px 8px" }}>
-                            <ClockCircleOutlined />
-                            Trễ hạn chấm điểm
-                        </Tag>
-                    );
-                }
-
-                if (isAppOverdue) {
-                    return (
-                        <Tag color="error" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600, borderRadius: 12, padding: "2px 8px" }}>
-                            <ClockCircleOutlined />
-                            Trễ hạn phê duyệt
-                        </Tag>
-                    );
-                }
-
-                const cfg = STATUS_CONFIG[val] ?? STATUS_CONFIG.NOT_STARTED;
-                return (
-                    <Tag color={cfg.tagColor} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600, borderRadius: 12, padding: "2px 8px" }}>
-                        {cfg.icon}
-                        {cfg.text}
-                    </Tag>
+                const renderPillBadge = (text: string, icon: React.ReactNode, bg: string, border: string, color: string) => (
+                    <span
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 5,
+                            borderRadius: 9999,
+                            padding: "3px 12px",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            backgroundColor: bg,
+                            border: `1px solid ${border}`,
+                            color: color,
+                            whiteSpace: "nowrap",
+                        }}
+                    >
+                        <span style={{ fontSize: 11, display: "inline-flex", alignItems: "center" }}>{icon}</span>
+                        <span>{text}</span>
+                    </span>
                 );
+
+                if (isEmpOverdue) {
+                    return renderPillBadge("Trễ hạn tự đánh giá", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                }
+                if (isMgrOverdue) {
+                    return renderPillBadge("Trễ hạn chấm điểm", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                }
+                if (isAppOverdue) {
+                    return renderPillBadge("Trễ hạn phê duyệt", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                }
+
+                const styleConfig: Record<string, { bg: string; border: string; color: string; text: string; icon: React.ReactNode }> = {
+                    NOT_STARTED: { text: "Chưa bắt đầu", bg: "#f8fafc", border: "#e2e8f0", color: "#64748b", icon: <StopOutlined /> },
+                    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb", icon: <SyncOutlined spin /> },
+                    PENDING_MANAGER_REVIEW: { text: "Chờ QL chấm", bg: "#fffbeb", border: "#fef08a", color: "#d97706", icon: <ClockCircleOutlined /> },
+                    MANAGER_REVIEWING: { text: "QL đang chấm", bg: "#faf5ff", border: "#e9d5ff", color: "#9333ea", icon: <SyncOutlined spin /> },
+                    PENDING_APPROVAL: { text: "Chờ phê duyệt", bg: "#ecfeff", border: "#a5f3fc", color: "#0891b2", icon: <ClockCircleOutlined /> },
+                    REVISION_NEEDED: { text: "Yêu cầu sửa đổi", bg: "#fff1f2", border: "#fecdd3", color: "#e11d48", icon: <CloseCircleOutlined /> },
+                    COMPLETED: { text: "Hoàn tất", bg: "#f0fdf4", border: "#bbf7d0", color: "#16a34a", icon: <CheckCircleOutlined /> },
+                };
+
+                const st = styleConfig[val] ?? styleConfig.NOT_STARTED;
+                return renderPillBadge(st.text, st.icon, st.bg, st.border, st.color);
             },
         },
         {
             title: "Hành động",
             key: "actions",
             align: "center" as const,
-            width: 110,
+            width: 100,
             fixed: "right" as const,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             render: (_: any, record: any) => (
-                <Button
-                    type="primary"
-                    ghost
-                    icon={<EyeOutlined />}
-                    onClick={() => navigate(`/admin/evaluation/my-records/${record.id}?readonly=true&from=summary`)}
-                    style={{ fontWeight: 600, borderRadius: 6 }}
-                    size="small"
-                >
-                    Chi tiết
-                </Button>
+                <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <ActionButton
+                        variant="view"
+                        tooltip="Xem chi tiết"
+                        icon={<EyeOutlined style={{ fontSize: 16 }} />}
+                        aria-label="Xem chi tiết"
+                        onClick={() => navigate(`/admin/evaluation/my-records/${record.id}?readonly=true&from=summary`)}
+                    />
+                </div>
             ),
         },
     ];
@@ -1269,6 +1210,18 @@ const CompletedEvaluationsPage = () => {
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <FilterOutlined style={{ color: "#722ed1", fontSize: 16 }} />
                         <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 15 }}>Bộ lọc dữ liệu</span>
+                        {isFiltered && (
+                            <Button
+                                type="dashed"
+                                danger
+                                icon={<ReloadOutlined />}
+                                onClick={handleResetFilters}
+                                style={{ borderRadius: 8, fontWeight: 600, marginLeft: 8 }}
+                                size="small"
+                            >
+                                Đặt lại bộ lọc
+                            </Button>
+                        )}
                     </div>
                     <Access permission={ALL_PERMISSIONS.EVALUATION.GET_COMPLETED_SUMMARY} hideChildren>
                         <Dropdown menu={{ items: exportMenuItems }} trigger={["click"]} disabled={!filteredRecords.length}>
@@ -1285,31 +1238,6 @@ const CompletedEvaluationsPage = () => {
                 <Row gutter={[24, 16]}>
                     <Col xs={24} md={8} lg={6}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            <span style={{ fontWeight: 600, color: "#475569", fontSize: 12 }}>Kỳ đánh giá:</span>
-                            <Select
-                                style={{ width: "100%" }}
-                                value={selectedPeriod}
-                                onChange={setSelectedPeriod}
-                                options={periods.map(p => ({
-                                    label: `${p.name}${p.company?.name ? ` - ${p.company.name}` : ""}`,
-                                    value: p.id,
-                                }))}
-                                placeholder={selectedCompany ? "Tìm kỳ theo công ty đã chọn" : "Tìm kỳ đánh giá"}
-                                loading={periodLoading}
-                                showSearch
-                                filterOption={false}
-                                onSearch={setPeriodSearch}
-                                onOpenChange={(open) => {
-                                    if (open) fetchPeriods(periodSearch, selectedCompany, false);
-                                }}
-                                notFoundContent={periodLoading ? "Đang tải..." : "Không tìm thấy kỳ đánh giá"}
-                                allowClear
-                                popupMatchSelectWidth={false}
-                            />
-                        </div>
-                    </Col>
-                    <Col xs={24} md={8} lg={6}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <span style={{ fontWeight: 600, color: "#475569", fontSize: 12 }}>Công ty:</span>
                             <Select
                                 style={{ width: "100%" }}
@@ -1317,6 +1245,28 @@ const CompletedEvaluationsPage = () => {
                                 onChange={handleCompanyChange}
                                 options={companies.map(c => ({ label: c.name, value: c.id }))}
                                 placeholder="Tất cả công ty"
+                                allowClear
+                                popupMatchSelectWidth={false}
+                            />
+                        </div>
+                    </Col>
+                    <Col xs={24} md={8} lg={6}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <span style={{ fontWeight: 600, color: "#475569", fontSize: 12 }}>Kỳ đánh giá:</span>
+                            <Select
+                                style={{ width: "100%" }}
+                                value={selectedPeriod}
+                                onChange={handlePeriodChange}
+                                options={periods.map(p => ({
+                                    label: `${p.name}${p.company?.name ? ` - ${p.company.name}` : ""}`,
+                                    value: p.id,
+                                }))}
+                                placeholder="Tất cả kỳ đánh giá"
+                                loading={periodLoading}
+                                showSearch
+                                filterOption={false}
+                                onSearch={setPeriodSearch}
+                                notFoundContent={periodLoading ? "Đang tải..." : "Không tìm thấy kỳ đánh giá"}
                                 allowClear
                                 popupMatchSelectWidth={false}
                             />
@@ -1356,7 +1306,7 @@ const CompletedEvaluationsPage = () => {
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             <span style={{ fontWeight: 600, color: "#475569", fontSize: 12 }}>Tìm kiếm nhân sự:</span>
                             <Input
-                                placeholder="Tên hoặc email..."
+                                placeholder="Tên, email hoặc mã NV..."
                                 prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
                                 value={searchText}
                                 onChange={e => setSearchText(e.target.value)}
@@ -1421,8 +1371,7 @@ const CompletedEvaluationsPage = () => {
                                     }
                                 }}
                                 label={{
-                                    type: 'inner',
-                                    offset: '-50%',
+                                    position: 'inside',
                                     text: (datum: any) => datum.value,
                                     style: {
                                         textAlign: 'center',
@@ -1535,7 +1484,15 @@ const CompletedEvaluationsPage = () => {
                     }}
                     scroll={{ x: "max-content" }}
                     size="middle"
-                    locale={{ emptyText: <Empty description="Không tìm thấy kết quả phù hợp" /> }}
+                    locale={{
+                        emptyText: (
+                            <Empty
+                                description={selectedPeriod
+                                    ? "Kỳ đánh giá này chưa có phiếu hoàn tất"
+                                    : "Không tìm thấy kết quả phù hợp"}
+                            />
+                        )
+                    }}
                 />
             </div>
         </PageContainer>

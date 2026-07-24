@@ -12,13 +12,13 @@ import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
 import { Radar, Column } from "@/components/common/chart/LazyChart";
 import {
-    callFetchEvaluationRecordById,
-    callEmployeeSaveScore,
-    callEmployeeSubmitRecord,
-    callEmployeeSaveSelfReview,
-    callEmployeeConfirmRecord,
-    callFetchRecordHistory,
-} from "@/config/api";
+    useEvaluationRecordQuery,
+    useEvaluationRecordHistoryQuery,
+    useEmployeeSaveScoreMutation,
+    useEmployeeSaveSelfReviewMutation,
+    useEmployeeSubmitMutation,
+    useEmployeeConfirmRecordMutation,
+} from "@/hooks/useEvaluations";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
@@ -187,9 +187,16 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
     const searchParams = new URLSearchParams(location.search);
     const isReadonlyView = searchParams.get("readonly") === "true";
 
+    const numId = Number(id);
+    const { data: recordData, isLoading: loading, isError, refetch: fetchRecord } = useEvaluationRecordQuery(numId);
+    const { data: history = [] } = useEvaluationRecordHistoryQuery(numId);
+
+    const saveScoreMutation = useEmployeeSaveScoreMutation();
+    const saveSelfReviewMutation = useEmployeeSaveSelfReviewMutation();
+    const submitMutation = useEmployeeSubmitMutation();
+    const confirmMutation = useEmployeeConfirmRecordMutation();
+
     const [record, setRecord] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [savingComment, setSavingComment] = useState(false);
@@ -197,11 +204,23 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
-    const [isError, setIsError] = useState(false);
     const [hoveredGroupId, setHoveredGroupId] = useState<string | number | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [isDirty, setIsDirty] = useState(false);
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (recordData) {
+            setRecord(recordData);
+            const commentSelf = recordData.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
+            if (commentSelf) setSelfReview(commentSelf.content);
+            const initScores: Record<number, number> = {};
+            recordData.scores?.forEach((s: any) => {
+                if (s.scoredBy === "EMPLOYEE") initScores[s.criteriaId] = s.score;
+            });
+            setLocalScores(initScores);
+        }
+    }, [recordData]);
 
     useEffect(() => {
         const top = topScrollRef.current;
@@ -297,42 +316,13 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         return false;
     });
 
-    const fetchRecord = useCallback(async () => {
-        if (!id || isNaN(Number(id))) return;
-        setLoading(true);
-        try {
-            const [recRes, histRes] = await Promise.all([
-                callFetchEvaluationRecordById(Number(id)),
-                callFetchRecordHistory(Number(id)),
-            ]);
-            if (recRes?.data) {
-                setRecord(recRes.data);
-                const commentSelf = recRes.data.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
-                if (commentSelf) setSelfReview(commentSelf.content);
-                const initScores: Record<number, number> = {};
-                recRes.data.scores?.forEach((s: any) => {
-                    if (s.scoredBy === "EMPLOYEE") initScores[s.criteriaId] = s.score;
-                });
-                setLocalScores(initScores);
-            }
-            if (histRes?.data) setHistory(histRes.data);
-            setIsError(false);
-        } catch {
-            notify.error("Lỗi tải dữ liệu đánh giá");
-            setIsError(true);
-        }
-        finally { setLoading(false); }
-    }, [id]);
-
-    useEffect(() => { fetchRecord(); }, [fetchRecord]);
-
     const handleSaveScore = async (criteriaId: number, score: number) => {
         if (!record?.id) return;
         const previousScore = localScores[criteriaId];
         setSavingScore(criteriaId);
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            const response = await callEmployeeSaveScore(record.id, criteriaId, score);
+            const response = await saveScoreMutation.mutateAsync({ recordId: record.id, criteriaId, score });
             const update = response.data;
             if (update) {
                 setRecord((current: any) => ({
@@ -341,7 +331,6 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
                     scoringSummary: update.scoringSummary,
                 }));
             }
-            notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
             setLocalScores(prev => {
                 const next = { ...prev };
@@ -357,7 +346,7 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         if (!record?.id) return;
         setSavingComment(true);
         try {
-            await callEmployeeSaveSelfReview(record.id, selfReview);
+            await saveSelfReviewMutation.mutateAsync({ recordId: record.id, content: selfReview });
             setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
@@ -375,10 +364,9 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         setSubmitting(true);
         try {
             // Tự động lưu nhận xét tự đánh giá trước khi nộp
-            await callEmployeeSaveSelfReview(record.id, selfReview);
+            await saveSelfReviewMutation.mutateAsync({ recordId: record.id, content: selfReview });
             setIsDirty(false);
-            await callEmployeeSubmitRecord(record.id);
-            notify.success("Đã nộp bản đánh giá!");
+            await submitMutation.mutateAsync(record.id);
             if (onClose || backPath) {
                 handleClose();
             } else {
@@ -393,8 +381,7 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
         if (!record?.id) return;
         setConfirming(true);
         try {
-            await callEmployeeConfirmRecord(record.id);
-            notify.success("Đã xác nhận kết quả!");
+            await confirmMutation.mutateAsync(record.id);
             fetchRecord();
         } catch (err: any) {
             notify.error(err?.message || err?.response?.data?.message || "Lỗi xác nhận");
@@ -437,7 +424,7 @@ const MyEvaluationDetailPage = ({ recordId, onClose }: MyEvaluationDetailPagePro
     if (isError) return renderInWorkspaceDrawer(
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", gap: 16, background: "#f8fafc" }}>
             <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
+            <Button type="primary" onClick={() => fetchRecord()}>Thử lại</Button>
         </div>
     );
     if (!record) return renderInWorkspaceDrawer(

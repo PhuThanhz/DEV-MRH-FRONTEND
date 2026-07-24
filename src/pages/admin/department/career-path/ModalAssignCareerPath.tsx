@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Form, Row, Col, Alert, Spin, Typography, Select } from "antd";
 import {
     ModalForm,
@@ -11,8 +11,10 @@ import dayjs from "dayjs";
 import {
     useAssignCareerPathMutation,
     useUpdateEmployeeCareerPathMutation,
+    useUsersUnassignedCareerPathQuery,
 } from "@/hooks/useEmployeeCareerPaths";
-import { callFetchUsersUnassignedCareerPath, callFetchUserPositions, callGetCareerPathTemplatesByDepartment } from "@/config/api";
+import { useCareerPathTemplatesByDepartmentQuery } from "@/hooks/useCareerPathTemplates";
+import { callFetchUserPositions } from "@/config/api";
 import type { ICareerPathTemplate, IEmployeeCareerPath } from "@/types/backend";
 
 const { Text } = Typography;
@@ -110,10 +112,21 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
 
-    const [templates, setTemplates] = useState<ICareerPathTemplate[]>([]);
-    const [loadingTemplates, setLoadingTemplates] = useState(false);
-    const [userOptions, setUserOptions] = useState<IUserOption[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false);
+    const { data: templates = [], isLoading: loadingTemplates } = useCareerPathTemplatesByDepartmentQuery(open ? departmentId : undefined);
+    const { data: rawUsers = [], isLoading: loadingUsers } = useUsersUnassignedCareerPathQuery(open && !isEdit ? departmentId : undefined);
+
+    const userOptions: IUserOption[] = useMemo(() => {
+        return (rawUsers ?? []).map((u: any) => {
+            const activePos = u.positions?.find((p: any) => p.active) ?? u.positions?.[0];
+            return {
+                id: String(u.id),
+                name: u.name,
+                email: u.email,
+                jobTitleName: activePos?.jobTitleNameVi,
+                positionCode: activePos?.positionCode,
+            };
+        });
+    }, [rawUsers]);
 
     const [loadingPosition, setLoadingPosition] = useState(false);
     const [detectedCareerPathId, setDetectedCareerPathId] = useState<number | undefined>(undefined);
@@ -127,50 +140,8 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
     const { mutate: assign, isPending: isAssigning } = useAssignCareerPathMutation();
     const { mutate: update, isPending: isUpdating } = useUpdateEmployeeCareerPathMutation();
 
-    // ── Load templates + users ────────────────────────────────────
     useEffect(() => {
-        if (!open || !departmentId) return;
-
-        // Load templates
-        const loadTemplates = async () => {
-            setLoadingTemplates(true);
-            try {
-                const res = await callGetCareerPathTemplatesByDepartment(departmentId);
-                setTemplates(res?.data ?? []);
-            } catch {
-                setTemplates([]);
-            } finally {
-                setLoadingTemplates(false);
-            }
-        };
-
-
-        // Load users với positions - chỉ lấy user thuộc phòng ban này
-        const loadUsers = async () => {
-            setLoadingUsers(true);
-            try {
-                const res = await callFetchUsersUnassignedCareerPath(departmentId); // ← đổi
-                const users = res?.data ?? []; // ← không cần .result vì là List, không phải paginate
-                const opts: IUserOption[] = users.map((u: any) => {
-                    const activePos = u.positions?.find((p: any) => p.active) ?? u.positions?.[0];
-                    return {
-                        id: String(u.id),
-                        name: u.name,
-                        email: u.email,
-                        jobTitleName: activePos?.jobTitleNameVi,
-                        positionCode: activePos?.positionCode,
-                    };
-                });
-                setUserOptions(opts);
-            } catch {
-                setUserOptions([]);
-            } finally {
-                setLoadingUsers(false);
-            }
-        };
-
-        loadTemplates();
-        if (!isEdit) loadUsers();
+        if (!open) return;
 
         if (isEdit && dataInit) {
             form.setFieldsValue({ note: dataInit.note });
@@ -186,7 +157,7 @@ const ModalAssignCareerPath = ({ open, onClose, dataInit, departmentId, onSucces
             setStepMatchWarning(false);
             setNotFound(false);
         }
-    }, [open, dataInit]);
+    }, [open, isEdit, dataInit, form]);
 
     // ── Detect vị trí khi chọn nhân viên ─────────────────────────
     const handleUserChange = async (userId: string) => {

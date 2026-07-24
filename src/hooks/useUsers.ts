@@ -5,6 +5,7 @@ import {
     callFetchUserById,
     callUpdateUser,
     callDeleteUser,
+    callFetchUsersCrossCompany,
 } from "@/config/api";
 import type { IUser, IModelPaginate } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
@@ -25,8 +26,20 @@ export const useUsersQuery = (query: string, enabled = true) => {
     });
 };
 
+export const useUsersCrossCompanyQuery = (query: string, enabled = true) => {
+    return useQuery({
+        queryKey: ["users-cross-company", query],
+        enabled,
+        queryFn: async () => {
+            const res = await callFetchUsersCrossCompany(query);
+            if (!res?.data) throw new Error("Không thể lấy danh sách người dùng liên công ty");
+            return res.data;
+        },
+    });
+};
+
 // ======================================================
-// GET DETAIL  ✅ đổi number → string
+// GET DETAIL
 // ======================================================
 export const useUserByIdQuery = (id?: string) => {
     return useQuery({
@@ -79,7 +92,6 @@ export const useUpdateUserMutation = () => {
             notify.updated(res?.message || "Cập nhật người dùng thành công");
             queryClient.invalidateQueries({ queryKey: ["users"] });
             if (variables?.id) {
-                // id là string UUID nên invalidate đúng key
                 queryClient.invalidateQueries({ queryKey: ["user", variables.id] });
             }
         },
@@ -95,7 +107,7 @@ export const useUpdateUserMutation = () => {
 export const useDeleteUserMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (id: string) => {  // ✅ string
+        mutationFn: async (id: string) => {
             const res = await callDeleteUser(id);
             if (!res?.statusCode || res.statusCode !== 200) {
                 throw new Error(res?.message || "Không thể xóa người dùng");

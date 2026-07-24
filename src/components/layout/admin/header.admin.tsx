@@ -14,6 +14,7 @@ import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
 import NotificationBell from "@/components/common/notification/NotificationBell";
 import { notify } from "@/components/common/notification/notify";
+import { useAvatarSrc } from "@/hooks/useAvatarSrc";
 
 const getAccountDropdownWidth = (triggerWidth = 0) => {
     const viewportWidth = window.innerWidth;
@@ -37,17 +38,13 @@ const HeaderAdmin: React.FC<IProps> = ({
     const user = useAppSelector((s) => s.account.user);
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const backendURL = import.meta.env.VITE_BACKEND_URL;
-
     const [menuOpen, setMenuOpen] = useState(false);
     const [notifOpen, setNotifOpen] = useState(false);
     const [openAccountModal, setOpenAccountModal] = useState(false);
     const [dropdownWidth, setDropdownWidth] = useState(292);
     const triggerRef = useRef<HTMLDivElement>(null);
 
-    const avatarSrc = user?.avatar
-        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar`
-        : undefined;
+    const { src: avatarSrc, onError: handleAvatarError } = useAvatarSrc(user?.avatar);
 
     const getInitials = (name?: string) =>
         name
@@ -87,12 +84,13 @@ const HeaderAdmin: React.FC<IProps> = ({
                         <Avatar
                             size={42}
                             src={avatarSrc}
+                            onError={handleAvatarError}
                             style={{
                                 background: "linear-gradient(135deg, #ec4899, #a855f7)",
                                 fontWeight: 700, fontSize: 14, color: "#fff",
                             }}
                         >
-                            {!user?.avatar && getInitials(user?.name)}
+                            {!avatarSrc && getInitials(user?.name)}
                         </Avatar>
                         <span style={{
                             position: "absolute", bottom: 0, right: 0,
@@ -272,6 +270,7 @@ const HeaderAdmin: React.FC<IProps> = ({
                                     <Avatar
                                         size={36}
                                         src={avatarSrc}
+                                        onError={handleAvatarError}
                                         style={{
                                             backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",
                                             border: "1.5px solid rgba(255,255,255,0.55)",
@@ -280,7 +279,7 @@ const HeaderAdmin: React.FC<IProps> = ({
                                             color: "#fff",
                                         }}
                                     >
-                                        {!user?.avatar && getInitials(user?.name)}
+                                        {!avatarSrc && getInitials(user?.name)}
                                     </Avatar>
                                     <span
                                         className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-pink-500"

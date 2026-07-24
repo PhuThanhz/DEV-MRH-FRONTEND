@@ -7,7 +7,9 @@ import type {
     IEvaluationHistory,
     IBatchApproveResponse,
     IModelPaginate,
-    IPeriodProgress
+    IPeriodProgress,
+    IManagerDashboard,
+    IApproverDashboard
 } from "@/types/backend";
 import {
     callFetchEvaluationRecordById,
@@ -34,7 +36,30 @@ import {
     callFetchCompletedSummary,
     callEmployeeConfirmRecord,
     callFetchRecordHistory,
-    callFetchPeriodProgress
+    callFetchPeriodProgress,
+    callFetchManagerDashboard,
+    callFetchApproverDashboard,
+    callFetchEvaluationPeriods,
+    callActivateEvaluationPeriod,
+    callCloseEvaluationPeriod,
+    callAdjustEvaluationPeriodStartDate,
+    callFetchTemplatesInPeriod,
+    callAddTemplateToPeriod,
+    callRemoveTemplateFromPeriod,
+    callFetchEmployeesInPeriod,
+    callAddEmployeeToPeriod,
+    callCancelPeriodEmployee,
+    callFetchEvaluationTemplateById,
+    callCreateTemplateSection,
+    callUpdateTemplateSection,
+    callDeleteTemplateSection,
+    callCreateTemplateCriteria,
+    callUpdateTemplateCriteria,
+    callDeleteTemplateCriteria,
+    callCreateCriteriaLevel,
+    callUpdateCriteriaLevel,
+    callPublishEvaluationTemplate,
+    callFetchEvaluationTemplates,
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
 
@@ -54,6 +79,30 @@ export const usePeriodProgressQuery = (periodId: number) => {
     });
 };
 
+export const useManagerDashboardQuery = (periodId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["manager-dashboard", periodId ?? null],
+        queryFn: async () => {
+            const res = await callFetchManagerDashboard(periodId);
+            if (!res?.data) throw new Error("Không lấy được dashboard quản lý");
+            return res.data as IManagerDashboard;
+        },
+        enabled,
+    });
+};
+
+export const useApproverDashboardQuery = (periodId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["approver-dashboard", periodId ?? null],
+        queryFn: async () => {
+            const res = await callFetchApproverDashboard(periodId);
+            if (!res?.data) throw new Error("Không lấy được dashboard người phê duyệt");
+            return res.data as IApproverDashboard;
+        },
+        enabled,
+    });
+};
+
 export const useEvaluationRecordQuery = (id: number) => {
     return useQuery({
         queryKey: ["evaluation-record", id],
@@ -63,6 +112,8 @@ export const useEvaluationRecordQuery = (id: number) => {
             return res.data;
         },
         enabled: !!id,
+        staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
     });
 };
 
@@ -155,14 +206,26 @@ export const useCompletedSummaryQuery = (
     companyId?: number,
     sectionId?: number,
     page: number = 1,
-    size: number = 15
+    size: number = 15,
+    searchText?: string,
+    filterGrade?: string
 ) => {
     return useQuery({
-        queryKey: ["evaluation-completed-summary", periodId, departmentId, companyId, sectionId, page, size],
+        queryKey: ["evaluation-completed-summary", periodId, departmentId, companyId, sectionId, page, size, searchText, filterGrade],
         queryFn: async () => {
-            const res = await callFetchCompletedSummary(periodId, departmentId, companyId, sectionId, page, size);
+            const res = await callFetchCompletedSummary(periodId, departmentId, companyId, sectionId, page, size, searchText, filterGrade);
             if (!res?.data) throw new Error("Không tải được tổng hợp kết quả");
             return res.data;
+        },
+    });
+};
+
+export const useEvaluationPeriodsQuery = (query: string = "") => {
+    return useQuery({
+        queryKey: ["evaluation-periods", query],
+        queryFn: async () => {
+            const res = await callFetchEvaluationPeriods(query);
+            return res?.data;
         },
     });
 };
@@ -318,6 +381,7 @@ export const useExtendRecordDeadlineMutation = () => {
         }) => callExtendEvaluationRecordDeadline(data),
         onSuccess: () => {
             notify.success("Đã gia hạn thời gian xử lý");
+            qc.invalidateQueries({ queryKey: ["period-employees"] });
             qc.invalidateQueries({ queryKey: ["evaluation-record"] });
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
@@ -343,6 +407,7 @@ export const useReassignEvaluatorsMutation = () => {
         }) => callReassignEvaluators(data),
         onSuccess: () => {
             notify.success("Đã điều chuyển người xử lý");
+            qc.invalidateQueries({ queryKey: ["period-employees"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
@@ -366,6 +431,246 @@ export const useEmployeeConfirmRecordMutation = () => {
             qc.invalidateQueries({ queryKey: ["my-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
+        },
+    });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERIOD DETAIL HOOKS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const useTemplatesInPeriodQuery = (periodId: number) => {
+    return useQuery({
+        queryKey: ["period-templates", periodId],
+        queryFn: async () => {
+            const res = await callFetchTemplatesInPeriod(periodId);
+            return res?.data || [];
+        },
+        enabled: !!periodId,
+    });
+};
+
+export const useEvaluationTemplatesQuery = (query: string = "page=1&size=100", enabled = true) => {
+    return useQuery({
+        queryKey: ["evaluation-templates", query],
+        queryFn: async () => {
+            const res = await callFetchEvaluationTemplates(query);
+            if (!res?.data) throw new Error("Không tải được danh sách mẫu đánh giá");
+            return res.data;
+        },
+        enabled,
+    });
+};
+
+export const useEmployeesInPeriodQuery = (periodId: number) => {
+    return useQuery({
+        queryKey: ["period-employees", periodId],
+        queryFn: async () => {
+            const res = await callFetchEmployeesInPeriod(periodId);
+            return res?.data || [];
+        },
+        enabled: !!periodId,
+    });
+};
+
+export const useAddTemplateToPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { periodId: number; templateId: number }) =>
+            callAddTemplateToPeriod(variables.periodId, variables.templateId),
+        onSuccess: (_, variables) => {
+            notify.success("Đã thêm mẫu đánh giá vào kỳ");
+            qc.invalidateQueries({ queryKey: ["period-templates", variables.periodId] });
+        },
+    });
+};
+
+export const useRemoveTemplateFromPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { periodId: number; templateId: number }) =>
+            callRemoveTemplateFromPeriod(variables.periodId, variables.templateId),
+        onSuccess: (_, variables) => {
+            notify.success("Đã xóa mẫu đánh giá khỏi kỳ");
+            qc.invalidateQueries({ queryKey: ["period-templates", variables.periodId] });
+        },
+    });
+};
+
+export const useAddEmployeeToPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { periodId: number; data: any }) =>
+            callAddEmployeeToPeriod(variables.periodId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Đã thêm nhân sự vào kỳ");
+            qc.invalidateQueries({ queryKey: ["period-employees", variables.periodId] });
+        },
+    });
+};
+
+export const useCancelPeriodEmployeeMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { id: number; periodId: number }) =>
+            callCancelPeriodEmployee(variables.id),
+        onSuccess: (_, variables) => {
+            notify.success("Đã hủy lượt đánh giá của nhân sự");
+            qc.invalidateQueries({ queryKey: ["period-employees", variables.periodId] });
+        },
+    });
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPLATE DETAIL HOOKS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const useEvaluationTemplateByIdQuery = (id: number) => {
+    return useQuery({
+        queryKey: ["evaluation-template", id],
+        queryFn: async () => {
+            const res = await callFetchEvaluationTemplateById(id);
+            if (!res?.data) throw new Error("Không thể lấy thông tin mẫu đánh giá");
+            return res.data;
+        },
+        enabled: !!id,
+    });
+};
+
+export const useCreateTemplateSectionMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { templateId: number; data: any }) =>
+            callCreateTemplateSection(variables.templateId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Thêm phần đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useUpdateTemplateSectionMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { sectionId: number; templateId: number; data: any }) =>
+            callUpdateTemplateSection(variables.sectionId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Cập nhật phần đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useDeleteTemplateSectionMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { sectionId: number; templateId: number }) =>
+            callDeleteTemplateSection(variables.sectionId),
+        onSuccess: (_, variables) => {
+            notify.success("Đã xóa phần đánh giá");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useCreateTemplateCriteriaMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { sectionId: number; templateId: number; data: any }) =>
+            callCreateTemplateCriteria(variables.sectionId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Thêm tiêu chí thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useUpdateTemplateCriteriaMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { criteriaId: number; templateId: number; data: any }) =>
+            callUpdateTemplateCriteria(variables.criteriaId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Cập nhật tiêu chí thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useDeleteTemplateCriteriaMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { criteriaId: number; templateId: number }) =>
+            callDeleteTemplateCriteria(variables.criteriaId),
+        onSuccess: (_, variables) => {
+            notify.success("Đã xóa tiêu chí");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useCreateCriteriaLevelMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { criteriaId: number; templateId: number; data: any }) =>
+            callCreateCriteriaLevel(variables.criteriaId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Thêm mức điểm thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const useUpdateCriteriaLevelMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { levelId: number; templateId: number; data: any }) =>
+            callUpdateCriteriaLevel(variables.levelId, variables.data),
+        onSuccess: (_, variables) => {
+            notify.success("Cập nhật mức điểm thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.templateId] });
+        },
+    });
+};
+
+export const usePublishTemplateMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (templateId: number) => callPublishEvaluationTemplate(templateId),
+        onSuccess: (_, templateId) => {
+            notify.success("Đã xuất bản mẫu đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-template", templateId] });
+        },
+    });
+};
+
+export const useActivateEvaluationPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => callActivateEvaluationPeriod(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
+        },
+    });
+};
+
+export const useCloseEvaluationPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => callCloseEvaluationPeriod(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
+        },
+    });
+};
+
+export const useAdjustEvaluationPeriodStartDateMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: { id: number; employeeStartDate: string }) =>
+            callAdjustEvaluationPeriodStartDate(variables.id, { employeeStartDate: variables.employeeStartDate }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
         },
     });
 };

@@ -23,6 +23,28 @@ const DEFAULT_DURATION: Record<NotifyVariant, number> = {
     warning: 4000,
     error: 5000,
 };
+const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+const clearDismissTimer = (id: string) => {
+    const timer = dismissTimers.get(id);
+    if (timer) clearTimeout(timer);
+    dismissTimers.delete(id);
+};
+
+const dismissToast = (id: string) => {
+    clearDismissTimer(id);
+    toast.dismiss(id);
+};
+
+const scheduleDismiss = (id: string, duration: number) => {
+    clearDismissTimer(id);
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    dismissTimers.set(id, setTimeout(() => {
+        dismissTimers.delete(id);
+        toast.dismiss(id);
+    }, duration));
+};
 
 const GENERIC_TITLES = new Set([
     "thành công",
@@ -291,36 +313,46 @@ const variantConfig: Record<NotifyVariant, {
     icon: ReactNode;
     iconBg: string;
     iconColor: string;
+    surface: string;
     border: string;
     progress: string;
+    progressEnd: string;
 }> = {
     success: {
         icon: <CheckCircleFilled />,
-        iconBg: "#ecfdf5",
-        iconColor: "#10b981",
+        iconBg: "#dcfce7",
+        iconColor: "#059669",
+        surface: "#f0fdf4",
         border: "#bbf7d0",
         progress: "#10b981",
+        progressEnd: "#34d399",
     },
     error: {
         icon: <ExclamationCircleFilled />,
-        iconBg: "#fef2f2",
-        iconColor: "#ef4444",
+        iconBg: "#fee2e2",
+        iconColor: "#dc2626",
+        surface: "#fef2f2",
         border: "#fecaca",
         progress: "#ef4444",
+        progressEnd: "#fb7185",
     },
     warning: {
         icon: <WarningFilled />,
-        iconBg: "#fffbeb",
-        iconColor: "#d97706",
+        iconBg: "#fef3c7",
+        iconColor: "#b45309",
+        surface: "#fffbeb",
         border: "#fde68a",
         progress: "#d97706",
+        progressEnd: "#fbbf24",
     },
     info: {
         icon: <InfoCircleFilled />,
-        iconBg: "#eff6ff",
+        iconBg: "#dbeafe",
         iconColor: "#2563eb",
+        surface: "#eff6ff",
         border: "#bfdbfe",
         progress: "#2563eb",
+        progressEnd: "#60a5fa",
     },
 };
 
@@ -343,67 +375,70 @@ const renderToastCard = ({
         <div
             role={variant === "error" || variant === "warning" ? "alert" : "status"}
             aria-live={variant === "error" || variant === "warning" ? "assertive" : "polite"}
+            aria-atomic="true"
             style={{
-                width: "min(420px, calc(100vw - 32px))",
+                width: "min(378px, calc(100vw - 24px))",
                 position: "relative",
                 overflow: "hidden",
-                borderRadius: 10,
-                background: "#ffffff",
+                borderRadius: 14,
+                background: `linear-gradient(135deg, ${config.surface} 0%, #ffffff 48%)`,
                 border: `1px solid ${config.border}`,
-                boxShadow: "0 10px 26px rgba(15, 23, 42, 0.13)",
-                padding: "12px 14px 14px",
+                boxShadow: "0 16px 40px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(15, 23, 42, 0.06)",
+                padding: "11px 12px 13px",
                 fontFamily: "var(--ant-font-family), Inter, -apple-system, BlinkMacSystemFont, sans-serif",
             }}
         >
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
                 <div
                     style={{
-                        width: 32,
-                        height: 32,
+                        width: 34,
+                        height: 34,
                         flex: "0 0 auto",
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 8,
+                        borderRadius: 11,
                         background: config.iconBg,
                         color: config.iconColor,
-                        fontSize: 16,
+                        fontSize: 17,
+                        boxShadow: `inset 0 0 0 1px ${config.border}`,
                     }}
                 >
                     {config.icon}
                 </div>
 
                 <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 760, lineHeight: 1.35 }}>
+                            <div style={{ color: "#172033", fontSize: 13.5, fontWeight: 750, lineHeight: 1.35, letterSpacing: "-0.01em" }}>
                                 {title}
                             </div>
-                            <div style={{ marginTop: 2, color: "#475569", fontSize: 12.5, fontWeight: 500, lineHeight: 1.5 }}>
+                            <div style={{ marginTop: 2, color: "#64748b", fontSize: 12.25, fontWeight: 500, lineHeight: 1.45 }}>
                                 {message}
                             </div>
                         </div>
 
                         <button
                             type="button"
+                            className="lotus-toast-close"
                             aria-label="Đóng thông báo"
-                            onClick={() => toast.dismiss(id)}
+                            onClick={() => dismissToast(id)}
                             style={{
-                                width: 26,
-                                height: 26,
+                                width: 28,
+                                height: 28,
                                 flex: "0 0 auto",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 border: 0,
-                                borderRadius: 8,
-                                background: "#f8fafc",
+                                borderRadius: 9,
+                                background: "transparent",
                                 color: "#94a3b8",
                                 cursor: "pointer",
                                 padding: 0,
                             }}
                         >
-                            <CloseOutlined style={{ fontSize: 11 }} />
+                            <CloseOutlined style={{ fontSize: 10.5 }} />
                         </button>
                     </div>
                 </div>
@@ -415,8 +450,8 @@ const renderToastCard = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: 2,
-                    background: "#f1f5f9",
+                    height: 2.5,
+                    background: "rgba(148, 163, 184, 0.12)",
                 }}
             >
                 <div
@@ -424,7 +459,7 @@ const renderToastCard = ({
                         height: "100%",
                         width: "100%",
                         transformOrigin: "left center",
-                        background: config.progress,
+                        background: `linear-gradient(90deg, ${config.progress}, ${config.progressEnd})`,
                         animation: `lotus-toast-progress ${duration}ms linear forwards`,
                     }}
                 />
@@ -440,7 +475,10 @@ const openToast = (variant: NotifyVariant, message: string, opts?: NotifyOptions
     const duration = opts?.duration ?? DEFAULT_DURATION[resolvedVariant];
     const copy = resolveNotifyCopy(resolvedVariant, message, opts?.title);
 
-    return toast.custom(
+    // Deduplicate toast ID to prevent waterfall spam when buttons are clicked multiple times
+    const toastId = opts?.id ?? opts?.toastId ?? `notify:${resolvedVariant}:${copy.title}:${copy.description}`;
+
+    const id = toast.custom(
         (t) => renderToastCard({
             id: String(t.id),
             title: copy.title,
@@ -449,12 +487,14 @@ const openToast = (variant: NotifyVariant, message: string, opts?: NotifyOptions
             duration,
         }),
         {
-            id: opts?.id ?? opts?.toastId,
+            id: toastId,
             duration,
             removeDelay: TOAST_REMOVE_DELAY,
             position: "top-right",
         }
     );
+    scheduleDismiss(String(id), duration);
+    return id;
 };
 
 export const notify = {
@@ -485,20 +525,24 @@ export const notify = {
     created: (msg: string, opts?: NotifyOptions) => openToast("success", msg, opts),
     updated: (msg: string, opts?: NotifyOptions) => openToast("success", msg, opts),
     deleted: (msg: string, opts?: NotifyOptions) => openToast("success", msg, opts),
-    pushNotification: (title: string, msg: string, opts?: NotifyOptions) =>
-        toast.custom(
+    pushNotification: (title: string, msg: string, opts?: NotifyOptions) => {
+        const duration = opts?.duration ?? 3200;
+        const id = toast.custom(
             (t) => renderToastCard({
                 id: String(t.id),
                 title: withoutTerminalPunctuation(cleanText(title)) || "Thông tin cập nhật",
                 message: asSentence(msg),
                 variant: "info",
-                duration: opts?.duration ?? 3200,
+                duration,
             }),
             {
                 id: opts?.id ?? opts?.toastId,
-                duration: opts?.duration ?? 3200,
+                duration,
                 removeDelay: TOAST_REMOVE_DELAY,
                 position: "top-right",
             }
-        ),
+        );
+        scheduleDismiss(String(id), duration);
+        return id;
+    },
 };

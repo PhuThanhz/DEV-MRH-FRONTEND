@@ -1964,6 +1964,8 @@ export interface IEvaluationPeriod {
 export interface IPeriodProgress {
     kpiProgress: {
         totalRecords: number;
+        notStartedCount: number;
+        notStartedPercentage: number;
         draftingCount: number;
         draftingPercentage: number;
         pendingManagerCount: number;
@@ -2034,6 +2036,25 @@ export interface IEvaluationTaskCounts {
     myPending: number;
     pendingManager: number;
     pendingApproval: number;
+}
+
+export interface IManagerDashboard {
+    totalEmployees: number;
+    notStartedCount: number;
+    pendingReviewCount: number;
+    reviewedCount: number;
+    approvedCount: number;
+    revisionNeededCount: number;
+    records: IEvaluationRecord[];
+}
+
+export interface IApproverDashboard {
+    totalEmployees: number;
+    completedCount: number;
+    pendingApprovalCount: number;
+    revisionNeededCount: number;
+    gradeDistribution: Record<string, number>;
+    records: IEvaluationRecord[];
 }
 
 export interface IEvaluationDelegation {

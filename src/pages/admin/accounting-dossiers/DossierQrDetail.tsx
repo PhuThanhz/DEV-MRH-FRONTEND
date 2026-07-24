@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Result, Spin, Button, Card, Space, Tag, Descriptions } from "antd";
 import { QrcodeOutlined, HomeOutlined, FileTextOutlined } from "@ant-design/icons";
 import { useAppSelector } from "@/redux/hooks";
-import { callFetchDossierByQrToken } from "@/config/api";
+import { useDossierByQrTokenQuery } from "@/hooks/useAccountingDossiers";
 import DossierDocumentList from "./components/DossierDocumentList";
 import type { IAccountingDossier } from "@/types/backend";
 import dayjs from "dayjs";
@@ -23,45 +23,28 @@ const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
 const DossierQrDetail = () => {
     const { token } = useParams<{ token: string }>();
     const navigate = useNavigate();
-    const { isAuthenticated, isLoading } = useAppSelector((state) => state.account);
+    const { isAuthenticated, isLoading: isAuthLoading } = useAppSelector((state) => state.account);
 
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<IAccountingDossier | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const canFetch = !isAuthLoading && (isAuthenticated || !!localStorage.getItem("access_token"));
 
     useEffect(() => {
-        if (isLoading) return;
-
+        if (isAuthLoading) return;
         if (!isAuthenticated) {
             const token_stored = localStorage.getItem("access_token");
             if (!token_stored) {
                 navigate(`/login?callback=/admin/accounting-dossiers/qr/${token}`, { replace: true });
-                return;
             }
-            return;
         }
+    }, [isAuthenticated, isAuthLoading, token, navigate]);
 
-        if (token) fetchDossier();
-    }, [isAuthenticated, isLoading, token]);
+    const { data, isLoading: loading, isError, error: fetchError, refetch } = useDossierByQrTokenQuery(
+        token,
+        { enabled: canFetch }
+    );
 
-    const fetchDossier = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await callFetchDossierByQrToken(token!);
-            if (res.data) {
-                setData(res.data);
-            } else {
-                throw new Error("Không tìm thấy bộ chứng từ");
-            }
-        } catch (err: any) {
-            setError(err?.message || "Không có quyền truy cập bộ chứng từ này");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const error = isError ? ((fetchError as any)?.message || "Không có quyền truy cập bộ chứng từ này") : null;
 
-    if (isLoading) {
+    if (isAuthLoading) {
         return (
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}>
                 <Spin size="large" tip="Đang kiểm tra quyền truy cập..." />
@@ -88,7 +71,7 @@ const DossierQrDetail = () => {
                     <Button type="primary" key="home" onClick={() => navigate("/admin")}>
                         Về trang chủ
                     </Button>,
-                    <Button key="retry" onClick={fetchDossier}>
+                    <Button key="retry" onClick={() => refetch()}>
                         Thử lại
                     </Button>
                 ]}

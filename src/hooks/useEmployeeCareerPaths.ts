@@ -8,6 +8,7 @@ import {
     callGetEmployeeCareerPathsByDepartment,
     callGetUpcomingPromotions,
     callGetEmployeeCareerPathHistory,
+    callFetchUsersUnassignedCareerPath,
 } from "@/config/api";
 import type {
     IEmployeeCareerPath,
@@ -43,6 +44,18 @@ export const useEmployeeCareerPathsByDepartmentQuery = (departmentId?: number) =
             const res = await callGetEmployeeCareerPathsByDepartment(departmentId!);
             if (!res?.data) throw new Error("Không thể lấy danh sách lộ trình");
             return res.data as IEmployeeCareerPath[];
+        },
+    });
+};
+
+/** Lấy danh sách nhân viên chưa gán lộ trình theo phòng ban */
+export const useUsersUnassignedCareerPathQuery = (departmentId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["users-unassigned-career-path", departmentId],
+        enabled: !!departmentId && enabled,
+        queryFn: async () => {
+            const res = await callFetchUsersUnassignedCareerPath(departmentId!);
+            return (res?.data ?? []) as any[];
         },
     });
 };

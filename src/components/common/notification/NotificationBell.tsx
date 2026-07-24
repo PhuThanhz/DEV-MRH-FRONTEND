@@ -26,7 +26,7 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                 onOpenChange={setOpen}
                 trigger={["click"]}
                 placement="bottomRight"
-                overlayStyle={{ zIndex: 10000, padding: 0, borderRadius: 10, overflow: "hidden" }}
+                overlayStyle={{ padding: 0, borderRadius: 10, overflow: "hidden" }}
                 getPopupContainer={() => document.body}
                 popupRender={() => (
                     <NotificationGrid

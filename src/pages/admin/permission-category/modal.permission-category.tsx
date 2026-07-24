@@ -8,7 +8,7 @@ import {
     useUpdatePermissionCategoryMutation,
 } from "@/hooks/usePermissionCategory";
 import { useCompaniesQuery } from "@/hooks/useCompanies";
-import { callFetchDepartmentsByCompany } from "@/config/api";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import type { IPermissionCategory } from "@/types/backend";
 import { useModalWidth } from "@/components/common/modal/detail";
 
@@ -29,8 +29,6 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
     const width = useModalWidth(500);
 
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-    const [deptOptions, setDeptOptions] = useState<any[]>([]);
-    const [loadingDept, setLoadingDept] = useState(false);
 
     const createMutation = useCreatePermissionCategoryMutation();
     const updateMutation = useUpdatePermissionCategoryMutation();
@@ -42,21 +40,15 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
         [companyData]
     );
 
-    const fetchDepartments = async (companyId: number) => {
-        setLoadingDept(true);
-        try {
-            const res = await callFetchDepartmentsByCompany(companyId);
-            setDeptOptions(res?.data?.map((d: any) => ({ label: d.name, value: d.id })) || []);
-        } finally {
-            setLoadingDept(false);
-        }
-    };
+    const { data: deptsData, isLoading: loadingDept } = useDepartmentsByCompanyQuery(selectedCompanyId ?? 0);
+    const deptOptions = useMemo(
+        () => (deptsData ?? []).map((d: any) => ({ label: d.name, value: d.id })),
+        [deptsData]
+    );
 
-    const handleCompanyChange = async (value: number) => {
+    const handleCompanyChange = (value: number) => {
         setSelectedCompanyId(value);
         form.setFieldsValue({ departmentId: undefined });
-        setDeptOptions([]);
-        if (value) await fetchDepartments(value);
     };
 
     useEffect(() => {
@@ -71,19 +63,16 @@ const ModalCategory = ({ open, setOpen, dataInit, setDataInit, onSuccess }: IPro
                 departmentId: dataInit.departmentId,
                 active: dataInit.active,
             });
-            if (companyId) fetchDepartments(companyId);
         } else {
             form.resetFields();
             form.setFieldsValue({ active: true });
             setSelectedCompanyId(null);
-            setDeptOptions([]);
         }
     }, [open, dataInit]);
 
     const handleClose = () => {
         form.resetFields();
         setSelectedCompanyId(null);
-        setDeptOptions([]);
         setDataInit(null);
         setOpen(false);
     };

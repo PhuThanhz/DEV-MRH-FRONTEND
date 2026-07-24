@@ -23,19 +23,19 @@ import {
     RightOutlined,
 } from "@ant-design/icons";
 import {
-    callFetchTemplatesInPeriod,
-    callAddTemplateToPeriod,
-    callRemoveTemplateFromPeriod,
-    callFetchEmployeesInPeriod,
-    callAddEmployeeToPeriod,
-    callCancelPeriodEmployee,
-    callFetchEvaluationTemplates,
-    callFetchUsersCrossCompany,
-    callFetchCompany,
-    callFetchDepartmentsByCompany,
-    callExtendEvaluationRecordDeadline,
-    callReassignEvaluators,
-} from "@/config/api";
+    useTemplatesInPeriodQuery,
+    useAddTemplateToPeriodMutation,
+    useRemoveTemplateFromPeriodMutation,
+    useEmployeesInPeriodQuery,
+    useAddEmployeeToPeriodMutation,
+    useCancelPeriodEmployeeMutation,
+    useExtendRecordDeadlineMutation,
+    useReassignEvaluatorsMutation,
+    useEvaluationTemplatesQuery,
+} from "@/hooks/useEvaluations";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import { useUsersCrossCompanyQuery } from "@/hooks/useUsers";
 import type { IEvaluationPeriod, IEvaluationTemplate } from "@/types/backend";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
@@ -467,22 +467,49 @@ const PeriodDetailDrawer = (props: IProps) => {
     const [managerPickerOpen, setManagerPickerOpen] = useState(false);
     const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
     const [reassigning, setReassigning] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [linkedTemplates, setLinkedTemplates] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [linkedEmployees, setLinkedEmployees] = useState<any[]>([]);
-    const [activeTemplates, setActiveTemplates] = useState<IEvaluationTemplate[]>([]);
-    // Pool nhân viên cho ô "Nhân viên tham gia": lọc theo công ty + phòng ban ở phía server.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [employeePool, setEmployeePool] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [companies, setCompanies] = useState<any[]>([]);
+    const periodId = period?.id || 0;
+    const { data: linkedTemplates = [], isLoading: loadingTemplates } = useTemplatesInPeriodQuery(periodId);
+    const { data: linkedEmployees = [], isLoading: loadingEmployees } = useEmployeesInPeriodQuery(periodId);
+
+    const addTemplateMutation = useAddTemplateToPeriodMutation();
+    const removeTemplateMutation = useRemoveTemplateFromPeriodMutation();
+    const addEmployeeMutation = useAddEmployeeToPeriodMutation();
+    const cancelEmployeeMutation = useCancelPeriodEmployeeMutation();
+    const extendMutation = useExtendRecordDeadlineMutation();
+    const reassignMutation = useReassignEvaluatorsMutation();
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [departments, setDepartments] = useState<any[]>([]);
     const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
     const referenceDataPeriodIdRef = useRef<number | null>(null);
+
+    const { data: companiesData } = useCompaniesQuery("page=1&size=100&sort=name,asc", open);
+    const companies = companiesData?.result ?? [];
+
+    const effectiveCompanyId = period?.company?.id ?? selectedCompanyId;
+
+    const { data: departmentsData = [] } = useDepartmentsByCompanyQuery(open && effectiveCompanyId ? effectiveCompanyId : 0);
+    const departments = departmentsData;
+
+    const userPoolQueryString = useMemo(() => {
+        if (!effectiveCompanyId) return "";
+        const parts = ["page=1", "size=500", `companyId=${effectiveCompanyId}`];
+        if (selectedDepartmentIds && selectedDepartmentIds.length > 0) {
+            selectedDepartmentIds.forEach(id => parts.push(`departmentIds=${id}`));
+        }
+        return parts.join("&");
+    }, [effectiveCompanyId, selectedDepartmentIds]);
+
+    const { data: userPoolData } = useUsersCrossCompanyQuery(userPoolQueryString, open && Boolean(effectiveCompanyId));
+    const employeePool = (userPoolData as any)?.result ?? [];
+
+    const { data: templatesData } = useEvaluationTemplatesQuery("page=1&size=100&filter=status='ACTIVE'", open && Boolean(period?.id));
+    const activeTemplates = useMemo(() => {
+        const result = (templatesData as any)?.result ?? [];
+        const periodCompanyId = period?.company?.id;
+        return periodCompanyId
+            ? result.filter((t: any) => t.company?.id === periodCompanyId)
+            : result;
+    }, [templatesData, period?.company?.id]);
 
     const extendRecordRows = useMemo(() => {
         if (!selectedEmployeeForExtend) return [];
@@ -572,8 +599,6 @@ const PeriodDetailDrawer = (props: IProps) => {
     }, [customExtendDeadlines, extendCascadeEnabled, extendDeadlineMode, extendDeadlineValue, extendInputMode, extendOffsetDays, extendOffsetHours, extendRecordRows, extendStrategy, period, phaseCustomDeadlines, selectedEmployeeForExtend]);
 
     // Loading states
-    const [, setLoadingTemplates] = useState(false);
-    const [loadingEmployees, setLoadingEmployees] = useState(false);
     const [submittingTemplate, setSubmittingTemplate] = useState(false);
     const [removingTemplateId, setRemovingTemplateId] = useState<number | null>(null);
     const [submittingEmployee, setSubmittingEmployee] = useState(false);
@@ -584,71 +609,21 @@ const PeriodDetailDrawer = (props: IProps) => {
     // Fetch initial templates & users on open
     useEffect(() => {
         if (open && period?.id) {
-            fetchLinkedTemplates();
-            fetchLinkedEmployees();
+            setSelectedRowKeys([]);
             referenceDataPeriodIdRef.current = null;
             const companyId = period.company?.id ?? null;
             setSelectedCompanyId(companyId);
             setSelectedDepartmentIds([]);
-            setDepartments([]);
-            if (companyId) {
-                void loadDepartments(companyId);
-                void loadEmployeePool(companyId, []);
-            }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, period]);
 
-    const loadCompanies = async () => {
-        try {
-            const res = await callFetchCompany("page=1&size=100&sort=name,asc");
-            if (res?.data?.result) {
-                setCompanies(res.data.result);
-            }
-        } catch {
-            // ignore
-        }
-    };
-
-    // Pool nhân viên: lọc theo công ty + danh sách phòng ban ở phía server (subquery UserPosition).
-    const loadEmployeePool = async (companyId: number | null, departmentIds: number[]) => {
-        if (!companyId) return;
-        try {
-            const parts = ["page=1", "size=500"];
-            parts.push(`companyId=${companyId}`);
-            if (departmentIds && departmentIds.length > 0) {
-                departmentIds.forEach(id => parts.push(`departmentIds=${id}`));
-            }
-            const res = await callFetchUsersCrossCompany(parts.join("&"));
-            if (res?.data?.result) setEmployeePool(res.data.result);
-        } catch {
-            // ignore
-        }
-    };
-
-    // res.data đã được interceptor unwrap về mảng ở runtime; typing khai báo là wrapper nên dùng any.
-    const loadDepartments = async (companyId: number) => {
-        try {
-            const res: any = await callFetchDepartmentsByCompany(companyId); // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (res?.data) setDepartments(res.data);
-        } catch {
-            // ignore
-        }
-    };
-
-    const handleCompanyFilterChange = async (value: number | null) => {
+    const handleCompanyFilterChange = (value: number | null) => {
         setSelectedCompanyId(value);
         setSelectedDepartmentIds([]);
-        setDepartments([]);
-        await Promise.all([
-            loadEmployeePool(value, []),
-            value ? loadDepartments(value) : Promise.resolve(),
-        ]);
     };
 
-    const handleDepartmentFilterChange = async (values: number[]) => {
+    const handleDepartmentFilterChange = (values: number[]) => {
         setSelectedDepartmentIds(values);
-        await loadEmployeePool(period?.company?.id ?? selectedCompanyId, values);
     };
 
     const assignedEmployeeIdsInPeriod = useMemo(() => {
@@ -661,8 +636,8 @@ const PeriodDetailDrawer = (props: IProps) => {
 
     const pickerSourceUsers = useMemo(() => {
         return employeePool
-            .filter(user => user.active !== false && !assignedEmployeeIdsInPeriod.has(String(user.id)))
-            .map((user): UserOption => ({
+            .filter((user: any) => user.active !== false && !assignedEmployeeIdsInPeriod.has(String(user.id)))
+            .map((user: any): UserOption => ({
                 value: String(user.id),
                 name: user.name ?? "",
                 email: user.email ?? "",
@@ -693,78 +668,11 @@ const PeriodDetailDrawer = (props: IProps) => {
         return [];
     }, [companies, period?.company?.id, period?.company?.name]);
 
-    const fetchLinkedTemplates = async () => {
-        if (!period?.id) return;
-        setLoadingTemplates(true);
-        try {
-            const res = await callFetchTemplatesInPeriod(period.id);
-            const data = res?.data;
-            if (data) {
-                setLinkedTemplates(data);
-                if (data.length > 0) {
-                    setSelectedTemplateId(prev => {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const exists = data.some((t: any) => t.template?.id === prev);
-                        return exists ? prev : data[0].template?.id;
-                    });
-                } else {
-                    setSelectedTemplateId(null);
-                }
-            }
-        } catch {
-            notify.error("Không thể tải danh sách biểu mẫu trong kỳ");
-        } finally {
-            setLoadingTemplates(false);
-        }
-    };
 
-    const fetchLinkedEmployees = async () => {
-        if (!period?.id) return;
-        setLoadingEmployees(true);
-        setSelectedRowKeys([]); // Reset selected rows on reload
-        try {
-            const res = await callFetchEmployeesInPeriod(period.id);
-            if (res?.data) {
-                setLinkedEmployees(res.data);
-            }
-        } catch {
-            notify.error("Không thể tải danh sách nhân sự tham gia");
-        } finally {
-            setLoadingEmployees(false);
-        }
-    };
-
-    const loadActiveTemplates = async () => {
-        try {
-            const res = await callFetchEvaluationTemplates("page=1&size=100&filter=status='ACTIVE'");
-            if (res?.data?.result) {
-                const periodCompanyId = period?.company?.id;
-                const filtered = periodCompanyId
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    ? res.data.result.filter((t: any) => t.company?.id === periodCompanyId)
-                    : res.data.result;
-                setActiveTemplates(filtered);
-            }
-        } catch {
-            // ignore
-        }
-    };
 
     const loadAssignmentReferenceData = async () => {
         if (!period?.id || period.status !== "DRAFT" || referenceDataPeriodIdRef.current === period.id) return;
-
         referenceDataPeriodIdRef.current = period.id;
-        const companyId = period.company?.id ?? null;
-        setLoadingAssignmentReferenceData(true);
-        try {
-            await Promise.all([
-                loadActiveTemplates(),
-                loadEmployeePool(companyId, selectedDepartmentIds),
-                companyId ? loadDepartments(companyId) : loadCompanies(),
-            ]);
-        } finally {
-            setLoadingAssignmentReferenceData(false);
-        }
     };
 
     const handleActivatePeriodInDrawer = async () => {
@@ -783,13 +691,9 @@ const PeriodDetailDrawer = (props: IProps) => {
         if (!period?.id) return;
         setSubmittingTemplate(true);
         try {
-            const res = await callAddTemplateToPeriod(period.id, values.templateId);
-            if (res?.data) {
-                notify.success("Liên kết biểu mẫu thành công");
-                templateForm.resetFields();
-                setSelectedTemplateId(values.templateId);
-                fetchLinkedTemplates();
-            }
+            await addTemplateMutation.mutateAsync({ periodId: period.id, templateId: values.templateId });
+            templateForm.resetFields();
+            setSelectedTemplateId(values.templateId);
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const msg = getApiErrorMessage(error, "Lỗi liên kết biểu mẫu");
             notify.error(msg);
@@ -803,9 +707,7 @@ const PeriodDetailDrawer = (props: IProps) => {
 
         setRemovingTemplateId(templateId);
         try {
-            await callRemoveTemplateFromPeriod(period.id, templateId);
-            notify.success("Đã gỡ mẫu khỏi kỳ đánh giá", { id: "remove-period-template" });
-            await fetchLinkedTemplates();
+            await removeTemplateMutation.mutateAsync({ periodId: period.id, templateId });
         } catch (error: any) {
             notify.error(getApiErrorMessage(error, "Không thể gỡ mẫu khỏi kỳ đánh giá"), { id: "remove-period-template" });
         } finally {
@@ -824,7 +726,7 @@ const PeriodDetailDrawer = (props: IProps) => {
         const skipped: string[] = [];
         const periodCompanyId = period.company?.id;
         for (const empId of employeeIds) {
-            const emp = employeePool.find(u => u.id === empId);
+            const emp = employeePool.find((u: any) => u.id === empId);
             const directManagerId = emp?.directManagerId || emp?.directManager?.id;
             const indirectManagerId = emp?.indirectManagerId || emp?.indirectManager?.id;
             const directManagerCompanyIds = emp?.directManagerCompanyIds || emp?.directManager?.companyIds;
@@ -858,22 +760,23 @@ const PeriodDetailDrawer = (props: IProps) => {
             const failed: string[] = [];
             for (const { id: empId, managerId } of toAssign) {
                 try {
-                    await callAddEmployeeToPeriod(period.id, {
-                        employeeId: empId,
-                        directManagerId: managerId,
-                        templateId: selectedTemplateId,
+                    await addEmployeeMutation.mutateAsync({
+                        periodId: period.id,
+                        data: {
+                            employeeId: empId,
+                            directManagerId: managerId,
+                            templateId: selectedTemplateId,
+                        },
                     });
                     successCount++;
                 } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-                    const empName = employeePool.find(u => u.id === empId)?.name || empId;
+                    const empName = employeePool.find((u: any) => u.id === empId)?.name || empId;
                     failed.push(`${empName}: ${getApiErrorMessage(error, "lỗi")}`);
                 }
             }
             if (successCount > 0) {
-                notify.success(`Đã thêm ${successCount} nhân viên vào kỳ`, { id: "add-employee-success" });
                 employeeForm.resetFields(["employeeId"]);
                 setEmployeePickerOpen(false);
-                fetchLinkedEmployees();
             }
             if (skipped.length > 0) {
                 console.warn("[evaluation-period] skipped employees", skipped);
@@ -895,12 +798,9 @@ const PeriodDetailDrawer = (props: IProps) => {
     };
 
     const handleCancelEmployee = async (id: number) => {
+        if (!period?.id) return;
         try {
-            const res = await callCancelPeriodEmployee(id);
-            if (res?.data) {
-                notify.success("Đã gỡ nhân viên khỏi kỳ đánh giá", { id: "cancel-employee" });
-                fetchLinkedEmployees();
-            }
+            await cancelEmployeeMutation.mutateAsync({ id, periodId: period.id });
         } catch {
             notify.error("Không thể gỡ nhân viên khỏi kỳ", { id: "cancel-employee" });
         }
@@ -1000,9 +900,10 @@ const PeriodDetailDrawer = (props: IProps) => {
                 .filter(Boolean)
             : undefined;
 
+        if (!period?.id) return;
         setExtending(true);
         try {
-            const res = await callExtendEvaluationRecordDeadline({
+            await extendMutation.mutateAsync({
                 recordIds,
                 phase: selectedEmployeeForExtend.phase,
                 deadline: baseTargetDeadline.toISOString(),
@@ -1011,18 +912,15 @@ const PeriodDetailDrawer = (props: IProps) => {
                 reason: values.reason,
                 cascade: usePhaseCustom ? false : values.cascade,
             });
-            if (res?.data) {
-                notify.success("Gia hạn thành công.");
-                setExtendModalOpen(false);
-                setSelectedEmployeeForExtend(null);
-                setExtendDeadlineMode("SHARED");
-                setExtendInputMode("DATE");
+            notify.success("Gia hạn thành công.");
+            setExtendModalOpen(false);
+            setSelectedEmployeeForExtend(null);
+            setExtendDeadlineMode("SHARED");
+            setExtendInputMode("DATE");
                 setExtendStrategy("CASCADE");
                 setCustomExtendDeadlines({});
                 setPhaseCustomDeadlines({});
                 setSelectedRowKeys([]);
-                fetchLinkedEmployees();
-            }
         } catch (error: any) {
             const msg = getApiErrorMessage(error, "Lỗi gia hạn bản đánh giá");
             notify.error(msg);
@@ -1084,9 +982,11 @@ const PeriodDetailDrawer = (props: IProps) => {
     };
 
     const handleBulkCancel = async () => {
+        if (!period?.id) return;
+        const pId = period.id;
         try {
             const results = await Promise.allSettled(
-                selectedRowKeys.map(id => callCancelPeriodEmployee(Number(id)))
+                selectedRowKeys.map(id => cancelEmployeeMutation.mutateAsync({ id: Number(id), periodId: pId }))
             );
             
             const rejected = results.filter((r) => r.status === 'rejected');
@@ -1101,7 +1001,6 @@ const PeriodDetailDrawer = (props: IProps) => {
             }
 
             setSelectedRowKeys([]);
-            fetchLinkedEmployees();
         } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             notify.error("Không thể gỡ các nhân sự đã chọn. Vui lòng thử lại.", { id: "bulk-cancel" });
         }
@@ -1142,7 +1041,7 @@ const PeriodDetailDrawer = (props: IProps) => {
     };
 
     const handleReassignSubmit = async (values: any) => {
-        if (!selectedEmployeeForReassign) return;
+        if (!selectedEmployeeForReassign || !period?.id) return;
         const recordIds = selectedEmployeeForReassign.isBulk
             ? selectedEmployeeForReassign.recordId
             : [selectedEmployeeForReassign.recordId];
@@ -1150,19 +1049,16 @@ const PeriodDetailDrawer = (props: IProps) => {
         if (!recordIds || recordIds.length === 0) return;
         setReassigning(true);
         try {
-            const res = await callReassignEvaluators({
+            await reassignMutation.mutateAsync({
                 recordIds,
                 evaluatorRole: values.evaluatorRole,
                 newEvaluatorUserId: values.newEvaluatorUserId,
                 reason: values.reason,
             });
-            if (res?.data) {
-                notify.success("Điều chuyển thành công.");
-                setReassignModalOpen(false);
-                setSelectedEmployeeForReassign(null);
-                setSelectedRowKeys([]);
-                fetchLinkedEmployees();
-            }
+            notify.success("Điều chuyển thành công.");
+            setReassignModalOpen(false);
+            setSelectedEmployeeForReassign(null);
+            setSelectedRowKeys([]);
         } catch (error: any) {
             const msg = getApiErrorMessage(error, "Lỗi điều chuyển người chấm/duyệt");
             notify.error(msg);
@@ -1478,8 +1374,8 @@ const PeriodDetailDrawer = (props: IProps) => {
     const availableTemplateOptions = useMemo(() => {
         const linkedTemplateIds = new Set(linkedTemplates.map(item => item.template?.id));
         return activeTemplates
-            .filter(template => !linkedTemplateIds.has(template.id))
-            .map(template => ({ label: template.name, value: template.id }));
+            .filter((template: any) => !linkedTemplateIds.has(template.id))
+            .map((template: any) => ({ label: template.name, value: template.id }));
     }, [activeTemplates, linkedTemplates]);
 
     const scheduleItems = useMemo(() => ([

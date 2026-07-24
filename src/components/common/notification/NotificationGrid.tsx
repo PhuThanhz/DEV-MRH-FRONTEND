@@ -271,39 +271,39 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <Dropdown
-                            trigger={["click"]}
-                            placement="bottomRight"
-                            menu={{
-                                items: [
-                                    {
-                                        key: "read-all",
-                                        icon: <CheckOutlined />,
-                                        label: "Đánh dấu tất cả đã đọc",
-                                        disabled: unreadCount === 0 || !markAllRead,
+                        <Tooltip title="Tuỳ chọn thông báo" placement="bottom">
+                            <Dropdown
+                                trigger={["click"]}
+                                placement="bottomRight"
+                                menu={{
+                                    items: [
+                                        {
+                                            key: "read-all",
+                                            icon: <CheckOutlined />,
+                                            label: "Đánh dấu tất cả đã đọc",
+                                            disabled: unreadCount === 0 || !markAllRead,
+                                        },
+                                        {
+                                            key: "sound",
+                                            icon: <SoundOutlined />,
+                                            label: soundEnabled ? "Tắt âm thanh" : "Bật âm thanh",
+                                            disabled: !toggleSound,
+                                        },
+                                        { type: "divider" },
+                                        {
+                                            key: "center",
+                                            icon: <NotificationOutlined />,
+                                            label: "Mở trung tâm thông báo",
+                                        },
+                                    ],
+                                    onClick: ({ key, domEvent }) => {
+                                        domEvent.stopPropagation();
+                                        if (key === "read-all") handleMarkReadClick();
+                                        if (key === "sound") toggleSound?.();
+                                        if (key === "center") onOpenFullCenter();
                                     },
-                                    {
-                                        key: "sound",
-                                        icon: <SoundOutlined />,
-                                        label: soundEnabled ? "Tắt âm thanh" : "Bật âm thanh",
-                                        disabled: !toggleSound,
-                                    },
-                                    { type: "divider" },
-                                    {
-                                        key: "center",
-                                        icon: <NotificationOutlined />,
-                                        label: "Mở trung tâm thông báo",
-                                    },
-                                ],
-                                onClick: ({ key, domEvent }) => {
-                                    domEvent.stopPropagation();
-                                    if (key === "read-all") handleMarkReadClick();
-                                    if (key === "sound") toggleSound?.();
-                                    if (key === "center") onOpenFullCenter();
-                                },
-                            }}
-                        >
-                            <Tooltip title="Tuỳ chọn thông báo" placement="bottom">
+                                }}
+                            >
                                 <button
                                     type="button"
                                     aria-label="Tuỳ chọn thông báo"
@@ -312,8 +312,8 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                                 >
                                     <MoreOutlined />
                                 </button>
-                            </Tooltip>
-                        </Dropdown>
+                            </Dropdown>
+                        </Tooltip>
                         <Tooltip title="Đóng" placement="bottom">
                             <button
                                 type="button"

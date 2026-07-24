@@ -57,6 +57,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
     const backendURL = import.meta.env.VITE_BACKEND_URL;
 
     useEffect(() => {
+        if (!openModal) return;
         if (dataInit?.id) {
             const roleItem: IRoleSelect = {
                 label: dataInit.role?.name ?? "",
@@ -101,7 +102,7 @@ const ModalUser = ({ openModal, setOpenModal, dataInit, setDataInit }: IProps) =
             setActiveTab("account");
             setCreatedUserId(null);
         }
-    }, [dataInit, form]);
+    }, [dataInit, openModal, form]);
 
     useEffect(() => {
         return () => {

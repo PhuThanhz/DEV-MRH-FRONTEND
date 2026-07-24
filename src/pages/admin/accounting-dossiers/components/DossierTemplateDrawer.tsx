@@ -38,13 +38,14 @@ import type {
 } from "@/types/backend";
 import ActionButton from "@/components/common/ui/ActionButton";
 import {
-    callCreateAccountingDossierCategory,
-    callDeleteAccountingDossierCategory,
-    callFetchAccountingDocumentCategoryActive,
-    callFetchAccountingDossierCategories,
-    callToggleAccountingDossierCategoryActive,
-    callUpdateAccountingDossierCategory,
-} from "@/config/api";
+    useAccountingDossierCategoriesQuery,
+    useAccountingDossierCategoryActiveQuery,
+    useCreateAccountingDossierCategoryMutation,
+    useUpdateAccountingDossierCategoryMutation,
+    useDeleteAccountingDossierCategoryMutation,
+    useToggleAccountingDossierCategoryActiveMutation,
+} from "@/hooks/useAccountingDossiers";
+import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
 import { getModalWidth } from "@/utils/responsive";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import DataTable from "@/components/common/data-table";
@@ -82,74 +83,35 @@ const DossierTemplateDrawer = ({
     canToggleActive = false,
     isSuperAdmin = false,
 }: DossierTemplateDrawerProps) => {
-    const [rows, setRows] = useState<IAccountingDossierCategory[]>([]);
-    const [docCategories, setDocCategories] = useState<IAccountingDocumentCategory[]>([]);
-    const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("");
     const [editorRecord, setEditorRecord] = useState<IAccountingDossierCategory | null | "new">(null);
     const [previewRecord, setPreviewRecord] = useState<IAccountingDossierCategory | null>(null);
 
-    const loadData = useCallback(async (force = false) => {
-        if (!force && templateLookupCache && templateLookupCache.expiresAt > Date.now()) {
-            setRows(templateLookupCache.rows);
-            setDocCategories(templateLookupCache.documentCategories);
-            return;
-        }
-        setLoading(true);
-        try {
-            const [templateRes, docCatRes] = await Promise.all([
-                callFetchAccountingDossierCategories("page=1&size=200&sort=categoryName,asc"),
-                callFetchAccountingDocumentCategoryActive(),
-            ]);
-            const nextRows = (templateRes as any)?.data?.result || [];
-            const nextDocumentCategories = (docCatRes as any)?.data || [];
-            templateLookupCache = {
-                rows: nextRows,
-                documentCategories: nextDocumentCategories,
-                expiresAt: Date.now() + TEMPLATE_CACHE_TTL_MS,
-            };
-            setRows(nextRows);
-            setDocCategories(nextDocumentCategories);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const { data: rows = [], isLoading: loadingRows } = useAccountingDossierCategoriesQuery(open ? "page=1&size=200&sort=categoryName,asc" : "");
+    const { data: docCategories = [], isLoading: loadingDocs } = useAccountingDocumentCategoryActiveQuery();
+    const loading = loadingRows || loadingDocs;
 
-    useEffect(() => {
-        if (open) void loadData();
-    }, [open, loadData]);
+    const toggleMutation = useToggleAccountingDossierCategoryActiveMutation();
+    const deleteMutation = useDeleteAccountingDossierCategoryMutation();
 
     const filteredRows = useMemo(() => {
+        const safeRows = Array.isArray(rows) ? rows : [];
         const normalizedQuery = query.trim().toLocaleLowerCase("vi-VN");
-        if (!normalizedQuery) return rows;
-        return rows.filter((record) => [record.categoryCode, record.categoryName, record.description]
+        if (!normalizedQuery) return safeRows;
+        return safeRows.filter((record) => [record.categoryCode, record.categoryName, record.description]
             .filter(Boolean)
             .some((value) => value!.toLocaleLowerCase("vi-VN").includes(normalizedQuery)));
     }, [query, rows]);
 
     const toggleActive = useCallback(async (record: IAccountingDossierCategory) => {
         if (!record.id) return;
-        try {
-            await callToggleAccountingDossierCategoryActive(record.id, !record.active);
-            notify.success(record.active ? "Đã ngưng hiệu lực mẫu" : "Đã kích hoạt lại mẫu");
-            await loadData();
-        } catch (error: any) {
-            notify.error(error?.response?.status === 401
-                ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để cập nhật trạng thái mẫu."
-                : error?.response?.data?.message || error?.response?.data?.error || "Không thể cập nhật trạng thái mẫu");
-        }
-    }, [loadData]);
+        await toggleMutation.mutateAsync({ id: record.id, active: !record.active });
+    }, [toggleMutation]);
 
     const deleteTemplate = useCallback(async (record: IAccountingDossierCategory) => {
         if (!record.id) return;
-        try {
-            await callDeleteAccountingDossierCategory(record.id);
-            notify.success("Đã xóa mẫu bộ chứng từ");
-            await loadData();
-        } catch (error: any) {
-            notify.error(error?.response?.data?.message || "Không thể xóa mẫu bộ chứng từ");
-        }
-    }, [loadData]);
+        await deleteMutation.mutateAsync(record.id);
+    }, [deleteMutation]);
 
     const confirmDeleteTemplate = useCallback((record: IAccountingDossierCategory) => {
         Modal.confirm({
@@ -247,11 +209,27 @@ const DossierTemplateDrawer = ({
             title: "Trạng thái",
             width: 126,
             responsive: ["md"],
-            render: (_, record) => record.active ? (
-                <Tag color="success" icon={<CheckCircleFilled />}>Đang hiệu lực</Tag>
-            ) : (
-                <Tag color="error" icon={<PauseCircleOutlined />}>Ngưng hiệu lực</Tag>
-            ),
+            render: (_, record) => {
+                const isActive = record.active;
+                return (
+                    <Tag
+                        style={{
+                            borderRadius: 4,
+                            padding: "0px 8px",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            height: 22,
+                            lineHeight: "20px",
+                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                            background: isActive ? "#f6ffed" : "#fff2f0",
+                            color: isActive ? "#389e0d" : "#cf1322",
+                            margin: 0,
+                        }}
+                    >
+                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                    </Tag>
+                );
+            },
         },
         {
             title: "Thao tác",
@@ -496,7 +474,6 @@ const DossierTemplateDrawer = ({
                     onClose={() => setEditorRecord(null)}
                     onSaved={async () => {
                         setEditorRecord(null);
-                        await loadData(true);
                     }}
                 />
             )}
@@ -509,72 +486,119 @@ const DossierTemplateDrawer = ({
 
 const TemplatePreviewModal = ({ record, onClose }: { record: IAccountingDossierCategory; onClose: () => void }) => {
     const documentCategories = record.documentCategories || [];
-    const isActive = record.active;
+    const isActive = !!record.active;
     const scopeLabel = record.scope === "COMPANY" ? "Theo công ty" : "Toàn hệ thống";
 
     return (
         <Modal
-            open
-            className="template-preview-modal"
+            open={true}
+            onCancel={onClose}
+            width={680}
+            centered
+            destroyOnClose
+            styles={{
+                content: { padding: "20px 24px", borderRadius: 16 },
+                header: { marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #f1f5f9" },
+            }}
             title={
-                <div className="editor-modal-title">
-                    <span className="editor-modal-icon"><EyeOutlined /></span>
-                    <span className="editor-modal-copy">
-                        <strong>Chi tiết mẫu bộ chứng từ</strong>
-                        <span>Xem cấu hình đang áp dụng cho mẫu này</span>
-                    </span>
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#e8256b]/10 text-[#e8256b] flex items-center justify-center text-base shrink-0">
+                        <EyeOutlined />
+                    </div>
+                    <div>
+                        <h3 className="m-0 text-base font-bold text-slate-900 tracking-tight">Chi tiết mẫu bộ chứng từ</h3>
+                        <p className="m-0 text-xs text-slate-500 font-normal">Xem cấu hình chi tiết đang áp dụng cho mẫu này</p>
+                    </div>
                 </div>
             }
-            footer={<Button className="template-preview-close" onClick={onClose}>Đóng</Button>}
-            onCancel={onClose}
-            width={getModalWidth(640)}
-            destroyOnHidden
+            footer={[
+                <Button key="close" onClick={onClose} style={{ borderRadius: 8 }} className="font-medium px-5">
+                    Đóng
+                </Button>,
+            ]}
         >
-            <div className="template-preview-identity">
-                <Text className="template-preview-name">{record.categoryName || "Chưa có tên mẫu"}</Text>
-                <div className="template-preview-description">{record.description || "Mẫu này chưa có mô tả."}</div>
-            </div>
+            <div className="space-y-4">
+                {/* Card 1: Identity & Meta */}
+                <div className="bg-gradient-to-br from-slate-50/90 to-white rounded-xl border border-slate-200/90 p-4.5 shadow-2xs">
+                    <h4 className="text-base font-bold text-slate-900 tracking-tight mb-1">{record.categoryName || "Chưa có tên mẫu"}</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed m-0 mb-4">{record.description || "Mẫu này chưa có mô tả."}</p>
 
-            <div className="template-preview-meta">
-                <div className="template-preview-meta-item">
-                    <span className="template-preview-meta-label">Mã mẫu</span>
-                    <span className="template-preview-meta-value template-preview-code">{record.categoryCode || "Chưa có mã"}</span>
-                </div>
-                <div className="template-preview-meta-item">
-                    <span className="template-preview-meta-label">Trạng thái</span>
-                    <span className="template-preview-meta-value">
-                        {isActive
-                            ? <Tag color="success" icon={<CheckCircleFilled />}>Đang hiệu lực</Tag>
-                            : <Tag color="error" icon={<PauseCircleOutlined />}>Ngưng hiệu lực</Tag>}
-                    </span>
-                </div>
-                <div className="template-preview-meta-item">
-                    <span className="template-preview-meta-label">Phạm vi áp dụng</span>
-                    <span className="template-preview-meta-value">
-                        {record.scope === "COMPANY" ? <ApartmentOutlined /> : <GlobalOutlined />}
-                        {scopeLabel}
-                    </span>
-                </div>
-                <div className="template-preview-meta-item">
-                    <span className="template-preview-meta-label">Phiên bản</span>
-                    <span className="template-preview-meta-value">v{record.version || 1}</span>
-                </div>
-            </div>
-
-            <div className="template-preview-section-heading">
-                <div className="template-preview-section-title">Loại chứng từ trong mẫu</div>
-                <Text type="secondary">{documentCategories.length} loại</Text>
-            </div>
-            <div className="template-preview-documents">
-                {documentCategories.length ? documentCategories.map((document: any) => (
-                    <div className="template-preview-document" key={document.id}>
-                        <span className="template-preview-document-main">
-                            <FileTextOutlined />
-                            <span className="template-preview-document-name">{document.categoryName || document.categoryCode || "Loại chứng từ"}</span>
-                        </span>
-                        <Tag color={document.required === false ? "default" : "blue"}>{document.required === false ? "Tùy chọn" : "Bắt buộc"}</Tag>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+                        <div>
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Mã mẫu</div>
+                            <div className="text-[11px] font-mono font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded truncate max-w-[150px]" title={record.categoryCode}>
+                                {record.categoryCode || "Chưa có mã"}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</div>
+                            <div>
+                                <Tag
+                                    style={{
+                                        borderRadius: 4,
+                                        padding: "0px 8px",
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        height: 22,
+                                        lineHeight: "20px",
+                                        border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
+                                        background: isActive ? "#f6ffed" : "#fff2f0",
+                                        color: isActive ? "#389e0d" : "#cf1322",
+                                        margin: 0,
+                                    }}
+                                >
+                                    {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                                </Tag>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Phạm vi áp dụng</div>
+                            <div className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+                                {record.scope === "COMPANY" ? <ApartmentOutlined className="text-blue-500" /> : <GlobalOutlined className="text-purple-500" />}
+                                <span>{scopeLabel}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Phiên bản</div>
+                            <div className="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded inline-block">
+                                v{record.version || 1}
+                            </div>
+                        </div>
                     </div>
-                )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có loại chứng từ" />}
+                </div>
+
+                {/* Card 2: Document categories */}
+                <div className="bg-white rounded-xl border border-slate-200/90 p-4.5 shadow-2xs">
+                    <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-100">
+                        <span className="font-semibold text-slate-800 text-xs tracking-tight flex items-center gap-2">
+                            <FileTextOutlined className="text-[#e8256b]" />
+                            Loại chứng từ trong mẫu
+                        </span>
+                        <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">
+                            {documentCategories.length} loại
+                        </span>
+                    </div>
+
+                    {documentCategories.length > 0 ? (
+                        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                            {documentCategories.map((doc: any) => (
+                                <div key={doc.id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/70 border border-slate-200/60 hover:bg-white hover:border-slate-300 hover:shadow-2xs transition-all">
+                                    <div className="flex items-center gap-2.5">
+                                        <FileTextOutlined className="text-slate-400 text-sm" />
+                                        <span className="text-xs font-semibold text-slate-800">{doc.categoryName || doc.categoryCode || "Loại chứng từ"}</span>
+                                    </div>
+                                    {doc.required === false ? (
+                                        <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">Tùy chọn</span>
+                                    ) : (
+                                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/80">Bắt buộc</span>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có loại chứng từ" />
+                    )}
+                </div>
             </div>
         </Modal>
     );
@@ -600,6 +624,9 @@ const TemplateEditorModal = ({
     const [form] = Form.useForm<TemplateFormValues>();
     const [saving, setSaving] = useState(false);
     const scope = Form.useWatch("scope", form);
+
+    const createMutation = useCreateAccountingDossierCategoryMutation();
+    const updateMutation = useUpdateAccountingDossierCategoryMutation();
 
     useEffect(() => {
         const defaultCompanyId = !isSuperAdmin && companies.length === 1 ? companies[0].id : undefined;
@@ -636,8 +663,8 @@ const TemplateEditorModal = ({
                 active: values.active ?? true,
                 documentCategoryItems: values.documentCategoryItems?.map((item, index) => ({ documentCategoryId: item.documentCategoryId, required: item.required ?? true, sortOrder: index })) || [],
             };
-            if (record?.id) await callUpdateAccountingDossierCategory(record.id, payload);
-            else await callCreateAccountingDossierCategory(payload);
+            if (record?.id) await updateMutation.mutateAsync({ id: record.id, data: payload });
+            else await createMutation.mutateAsync(payload);
             await onSaved();
         } finally {
             setSaving(false);

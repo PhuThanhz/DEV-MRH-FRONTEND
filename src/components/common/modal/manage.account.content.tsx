@@ -17,6 +17,7 @@ import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { getModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
 import { useBreakpoint } from "@/hooks/useIsMobile";
+import { buildPublicFileUrl } from "@/config/file-utils";
 import backgroundTrangCaNhan from "../../../../backgroundtrangcanhan.webp";
 
 /* ═══════════════════════════════════════════
@@ -427,9 +428,8 @@ export const UserUpdateInfo = ({ onClose }: { onClose: (v: boolean) => void }) =
     const [panelAvatarError, setPanelAvatarError] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
 
-    const backendURL = import.meta.env.VITE_BACKEND_URL;
     const currentAvatar = user?.avatar
-        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
+        ? buildPublicFileUrl(user.avatar, "avatar")
         : "";
     const userId = user?.id ? String(user.id) : undefined;
 

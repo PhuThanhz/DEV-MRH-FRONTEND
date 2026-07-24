@@ -1,6 +1,8 @@
 import { Modal, Form, Input, Select, Button, ConfigProvider } from 'antd';
-import { useState, useEffect } from 'react';
-import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate, callFetchCompany, callFetchCompanyJobTitlesByCompany } from '@/config/api';
+import { useState, useEffect, useMemo } from 'react';
+import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate } from '@/config/api';
+import { useCompaniesQuery } from '@/hooks/useCompanies';
+import { useCompanyJobTitlesQuery } from '@/hooks/useCompanyJobTitles';
 import type { IEvaluationTemplate } from '@/types/backend';
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
@@ -19,25 +21,23 @@ const TemplateModal = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, dataInit, setDataInit } = props;
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
-    const [companies, setCompanies] = useState<{ label: string; value: number }[]>([]);
-    const [jobTitles, setJobTitles] = useState<{ label: string; value: number }[]>([]);
+    const watchCompanyId = Form.useWatch('companyId', form);
 
-    useEffect(() => {
-        const loadOptions = async () => {
-            try {
-                const compRes = await callFetchCompany("page=1&size=200&sort=name,asc");
-                if (compRes?.data?.result) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setCompanies(compRes.data.result.map((c: any) => ({ label: c.name, value: c.id })));
-                }
-            } catch (error) {
-                console.error("Lỗi khi tải cấu hình công ty", error);
-            }
-        };
-        if (openModal) {
-            loadOptions();
-        }
-    }, [openModal]);
+    const { data: companiesData } = useCompaniesQuery("page=1&size=200&sort=name,asc", openModal);
+    const companies = useMemo(() => {
+        return (companiesData?.result ?? []).map((c: any) => ({ label: c.name, value: c.id }));
+    }, [companiesData]);
+
+    const { data: rawCompanyJts = [] } = useCompanyJobTitlesQuery(openModal && watchCompanyId ? watchCompanyId : undefined);
+    const jobTitles = useMemo(() => {
+        if (!watchCompanyId) return [];
+        return Array.from(
+            new Map(rawCompanyJts
+                .filter((cjt: any) => cjt.jobTitle)
+                .map((cjt: any) => [cjt.jobTitle.id, { label: cjt.jobTitle.nameVi, value: cjt.jobTitle.id }])
+            ).values()
+        ) as { label: string; value: number }[];
+    }, [watchCompanyId, rawCompanyJts]);
 
     useEffect(() => {
         if (openModal) {
@@ -55,39 +55,6 @@ const TemplateModal = (props: IProps) => {
             }
         }
     }, [openModal, dataInit, form]);
-
-    const watchCompanyId = Form.useWatch('companyId', form);
-
-    useEffect(() => {
-        const loadJobTitles = async () => {
-            if (watchCompanyId) {
-                try {
-                    const res = await callFetchCompanyJobTitlesByCompany(watchCompanyId);
-                    if (res?.data) {
-                        // Trích xuất jobTitle gốc từ danh sách company job titles
-                        const uniqueTitles = Array.from(
-                            new Map(res.data
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                .filter((cjt: any) => cjt.jobTitle)
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                .map((cjt: any) => [cjt.jobTitle.id, { label: cjt.jobTitle.nameVi, value: cjt.jobTitle.id }])
-                            ).values()
-                        );
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        setJobTitles(uniqueTitles as any);
-                    }
-                } catch {
-                    setJobTitles([]);
-                }
-            } else {
-                setJobTitles([]);
-                // Xóa chọn chức danh nếu chưa chọn công ty
-                form.setFieldValue('targetJobTitles', []);
-            }
-        };
-        
-        loadJobTitles();
-    }, [watchCompanyId, form]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onFinish = async (values: any) => {

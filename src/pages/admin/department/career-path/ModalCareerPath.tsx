@@ -181,6 +181,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
     const { mutateAsync: bulkCreate, isPending: isBulkCreating } = useBulkCreateCareerPathMutation();
 
     useEffect(() => {
+        if (!openModal) return;
         if (isEdit && dataInit) {
             form.setFieldsValue({ ...dataInit, active: dataInit.active ?? true });
             setActiveState(dataInit.active ?? true);
@@ -192,7 +193,7 @@ const ModalCareerPath = ({ openModal, setOpenModal, dataInit, setDataInit }: IPr
             setSelectedJobTitleIds([]);
             setPreviewData(null);
         }
-    }, [dataInit, isEdit, departmentId, form]);
+    }, [dataInit, isEdit, departmentId, form, openModal]);
 
     const handleReset = () => {
         form.resetFields();

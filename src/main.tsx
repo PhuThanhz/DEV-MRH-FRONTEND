@@ -9,7 +9,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/config/react-query-client';
 import { ToastProvider } from "@/components/common/notification/ToastProvider";
 
-import { ConfigProvider } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import viVN from "antd/locale/vi_VN";
 import "dayjs/locale/vi";
 
@@ -22,8 +22,10 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <ConfigProvider locale={viVN}>
-          <App />
-          <ToastProvider />
+          <AntdApp>
+            <App />
+            <ToastProvider />
+          </AntdApp>
         </ConfigProvider>
         {ReactQueryDevtools && (
           <Suspense fallback={null}>

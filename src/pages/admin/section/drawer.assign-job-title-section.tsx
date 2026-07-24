@@ -1,13 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Drawer, Table, Input, Checkbox, Space, Badge, Button, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import {
-    callFetchJobTitle,
-    callCreateSectionJobTitle,
-    callFetchCompanyJobTitlesOfDepartment,
-} from "@/config/api";
-
+import { useJobTitlesQuery } from "@/hooks/useJobTitles";
+import { useCompanyJobTitlesOfDepartmentQuery } from "@/hooks/useDepartmentJobTitles";
+import { useCreateSectionJobTitleMutation } from "@/hooks/useSectionJobTitle";
 import { notify } from "@/components/common/notification/notify";
 import { getModalWidth } from "@/utils/responsive";
 
@@ -28,91 +25,43 @@ const DrawerAssignSectionJobTitle = ({
     assignedJobIds,
     onSuccess,
 }: IProps) => {
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<any[]>([]);
     const [selected, setSelected] = useState<number[]>([]);
     const [search, setSearch] = useState("");
 
-    // jobTitleId bị block do COMPANY hoặc DEPARTMENT
-    const [blockedJobIds, setBlockedJobIds] = useState<number[]>([]);
+    const query = search ? `page=1&size=300&filter=nameVi~'${search}'` : `page=1&size=300`;
+    const { data: jobTitleRes, isLoading: loadingJobTitles } = useJobTitlesQuery(query, open);
+    const { data: deptCompanyJobTitles = [], isLoading: loadingDeptTitles } = useCompanyJobTitlesOfDepartmentQuery(open ? departmentId : undefined);
+    const createMutation = useCreateSectionJobTitleMutation();
 
-    /*
-     * =====================================================
-     * LOAD COMPANY_JOB_TITLE EFFECTIVE AT DEPARTMENT
-     * =====================================================
-     */
-    const loadDepartmentCompanyJobTitles = async () => {
-        const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
-        const list = res?.data ?? [];
+    const loading = loadingJobTitles || loadingDeptTitles;
 
-        const blocked = list
-            .filter(
-                (x: any) =>
-                    x.source === "COMPANY" || x.source === "DEPARTMENT"
-            )
+    const blockedJobIds = useMemo(() => {
+        return (deptCompanyJobTitles ?? [])
+            .filter((x: any) => x.source === "COMPANY" || x.source === "DEPARTMENT")
             .map((x: any) => x.jobTitle.id);
+    }, [deptCompanyJobTitles]);
 
-        setBlockedJobIds(blocked);
-    };
-
-    /*
-     * =====================================================
-     * FETCH ALL JOB TITLES (MASTER)
-     * =====================================================
-     */
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const filters: string[] = [];
-            if (search) filters.push(`nameVi~'${search}'`);
-
-            const query =
-                filters.length > 0
-                    ? `page=1&size=300&filter=${filters.join(" and ")}`
-                    : `page=1&size=300`;
-
-            const res = await callFetchJobTitle(query);
-            const list = res?.data?.result ?? [];
-
-            const sorted = [...list].sort((a: any, b: any) => {
-                const orderA = a.positionLevel?.bandOrder ?? 999;
-                const orderB = b.positionLevel?.bandOrder ?? 999;
-
-                if (orderA !== orderB) return orderA - orderB;
-
-                const levelA = a.positionLevel?.levelNumber ?? 0;
-                const levelB = b.positionLevel?.levelNumber ?? 0;
-
-                return levelA - levelB;
-            });
-
-            setData(sorted);
-        } catch {
-            notify.error("Không thể tải danh sách chức danh");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const data = useMemo(() => {
+        const list = jobTitleRes?.result ?? [];
+        return [...list].sort((a: any, b: any) => {
+            const orderA = a.positionLevel?.bandOrder ?? 999;
+            const orderB = b.positionLevel?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.positionLevel?.levelNumber ?? 0) - (b.positionLevel?.levelNumber ?? 0);
+        });
+    }, [jobTitleRes]);
 
     useEffect(() => {
         if (open) {
             setSelected([]);
-            loadDepartmentCompanyJobTitles();
-            fetchData();
         }
-    }, [open, search]);
+    }, [open]);
 
-    /*
-     * =====================================================
-     * ASSIGN
-     * =====================================================
-     */
     const handleAssign = async () => {
         try {
             for (const id of selected) {
-                await callCreateSectionJobTitle({ sectionId, jobTitleId: id });
+                await createMutation.mutateAsync({ sectionId, jobTitleId: id });
             }
-            notify.created("Gán chức danh thành công");
             onSuccess();
             onClose();
         } catch {

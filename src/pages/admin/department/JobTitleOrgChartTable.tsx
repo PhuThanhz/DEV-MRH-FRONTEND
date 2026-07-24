@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Table, Card, Spin, Empty } from "antd";
 
-import { callFetchCompanyJobTitlesOfDepartment } from "@/config/api";
+import { useCompanyJobTitlesOfDepartmentQuery } from "@/hooks/useDepartmentJobTitles";
 import type { IDepartmentJobTitle } from "@/types/backend";
 
 interface JobTitleOrgChartTableProps {
@@ -9,44 +9,26 @@ interface JobTitleOrgChartTableProps {
 }
 
 const JobTitleOrgChartTable = ({ departmentId }: JobTitleOrgChartTableProps) => {
-    const [data, setData] = useState<IDepartmentJobTitle[]>([]);
-    const [loading, setLoading] = useState(false);
+    const { data: rawList = [], isLoading: loading } = useCompanyJobTitlesOfDepartmentQuery(departmentId);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
+    const data = useMemo(() => {
+        const list = rawList.map((x: any) => ({
+            ...x,
+            jobTitle: {
+                ...x.jobTitle,
+                nameEn: x.jobTitle?.nameEn || "",
+                positionCode: x.jobTitle?.positionCode || "",
+            },
+            active: true,
+        }));
 
-                const list = (res?.data ?? [])
-                    .filter((x: any) => x.source === "DEPARTMENT")
-                    .map((x: any) => ({
-                        ...x,
-                        jobTitle: {
-                            ...x.jobTitle,
-                            nameEn: x.jobTitle?.nameEn || "",
-                            positionCode: x.jobTitle?.positionCode || "",
-                        },
-                        active: true,
-                    }));
-
-                const sorted = [...list].sort((a, b) => {
-                    const orderA = a.jobTitle?.bandOrder ?? 999;
-                    const orderB = b.jobTitle?.bandOrder ?? 999;
-                    if (orderA !== orderB) return orderA - orderB;
-                    return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
-                });
-
-                setData(sorted);
-            } catch (err) {
-                console.error("Lỗi tải bản đồ chức danh:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (departmentId) fetchData();
-    }, [departmentId]);
+        return [...list].sort((a: any, b: any) => {
+            const orderA = a.jobTitle?.bandOrder ?? 999;
+            const orderB = b.jobTitle?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
+        });
+    }, [rawList]);
 
     const columns = [
         {

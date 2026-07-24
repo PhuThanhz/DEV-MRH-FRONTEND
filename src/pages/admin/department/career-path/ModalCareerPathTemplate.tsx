@@ -8,7 +8,7 @@ import {
     useCreateCareerPathTemplateMutation,
     useUpdateCareerPathTemplateMutation,
 } from "@/hooks/useCareerPathTemplates";
-import { callGetCareerPathByDepartment } from "@/config/api";
+import { useCareerPathsByDepartmentQuery } from "@/hooks/useCareerPaths";
 import type { ICareerPath, ICareerPathTemplate } from "@/types/backend";
 
 const { Text } = Typography;
@@ -88,29 +88,13 @@ const ModalCareerPathTemplate = ({ open, onClose, dataInit, onSuccess }: IProps)
     const [form] = Form.useForm();
     const isEdit = Boolean(dataInit?.id);
 
-    const [careerPaths, setCareerPaths] = useState<ICareerPath[]>([]);
-    const [loadingPaths, setLoadingPaths] = useState(false);
     const [steps, setSteps] = useState<StepForm[]>([{ careerPathId: undefined }]);
+
+    const { data: careerPaths = [], isLoading: loadingPaths } = useCareerPathsByDepartmentQuery(open ? Number(departmentId) : undefined);
 
     const createMutation = useCreateCareerPathTemplateMutation();
     const updateMutation = useUpdateCareerPathTemplateMutation();
     const isPending = createMutation.isPending || updateMutation.isPending;
-
-    useEffect(() => {
-        if (!open || !departmentId) return;
-        const load = async () => {
-            setLoadingPaths(true);
-            try {
-                const res = await callGetCareerPathByDepartment(Number(departmentId));
-                setCareerPaths(res?.data ?? []);
-            } catch {
-                setCareerPaths([]);
-            } finally {
-                setLoadingPaths(false);
-            }
-        };
-        load();
-    }, [open, departmentId]);
 
     useEffect(() => {
         if (!open) return;

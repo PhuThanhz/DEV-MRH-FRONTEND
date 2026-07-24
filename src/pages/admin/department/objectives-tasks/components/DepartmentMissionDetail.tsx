@@ -123,7 +123,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
             notify.error((error as any)?.message || "Không thể tải dữ liệu mục tiêu phòng ban");
         }
     }, [error]);
-    
+
     const { mutateAsync: createObjective, isPending } = useCreateDepartmentObjectiveMutation();
     const { mutateAsync: publishObjective, isPending: isPublishing } = usePublishDepartmentObjectiveMutation();
 
@@ -342,7 +342,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
 
         if (mission.issueDate) setIssueDate(dayjs(mission.issueDate));
         else setIssueDate(null);
-        
+
         if (mission.status) setStatus(mission.status);
         else setStatus("PUBLISHED");
 
@@ -472,10 +472,10 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
             <div className="flex flex-col items-center justify-center h-full bg-[#f8f9fb] text-gray-400 select-none">
                 <div className="w-16 h-16 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center mb-4">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e8637a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="2" y="7" width="20" height="14" rx="2"/>
-                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                        <line x1="12" y1="12" x2="12" y2="16"/>
-                        <line x1="10" y1="14" x2="14" y2="14"/>
+                        <rect x="2" y="7" width="20" height="14" rx="2" />
+                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                        <line x1="12" y1="12" x2="12" y2="16" />
+                        <line x1="10" y1="14" x2="14" y2="14" />
                     </svg>
                 </div>
                 <p className="text-[14px] font-semibold text-gray-600 mb-1">Chọn phòng ban để xem chi tiết</p>

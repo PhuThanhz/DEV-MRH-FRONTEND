@@ -1,17 +1,18 @@
-import React, { lazy, Suspense, useState, useEffect, useRef } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { Input, Typography, Empty, Spin, Tag, Tooltip, Select, Badge, Skeleton } from "antd";
 import {
     SearchOutlined, ArrowLeftOutlined, DownloadOutlined, PrinterOutlined,
     FileTextOutlined, FilterOutlined, CalendarOutlined, CheckCircleFilled,
     MinusCircleFilled, CloseOutlined, SlidersOutlined, InboxOutlined,
 } from "@ant-design/icons";
-import { callFetchAccountingDocuments } from "@/config/api";
+import { useAccountingDocumentsQuery } from "@/hooks/useAccountingDocuments";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { PATHS } from "@/constants/paths";
 import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
 import LotusCharmAssistant from "@/components/common/navigation/LotusCharmAssistant";
 import { downloadUrlAsBlob, getFileNameFromUrl } from "@/config/download-url";
+import { preloadPdfWorker } from "@/config/pdf-viewer";
 
 const { Text } = Typography;
 const loadInlinePdfViewer = () => import("./InlinePdfViewer");
@@ -112,8 +113,7 @@ const MetaChip = ({ label, value }: { label: string; value: string }) => (
 const LookupPortalPage = () => {
     const navigate = useNavigate();
     const [query, setQuery] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const [filterOpen, setFilterOpen] = useState(false);
@@ -127,38 +127,47 @@ const LookupPortalPage = () => {
 
     const activeFilterCount = [filterCategory, filterValidity !== "all", filterYear, filterMonth].filter(Boolean).length;
 
-    // ── Fetch ──────────────────────────────────────────
+    // Debounce query
     useEffect(() => {
-        const run = async () => {
-            setLoading(true);
-            try {
-                let qs = `current=1&pageSize=50`;
-                if (query.trim()) qs += `&keyword=${encodeURIComponent(query.trim())}`;
-                if (filterValidity !== "all") {
-                    qs += `&validity=${filterValidity === "effective" ? "EFFECTIVE" : "CANCELLED"}`;
-                }
-                if (filterCategory) qs += `&accountingCategory.id=${filterCategory}`;
-                if (filterYear) {
-                    const s = (filterMonth
-                        ? dayjs(`${filterYear}-${String(filterMonth).padStart(2, "0")}-01`).startOf("month")
-                        : dayjs(`${filterYear}-01-01`).startOf("year")).toISOString();
-                    const e = (filterMonth
-                        ? dayjs(`${filterYear}-${String(filterMonth).padStart(2, "0")}-01`).endOf("month")
-                        : dayjs(`${filterYear}-12-31`).endOf("year")).toISOString();
-                    qs += `&issuedDate>=${s}&issuedDate<=${e}`;
-                }
-                const res = await callFetchAccountingDocuments(qs);
-                const data: any[] = res?.data?.result || (Array.isArray(res?.data) ? res.data : []);
-
-                setResults(data);
-                if (data.length > 0) { setSelectedIndex(0); setSelectedDoc(data[0]); }
-                else { setSelectedIndex(-1); setSelectedDoc(null); }
-            } catch (e) { console.error(e); }
-            finally { setLoading(false); }
-        };
-        const t = setTimeout(run, 280);
+        const t = setTimeout(() => setDebouncedQuery(query), 280);
         return () => clearTimeout(t);
-    }, [query, filterCategory, filterValidity, filterYear, filterMonth]);
+    }, [query]);
+
+    const queryString = useMemo(() => {
+        let qs = `current=1&pageSize=50`;
+        if (debouncedQuery.trim()) qs += `&keyword=${encodeURIComponent(debouncedQuery.trim())}`;
+        if (filterValidity !== "all") {
+            qs += `&validity=${filterValidity === "effective" ? "EFFECTIVE" : "CANCELLED"}`;
+        }
+        if (filterCategory) qs += `&accountingCategory.id=${filterCategory}`;
+        if (filterYear) {
+            const s = (filterMonth
+                ? dayjs(`${filterYear}-${String(filterMonth).padStart(2, "0")}-01`).startOf("month")
+                : dayjs(`${filterYear}-01-01`).startOf("year")).toISOString();
+            const e = (filterMonth
+                ? dayjs(`${filterYear}-${String(filterMonth).padStart(2, "0")}-01`).endOf("month")
+                : dayjs(`${filterYear}-12-31`).endOf("year")).toISOString();
+            qs += `&issuedDate>=${s}&issuedDate<=${e}`;
+        }
+        return qs;
+    }, [debouncedQuery, filterCategory, filterValidity, filterYear, filterMonth]);
+
+    const { data: docsRes, isLoading: loading } = useAccountingDocumentsQuery(queryString);
+
+    const results: any[] = useMemo(() => {
+        const res = docsRes as any;
+        return res?.result || (Array.isArray(res) ? res : []);
+    }, [docsRes]);
+
+    useEffect(() => {
+        if (results.length > 0) {
+            setSelectedIndex(0);
+            setSelectedDoc(results[0]);
+        } else {
+            setSelectedIndex(-1);
+            setSelectedDoc(null);
+        }
+    }, [results]);
 
     // ── Keyboard ───────────────────────────────────────
     useEffect(() => {
@@ -192,7 +201,10 @@ const LookupPortalPage = () => {
     const absoluteFileUrl = buildDocumentFileUrl(fileUrl);
 
     useEffect(() => {
-        if (fileUrl && isPdf(fileUrl)) void loadInlinePdfViewer();
+        if (fileUrl && isPdf(fileUrl)) {
+            void loadInlinePdfViewer();
+            void preloadPdfWorker().catch(() => undefined);
+        }
     }, [fileUrl]);
 
     const handleOpenFile = () => {

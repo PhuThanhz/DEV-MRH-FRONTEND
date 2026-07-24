@@ -31,6 +31,7 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
     const { mutate: updateLevel, isPending: isUpdating } = useUpdatePositionLevelMutation();
 
     useEffect(() => {
+        if (!openModal) return;
         if (dataInit?.id) {
             form.setFieldsValue({
                 code: dataInit.code,
@@ -40,7 +41,7 @@ const ModalPositionLevel = ({ openModal, setOpenModal, dataInit, setDataInit }: 
         } else {
             form.resetFields();
         }
-    }, [dataInit]);
+    }, [dataInit, openModal, form]);
 
     const handleReset = () => {
         form.resetFields();

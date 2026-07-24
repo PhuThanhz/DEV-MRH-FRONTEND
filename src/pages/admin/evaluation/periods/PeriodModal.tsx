@@ -315,7 +315,7 @@ const PeriodModal = (props: IProps) => {
                                 >
                                     <Select
                                         className="period-company-select"
-                                        popupClassName="period-company-select-popup"
+                                        classNames={{ popup: { root: "period-company-select-popup" } }}
                                         placeholder="Chọn công ty áp dụng"
                                         allowClear
                                         showSearch
@@ -323,9 +323,13 @@ const PeriodModal = (props: IProps) => {
                                         options={companies}
                                         loading={isFetchingCompanies}
                                         popupMatchSelectWidth={false}
-                                        dropdownStyle={{
-                                            minWidth: 560,
-                                            maxWidth: "min(760px, calc(100vw - 48px))",
+                                        styles={{
+                                            popup: {
+                                                root: {
+                                                    minWidth: 560,
+                                                    maxWidth: "min(760px, calc(100vw - 48px))",
+                                                }
+                                            }
                                         }}
                                         optionRender={(option) => {
                                             const label = String(option.label ?? "");

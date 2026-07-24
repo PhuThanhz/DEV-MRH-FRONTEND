@@ -1,6 +1,6 @@
 import React from "react";
 import { Tag, Space, Popconfirm, Tooltip } from "antd";
-import { EyeOutlined, EditOutlined, DeleteOutlined, QrcodeOutlined, ShareAltOutlined } from "@ant-design/icons";
+import { EyeOutlined, EditOutlined, DeleteOutlined, QrcodeOutlined, ShareAltOutlined, DiffOutlined } from "@ant-design/icons";
 import { MoreOutlined } from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { ProColumns } from "@ant-design/pro-components";
@@ -272,17 +272,14 @@ export const buildProcedureColumns = ({
                 }
 
                 if (canRevise) {
+                    const nextVer = (record.version ?? 1) + 1;
                     menuItems.push({
                         key: "revise",
-                        icon: (
-                            <Tag color="green" style={{ margin: 0, borderRadius: 6, padding: "0 6px", fontSize: 12 }}>
-                                v{(record.version ?? 1) + 1}
-                            </Tag>
-                        ),
+                        icon: <DiffOutlined style={{ color: "#16a34a" }} />,
                         label: (
-                            <Tooltip title={`Tạo phiên bản v${(record.version ?? 1) + 1}`}>
+                            <Tooltip title={`Tạo phiên bản v${nextVer}`}>
                                 <span data-guide-id={`${type.toLowerCase()}-procedure-revise-menu-item`} onClick={() => onRevise(record)}>
-                                    Tạo version v{(record.version ?? 1) + 1}
+                                    Tạo phiên bản v{nextVer}
                                 </span>
                             </Tooltip>
                         ),

@@ -45,17 +45,17 @@ import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import StructuredListSection from "@/components/common/ui/StructuredListSection";
 import { getModalWidth } from "@/utils/responsive";
 import {
-    callFetchEvaluationTemplateById,
-    callCreateTemplateSection,
-    callUpdateTemplateSection,
-    callDeleteTemplateSection,
-    callCreateTemplateCriteria,
-    callUpdateTemplateCriteria,
-    callDeleteTemplateCriteria,
-    callCreateCriteriaLevel,
-    callUpdateCriteriaLevel,
-    callPublishEvaluationTemplate,
-} from "@/config/api";
+    useEvaluationTemplateByIdQuery,
+    useCreateTemplateSectionMutation,
+    useUpdateTemplateSectionMutation,
+    useDeleteTemplateSectionMutation,
+    useCreateTemplateCriteriaMutation,
+    useUpdateTemplateCriteriaMutation,
+    useDeleteTemplateCriteriaMutation,
+    useCreateCriteriaLevelMutation,
+    useUpdateCriteriaLevelMutation,
+    usePublishTemplateMutation,
+} from "@/hooks/useEvaluations";
 import type { IEvaluationTemplate, ITemplateSection, ITemplateCriteria, ITemplateCriteriaLevel } from "@/types/backend";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -78,10 +78,36 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
     const navigate = useNavigate();
     const templateId = templateIdOverride ?? Number(id);
 
-    const [template, setTemplate] = useState<IEvaluationTemplate | null>(null);
+    const { data: templateData, isLoading: loading, refetch: loadData } = useEvaluationTemplateByIdQuery(templateId);
+
+    const publishMutation = usePublishTemplateMutation();
+    const createSectionMutation = useCreateTemplateSectionMutation();
+    const updateSectionMutation = useUpdateTemplateSectionMutation();
+    const deleteSectionMutation = useDeleteTemplateSectionMutation();
+    const createCriteriaMutation = useCreateTemplateCriteriaMutation();
+    const updateCriteriaMutation = useUpdateTemplateCriteriaMutation();
+    const deleteCriteriaMutation = useDeleteTemplateCriteriaMutation();
+    const createLevelMutation = useCreateCriteriaLevelMutation();
+    const updateLevelMutation = useUpdateCriteriaLevelMutation();
+
+    const template = templateData || null;
     const [sections, setSections] = useState<ITemplateSection[]>([]);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
+    const [publishing, setPublishing] = useState(false);
+
+    useEffect(() => {
+        if (templateData) {
+            const fetchedSections: ITemplateSection[] = templateData.sections ?? [];
+            setSections(fetchedSections);
+            if (fetchedSections.length > 0) {
+                if (!selectedSectionId || !fetchedSections.some(s => s.id === selectedSectionId)) {
+                    setSelectedSectionId(fetchedSections[0].id ?? null);
+                }
+            } else {
+                setSelectedSectionId(null);
+            }
+        }
+    }, [templateData]);
 
     // ── UX Feature 5: Collapse panels ──────────────────────────────────
     const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -127,19 +153,21 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
         updated.forEach(async (sec) => {
             if (!sec.id) return;
             try {
-                const { callUpdateTemplateSection } = await import("@/config/api");
-                await callUpdateTemplateSection(sec.id, {
-                    code: sec.code,
-                    name: sec.name,
-                    weight: sec.weight,
-                    displayOrder: sec.displayOrder,
+                await updateSectionMutation.mutateAsync({
+                    sectionId: sec.id,
+                    templateId,
+                    data: {
+                        code: sec.code,
+                        name: sec.name,
+                        weight: sec.weight,
+                        displayOrder: sec.displayOrder,
+                    },
                 });
             } catch (_) {
-                // silent – loadData will reconcile
+                // silent – query cache invalidation will reconcile
             }
         });
         notify.success("Đã phân bổ đều trọng số cho các phần.");
-        setTimeout(() => loadData(), 600);
     };
 
     // ── UX Feature 4: Drag & drop handlers ────────────────────────────
@@ -171,12 +199,15 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
         withOrder.forEach(async (sec) => {
             if (!sec.id) return;
             try {
-                const { callUpdateTemplateSection } = await import("@/config/api");
-                await callUpdateTemplateSection(sec.id, {
-                    code: sec.code,
-                    name: sec.name,
-                    weight: sec.weight,
-                    displayOrder: sec.displayOrder,
+                await updateSectionMutation.mutateAsync({
+                    sectionId: sec.id,
+                    templateId,
+                    data: {
+                        code: sec.code,
+                        name: sec.name,
+                        weight: sec.weight,
+                        displayOrder: sec.displayOrder,
+                    },
                 });
             } catch (_) {}
         });
@@ -184,30 +215,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
     };
     const handleDragEnd = () => { setDragOverId(null); dragSrcIdRef.current = null; };
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const res = await callFetchEvaluationTemplateById(templateId);
-            if (res?.data) {
-                setTemplate(res.data);
-                const fetchedSections: ITemplateSection[] = res.data.sections ?? [];
-                setSections(fetchedSections);
-                
-                // Keep selected section active if it still exists
-                if (fetchedSections.length > 0) {
-                    if (!selectedSectionId || !fetchedSections.some(s => s.id === selectedSectionId)) {
-                        setSelectedSectionId(fetchedSections[0].id ?? null);
-                    }
-                } else {
-                    setSelectedSectionId(null);
-                }
-            }
-        } catch (error) {
-            notify.error("Không thể tải chi tiết mẫu đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     const handlePublish = async () => {
         if (!templateId) return;
@@ -268,27 +276,17 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
             }
         }
 
-        setLoading(true);
+        setPublishing(true);
         try {
-            const res = await callPublishEvaluationTemplate(templateId);
-            if (res?.data) {
-                notify.success("Kích hoạt mẫu đánh giá thành công.");
-                loadData();
-                handleBack();
-            }
+            await publishMutation.mutateAsync(templateId);
+            handleBack();
         } catch (error: any) {
             const msg = error?.message || error?.response?.data?.message || "Lỗi kích hoạt mẫu đánh giá";
             notify.error(msg);
         } finally {
-            setLoading(false);
+            setPublishing(false);
         }
     };
-
-    useEffect(() => {
-        if (templateId) {
-            loadData();
-        }
-    }, [templateId]);
 
     const handleBack = () => {
         if (onClose) {
@@ -321,9 +319,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
     const handleDeleteSection = async (sectionId: number, e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            await callDeleteTemplateSection(sectionId);
-            notify.success("Xóa phần thành công");
-            loadData();
+            await deleteSectionMutation.mutateAsync({ sectionId, templateId });
         } catch (error: any) {
             const msg = error?.message || error?.response?.data?.message || "Lỗi xóa phần trong template";
             notify.error(msg);
@@ -356,14 +352,11 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
 
         try {
             if (editingSection?.id) {
-                await callUpdateTemplateSection(editingSection.id, payload);
-                notify.success("Cập nhật phần thành công");
+                await updateSectionMutation.mutateAsync({ sectionId: editingSection.id, templateId, data: payload });
             } else {
-                await callCreateTemplateSection(templateId, payload);
-                notify.success("Thêm phần mới thành công");
+                await createSectionMutation.mutateAsync({ templateId, data: payload });
             }
             setIsSectionModalOpen(false);
-            loadData();
         } catch (error: any) {
             const msg = error?.message || error?.response?.data?.message || "Lỗi lưu thông tin phần";
             notify.error(msg);
@@ -440,9 +433,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
 
     const handleDeleteCriteria = async (criteriaId: number) => {
         try {
-            await callDeleteTemplateCriteria(criteriaId);
-            notify.success("Xóa tiêu chí thành công");
-            loadData();
+            await deleteCriteriaMutation.mutateAsync({ criteriaId, templateId });
         } catch (error: any) {
             const msg = error?.message || error?.response?.data?.message || "Lỗi xóa tiêu chí";
             notify.error(msg);
@@ -459,9 +450,9 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
             };
 
             if (levelId) {
-                await callUpdateCriteriaLevel(levelId, payload);
+                await updateLevelMutation.mutateAsync({ levelId, templateId, data: payload });
             } else {
-                await callCreateCriteriaLevel(criteriaId, payload);
+                await createLevelMutation.mutateAsync({ criteriaId, templateId, data: payload });
             }
         }
     };
@@ -475,7 +466,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
 
         for (const existingChild of existingChildren) {
             if (existingChild.id && !submittedIds.has(existingChild.id)) {
-                await callDeleteTemplateCriteria(existingChild.id);
+                await deleteCriteriaMutation.mutateAsync({ criteriaId: existingChild.id, templateId });
             }
         }
 
@@ -492,10 +483,10 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
 
             const childId = child.id;
             if (childId) {
-                await callUpdateTemplateCriteria(childId, childPayload);
+                await updateCriteriaMutation.mutateAsync({ criteriaId: childId, templateId, data: childPayload });
                 await saveCriteriaLevels(childId, child);
             } else {
-                const childRes = await callCreateTemplateCriteria(selectedSectionId, childPayload);
+                const childRes = await createCriteriaMutation.mutateAsync({ sectionId: selectedSectionId, templateId, data: childPayload });
                 const newChildId = childRes?.data?.id;
                 if (newChildId) {
                     await saveCriteriaLevels(newChildId, child);
@@ -550,7 +541,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
         try {
             let savedCriteria: ITemplateCriteria | undefined;
             if (editingCriteria?.id) {
-                const res = await callUpdateTemplateCriteria(editingCriteria.id, payload);
+                const res = await updateCriteriaMutation.mutateAsync({ criteriaId: editingCriteria.id, templateId, data: payload });
                 savedCriteria = res?.data ?? editingCriteria;
                 if (criteriaSetupMode === "LEVELS" && !selectedParentCriteriaId && !editingCriteria.subCriteria?.length) {
                     await saveCriteriaLevels(editingCriteria.id, values);
@@ -558,9 +549,8 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                 if (!selectedParentCriteriaId && criteriaSetupMode === "CHILDREN") {
                     await syncChildCriteria(editingCriteria, values);
                 }
-                notify.success("Cập nhật tiêu chí thành công");
             } else {
-                const res = await callCreateTemplateCriteria(selectedSectionId, payload);
+                const res = await createCriteriaMutation.mutateAsync({ sectionId: selectedSectionId, templateId, data: payload });
                 savedCriteria = res?.data;
 
                 if (savedCriteria?.id && criteriaSetupMode === "LEVELS") {
@@ -571,29 +561,35 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                     const childCriteria = (values.childCriteria ?? []).filter((child: any) => child?.name?.trim());
                     for (let index = 0; index < childCriteria.length; index++) {
                         const child = childCriteria[index];
-                        const childRes = await callCreateTemplateCriteria(selectedSectionId, {
-                            name: child.name,
-                            description: child.description || "",
-                            measurementMethod: child.measurementMethod || "",
-                            weight: 0,
-                            displayOrder: index + 1,
-                            parentCriteria: { id: savedCriteria.id },
+                        const childRes = await createCriteriaMutation.mutateAsync({
+                            sectionId: selectedSectionId,
+                            templateId,
+                            data: {
+                                name: child.name,
+                                description: child.description || "",
+                                measurementMethod: child.measurementMethod || "",
+                                weight: 0,
+                                displayOrder: index + 1,
+                                parentCriteria: { id: savedCriteria.id },
+                            },
                         });
                         const childId = childRes?.data?.id;
                         if (childId) {
                             for (const lvl of SCORE_LEVELS) {
-                                await callCreateCriteriaLevel(childId, {
-                                    level: lvl,
-                                    description: child[`levelDescription_${lvl}`] ?? "",
+                                await createLevelMutation.mutateAsync({
+                                    criteriaId: childId,
+                                    templateId,
+                                    data: {
+                                        level: lvl,
+                                        description: child[`levelDescription_${lvl}`] ?? "",
+                                    },
                                 });
                             }
                         }
                     }
                 }
-                notify.success("Thêm tiêu chí thành công");
             }
             setIsCriteriaModalOpen(false);
-            loadData();
         } catch (error: any) {
             const msg = error?.message || error?.response?.data?.message || "Lỗi lưu tiêu chí";
             notify.error(msg);

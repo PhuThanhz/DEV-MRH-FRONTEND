@@ -37,8 +37,8 @@ export const ToastProvider = () => {
                 },
             }}
             containerStyle={{
-                top: 16,
-                right: 16,
+                top: 18,
+                right: 18,
             }}
             reverseOrder={false}
         />

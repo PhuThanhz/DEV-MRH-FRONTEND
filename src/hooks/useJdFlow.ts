@@ -75,13 +75,13 @@ export const useJdFlowInboxQuery = (options?: { enabled?: boolean }) => {
 };
 /* ===================== JD APPROVERS ===================== */
 
-export const useJdApproversQuery = (enabled: boolean = true) => {
+export const useJdApproversQuery = (jdId?: number, enabled: boolean = true) => {
     return useQuery<IJDApprover[]>({
-        queryKey: ["jd-approvers"],
-        enabled,
+        queryKey: ["jd-approvers", jdId],
+        enabled: enabled && (jdId !== undefined ? !!jdId : true),
         staleTime: 1000 * 60,
         queryFn: async (): Promise<IJDApprover[]> => {
-            const res = await callFetchJdApprovers();
+            const res = await callFetchJdApprovers(jdId);
             if (!res || res.statusCode !== 200) {
                 throw new Error(res?.message || "Không thể lấy danh sách người duyệt JD");
             }
@@ -167,13 +167,13 @@ export const useIssueJdFlowMutation = () => {
 
 /* ===================== JD ISSUERS ===================== */
 
-export const useJdIssuersQuery = (enabled: boolean = true) => {
+export const useJdIssuersQuery = (jdId?: number, enabled: boolean = true) => {
     return useQuery<IJDApprover[]>({
-        queryKey: ["jd-issuers"],
-        enabled,
+        queryKey: ["jd-issuers", jdId],
+        enabled: enabled && (jdId !== undefined ? !!jdId : true),
         staleTime: 1000 * 60,
         queryFn: async (): Promise<IJDApprover[]> => {
-            const res = await callFetchJdIssuers();
+            const res = await callFetchJdIssuers(jdId);
             if (!res || res.statusCode !== 200) {
                 throw new Error(res?.message || "Không thể lấy danh sách người ban hành JD");
             }

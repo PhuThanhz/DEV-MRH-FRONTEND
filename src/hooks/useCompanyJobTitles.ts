@@ -37,6 +37,18 @@ export const useCompanyJobTitlesQuery = (companyId?: number) => {
     });
 };
 
+export const useAllCompanyJobTitlesQuery = (companyId?: number) => {
+    return useQuery({
+        queryKey: ["company-job-titles-all", companyId],
+        enabled: !!companyId && companyId > 0,
+        queryFn: async () => {
+            if (!companyId) throw new Error("Thiếu ID công ty");
+            const res = await callFetchCompanyJobTitlesByCompany(companyId);
+            return res?.data ?? [];
+        },
+    });
+};
+
 /* =====================================================
    2. GÁN CHỨC DANH VÀO CÔNG TY
 ===================================================== */
@@ -49,9 +61,8 @@ export const useCreateCompanyJobTitleMutation = () => {
 
         onSuccess: (_res, payload) => {
             notify.success("Gán chức danh vào công ty thành công");
-            qc.invalidateQueries({
-                queryKey: ["company-job-titles", payload.companyId],
-            });
+            qc.invalidateQueries({ queryKey: ["company-job-titles", payload.companyId] });
+            qc.invalidateQueries({ queryKey: ["company-job-titles-all", payload.companyId] });
         },
 
         onError: (err: any) => {
@@ -72,9 +83,8 @@ export const useDeleteCompanyJobTitleMutation = () => {
 
         onSuccess: (_res, payload) => {
             notify.success("Đã hủy gán chức danh khỏi công ty");
-            qc.invalidateQueries({
-                queryKey: ["company-job-titles", payload.companyId],
-            });
+            qc.invalidateQueries({ queryKey: ["company-job-titles", payload.companyId] });
+            qc.invalidateQueries({ queryKey: ["company-job-titles-all", payload.companyId] });
         },
 
         onError: (err: any) => {

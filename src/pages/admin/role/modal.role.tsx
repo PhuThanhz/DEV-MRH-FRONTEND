@@ -1,17 +1,16 @@
 import {
-    ModalForm,
     ProFormSwitch,
     ProFormText,
     ProFormTextArea,
 } from '@ant-design/pro-components';
 import { Form } from 'antd';
-import { isMobile } from 'react-device-detect';
 import { callCreateRole, callUpdateRole } from '@/config/api';
 import type { IPermission, IRole } from '@/types/backend';
-import ModuleApi from './module.api';
+import ModuleApi, { MODULE_MERGE_MAP, CHILD_TO_PARENT } from './module.api';
 import { useAppDispatch } from '@/redux/hooks';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { notify } from '@/components/common/notification/notify';
+import LotusDetailDrawer from '@/components/common/drawer/LotusDetailDrawer';
 
 interface IProps {
     openModal: boolean;
@@ -25,12 +24,56 @@ interface IProps {
     setSingleRole: (v: any) => void;
 }
 
+const countSelectedPermissions = (perms: Record<string, any> | undefined): number => {
+    if (!perms) return 0;
+    let count = 0;
+    for (const key in perms) {
+        if (key.match(/^[1-9][0-9]*$/) && perms[key] === true) {
+            count++;
+        }
+    }
+    return count;
+};
+
+/* ── ModalRole Component ── */
 const ModalRole = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, listPermissions, singleRole, setSingleRole } = props;
     const dispatch = useAppDispatch();
     const [form] = Form.useForm();
     const isEdit = !!singleRole?.id;
     const [showLeft, setShowLeft] = useState(true);
+
+    // Merge database modules into parent virtual groups on the frontend as defined in MODULE_MERGE_MAP
+    const processedListPermissions = useMemo(() => {
+        if (!listPermissions) return [];
+
+        const byParent = new Map<string, IPermission[]>();
+        const passthrough: { module: string; permissions: IPermission[] }[] = [];
+
+        for (const grp of listPermissions) {
+            const parent = CHILD_TO_PARENT[grp.module] ?? (MODULE_MERGE_MAP[grp.module] ? grp.module : null);
+            if (parent) {
+                const arr = byParent.get(parent) ?? [];
+                arr.push(...(grp.permissions || []));
+                byParent.set(parent, arr);
+            } else {
+                passthrough.push(grp);
+            }
+        }
+
+        const merged = Array.from(byParent.entries()).map(([module, permissions]) => ({
+            module,
+            permissions,
+        }));
+
+        return [...merged, ...passthrough];
+    }, [listPermissions]);
+
+    // Calculate total permissions in the system
+    const totalSystemPermissions = useMemo(() => {
+        if (!listPermissions) return 0;
+        return listPermissions.reduce((acc, curr) => acc + (curr.permissions?.length ?? 0), 0);
+    }, [listPermissions]);
 
     const submitRole = async (valuesForm: any) => {
         const { description, active, name, permissions } = valuesForm;
@@ -77,272 +120,254 @@ const ModalRole = (props: IProps) => {
     return (
         <>
             <style>{globalCss}</style>
-            <ModalForm
-                title={null}
+            <LotusDetailDrawer
                 open={openModal}
-                modalProps={{
-                    onCancel: handleReset,
-                    afterClose: handleReset,
-                    destroyOnHidden: true,
-                    width: 1200, // Dynamic responsive width is handled gracefully by our CSS media queries!
-                    keyboard: false,
-                    maskClosable: false,
-                    className: 'apple-modal role-form-modal',
-                    footer: null,
-                    closable: false,
-                    style: { top: 24 },
-                }}
-                scrollToFirstError
-                preserve={false}
-                form={form}
-                onFinish={submitRole}
-                submitter={false}
+                onClose={handleReset}
+                maskClosable={false}
+                keyboard={false}
             >
-                {/* ── HEADER ── */}
-                <div style={s.header} className="apple-modal-header">
-                    <div style={s.headerIcon}>
-                        {isEdit ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="#007AFF" strokeWidth="2" />
-                                <path d="M12 8v8M8 12h8" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                        )}
-                    </div>
-                    <div style={s.headerLeft}>
-                        <div style={s.title}>{isEdit ? 'Chỉnh sửa Role' : 'Tạo Role mới'}</div>
-                        <div style={s.subtitle}>
-                            {isEdit
-                                ? `Đang chỉnh sửa: ${singleRole?.name}`
-                                : 'Điền thông tin và phân quyền cho vai trò mới'}
+                <Form
+                    form={form}
+                    onFinish={submitRole}
+                    scrollToFirstError
+                    preserve={false}
+                    layout="vertical"
+                    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                >
+                    {/* ── HEADER ── */}
+                    <div style={s.header} className="apple-modal-header">
+                        <div style={s.headerIcon}>
+                            {isEdit ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="#2563EB" strokeWidth="2" />
+                                    <path d="M12 8v8M8 12h8" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            )}
                         </div>
+                        <div style={s.headerLeft}>
+                            <div style={s.title}>{isEdit ? 'Chỉnh sửa Role' : 'Tạo Role mới'}</div>
+                            <div style={s.subtitle}>
+                                {isEdit
+                                    ? `Đang chỉnh sửa: ${singleRole?.name}`
+                                    : 'Điền thông tin và phân quyền cho vai trò mới'}
+                            </div>
+                        </div>
+
+                        {/* Toggle left panel */}
+                        <button
+                            style={s.toggleBtn}
+                            type="button"
+                            onClick={() => setShowLeft(v => !v)}
+                            className="apple-toggle-btn"
+                        >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="3" width="7" height="18" rx="2" stroke="#475569" strokeWidth="1.8" />
+                                <path d="M14 7h5M14 12h5M14 17h5" stroke="#475569" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                            <span style={s.toggleBtnLabel}>
+                                {showLeft ? 'Ẩn thông tin' : 'Hiện thông tin'}
+                            </span>
+                        </button>
                     </div>
 
-                    {/* Toggle left panel */}
-                    <button
-                        style={s.toggleBtn}
-                        type="button"
-                        onClick={() => setShowLeft(v => !v)}
-                        className="apple-toggle-btn"
-                    >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="7" height="18" rx="2" stroke="#636366" strokeWidth="1.8" />
-                            <path d="M14 7h5M14 12h5M14 17h5" stroke="#636366" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                        <span style={s.toggleBtnLabel} className="apple-toggle-label">
-                            <span className="label-desktop">{showLeft ? 'Ẩn thông tin' : 'Hiện thông tin'}</span>
-                            <span className="label-mobile">{showLeft ? 'Xem phân quyền' : 'Xem thông tin'}</span>
-                        </span>
-                    </button>
+                    {/* ── BODY ── */}
+                    <div style={s.body} className="apple-modal-body-layout">
 
-                    <button style={s.closeBtn} onClick={handleReset} type="button" className="apple-close-btn">
-                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="#636366" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                    </button>
-                </div>
+                        {/* ── LEFT PANEL ── */}
+                        <div style={{
+                            ...s.leftPanel,
+                            width: showLeft ? 280 : 0, // Desktop base width
+                            opacity: showLeft ? 1 : 0,
+                            paddingLeft: showLeft ? 18 : 0,
+                            paddingRight: showLeft ? 18 : 0,
+                            pointerEvents: showLeft ? 'auto' : 'none',
+                        }} className={`apple-left-panel ${showLeft ? 'active' : ''}`}>
+                            <div className="apple-left-panel-inner" style={{ width: 244, minWidth: 244 }}>
+                                <div style={s.sectionLabel}>
+                                    <span style={s.sectionDot} />
+                                    Thông tin cơ bản
+                                </div>
 
-                {/* ── BODY ── */}
-                <div style={s.body} className="apple-modal-body-layout">
+                                <div style={s.fieldGroup}>
+                                    <label style={s.label}>Tên Role <span style={s.required}>*</span></label>
+                                    <ProFormText
+                                        name="name"
+                                        noStyle
+                                        rules={[{ required: true, message: 'Vui lòng nhập tên role' }]}
+                                        fieldProps={{
+                                            placeholder: 'VD: ADMIN, HR_MANAGER...',
+                                            size: 'large',
+                                        }}
+                                    />
+                                </div>
 
-                    {/* ── LEFT PANEL ── */}
-                    <div style={{
-                        ...s.leftPanel,
-                        width: showLeft ? 280 : 0, // Desktop base width
-                        opacity: showLeft ? 1 : 0,
-                        paddingLeft: showLeft ? 18 : 0,
-                        paddingRight: showLeft ? 18 : 0,
-                        pointerEvents: showLeft ? 'auto' : 'none',
-                    }} className={`apple-left-panel ${showLeft ? 'active' : ''}`}>
-                        <div className="apple-left-panel-inner" style={{ width: 244, minWidth: 244 }}>
-                            <div style={s.sectionLabel}>
-                                <span style={s.sectionDot} />
-                                Thông tin cơ bản
-                            </div>
+                                <div style={s.fieldGroup}>
+                                    <label style={s.label}>Mô tả <span style={s.required}>*</span></label>
+                                    <ProFormTextArea
+                                        name="description"
+                                        noStyle
+                                        rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
+                                        fieldProps={{
+                                            placeholder: 'Mô tả ngắn về vai trò này...',
+                                            autoSize: { minRows: 3, maxRows: 4 },
+                                        }}
+                                    />
+                                </div>
 
-                            <div style={s.fieldGroup}>
-                                <label style={s.label}>Tên Role <span style={s.required}>*</span></label>
-                                <ProFormText
-                                    name="name"
-                                    noStyle
-                                    rules={[{ required: true, message: 'Vui lòng nhập tên role' }]}
-                                    fieldProps={{
-                                        placeholder: 'VD: ADMIN, HR_MANAGER...',
-                                        size: 'large',
-                                    }}
-                                />
-                            </div>
-
-                            <div style={s.fieldGroup}>
-                                <label style={s.label}>Mô tả <span style={s.required}>*</span></label>
-                                <ProFormTextArea
-                                    name="description"
-                                    noStyle
-                                    rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
-                                    fieldProps={{
-                                        placeholder: 'Mô tả ngắn về vai trò này...',
-                                        autoSize: { minRows: 3, maxRows: 4 },
-                                    }}
-                                />
-                            </div>
-
-                            {/* Status */}
-                            <div style={s.fieldGroup}>
-                                <label style={s.label}>Trạng thái</label>
-                                <Form.Item noStyle shouldUpdate={(p, c) => p.active !== c.active}>
-                                    {({ getFieldValue }) => {
-                                        const active = getFieldValue('active') !== false;
-                                        return (
-                                            <div style={s.statusCard}>
-                                                <div style={s.statusLeft}>
-                                                    <div style={{
-                                                        ...s.statusDot,
-                                                        background: active ? '#34C759' : '#D1D1D6',
-                                                    }} />
-                                                    <div>
+                                {/* Status */}
+                                <div style={s.fieldGroup}>
+                                    <label style={s.label}>Trạng thái</label>
+                                    <Form.Item noStyle shouldUpdate={(p, c) => p.active !== c.active}>
+                                        {({ getFieldValue }) => {
+                                            const active = getFieldValue('active') !== false;
+                                            return (
+                                                <div style={s.statusCard}>
+                                                    <div style={s.statusLeft}>
                                                         <div style={{
-                                                            fontSize: 13,
-                                                            fontWeight: 500,
-                                                            color: active ? '#1C1C1E' : '#8E8E93',
-                                                        }}>
-                                                            {active ? 'Đang hoạt động' : 'Không hoạt động'}
-                                                        </div>
-                                                        <div style={{
-                                                            fontSize: 11,
-                                                            color: '#AEAEB2',
-                                                            marginTop: 1,
-                                                        }}>
-                                                            {active ? 'Có thể gán cho người dùng' : 'Tạm thời vô hiệu hoá'}
+                                                            ...s.statusDot,
+                                                            background: active ? '#34C759' : '#D1D1D6',
+                                                        }} />
+                                                        <div>
+                                                            <div style={{
+                                                                fontSize: 13,
+                                                                fontWeight: 600,
+                                                                color: active ? '#0F172A' : '#64748B',
+                                                            }}>
+                                                                {active ? 'Đang hoạt động' : 'Không hoạt động'}
+                                                            </div>
+                                                            <div style={{
+                                                                fontSize: 11,
+                                                                color: '#64748B',
+                                                                marginTop: 1,
+                                                            }}>
+                                                                {active ? 'Có thể gán cho người dùng' : 'Tạm thời vô hiệu hoá'}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <ProFormSwitch
-                                                    name="active"
-                                                    noStyle
-                                                    initialValue={true}
-                                                    fieldProps={{ defaultChecked: true }}
-                                                />
-                                            </div>
-                                        );
-                                    }}
-                                </Form.Item>
-                            </div>
-
-                            {/* Summary */}
-                            <div style={s.summaryWrap}>
-                                <div style={s.sectionLabel}>
-                                    <span style={{ ...s.sectionDot, background: '#007AFF' }} />
-                                    Tổng quan
-                                </div>
-                                <div style={s.summaryGrid}>
-                                    <Form.Item noStyle shouldUpdate>
-                                        {({ getFieldValue }) => {
-                                            const perms = getFieldValue('permissions') || {};
-                                            const count = Object.entries(perms).filter(
-                                                ([k, v]) => k.match(/^[1-9][0-9]*$/) && v === true
-                                            ).length;
-                                            return (
-                                                <div style={s.summaryCard}>
-                                                    <div style={{ ...s.summaryNum, color: '#007AFF' }}>{count}</div>
-                                                    <div style={s.summaryLabel}>Quyền đã chọn</div>
+                                                    <ProFormSwitch
+                                                        name="active"
+                                                        noStyle
+                                                        initialValue={true}
+                                                        fieldProps={{ defaultChecked: true }}
+                                                    />
                                                 </div>
                                             );
                                         }}
                                     </Form.Item>
-                                    <div style={s.summaryCard}>
-                                        <div style={{ ...s.summaryNum, color: '#5856D6' }}>
-                                            {listPermissions?.length ?? 0}
+                                </div>
+
+                                {/* Summary */}
+                                <div style={s.summaryWrap}>
+                                    <div style={s.sectionLabel}>
+                                        <span style={{ ...s.sectionDot, background: '#2563EB' }} />
+                                        Tổng quan
+                                    </div>
+                                    <div style={s.summaryGrid}>
+                                        <Form.Item noStyle shouldUpdate={(prev, curr) => prev.permissions !== curr.permissions}>
+                                            {({ getFieldValue }) => {
+                                                const count = countSelectedPermissions(getFieldValue('permissions'));
+                                                return (
+                                                    <div style={s.summaryCard}>
+                                                        <div style={{ ...s.summaryNum, color: '#2563EB' }}>
+                                                            {count}
+                                                            <span style={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}>/{totalSystemPermissions}</span>
+                                                        </div>
+                                                        <div style={s.summaryLabel}>Quyền đã chọn</div>
+                                                    </div>
+                                                );
+                                            }}
+                                        </Form.Item>
+                                        <div style={s.summaryCard}>
+                                            <div style={{ ...s.summaryNum, color: '#475569' }}>
+                                                {processedListPermissions?.length ?? 0}
+                                            </div>
+                                            <div style={s.summaryLabel}>Module hệ thống</div>
                                         </div>
-                                        <div style={s.summaryLabel}>Module hệ thống</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* ── DIVIDER ── */}
-                    {showLeft && <div style={s.vDivider} className="apple-v-divider" />}
+                        {/* ── DIVIDER ── */}
+                        {showLeft && <div style={s.vDivider} className="apple-v-divider" />}
 
-                    {/* ── RIGHT PANEL ── */}
-                    <div style={s.rightPanel} className={`apple-right-panel ${showLeft ? 'has-left' : ''}`}>
-                        <div style={s.rightHeader}>
-                            <div style={s.rightHeaderLeft}>
-                                <div style={s.sectionLabel}>
-                                    <span style={{ ...s.sectionDot, background: '#5856D6' }} />
-                                    Phân quyền
+                        {/* ── RIGHT PANEL ── */}
+                        <div style={s.rightPanel} className={`apple-right-panel ${showLeft ? 'has-left' : ''}`}>
+                            <div style={s.rightHeader}>
+                                <div style={s.rightHeaderLeft}>
+                                    <div style={s.sectionLabelBold}>
+                                        <span style={{ ...s.sectionDot, background: '#2563EB' }} />
+                                        Phân quyền
+                                    </div>
+                                    <span style={s.rightHintBold}>Bật / tắt từng quyền hoặc toàn bộ module</span>
                                 </div>
-                                <span style={s.rightHint}>Bật / tắt từng quyền hoặc toàn bộ module</span>
+                                <Form.Item noStyle shouldUpdate={(prev, curr) => prev.permissions !== curr.permissions}>
+                                    {({ getFieldValue }) => {
+                                        const count = countSelectedPermissions(getFieldValue('permissions'));
+                                        return count > 0 ? (
+                                            <div style={s.rightBadge}>
+                                                Đã chọn {count}/{totalSystemPermissions} quyền
+                                            </div>
+                                        ) : null;
+                                    }}
+                                </Form.Item>
                             </div>
-                            <Form.Item noStyle shouldUpdate>
-                                {({ getFieldValue }) => {
-                                    const perms = getFieldValue('permissions') || {};
-                                    const count = Object.entries(perms).filter(
-                                        ([k, v]) => k.match(/^[1-9][0-9]*$/) && v === true
-                                    ).length;
-                                    return count > 0 ? (
-                                        <div style={s.rightBadge}>{count} quyền</div>
-                                    ) : null;
-                                }}
-                            </Form.Item>
-                        </div>
-                        <div style={s.permScroll}>
-                            <ModuleApi
-                                form={form}
-                                listPermissions={listPermissions}
-                                singleRole={singleRole}
-                                openModal={openModal}
-                            />
+                            <div style={s.permScroll}>
+                                <ModuleApi
+                                    form={form}
+                                    listPermissions={processedListPermissions}
+                                    singleRole={singleRole}
+                                    openModal={openModal}
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* ── FOOTER ── */}
-                <div style={s.footer} className="apple-modal-footer">
-                    <Form.Item noStyle shouldUpdate>
-                        {({ getFieldValue }) => {
-                            const perms = getFieldValue('permissions') || {};
-                            const count = Object.entries(perms).filter(
-                                ([k, v]) => k.match(/^[1-9][0-9]*$/) && v === true
-                            ).length;
-                            return (
-                                <div style={s.footerInfo}>
-                                    {count > 0 ? (
-                                        <div style={s.footerBadge}>
-                                            <div style={s.footerDot} />
-                                            {count} quyền đã chọn
-                                        </div>
-                                    ) : (
-                                        <div style={s.footerEmpty}>Chưa chọn quyền nào</div>
-                                    )}
-                                </div>
-                            );
-                        }}
-                    </Form.Item>
-                    <div style={s.footerRight}>
-                        <button
-                            style={s.cancelBtn}
-                            onClick={handleReset}
-                            type="button"
-                            className="apple-cancel-btn"
-                        >
-                            Hủy
-                        </button>
-                        <button
-                            style={s.submitBtn}
-                            type="button"
-                            onClick={() => form.submit()}
-                            className="apple-submit-btn"
-                        >
-                            {isEdit ? 'Lưu thay đổi' : 'Tạo mới'}
-                        </button>
+                    {/* ── FOOTER ── */}
+                    <div style={s.footer} className="apple-modal-footer">
+                        <Form.Item noStyle shouldUpdate={(prev, curr) => prev.permissions !== curr.permissions}>
+                            {({ getFieldValue }) => {
+                                const count = countSelectedPermissions(getFieldValue('permissions'));
+                                return (
+                                    <div style={s.footerInfo}>
+                                        {count > 0 ? (
+                                            <div style={s.footerBadge}>
+                                                <div style={s.footerDot} />
+                                                Đã chọn {count}/{totalSystemPermissions} quyền
+                                            </div>
+                                        ) : (
+                                            <div style={s.footerEmpty}>Chưa chọn quyền nào</div>
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        </Form.Item>
+                        <div style={s.footerRight}>
+                            <button
+                                style={s.cancelBtn}
+                                onClick={handleReset}
+                                type="button"
+                                className="apple-cancel-btn"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                style={s.submitBtn}
+                                type="button"
+                                onClick={() => form.submit()}
+                                className="apple-submit-btn"
+                            >
+                                {isEdit ? 'Lưu thay đổi' : 'Tạo mới'}
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-            </ModalForm>
+                </Form>
+            </LotusDetailDrawer>
         </>
     );
 };
@@ -373,16 +398,17 @@ const s: Record<string, React.CSSProperties> = {
     },
     headerLeft: { flex: 1 },
     title: {
-        fontSize: 15,
-        fontWeight: 600,
-        color: '#1C1C1E',
+        fontSize: 16,
+        fontWeight: 700,
+        color: '#0F172A',
         letterSpacing: '-0.3px',
         lineHeight: 1.3,
     },
     subtitle: {
-        fontSize: 11,
-        color: '#AEAEB2',
-        marginTop: 1,
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: 500,
+        marginTop: 2,
     },
 
     /* Toggle btn */
@@ -392,7 +418,7 @@ const s: Record<string, React.CSSProperties> = {
         gap: 5,
         padding: '5px 11px',
         borderRadius: 8,
-        border: '1px solid #E5E5EA',
+        border: '1px solid #CBD5E1',
         background: '#FAFAFA',
         cursor: 'pointer',
         flexShrink: 0,
@@ -400,8 +426,8 @@ const s: Record<string, React.CSSProperties> = {
     },
     toggleBtnLabel: {
         fontSize: 12,
-        color: '#636366',
-        fontWeight: 400,
+        color: '#1E293B',
+        fontWeight: 600,
         whiteSpace: 'nowrap' as const,
     },
 
@@ -409,7 +435,7 @@ const s: Record<string, React.CSSProperties> = {
         width: 26,
         height: 26,
         borderRadius: '50%',
-        border: '1px solid #E5E5EA',
+        border: '1px solid #CBD5E1',
         background: '#F9F9F9',
         cursor: 'pointer',
         display: 'flex',
@@ -422,8 +448,7 @@ const s: Record<string, React.CSSProperties> = {
     /* Body */
     body: {
         display: 'flex',
-        height: 'calc(88vh - 140px)',
-        minHeight: 520,
+        flex: 1,
         overflow: 'hidden',
     },
 
@@ -443,16 +468,26 @@ const s: Record<string, React.CSSProperties> = {
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#AEAEB2',
+        fontSize: 12,
+        fontWeight: 700,
+        color: '#0F172A',
         textTransform: 'uppercase' as const,
         letterSpacing: '0.6px',
         marginBottom: 12,
     },
+    sectionLabelBold: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 14,
+        fontWeight: 700,
+        color: '#0F172A',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.5px',
+    },
     sectionDot: {
-        width: 5,
-        height: 5,
+        width: 6,
+        height: 6,
         borderRadius: '50%',
         background: '#34C759',
         flexShrink: 0,
@@ -464,8 +499,8 @@ const s: Record<string, React.CSSProperties> = {
     label: {
         display: 'block',
         fontSize: 12,
-        fontWeight: 500,
-        color: '#48484A',
+        fontWeight: 600,
+        color: '#1E293B',
         marginBottom: 5,
     },
     required: {
@@ -473,14 +508,14 @@ const s: Record<string, React.CSSProperties> = {
         marginLeft: 2,
     },
 
-    /* Status card — neutral, không nổi bật */
+    /* Status card */
     statusCard: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '9px 11px',
         borderRadius: 10,
-        border: '1px solid #E5E5EA',
+        border: '1px solid #CBD5E1',
         background: '#FAFAFA',
     },
     statusLeft: {
@@ -516,18 +551,17 @@ const s: Record<string, React.CSSProperties> = {
     },
     summaryNum: {
         fontSize: 24,
-        fontWeight: 600,
+        fontWeight: 700,
         letterSpacing: '-0.8px',
         lineHeight: 1,
         marginBottom: 3,
     },
     summaryLabel: {
         fontSize: 11,
-        color: '#AEAEB2',
-        fontWeight: 400,
+        color: '#475569',
+        fontWeight: 600,
     },
 
-    /* Divider */
     vDivider: {
         width: 1,
         background: '#EBEBEB',
@@ -546,33 +580,40 @@ const s: Record<string, React.CSSProperties> = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '14px 20px 12px',
+        padding: '14px 20px',
         borderBottom: '1px solid #F0F0F0',
+        background: '#FFFFFF',
         flexShrink: 0,
     },
     rightHeaderLeft: {
         display: 'flex',
-        flexDirection: 'column' as const,
-        gap: 2,
+        alignItems: 'center',
+        gap: 12,
     },
     rightHint: {
-        fontSize: 11,
-        color: '#C7C7CC',
-        marginLeft: 11,
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: 500,
+    },
+    rightHintBold: {
+        fontSize: 12,
+        color: '#475569',
+        fontWeight: 600,
     },
     rightBadge: {
-        background: '#F2F2F7',
-        color: '#636366',
-        fontSize: 12,
-        fontWeight: 500,
-        padding: '3px 11px',
-        borderRadius: 20,
-        border: '1px solid #E5E5EA',
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#1D4ED8',
+        background: '#EFF6FF',
+        border: '1px solid #BFDBFE',
+        padding: '3px 10px',
+        borderRadius: 12,
     },
+
     permScroll: {
         flex: 1,
         overflowY: 'auto',
-        padding: '12px 16px 18px',
+        padding: '0 20px 16px 20px', // Top padding moved to ModuleApi sticky header to eliminate hole gap!
     },
 
     /* Footer */
@@ -580,254 +621,74 @@ const s: Record<string, React.CSSProperties> = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 20px 14px',
+        padding: '12px 20px',
         borderTop: '1px solid #F0F0F0',
         background: '#FFFFFF',
-        borderRadius: '0 0 18px 18px',
         flexShrink: 0,
     },
     footerInfo: {
-        display: 'flex',
-        alignItems: 'center',
+        fontSize: 12,
     },
     footerBadge: {
         display: 'flex',
         alignItems: 'center',
         gap: 6,
         fontSize: 12,
-        fontWeight: 500,
-        color: '#1D4ED8',
-        background: '#EFF6FF',
-        border: '1px solid #BFDBFE',
+        fontWeight: 600,
+        color: '#e8637a',
+        background: '#fff5f7',
+        border: '1px solid #f8d7da',
+        padding: '4px 12px',
         borderRadius: 20,
-        padding: '3px 11px',
     },
     footerDot: {
-        width: 5,
-        height: 5,
+        width: 6,
+        height: 6,
         borderRadius: '50%',
-        background: '#007AFF',
-        flexShrink: 0,
+        background: '#e8637a',
     },
     footerEmpty: {
-        fontSize: 12,
-        color: '#C7C7CC',
-        fontStyle: 'italic' as const,
+        color: '#64748B',
+        fontWeight: 500,
     },
     footerRight: {
         display: 'flex',
-        gap: 7,
+        alignItems: 'center',
+        gap: 8,
     },
     cancelBtn: {
-        padding: '8px 20px',
-        borderRadius: 9,
-        border: '1px solid #E5E5EA',
+        padding: '7px 16px',
+        borderRadius: 8,
+        border: '1px solid #CBD5E1',
         background: '#FFFFFF',
-        color: '#3A3A3C',
+        color: '#1E293B',
         fontSize: 13,
-        fontWeight: 400,
+        fontWeight: 600,
         cursor: 'pointer',
         transition: 'all 0.15s',
     },
     submitBtn: {
-        padding: '8px 24px',
-        borderRadius: 9,
+        padding: '7px 18px',
+        borderRadius: 8,
         border: 'none',
-        background: '#007AFF',
+        background: '#e8637a',
         color: '#FFFFFF',
         fontSize: 13,
-        fontWeight: 500,
+        fontWeight: 600,
         cursor: 'pointer',
+        boxShadow: '0 2px 8px rgba(232, 99, 122, 0.3)',
         transition: 'all 0.15s',
     },
 };
 
-/* ─── Global CSS ─── */
 const globalCss = `
-  .apple-modal .ant-modal-content {
-    border-radius: 20px !important;
-    padding: 0 !important;
-    overflow: hidden;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.04) !important;
-  }
-  .apple-modal .ant-modal-header,
-  .apple-modal .ant-modal-footer {
-    display: none !important;
-  }
-  .apple-modal .ant-modal-body {
-    padding: 0 !important;
-  }
-
-  /* Inputs */
-  .apple-modal .ant-input,
-  .apple-modal .ant-input-affix-wrapper,
-  .apple-modal textarea.ant-input {
-    border-radius: 9px !important;
-    border: 1px solid #E5E5EA !important;
-    background: #FFFFFF !important;
-    font-size: 13px !important;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    box-shadow: none !important;
-  }
-  .apple-modal .ant-input:hover,
-  .apple-modal .ant-input-affix-wrapper:hover {
-    border-color: #C7C7CC !important;
-  }
-  .apple-modal .ant-input:focus,
-  .apple-modal .ant-input-affix-wrapper:focus-within,
-  .apple-modal textarea.ant-input:focus {
-    border-color: #007AFF !important;
-    box-shadow: 0 0 0 3px rgba(0,122,255,0.1) !important;
-    background: #FFFFFF !important;
-  }
-  .apple-modal .ant-input-lg {
-    font-size: 13px !important;
-    padding: 9px 12px !important;
-    border-radius: 9px !important;
-  }
-
-  /* Switch */
-  .apple-modal .ant-switch {
-    background: #D1D1D6 !important;
-  }
-  .apple-modal .ant-switch-checked {
-    background: #007AFF !important;
-  }
-
-  /* Form item */
-  .apple-modal .ant-form-item {
-    margin-bottom: 0 !important;
-  }
-  .apple-modal .ant-form-item-explain-error {
-    font-size: 11px;
-    margin-top: 3px;
-    color: #FF3B30;
-  }
-
-  /* Buttons */
-  .apple-close-btn:hover {
-    background: #EFEFF4 !important;
-    border-color: #D1D1D6 !important;
-  }
-  .apple-toggle-btn:hover {
-    background: #EFEFF4 !important;
-    border-color: #D1D1D6 !important;
-  }
-  .apple-cancel-btn:hover {
-    background: #F2F2F7 !important;
-    border-color: #C7C7CC !important;
-  }
-  .apple-submit-btn:hover {
-    opacity: 0.86;
-  }
-  .apple-submit-btn:active {
-    opacity: 1;
-  }
-
-  /* Scrollbar */
-  .apple-modal ::-webkit-scrollbar { width: 4px; }
-  .apple-modal ::-webkit-scrollbar-track { background: transparent; }
-  .apple-modal ::-webkit-scrollbar-thumb {
-    background: #D1D1D6;
-    border-radius: 4px;
-  }
-  .apple-modal ::-webkit-scrollbar-thumb:hover {
-    background: #AEAEB2;
-  }
-
-  /* ── Mobile Responsive Overrides ── */
-  .apple-toggle-label .label-mobile {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    /* Modal full-screen wrapper overrides */
-    .apple-modal {
-      width: 100% !important;
-      max-width: 100vw !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      top: 0 !important;
-    }
-    .apple-modal .ant-modal-content {
-      border-radius: 0 !important;
-      height: 100vh !important;
-      display: flex !important;
-      flex-direction: column !important;
-      box-shadow: none !important;
-    }
-    
-    /* Header & Footer overrides */
-    .apple-modal-header {
-      padding: 12px 16px !important;
-      height: 64px !important;
-      flex-shrink: 0 !important;
-    }
-    .apple-modal-footer {
-      padding: 12px 16px !important;
-      height: 64px !important;
-      flex-shrink: 0 !important;
-      gap: 8px !important;
-    }
-    
-    .apple-submit-btn, .apple-cancel-btn {
-      padding: 8px 16px !important;
-      font-size: 12px !important;
-    }
-    
-    /* Toggle Labels responsive */
-    .apple-toggle-label .label-desktop {
-      display: none !important;
-    }
-    .apple-toggle-label .label-mobile {
-      display: inline !important;
-    }
-    
-    /* Layout overrides */
-    .apple-modal-body-layout {
-      height: calc(100vh - 128px) !important;
-      min-height: unset !important;
-      flex-direction: column !important;
-    }
-    
-    /* Divider */
-    .apple-v-divider {
-      display: none !important;
-    }
-    
-    /* Left Panel (Basic Info) responsive */
-    .apple-left-panel {
-      width: 0 !important;
-      flex: 0 0 0 !important;
-      opacity: 0 !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-      pointer-events: none !important;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    .apple-left-panel.active {
-      width: 100% !important;
-      flex: 1 1 100% !important;
-      opacity: 1 !important;
-      padding-left: 16px !important;
-      padding-right: 16px !important;
-      pointer-events: auto !important;
-    }
-    .apple-left-panel-inner {
-      width: 100% !important;
-      min-width: 100% !important;
-    }
-    
-    /* Right Panel (Permissions) responsive */
-    .apple-right-panel {
-      width: 100% !important;
-      flex: 1 1 100% !important;
-      display: flex !important;
-    }
-    .apple-right-panel.has-left {
-      display: none !important;
-    }
-  }
+.apple-submit-btn:hover {
+    background: #d4506a !important;
+}
+.apple-cancel-btn:hover {
+    border-color: #94A3B8 !important;
+    background: #F8FAFC !important;
+}
 `;
 
 export default ModalRole;

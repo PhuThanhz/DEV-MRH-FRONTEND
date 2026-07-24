@@ -34,10 +34,12 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import {
     callFetchEvaluationPeriods,
-    callActivateEvaluationPeriod,
-    callCloseEvaluationPeriod,
-    callAdjustEvaluationPeriodStartDate,
 } from "@/config/api";
+import {
+    useActivateEvaluationPeriodMutation,
+    useCloseEvaluationPeriodMutation,
+    useAdjustEvaluationPeriodStartDateMutation,
+} from "@/hooks/useEvaluations";
 import PeriodModal from "./PeriodModal";
 import PeriodDetailDrawer from "./PeriodDetailDrawer";
 import PeriodProgressDrawer from "./PeriodProgressDrawer";
@@ -148,7 +150,7 @@ const PhaseStep = React.memo(({ phase, activePhase, status }: { phase: "employee
     );
 });
 
-const renderTimelineCell = (record: IEvaluationPeriod, canManagePeriod?: boolean, onReload?: () => void) => {
+const renderTimelineCell = (record: IEvaluationPeriod, canManagePeriod?: boolean, onReload?: () => void, adjustMutation?: any) => {
     const info = getPhaseInfo(record);
 
     const badgeConfig: Record<BadgeType, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
@@ -165,9 +167,12 @@ const renderTimelineCell = (record: IEvaluationPeriod, canManagePeriod?: boolean
     const hasTimeline = !!(record.employeeStartDate && record.employeeDeadline && record.managerDeadline && record.approvalDeadline);
 
     const handleAdjustStartDateNow = async () => {
+        if (!record.id) return;
         try {
             const nowIso = dayjs().subtract(1, "minute").toISOString();
-            await callAdjustEvaluationPeriodStartDate(record.id!, { employeeStartDate: nowIso });
+            if (adjustMutation) {
+                await adjustMutation.mutateAsync({ id: record.id, employeeStartDate: nowIso });
+            }
             notify.success("Đã mở cổng tự đánh giá thành công.");
             onReload?.();
         } catch (error: any) {
@@ -342,6 +347,10 @@ const PeriodPage = () => {
     const canCancelEmployee = useAccess(ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE);
     const canManagePeriod = roleName === "SUPER_ADMIN" || canAddTemplate || canAddEmployee || canExtendDeadline || canReassignEvaluator || canCancelEmployee;
 
+    const activateMutation = useActivateEvaluationPeriodMutation();
+    const closeMutation = useCloseEvaluationPeriodMutation();
+    const adjustStartDateMutation = useAdjustEvaluationPeriodStartDateMutation();
+
     const [searchValue, setSearchValue] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
@@ -368,28 +377,24 @@ const PeriodPage = () => {
 
     const handleActivate = useCallback(async (id: number) => {
         try {
-            const res = await callActivateEvaluationPeriod(id);
-            if (res?.data) {
-                notify.success("Kích hoạt thành công. Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
-                tableRef.current?.reload();
-                return res.data;
-            }
+            const res = await activateMutation.mutateAsync(id);
+            notify.success("Kích hoạt thành công. Bản chấm điểm đã được tự động sinh cho toàn bộ nhân viên.");
+            tableRef.current?.reload();
+            return res?.data;
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Không thể kích hoạt kỳ đánh giá");
         }
-    }, []);
+    }, [activateMutation]);
 
     const handleClose = useCallback(async (id: number) => {
         try {
-            const res = await callCloseEvaluationPeriod(id);
-            if (res?.data) {
-                notify.success("Đã đóng kỳ đánh giá.");
-                tableRef.current?.reload();
-            }
+            await closeMutation.mutateAsync(id);
+            notify.success("Đã đóng kỳ đánh giá.");
+            tableRef.current?.reload();
         } catch (error: any) {
             notify.error(error?.response?.data?.message || "Không thể đóng kỳ đánh giá");
         }
-    }, []);
+    }, [closeMutation]);
 
     const handlePeriodDrawerClose = useCallback(() => {
         const shouldReload = !drawerReadOnly;
@@ -470,7 +475,7 @@ const PeriodPage = () => {
             title: "Tiến trình",
             key: "timelineProgress",
             width: 380,
-            render: (_, record) => renderTimelineCell(record, canManagePeriod, () => tableRef.current?.reload()),
+            render: (_, record) => renderTimelineCell(record, canManagePeriod, () => tableRef.current?.reload(), adjustStartDateMutation),
         },
         {
             title: "Hành động",

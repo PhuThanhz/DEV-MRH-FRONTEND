@@ -27,12 +27,12 @@ import { getLeafCriteria, getSectionScore, getTotalScore, getWeightedScore, form
 import "../components/shared/evaluation-shell.css";
 import { useGrabToScroll } from "@/hooks/useGrabToScroll";
 import {
-    callFetchEvaluationRecordById,
-    callManagerSaveScore,
-    callManagerSubmitRecord,
-    callManagerSaveFeedback,
-    callFetchRecordHistory,
-} from "@/config/api";
+    useEvaluationRecordQuery,
+    useEvaluationRecordHistoryQuery,
+    useManagerSaveScoreMutation,
+    useManagerSaveFeedbackMutation,
+    useManagerSubmitMutation,
+} from "@/hooks/useEvaluations";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
@@ -152,9 +152,15 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
     const showCriteria = true;
     const [drawerOpen, setDrawerOpen] = useState(true);
 
+    const numId = Number(id);
+    const { data: recordData, isLoading: loading, isError, refetch: fetchRecord } = useEvaluationRecordQuery(numId);
+    const { data: history = [] } = useEvaluationRecordHistoryQuery(numId);
+
+    const saveScoreMutation = useManagerSaveScoreMutation();
+    const saveFeedbackMutation = useManagerSaveFeedbackMutation();
+    const submitMutation = useManagerSubmitMutation();
+
     const [record, setRecord] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [savingComment, setSavingComment] = useState(false);
@@ -163,7 +169,6 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
     const [savingScore, setSavingScore] = useState<number | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
     const [isDirty, setIsDirty] = useState(false);
-    const [isError, setIsError] = useState(false);
     const [hoveredGroupId, setHoveredGroupId] = useState<string | number | null>(null);
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
@@ -259,35 +264,18 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
         return false;
     });
 
-    const fetchRecord = useCallback(async () => {
-        if (!id || isNaN(Number(id))) return;
-        setLoading(true);
-        setIsError(false);
-        try {
-            const [recRes, histRes] = await Promise.all([
-                callFetchEvaluationRecordById(Number(id)),
-                callFetchRecordHistory(Number(id)),
-            ]);
-            if (recRes?.data) {
-                setRecord(recRes.data);
-                const commentManager = recRes.data.comments?.find((c: any) => c.commentType === "MANAGER_FEEDBACK");
-                if (commentManager) setManagerFeedback(commentManager.content);
-                const initScores: Record<number, number> = {};
-                recRes.data.scores?.forEach((s: any) => {
-                    if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
-                });
-                setLocalScores(initScores);
-            }
-            if (histRes?.data) setHistory(histRes.data);
-        } catch {
-            setIsError(true);
-            notify.error("Không thể tải dữ liệu đánh giá");
-        } finally {
-            setLoading(false);
+    useEffect(() => {
+        if (recordData) {
+            setRecord(recordData);
+            const commentManager = recordData.comments?.find((c: any) => c.commentType === "MANAGER_FEEDBACK");
+            if (commentManager) setManagerFeedback(commentManager.content);
+            const initScores: Record<number, number> = {};
+            recordData.scores?.forEach((s: any) => {
+                if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
+            });
+            setLocalScores(initScores);
         }
-    }, [id]);
-
-    useEffect(() => { fetchRecord(); }, [fetchRecord]);
+    }, [recordData]);
 
     const handleSaveScore = async (criteriaId: number, score: number) => {
         if (!record?.id) return;
@@ -295,7 +283,7 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
         const originalScore = localScores[criteriaId];
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            const response = await callManagerSaveScore(record.id, criteriaId, score);
+            const response = await saveScoreMutation.mutateAsync({ recordId: record.id, criteriaId, score });
             const update = response.data;
             if (update) {
                 setRecord((current: any) => ({
@@ -304,7 +292,6 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
                     scoringSummary: update.scoringSummary,
                 }));
             }
-            notify.success("Đã cập nhật điểm thành công");
         } catch (err: any) {
             notify.error(err?.message || err?.response?.data?.message || "Không thể lưu điểm");
             setLocalScores(prev => ({ ...prev, [criteriaId]: originalScore }));
@@ -315,7 +302,7 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
         if (!record?.id) return;
         setSavingComment(true);
         try {
-            await callManagerSaveFeedback(record.id, managerFeedback);
+            await saveFeedbackMutation.mutateAsync({ recordId: record.id, content: managerFeedback });
             setIsDirty(false);
             notify.success("Đã lưu nhận xét");
         } catch (err: any) {
@@ -328,10 +315,9 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
         setSubmitting(true);
         try {
             // Flush nhận xét trước khi nộp (tránh mất dữ liệu âm thầm)
-            await callManagerSaveFeedback(record.id, managerFeedback);
+            await saveFeedbackMutation.mutateAsync({ recordId: record.id, content: managerFeedback });
             setIsDirty(false);
-            await callManagerSubmitRecord(record.id);
-            notify.success("Đã nộp phê duyệt.");
+            await submitMutation.mutateAsync(record.id);
             if (onClose) {
                 handleClose();
             } else {
@@ -395,7 +381,7 @@ const ManagerEvaluationDetailPage = ({ recordId, onClose }: ManagerEvaluationDet
     if (isError) return renderInWorkspaceDrawer(
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
             <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            <Button type="primary" onClick={fetchRecord}>Thử lại</Button>
+            <Button type="primary" onClick={() => fetchRecord()}>Thử lại</Button>
         </div>
     );
     if (!record) return renderInWorkspaceDrawer(

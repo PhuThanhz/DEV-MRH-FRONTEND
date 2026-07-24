@@ -1,6 +1,7 @@
 // src/pages/admin/section/section-job-title/section.job-title.tab.tsx
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Button,
     Popconfirm,
@@ -20,12 +21,11 @@ import type { ActionType, ProColumns } from "@ant-design/pro-components";
 
 import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
-import { notify } from "@/components/common/notification/notify";
 
 import {
-    callFetchJobTitlesBySection,
-    callDeleteSectionJobTitle,
-} from "@/config/api";
+    useSectionJobTitlesQuery,
+    useDeleteSectionJobTitleMutation,
+} from "@/hooks/useSectionJobTitle";
 
 import DrawerAssignSectionJobTitle from "./drawer.assign-job-title-section";
 import DrawerSectionSalaryGrade from "../section/section-salary-grade/drawer.section-salary-grade";
@@ -99,8 +99,7 @@ const styles: Record<string, React.CSSProperties> = {
 
 /* ================= MAIN COMPONENT ================= */
 const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
-    const [data, setData] = useState<ISectionJobTitle[]>([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
     const [searchText, setSearchText] = useState("");
 
     const [openDrawer, setOpenDrawer] = useState(false);
@@ -114,32 +113,24 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
 
     const tableRef = useRef<ActionType>(null);
 
-    /* ================= FETCH DATA ================= */
-    const fetchData = async () => {
-        if (!sectionId) return;
-        setLoading(true);
-        try {
-            const res = await callFetchJobTitlesBySection(sectionId);
-            const list = res?.data ?? [];
+    const { data: rawList = [], isLoading: loading } = useSectionJobTitlesQuery(sectionId);
 
-            const sorted = [...list].sort((a, b) => {
-                const orderA = a.jobTitle?.bandOrder ?? 999;
-                const orderB = b.jobTitle?.bandOrder ?? 999;
-                if (orderA !== orderB) return orderA - orderB;
-                return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
-            });
+    const data = useMemo(() => {
+        return [...rawList].sort((a, b) => {
+            const orderA = a.jobTitle?.bandOrder ?? 999;
+            const orderB = b.jobTitle?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
+        });
+    }, [rawList]);
 
-            setData(sorted);
-        } catch {
-            notify.error("Không thể tải danh sách chức danh trong bộ phận");
-        } finally {
-            setLoading(false);
+    const deleteMutation = useDeleteSectionJobTitleMutation();
+
+    const handleRefetch = () => {
+        if (sectionId) {
+            queryClient.invalidateQueries({ queryKey: ["section-job-titles", sectionId] });
         }
     };
-
-    useEffect(() => {
-        if (sectionId) fetchData();
-    }, [sectionId]);
 
     /* ================= FILTERED DATA ================= */
     const filteredData = data.filter((row) =>
@@ -147,14 +138,9 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
     );
 
     /* ================= DELETE ================= */
-    const handleDelete = async (id: number) => {
-        try {
-            await callDeleteSectionJobTitle(id);
-            notify.deleted("Đã xoá chức danh khỏi bộ phận");
-            fetchData();
-        } catch {
-            notify.error("Không thể xoá chức danh");
-        }
+    const handleDelete = (id: number) => {
+        if (!sectionId) return;
+        deleteMutation.mutate({ id, sectionId });
     };
 
     /* ================= COLUMNS ================= */
@@ -350,7 +336,7 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
                     departmentId={departmentId}
                     assignedJobIds={data.map((d) => d.jobTitle.id)}
                     onSuccess={() => {
-                        fetchData();
+                        handleRefetch();
                         setOpenDrawer(false);
                     }}
                 />
@@ -365,7 +351,7 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
                     }}
                     sectionJobTitleId={selected.sectionJobTitleId}
                     jobTitleName={selected.jobTitleName}
-                    onSuccess={fetchData}
+                    onSuccess={handleRefetch}
                 />
             )}
 
@@ -379,7 +365,7 @@ const SectionJobTitleTab = ({ sectionId, departmentId }: IProps) => {
                     ownerLevel="SECTION"
                     ownerJobTitleId={selected.sectionJobTitleId}
                     ownerJobTitleName={selected.jobTitleName}
-                    onSuccess={fetchData}
+                    onSuccess={handleRefetch}
                 />
             )}
 

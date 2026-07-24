@@ -12,11 +12,12 @@ import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
 import {
-    callFetchEvaluationRecordById,
-    callApproveRecord, callRejectRecord,
-    callFetchRecordHistory,
-    callApproverSaveScore
-} from "@/config/api";
+    useEvaluationRecordQuery,
+    useEvaluationRecordHistoryQuery,
+    useApproverSaveScoreMutation,
+    useApproveRecordMutation,
+    useRejectRecordMutation,
+} from "@/hooks/useEvaluations";
 import { exportDetailedEvaluation } from "@/utils/ExportEvaluationDetailUtils";
 import { printEvaluationDetail } from "@/utils/PrintEvaluationUtils";
 import Access from "@/components/share/access";
@@ -126,9 +127,15 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
     const [drawerOpen, setDrawerOpen] = useState(true);
     const showCriteria = true;
 
+    const numId = Number(id);
+    const { data: recordData, isLoading: loading, isError, refetch: fetchRecord } = useEvaluationRecordQuery(numId);
+    const { data: history = [] } = useEvaluationRecordHistoryQuery(numId);
+
+    const saveScoreMutation = useApproverSaveScoreMutation();
+    const approveMutation = useApproveRecordMutation();
+    const rejectMutation = useRejectRecordMutation();
+
     const [record, setRecord] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [confirming, setConfirming] = useState(false);
@@ -136,7 +143,28 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
     const [localScores, setLocalScores] = useState<Record<number, number>>({});
     const [collapsedSections, setCollapsedSections] = useState<Record<number, boolean>>({});
     const [savingScore, setSavingScore] = useState<number | null>(null);
-    const [isError, setIsError] = useState(false);
+
+    useEffect(() => {
+        if (recordData) {
+            setRecord(recordData);
+            const commentSelf = recordData.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
+            setSelfReview(commentSelf?.content ?? "");
+            const initScores: Record<number, number> = {};
+            let hasApproverScores = false;
+            recordData.scores?.forEach((s: any) => {
+                if (s.scoredBy === "APPROVER") {
+                    initScores[s.criteriaId] = s.score;
+                    hasApproverScores = true;
+                }
+            });
+            if (!hasApproverScores) {
+                recordData.scores?.forEach((s: any) => {
+                    if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
+                });
+            }
+            setLocalScores(initScores);
+        }
+    }, [recordData]);
 
     useEffect(() => {
         const top = topScrollRef.current;
@@ -219,51 +247,12 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
         return false;
     });
 
-    const fetchRecord = useCallback(async () => {
-        if (!id || isNaN(Number(id))) return;
-        setLoading(true);
-        setIsError(false);
-        try {
-            const [recRes, histRes] = await Promise.all([
-                callFetchEvaluationRecordById(Number(id)),
-                callFetchRecordHistory(Number(id)),
-            ]);
-            if (recRes?.data) {
-                setRecord(recRes.data);
-                const commentSelf = recRes.data.comments?.find((c: any) => c.commentType === "SELF_REVIEW");
-                setSelfReview(commentSelf?.content ?? "");
-                const initScores: Record<number, number> = {};
-                let hasApproverScores = false;
-                recRes.data.scores?.forEach((s: any) => {
-                    if (s.scoredBy === "APPROVER") {
-                        initScores[s.criteriaId] = s.score;
-                        hasApproverScores = true;
-                    }
-                });
-                if (!hasApproverScores) {
-                    recRes.data.scores?.forEach((s: any) => {
-                        if (s.scoredBy === "MANAGER") initScores[s.criteriaId] = s.score;
-                    });
-                }
-                setLocalScores(initScores);
-            }
-            if (histRes?.data) setHistory(histRes.data);
-        } catch {
-            setIsError(true);
-            notify.error("Lỗi tải dữ liệu đánh giá");
-        } finally {
-            setLoading(false);
-        }
-    }, [id]);
-
-    useEffect(() => { fetchRecord(); }, [fetchRecord]);
-
     const handleSaveScore = async (criteriaId: number, score: number) => {
         if (!record?.id) return;
         setSavingScore(criteriaId);
         setLocalScores(prev => ({ ...prev, [criteriaId]: score }));
         try {
-            await callApproverSaveScore(record.id, criteriaId, score);
+            await saveScoreMutation.mutateAsync({ recordId: record.id, criteriaId, score });
         } catch (err: any) {
             notify.error(err?.response?.data?.message || "Lỗi lưu điểm");
         } finally { setSavingScore(null); }
@@ -307,8 +296,7 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
         }
         setSaving(true);
         try {
-            await callApproveRecord(Number(id), hasScoreOverride() ? overrideReason : undefined);
-            notify.success("Đã phê duyệt thành công!");
+            await approveMutation.mutateAsync({ recordId: Number(id), overrideReason: hasScoreOverride() ? overrideReason : undefined });
             setApproveModalOpen(false);
             setOverrideReason("");
             if (onClose) handleClose();
@@ -327,8 +315,7 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
         }
         setSaving(true);
         try {
-            await callRejectRecord(Number(id), rejectReason);
-            notify.success("Đã trả lại bản đánh giá!");
+            await rejectMutation.mutateAsync({ recordId: Number(id), reason: rejectReason });
             setRejectModalOpen(false);
             if (onClose) handleClose();
             else fetchRecord();
@@ -355,7 +342,7 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
     if (isError) return (
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 400, gap: 16 }}>
             <Empty description="Lỗi tải dữ liệu bản đánh giá" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            <Button type="primary" onClick={fetchRecord}>Đã hiểu</Button>
+            <Button type="primary" onClick={() => fetchRecord()}>Đã hiểu</Button>
         </div>
     );
     if (!record) return (

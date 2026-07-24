@@ -947,7 +947,7 @@ const WorkflowTemplatesPage = () => {
                             <Select 
                                 placeholder="Chọn công ty"
                                 popupMatchSelectWidth={false}
-                                dropdownStyle={{ minWidth: 400 }}
+                                styles={{ popup: { root: { minWidth: 400 } } }}
                                 showSearch
                                 optionFilterProp="children"
                             >
@@ -1360,7 +1360,7 @@ const WorkflowTemplatesPage = () => {
                                                                          showSearch 
                                                                          optionFilterProp="label"
                                                                          popupMatchSelectWidth={false}
-                                                                         dropdownStyle={{ minWidth: 450 }}
+                                                                         styles={{ popup: { root: { minWidth: 450 } } }}
                                                                      >
                                                                          {filteredUsers.map((u: any) => {
                                                                              const pos = u.positions?.[0];

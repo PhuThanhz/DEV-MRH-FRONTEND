@@ -5,11 +5,13 @@ import {
     ZoomOutOutlined,
 } from "@ant-design/icons";
 import { Skeleton } from "antd";
+import { memo, useMemo } from "react";
 import { SpecialZoomLevel, Worker, Viewer } from "@react-pdf-viewer/core";
 import { zoomPlugin } from "@react-pdf-viewer/zoom";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/zoom/lib/styles/index.css";
 import { PDF_WORKER_URL } from "@/config/pdf-worker";
+import { optimizePdfDocumentParams, resolvePdfViewerSource } from "@/config/pdf-viewer";
 
 interface IPdfPreviewerProps { url: string; onClose: () => void; isMobile: boolean }
 
@@ -38,37 +40,11 @@ const TBtn = ({
     </button>
 );
 
-const buildViewerSource = (url: string): { fileUrl: string; httpHeaders?: Record<string, string> } => {
-    const token = localStorage.getItem("access_token");
-    const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-    // URL đã là /api/v1/files/public?... → dùng thẳng, không cần auth
-    if (url.includes("/api/v1/files/public")) {
-        return { fileUrl: url };
-    }
-
-    // URL dạng /api/v1/files/view?... → đã là auth endpoint, chỉ attach token
-    if (url.includes("/api/v1/files/view")) {
-        return { fileUrl: url, httpHeaders: authHeaders };
-    }
-
-    // Legacy: /uploads/... hoặc /storage/... → chuyển sang /files/view với auth
-    const match = url.match(/\/(?:uploads|storage)\/(.+)$/);
-    if (match) {
-        const parts = match[1].split("/");
-        const fileName = parts.pop()!;
-        const folder = parts.join("/");
-        const viewUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/view?fileName=${encodeURIComponent(fileName)}&folder=${encodeURIComponent(folder)}`;
-        return { fileUrl: viewUrl, httpHeaders: authHeaders };
-    }
-
-    return { fileUrl: url };
-};
-
 const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
     const defaultScale = isMobile ? SpecialZoomLevel.PageWidth : 0.92;
-    const viewerSource = buildViewerSource(url);
-    const zoomPluginInstance = zoomPlugin();
+    const viewerSource = useMemo(() => resolvePdfViewerSource(url), [url]);
+    const zoomPluginInstance = useMemo(() => zoomPlugin(), []);
+    const plugins = useMemo(() => [zoomPluginInstance], [zoomPluginInstance]);
     const { ZoomIn, ZoomOut, CurrentScale } = zoomPluginInstance;
 
     return (
@@ -144,13 +120,8 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
                             fileUrl={viewerSource.fileUrl}
                             httpHeaders={viewerSource.httpHeaders}
                             defaultScale={defaultScale}
-                            plugins={[zoomPluginInstance]}
-                            transformGetDocumentParams={(params) => ({
-                                ...params,
-                                disableRange: false,
-                                disableStream: false,
-                                rangeChunkSize: 262144,
-                            })}
+                            plugins={plugins}
+                            transformGetDocumentParams={optimizePdfDocumentParams}
                             renderLoader={(percentages) => (
                                 <div style={{ padding: "32px 24px", background: "#fff", minHeight: 300, display: "flex", flexDirection: "column", gap: 16 }}>
                                     <Skeleton active paragraph={{ rows: 7 }} />
@@ -184,4 +155,4 @@ const PdfPreviewer = ({ url, onClose, isMobile }: IPdfPreviewerProps) => {
     );
 };
 
-export default PdfPreviewer;
+export default memo(PdfPreviewer);

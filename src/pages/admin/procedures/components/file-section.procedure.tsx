@@ -10,12 +10,17 @@ import {
     CloseOutlined,
 } from "@ant-design/icons";
 import { Button, Modal, Skeleton, Tooltip } from "antd";
-import { lazy, Suspense, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useMemo, useState } from "react";
 import { downloadUrlAsBlob } from "@/config/download-url";
+import { preloadPdfWorker } from "@/config/pdf-viewer";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 const loadPdfPreviewer = () => import("./PdfPreviewer");
 const PdfPreviewer = lazy(loadPdfPreviewer);
+const preloadPdfAssets = () => {
+    void loadPdfPreviewer();
+    void preloadPdfWorker().catch(() => undefined);
+};
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export const buildFileUrl = (fileName?: string, folder = "procedures") => {
     if (!fileName) return null;
@@ -88,7 +93,7 @@ interface IFileTileProps {
     compact?: boolean;
 }
 
-const FileTile = ({ fileName, fileUrl, onPreview, compact = false }: IFileTileProps) => {
+const FileTile = memo(({ fileName, fileUrl, onPreview, compact = false }: IFileTileProps) => {
     const ext = getExt(fileName);
     const cfg = getFileConfig(ext);
     const prettyName = decodeFileName(fileName);
@@ -131,7 +136,9 @@ const FileTile = ({ fileName, fileUrl, onPreview, compact = false }: IFileTilePr
                     boxSizing: "border-box",
                     alignSelf: "start",
                 }}
-                onMouseEnter={() => { if (isPdf) void loadPdfPreviewer(); }}
+                onMouseEnter={() => { if (isPdf) preloadPdfAssets(); }}
+                onFocus={() => { if (isPdf) preloadPdfAssets(); }}
+                onPointerDown={() => { if (isPdf) preloadPdfAssets(); }}
             >
                 <div style={{ width: compact ? 30 : 54, height: compact ? 32 : 62, borderRadius: compact ? 7 : 10, background: cfg.bg, border: `0.5px solid ${cfg.border}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 }}>
                     {cfg.icon}
@@ -151,7 +158,7 @@ const FileTile = ({ fileName, fileUrl, onPreview, compact = false }: IFileTilePr
             </div>
         </Tooltip>
     );
-};
+});
 // ─── FileSection ──────────────────────────────────────────────────────────────
 interface IPreviewState { url: string; ext: string; name: string }
 interface IFileSectionProps { fileNames?: string[]; folder?: string; variant?: "default" | "compact" }
@@ -161,14 +168,20 @@ const FileSection = ({ fileNames = [], folder = "procedures", variant = "default
     const [iframeLoaded, setIframeLoaded] = useState(false);
     const isMobile = useIsMobile();
 
-    const fileEntries = fileNames.map((name) => ({ name, url: buildFileUrl(name, folder)! })).filter((f) => f.url);
-    if (fileEntries.length === 0) return null;
-
-    const handlePreview = (url: string, fileName: string) => {
+    const fileEntries = useMemo(
+        () => fileNames.map((name) => ({ name, url: buildFileUrl(name, folder)! })).filter((f) => f.url),
+        [fileNames, folder]
+    );
+    const handlePreview = useCallback((url: string, fileName: string) => {
         setIframeLoaded(false);
         setPreview({ url, ext: getExt(fileName), name: decodeFileName(fileName) });
-    };
-    const handleClose = () => { setPreview(null); setIframeLoaded(false); };
+    }, []);
+    const handleClose = useCallback(() => {
+        setPreview(null);
+        setIframeLoaded(false);
+    }, []);
+
+    if (fileEntries.length === 0) return null;
 
     const officeUrl = preview
         ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(preview.url)}`

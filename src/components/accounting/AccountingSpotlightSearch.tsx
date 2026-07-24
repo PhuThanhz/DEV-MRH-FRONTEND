@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Modal, Input, List, Typography, Space, Button, Empty, Spin, Tag } from "antd";
 import { SearchOutlined, EyeOutlined, FileTextOutlined } from "@ant-design/icons";
-import { callFetchAccountingDocuments } from "@/config/api";
+import { useAccountingDocumentsQuery } from "@/hooks/useAccountingDocuments";
 import dayjs from "dayjs";
 import { getModalWidth } from "@/utils/responsive";
 
@@ -15,52 +15,39 @@ interface AccountingSpotlightSearchProps {
 
 const AccountingSpotlightSearch: React.FC<AccountingSpotlightSearchProps> = ({ open, onClose }) => {
     const [query, setQuery] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const inputRef = useRef<any>(null);
 
-    // Debounce search
+    // Debounce search input
     useEffect(() => {
-        const fetchResults = async () => {
-            if (!query.trim()) {
-                setResults([]);
-                return;
-            }
-            setLoading(true);
-            try {
-                const queryStr = `current=1&pageSize=10&keyword=${encodeURIComponent(query.trim())}`;
-                const res = await callFetchAccountingDocuments(queryStr);
-                if (res?.data?.result) {
-                    setResults(res.data.result);
-                } else if (Array.isArray(res?.data)) {
-                    // Filter in memory if the API returns all
-                    const filtered = res.data.filter((d: any) =>
-                        (d.documentCode && d.documentCode.toLowerCase().includes(query.toLowerCase())) ||
-                        (d.documentName && d.documentName.toLowerCase().includes(query.toLowerCase()))
-                    ).slice(0, 10);
-                    setResults(filtered);
-                } else {
-                    setResults([]);
-                }
-            } catch (error) {
-                console.error("Search error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         const timer = setTimeout(() => {
-            fetchResults();
+            setDebouncedQuery(query.trim());
         }, 300);
-
         return () => clearTimeout(timer);
     }, [query]);
+
+    const queryStr = debouncedQuery ? `current=1&pageSize=10&keyword=${encodeURIComponent(debouncedQuery)}` : "";
+    const { data: docsRes, isLoading: loading } = useAccountingDocumentsQuery(queryStr);
+
+    const results = useMemo(() => {
+        if (!debouncedQuery) return [];
+        const res = docsRes as any;
+        if (res?.result) {
+            return res.result;
+        } else if (Array.isArray(res)) {
+            return res.filter((d: any) =>
+                (d.documentCode && d.documentCode.toLowerCase().includes(debouncedQuery.toLowerCase())) ||
+                (d.documentName && d.documentName.toLowerCase().includes(debouncedQuery.toLowerCase()))
+            ).slice(0, 10);
+        }
+        return [];
+    }, [docsRes, debouncedQuery]);
 
     // Focus input on open
     useEffect(() => {
         if (open) {
             setQuery("");
-            setResults([]);
+            setDebouncedQuery("");
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [open]);
@@ -99,7 +86,7 @@ const AccountingSpotlightSearch: React.FC<AccountingSpotlightSearchProps> = ({ o
                 ) : results.length > 0 ? (
                     <List
                         dataSource={results}
-                        renderItem={(item) => (
+                        renderItem={(item: any) => (
                             <List.Item
                                 style={{
                                     background: "#fff",

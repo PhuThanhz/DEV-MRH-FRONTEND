@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Drawer, Input, Checkbox, Avatar, Button,
+    Modal, Input, Checkbox, Avatar, Button,
     Spin, Empty, Select,
 } from "antd";
 import {
     SearchOutlined, CloseOutlined, CheckOutlined, TeamOutlined, UserOutlined,
 } from "@ant-design/icons";
-import { callFetchUsersByCompany, callFetchUsersCrossCompany, callFetchCompany, callFetchDepartmentsByCompany, callFetchSectionsByDepartment } from "@/config/api";
+import { callFetchUsersByCompany, callFetchUsersCrossCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
+import { useSectionsByDepartmentQuery } from "@/hooks/useSections";
 
 export interface UserOption {
     value: string;
@@ -145,13 +148,8 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
     const [page, setPage] = useState(1);
     const [localSelected, setLocalSelected] = useState<string[]>([]);
 
-    const [companies, setCompanies] = useState<any[]>([]); // Danh sách công ty cho dropdown
-    const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null); // Công ty đang chọn để lọc
-
-    const [departments, setDepartments] = useState<any[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
-
-    const [sections, setSections] = useState<any[]>([]);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [managerFilter, setManagerFilter] = useState<'all' | 'hasManager' | 'noManager'>(
         hasDirectManager === true ? 'hasManager' : 'all'
@@ -159,6 +157,20 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
 
     const [total, setTotal] = useState(0); // Tổng số kết quả từ backend
     const [totalPages, setTotalPages] = useState(0); // Tổng số trang từ backend
+
+    const { data: companiesData } = useCompaniesQuery("page=1&size=100", open && Boolean(isCrossCompany));
+    const companies = companiesData?.result ?? [];
+
+    const effectiveCompanyId = selectedCompanyId || companyId;
+
+    const { data: departmentsData = [] } = useDepartmentsByCompanyQuery(open && effectiveCompanyId ? effectiveCompanyId : 0);
+    const departments = useMemo(() => {
+        if (!filterDepartmentIds || filterDepartmentIds.length === 0) return departmentsData;
+        return departmentsData.filter((d: any) => filterDepartmentIds.includes(d.id));
+    }, [departmentsData, filterDepartmentIds]);
+
+    const { data: sectionsData = [] } = useSectionsByDepartmentQuery(open && selectedDepartmentId ? selectedDepartmentId : 0);
+    const sections = sectionsData;
 
     // Reset states when modal is opened
     useEffect(() => {
@@ -172,21 +184,6 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
         setManagerFilter(hasDirectManager === true ? "hasManager" : "all");
     }, [open, hasDirectManager]);
 
-    // Load companies when cross-company is true and modal is open
-    useEffect(() => {
-        if (!open || !isCrossCompany) return;
-        const fetchCompanies = async () => {
-            try {
-                const res = await callFetchCompany("page=1&size=100");
-                setCompanies(res?.data?.result ?? []);
-            } catch {
-                // ignore
-            }
-        };
-        fetchCompanies();
-    }, [open, isCrossCompany]);
-
-    const effectiveCompanyId = selectedCompanyId || companyId;
     const getBlockedReason = (user: UserOption) => {
         if (hasDirectManager !== true) return "";
         if (!user.directManagerId) return "Thiếu QL trực tiếp";
@@ -200,42 +197,6 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
         return "";
     };
     const isSelectableUser = (user: UserOption) => !getBlockedReason(user);
-
-    // Load departments when company changes
-    useEffect(() => {
-        if (!open || !effectiveCompanyId) {
-            setDepartments([]);
-            setSelectedDepartmentId(null);
-            return;
-        }
-        const fetchDepts = async () => {
-            try {
-                const res = await callFetchDepartmentsByCompany(effectiveCompanyId);
-                let list = res?.data ?? [];
-                if (filterDepartmentIds && filterDepartmentIds.length > 0) {
-                    list = list.filter((d: any) => filterDepartmentIds.includes(d.id));
-                }
-                setDepartments(list);
-            } catch { }
-        };
-        fetchDepts();
-    }, [open, effectiveCompanyId, filterDepartmentIds]);
-
-    // Load sections when department changes
-    useEffect(() => {
-        if (!open || !selectedDepartmentId) {
-            setSections([]);
-            setSelectedSectionId(null);
-            return;
-        }
-        const fetchSections = async () => {
-            try {
-                const res = await callFetchSectionsByDepartment(selectedDepartmentId);
-                setSections(res?.data ?? []);
-            } catch { }
-        };
-        fetchSections();
-    }, [open, selectedDepartmentId]);
 
     const loadUsers = async (searchTerm: string = "") => {
         setLoading(true);
@@ -481,23 +442,18 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
     const somePageSelected = pageIds.some((id) => localSelected.includes(id)) && !allPageSelected;
 
     return (
-        <Drawer
+        <Modal
             open={open}
-            onClose={onClose}
-            placement="right"
-            width="min(800px, calc(100vw - 32px))"
-            title={null}
-            closable={false}
-            mask
-            className="user-picker-drawer"
+            onCancel={onClose}
+            footer={null}
+            width={840}
+            centered
+            destroyOnHidden
+            zIndex={1300}
+            closeIcon={null}
             styles={{
-                mask: { background: "rgba(15, 23, 42, 0.3)", backdropFilter: "blur(2px)" },
-                content: {
-                    boxShadow: "-20px 0 48px rgba(15, 23, 42, 0.16)",
-                    borderTopLeftRadius: 16,
-                    borderBottomLeftRadius: 16,
-                    overflow: "hidden",
-                },
+                content: { padding: 0, borderRadius: 20, overflow: "hidden", height: "82vh", maxHeight: 720 },
+                mask: { background: "rgba(15, 23, 42, 0.45)", backdropFilter: "blur(4px)" },
                 body: {
                     padding: 0,
                     height: "100%",
@@ -1037,7 +993,7 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
                     </Button>
                 </div>
             </div>
-        </Drawer>
+        </Modal>
     );
 };
 

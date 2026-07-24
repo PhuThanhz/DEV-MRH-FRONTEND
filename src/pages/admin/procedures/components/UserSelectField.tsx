@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Form, Tag, Avatar, Tooltip, Typography } from "antd";
+import { Form, Tag, Avatar, Tooltip, Typography, Input } from "antd";
 import { UserOutlined, InfoCircleOutlined, PlusOutlined, CloseOutlined } from "@ant-design/icons";
 import UserPickerModal from "./UserPickerModal";
 import { callFetchUsersByCompany, callFetchUsersCrossCompany } from "@/config/api";
@@ -182,7 +182,9 @@ const UserSelectField: React.FC<UserSelectFieldProps> = ({
 
     return (
         <>
-            <Form.Item name={name} hidden rules={rules} />
+            <Form.Item name={name} hidden rules={rules}>
+                <Input type="hidden" />
+            </Form.Item>
 
             <Form.Item
                 label={

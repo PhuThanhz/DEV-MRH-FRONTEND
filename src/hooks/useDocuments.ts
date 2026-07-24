@@ -15,6 +15,9 @@ import {
     callFetchDocumentShareTokenAccessLogs,
     callMarkDocumentRead,
     callGetNextDocumentCode,
+    callFetchFolderTree,
+    callFetchFolderDocuments,
+    callCreateDocumentShortcut,
 } from "@/config/api";
 import type {
     IDocument,
@@ -281,6 +284,50 @@ export const useDocumentShareTokenAccessLogsQuery = (tokenId?: number, enabled =
         queryFn: async () => {
             const res = await callFetchDocumentShareTokenAccessLogs(tokenId!);
             return (res.data as any[]) ?? [];
+        },
+    });
+};
+
+/* ===================== FOLDER TREE & DOCUMENTS ===================== */
+export const useFolderTreeQuery = (ownerId?: string, enabled = true) => {
+    return useQuery({
+        queryKey: ["folder-tree", ownerId],
+        enabled,
+        queryFn: async () => {
+            const res = await callFetchFolderTree(ownerId);
+            return res.data ?? [];
+        },
+    });
+};
+
+export const useFolderDocumentsQuery = (folderId?: number, enabled = true) => {
+    return useQuery({
+        queryKey: ["folder-documents", folderId],
+        enabled: !!folderId && enabled,
+        queryFn: async () => {
+            if (!folderId) return [];
+            const res = await callFetchFolderDocuments(folderId);
+            return res.data ?? [];
+        },
+    });
+};
+
+/* ===================== CREATE SHORTCUT ===================== */
+export const useCreateDocumentShortcutMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ documentId, folderId }: { documentId: number; folderId: number }) => {
+            const res = await callCreateDocumentShortcut(documentId, folderId);
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.success("Thêm lối tắt thành công.");
+            queryClient.invalidateQueries({ queryKey: ["folder-documents", variables.folderId] });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+        },
+        onError: (error: any) => {
+            const msg = error?.response?.data?.message || "Đã xảy ra lỗi khi thêm lối tắt";
+            notify.error(msg);
         },
     });
 };

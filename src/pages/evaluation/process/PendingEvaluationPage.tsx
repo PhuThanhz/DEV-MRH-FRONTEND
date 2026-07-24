@@ -24,6 +24,7 @@ import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelec
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import EvaluationStatusTag, { type EvaluationStatus } from "../components/EvaluationStatusTag";
+import EvaluationHistoryDrawer from "../components/EvaluationHistoryDrawer";
 import { useAppSelector } from "@/redux/hooks";
 import TabBar, { type TabItem } from "@/components/common/tabs/TabBar";
 import ManagerEvaluationDetailPage from "../manager/ManagerEvaluationDetailPage";
@@ -489,12 +490,35 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                     ? record.status === "PENDING_MANAGER_REVIEW" || record.status === "MANAGER_REVIEWING"
                     : record.status === "PENDING_APPROVAL";
 
-                const label = isHighlight
-                    ? (isManager ? "Đánh giá" : "Phê duyệt")
-                    : "Chi tiết";
-
                 return (
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        {isHighlight ? (
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => setActiveDetailRecord(record)}
+                                style={{
+                                    borderRadius: 6,
+                                    fontWeight: 650,
+                                    background: "#e8256b",
+                                    borderColor: "#e8256b",
+                                    color: "#ffffff",
+                                    fontSize: 12,
+                                    height: 28,
+                                }}
+                            >
+                                {isManager ? "Đánh giá" : "Phê duyệt"}
+                            </Button>
+                        ) : (
+                            <ActionButton
+                                variant="view"
+                                tooltip="Xem chi tiết"
+                                icon={<EyeOutlined />}
+                                aria-label="Xem chi tiết"
+                                onClick={() => setActiveDetailRecord(record)}
+                            />
+                        )}
                         <ActionButton
                             variant="progress"
                             tooltip="Xem lịch sử xử lý"
@@ -502,23 +526,6 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                             aria-label="Xem lịch sử xử lý"
                             onClick={() => setHistoryRecord(record)}
                         />
-                        <Button
-                            type={isHighlight ? "primary" : "default"}
-                            size="small"
-                            icon={isHighlight ? <EditOutlined /> : <EyeOutlined />}
-                            onClick={() => setActiveDetailRecord(record)}
-                            style={{
-                                borderRadius: 6,
-                                fontWeight: 650,
-                                background: isHighlight ? "#e8637a" : "#ffffff",
-                                color: isHighlight ? "#ffffff" : "#475569",
-                                border: isHighlight ? "none" : "1px solid #cbd5e1",
-                                fontSize: 12,
-                                height: 28,
-                            }}
-                        >
-                            {label}
-                        </Button>
                     </div>
                 );
             },
@@ -735,41 +742,13 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                 />
             </div>
 
-            <Drawer
-                title={historyRecord ? `Lịch sử đánh giá - ${historyRecord.employee?.fullName || historyRecord.employee?.username || "Nhân viên"}` : "Lịch sử đánh giá"}
+            <EvaluationHistoryDrawer
                 open={!!historyRecord}
                 onClose={() => setHistoryRecord(null)}
-                width={520}
-                destroyOnHidden
-            >
-                {historyQuery.isLoading ? (
-                    <div style={{ color: "#64748b", padding: "16px 0" }}>Đang tải lịch sử...</div>
-                ) : (historyQuery.data || []).length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lịch sử xử lý" />
-                ) : (
-                    <Timeline
-                        items={(historyQuery.data || []).map((item: any) => ({
-                            color: item.toStatus === "COMPLETED" ? "green" : item.toStatus === "REVISION_NEEDED" ? "red" : "blue",
-                            children: (
-                                <div style={{ paddingBottom: 8 }}>
-                                    <div style={{ fontWeight: 700, color: "#334155", fontSize: 13 }}>
-                                        {item.performedBy?.fullName || item.performedBy?.username || "Hệ thống"}
-                                    </div>
-                                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>
-                                        {item.fromStatus ? <EvaluationStatusTag status={item.fromStatus} /> : "Khởi tạo"}
-                                        <span style={{ margin: "0 6px" }}>→</span>
-                                        <EvaluationStatusTag status={item.toStatus} />
-                                    </div>
-                                    {item.note && <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>{item.note}</div>}
-                                    <div style={{ color: "#94a3b8", fontSize: 11, marginTop: 5 }}>
-                                        {item.performedAt ? dayjs(item.performedAt).format("DD/MM/YYYY HH:mm") : "—"}
-                                    </div>
-                                </div>
-                            ),
-                        }))}
-                    />
-                )}
-            </Drawer>
+                record={historyRecord}
+                historyData={historyQuery.data || []}
+                loading={historyQuery.isLoading}
+            />
             {activeDetailRecord?.evalRole === "MANAGER" && (
                 <ManagerEvaluationDetailPage
                     recordId={activeDetailRecord.id}

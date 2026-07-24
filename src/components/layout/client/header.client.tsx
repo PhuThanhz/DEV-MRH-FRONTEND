@@ -13,6 +13,7 @@ import { setLogoutAction } from "@/redux/slice/accountSlide";
 import { PATHS } from "@/constants/paths";
 import ManageAccount from "@/components/common/modal/manage.account";
 import { notify } from "@/components/common/notification/notify";
+import { useAvatarSrc } from "@/hooks/useAvatarSrc";
 
 const getAccountDropdownWidth = (triggerWidth = 0) => {
     const viewportWidth = window.innerWidth;
@@ -25,8 +26,6 @@ const Header = () => {
     const dispatch = useAppDispatch();
     const isAuthenticated = useAppSelector((state) => state.account.isAuthenticated);
     const user = useAppSelector((state) => state.account.user);
-    const backendURL = import.meta.env.VITE_BACKEND_URL;
-
     const [openMobileMenu, setOpenMobileMenu] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownWidth, setDropdownWidth] = useState(292);
@@ -51,9 +50,7 @@ const Header = () => {
         setOpenMobileMenu(false);
     }, [location]);
 
-    const avatarSrc = user?.avatar
-        ? `${backendURL}/api/v1/files/public?fileName=${encodeURIComponent(user.avatar)}&folder=avatar&t=${Date.now()}`
-        : undefined;
+    const { src: avatarSrc, onError: handleAvatarError } = useAvatarSrc(user?.avatar);
 
     // Lấy initials từ tên
     const getInitials = (name?: string) =>
@@ -139,12 +136,13 @@ const Header = () => {
                         <Avatar
                             size={40}
                             src={avatarSrc}
+                            onError={handleAvatarError}
                             style={{
                                 background: "linear-gradient(135deg, #ec4899, #a855f7)",
                                 fontWeight: 700, fontSize: 14, color: "#fff",
                             }}
                         >
-                            {!user?.avatar && getInitials(user?.name)}
+                            {!avatarSrc && getInitials(user?.name)}
                         </Avatar>
                         <span style={{
                             position: "absolute", bottom: 0, right: 0,
@@ -351,6 +349,7 @@ const Header = () => {
                                             <Avatar
                                                 size={36}
                                                 src={avatarSrc}
+                                                onError={handleAvatarError}
                                                 style={{
                                                     backgroundColor: avatarSrc ? "transparent" : "rgba(255,255,255,0.2)",
                                                     border: "1.5px solid rgba(255,255,255,0.55)",
@@ -360,7 +359,7 @@ const Header = () => {
                                                     flexShrink: 0,
                                                 }}
                                             >
-                                                {!user?.avatar && getInitials(user?.name)}
+                                                {!avatarSrc && getInitials(user?.name)}
                                             </Avatar>
                                             {/* Online dot */}
                                             <span
@@ -491,10 +490,11 @@ const Header = () => {
                             <Avatar
                                 size={52}
                                 src={avatarSrc}
+                                onError={handleAvatarError}
                                 className="flex items-center justify-center font-bold text-[18px] border-[3px] border-white shadow-md"
                                 style={{ background: "linear-gradient(135deg, #ec4899, #f43f5e)" }}
                             >
-                                {!user?.avatar && getInitials(user?.name)}
+                                {!avatarSrc && getInitials(user?.name)}
                             </Avatar>
                             <span className="absolute bottom-1 right-0 w-3.5 h-3.5 rounded-full bg-green-500 border-[2.5px] border-white shadow-sm" />
                         </div>

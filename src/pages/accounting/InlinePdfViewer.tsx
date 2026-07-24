@@ -1,49 +1,19 @@
 import { FileTextOutlined } from "@ant-design/icons";
+import { memo, useMemo } from "react";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import { PDF_WORKER_URL } from "@/config/pdf-worker";
-
-const buildViewerSource = (url: string): { fileUrl: string; httpHeaders?: Record<string, string> } => {
-    const token = localStorage.getItem("access_token");
-    const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-    // URL đã là /api/v1/files/public?... → dùng thẳng, không cần auth
-    if (url.includes("/api/v1/files/public")) {
-        return { fileUrl: url };
-    }
-
-    // URL dạng /api/v1/files/view?... → đã là auth endpoint, chỉ attach token
-    if (url.includes("/api/v1/files/view")) {
-        return { fileUrl: url, httpHeaders: authHeaders };
-    }
-
-    // Legacy: /uploads/... hoặc /storage/... → chuyển sang /files/view với auth
-    const match = url.match(/\/(?:uploads|storage)\/(.+)$/);
-    if (match) {
-        const parts = match[1].split("/");
-        const fileName = parts.pop()!;
-        const folder = parts.join("/");
-        const viewUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/files/view?fileName=${encodeURIComponent(fileName)}&folder=${encodeURIComponent(folder)}`;
-        return { fileUrl: viewUrl, httpHeaders: authHeaders };
-    }
-
-    return { fileUrl: url };
-};
+import { optimizePdfDocumentParams, resolvePdfViewerSource } from "@/config/pdf-viewer";
 
 const InlinePdfViewer = ({ fileUrl, onOpen, onDownload }: { fileUrl: string; onOpen: () => void; onDownload: () => void }) => {
-    const viewerSource = buildViewerSource(fileUrl);
+    const viewerSource = useMemo(() => resolvePdfViewerSource(fileUrl), [fileUrl]);
     return (
         <div style={{ width: "100%", height: "100%", minHeight: 560, background: "#f3f4f6" }}>
             <Worker workerUrl={PDF_WORKER_URL}>
                 <Viewer
                     fileUrl={viewerSource.fileUrl}
                     httpHeaders={viewerSource.httpHeaders}
-                    transformGetDocumentParams={(params) => ({
-                        ...params,
-                        disableRange: false,
-                        disableStream: false,
-                        rangeChunkSize: 262144,
-                    })}
+                    transformGetDocumentParams={optimizePdfDocumentParams}
                     renderError={(error) => {
                         console.error("Inline PDF load error:", error);
                         return (
@@ -83,4 +53,4 @@ const actionButtonStyle: React.CSSProperties = {
     cursor: "pointer",
 };
 
-export default InlinePdfViewer;
+export default memo(InlinePdfViewer);

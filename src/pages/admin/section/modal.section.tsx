@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ModalForm, ProFormText, ProFormSwitch, ProForm } from "@ant-design/pro-components";
 import { Col, Form, Row, Tag } from "antd";
 
 import type { ISection } from "@/types/backend";
 import { DebounceSelect } from "@/components/common/debouce.select";
 import { useCreateSectionMutation, useUpdateSectionMutation } from "@/hooks/useSections";
-import { callFetchCompany, callFetchDepartmentsByCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { useIsMobile, useModalWidth } from "@/components/common/modal/detail";
 
 interface IProps {
@@ -32,30 +33,31 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
 
     const [selectedCompany, setSelectedCompany] = useState<ISelectOption | null>(null);
     const [selectedDept,    setSelectedDept]    = useState<ISelectOption | null>(null);
-    const [deptOptions,     setDeptOptions]     = useState<ISelectOption[]>([]);
-    const [loadingDept,     setLoadingDept]     = useState(false);
 
-    // Khi chọn công ty → load phòng ban ngay, reset dept cũ
-    const handleCompanyChange = async (v: any) => {
+    const activeCompanyId = selectedCompany?.value ?? (isEdit ? ((dataInit?.department as any)?.company?.id ?? (dataInit?.department as any)?.companyId ?? 0) : 0);
+
+    const { data: companyPaginate } = useCompaniesQuery("page=1&size=200", openModal && !isEdit);
+    const companyOptions = useMemo<ISelectOption[]>(
+        () => (companyPaginate?.result ?? []).map((c) => ({ label: c.name, value: c.id ?? 0 })),
+        [companyPaginate]
+    );
+
+    const { data: deptsData, isLoading: loadingDept } = useDepartmentsByCompanyQuery(activeCompanyId);
+    const deptOptions = useMemo(
+        () => (deptsData ?? []).map((d) => ({ label: d.name, value: d.id })),
+        [deptsData]
+    );
+
+    const handleCompanyChange = (v: any) => {
         setSelectedCompany(v ?? null);
         setSelectedDept(null);
-        setDeptOptions([]);
         form.setFieldValue("department", undefined);
-
-        if (v?.value) {
-            setLoadingDept(true);
-            try {
-                const res = await callFetchDepartmentsByCompany(v.value);
-                const opts = (res?.data ?? []).map((d: any) => ({ label: d.name, value: d.id }));
-                setDeptOptions(opts);
-            } finally {
-                setLoadingDept(false);
-            }
-        }
     };
 
     /** Prefill form khi edit */
     useEffect(() => {
+        if (!openModal) return;
+
         if (dataInit?.id) {
             const dept: ISelectOption = {
                 label: dataInit.department?.name ?? "",
@@ -72,25 +74,22 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
             form.resetFields();
             setSelectedCompany(null);
             setSelectedDept(null);
-            setDeptOptions([]);
         }
-    }, [dataInit, form]);
+    }, [openModal, dataInit, form]);
 
     /** Reset và đóng modal */
     const handleReset = () => {
         form.resetFields();
         setSelectedCompany(null);
         setSelectedDept(null);
-        setDeptOptions([]);
         setDataInit(null);
         setOpenModal(false);
     };
 
     /** Load danh sách công ty (debounce search) */
     async function fetchCompanyList(input: string): Promise<ISelectOption[]> {
-        const res = await callFetchCompany(`page=1&size=200&name=/${input}/i`);
-        return (
-            res?.data?.result?.map((c: any) => ({ label: c.name, value: c.id })) ?? []
+        return companyOptions.filter((c) =>
+            !input || c.label.toLowerCase().includes(input.toLowerCase())
         );
     }
 
@@ -240,50 +239,29 @@ const ModalSection = ({ openModal, setOpenModal, dataInit, setDataInit, onSucces
                             }
                             rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
                         >
-                            {isEdit ? (
-                                <DebounceSelect
-                                    allowClear
-                                    size="large"
-                                    placeholder="Chọn phòng ban"
-                                    fetchOptions={async (input) => {
-                                        const res = await callFetchDepartmentsByCompany(
-                                            dataInit?.department?.id ?? 0
-                                        );
-                                        return (res?.data ?? [])
-                                            .filter((d: any) =>
-                                                !input || d.name.toLowerCase().includes(input.toLowerCase())
-                                            )
-                                            .map((d: any) => ({ label: d.name, value: d.id }));
-                                    }}
-                                    value={selectedDept as any}
-                                    onChange={(v: any) => setSelectedDept(v ?? null)}
-                                    style={{ width: "100%" }}
-                                />
-                            ) : (
-                                <DebounceSelect
-                                    allowClear
-                                    size="large"
-                                    placeholder={
-                                        !selectedCompany
-                                            ? "← Chọn công ty trước"
-                                            : loadingDept
-                                                ? "Đang tải phòng ban..."
-                                                : deptOptions.length === 0
-                                                    ? "Công ty chưa có phòng ban"
-                                                    : "Chọn phòng ban"
-                                    }
-                                    fetchOptions={async (input) =>
-                                        deptOptions.filter((d) =>
-                                            !input || d.label.toLowerCase().includes(input.toLowerCase())
-                                        )
-                                    }
-                                    value={selectedDept as any}
-                                    onChange={(v: any) => setSelectedDept(v ?? null)}
-                                    disabled={!selectedCompany || loadingDept}
-                                    style={{ width: "100%" }}
-                                    key={selectedCompany?.value ?? "no-company"}
-                                />
-                            )}
+                            <DebounceSelect
+                                allowClear
+                                size="large"
+                                placeholder={
+                                    !isEdit && !selectedCompany
+                                        ? "← Chọn công ty trước"
+                                        : loadingDept
+                                            ? "Đang tải phòng ban..."
+                                            : deptOptions.length === 0
+                                                ? "Công ty chưa có phòng ban"
+                                                : "Chọn phòng ban"
+                                }
+                                fetchOptions={async (input) =>
+                                    deptOptions.filter((d) =>
+                                        !input || d.label.toLowerCase().includes(input.toLowerCase())
+                                    )
+                                }
+                                value={selectedDept as any}
+                                onChange={(v: any) => setSelectedDept(v ?? null)}
+                                disabled={(!isEdit && !selectedCompany) || loadingDept}
+                                style={{ width: "100%" }}
+                                key={activeCompanyId || "no-company"}
+                            />
                         </ProForm.Item>
                     </Col>
 

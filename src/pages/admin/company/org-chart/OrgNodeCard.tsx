@@ -269,13 +269,13 @@ const OrgNodeCard = ({ id, data }: { id: string; data: OrgNodeData }) => {
                     >
                         {showCreate && (
                             isDepartment ? (
-                                <Dropdown menu={quickAddMenu} trigger={["click"]} placement="bottomRight" overlayStyle={{ zIndex: 2600 }}>
-                                    <span>
-                                        <Tooltip title="Thêm trong phòng ban" placement="top">
+                                <Tooltip title="Thêm trong phòng ban" placement="top">
+                                    <Dropdown menu={quickAddMenu} trigger={["click"]} placement="bottomRight">
+                                        <span>
                                             {addButton}
-                                        </Tooltip>
-                                    </span>
-                                </Dropdown>
+                                        </span>
+                                    </Dropdown>
+                                </Tooltip>
                             ) : (
                                 <Tooltip title="Thêm cấp dưới" placement="top">
                                     {addButton}

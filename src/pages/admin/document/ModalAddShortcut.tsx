@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Tree, Spin, Empty, Typography, Row, Col } from 'antd';
 import { FolderOutlined, FolderOpenOutlined, FilePdfOutlined, FileExcelOutlined, FileImageOutlined, FileZipOutlined, FileTextOutlined, FileOutlined } from '@ant-design/icons';
-import { callFetchFolderTree, callCreateDocumentShortcut, callFetchFolderDocuments } from '@/config/api';
+import {
+    useFolderTreeQuery,
+    useFolderDocumentsQuery,
+    useCreateDocumentShortcutMutation,
+} from '@/hooks/useDocuments';
 import type { IDocumentFolder, IDocument } from '@/types/backend';
 import { notify } from "@/components/common/notification/notify";
 import { getModalWidth } from '@/utils/responsive';
@@ -24,71 +28,39 @@ const getFileIcon = (fileName: string) => {
     return <FileOutlined style={{ color: '#8c8c8c', fontSize: 24 }} />;
 };
 
-const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
-    const [treeData, setTreeData] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
-    const [submitting, setSubmitting] = useState(false);
+const formatTreeData = (folders: IDocumentFolder[]): any[] => {
+    return folders.map(f => ({
+        title: f.folderName,
+        key: f.id as number,
+        icon: ({ expanded }: any) => (expanded ? <FolderOpenOutlined style={{ color: '#faad14' }} /> : <FolderOutlined style={{ color: '#faad14' }} />),
+        children: f.children && f.children.length > 0 ? formatTreeData(f.children) : undefined,
+        isLeaf: !f.children || f.children.length === 0,
+    }));
+};
 
-    const [folderDocs, setFolderDocs] = useState<any[]>([]);
-    const [loadingDocs, setLoadingDocs] = useState(false);
+const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
+    const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+
+    const selectedFolderId = useMemo(() => {
+        return selectedKeys.length > 0 ? Number(selectedKeys[0]) : undefined;
+    }, [selectedKeys]);
+
+    const { data: rawFolders = [], isLoading: loading } = useFolderTreeQuery(undefined, open);
+    const { data: folderDocs = [], isLoading: loadingDocs } = useFolderDocumentsQuery(selectedFolderId, open);
+    const createShortcutMutation = useCreateDocumentShortcutMutation();
+
+    const submitting = createShortcutMutation.isPending;
+
+    const treeData = useMemo(() => formatTreeData(rawFolders), [rawFolders]);
 
     useEffect(() => {
         if (open) {
-            fetchTree();
             setSelectedKeys([]);
-            setFolderDocs([]);
         }
     }, [open]);
 
-    const fetchTree = async () => {
-        setLoading(true);
-        try {
-            const res = await callFetchFolderTree();
-            if (res.data) {
-                setTreeData(formatTreeData(res.data));
-            }
-        } catch (error) {
-            notify.error("Không thể tải cây thư mục");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchDocsForFolder = async (folderId: number) => {
-        setLoadingDocs(true);
-        try {
-            const res = await callFetchFolderDocuments(folderId);
-            if (res.data) {
-                setFolderDocs(res.data);
-            } else {
-                setFolderDocs([]);
-            }
-        } catch (error) {
-            notify.error("Không thể tải danh sách tài liệu trong thư mục");
-        } finally {
-            setLoadingDocs(false);
-        }
-    };
-
-    const formatTreeData = (folders: IDocumentFolder[]): any[] => {
-        return folders.map(f => ({
-            title: f.folderName,
-            key: f.id as number,
-            icon: ({ expanded }: any) => (expanded ? <FolderOpenOutlined style={{ color: '#faad14' }} /> : <FolderOutlined style={{ color: '#faad14' }} />),
-            children: f.children && f.children.length > 0 ? formatTreeData(f.children) : undefined,
-            isLeaf: !f.children || f.children.length === 0,
-        }));
-    };
-
-    const handleSelect = (keys: React.Key[], info: any) => {
+    const handleSelect = (keys: React.Key[]) => {
         setSelectedKeys(keys);
-        if (keys.length > 0) {
-            const folderId = Number(keys[0]);
-            fetchDocsForFolder(folderId);
-        } else {
-            setFolderDocs([]);
-        }
     };
 
     const handleOk = async () => {
@@ -101,18 +73,10 @@ const ModalAddShortcut: React.FC<IProps> = ({ open, onClose, document }) => {
             return;
         }
 
-        setSubmitting(true);
-        try {
-            const folderId = Number(selectedKeys[0]);
-            await callCreateDocumentShortcut(document.id, folderId);
-            notify.success("Thêm lối tắt thành công.");
-            onClose();
-        } catch (error: any) {
-            const msg = error?.response?.data?.message || "Đã xảy ra lỗi khi thêm lối tắt";
-            notify.error(msg);
-        } finally {
-            setSubmitting(false);
-        }
+        const folderId = Number(selectedKeys[0]);
+        createShortcutMutation.mutate({ documentId: document.id, folderId }, {
+            onSuccess: () => onClose(),
+        });
     };
 
     return (

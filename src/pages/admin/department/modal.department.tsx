@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ModalForm, ProFormText } from "@ant-design/pro-components";
 import { Col, Form, Row } from "antd";
 
@@ -8,7 +8,7 @@ import {
     useCreateDepartmentMutation,
     useUpdateDepartmentMutation,
 } from "@/hooks/useDepartments";
-import { callFetchCompany } from "@/config/api";
+import { useCompaniesQuery } from "@/hooks/useCompanies";
 import { useIsMobile, useModalWidth } from "@/components/common/modal/detail";
 
 /* ================= TYPES ================= */
@@ -44,6 +44,16 @@ const ModalDepartment = ({
     const { mutate: createDepartment, isPending: isCreating } = useCreateDepartmentMutation();
     const { mutate: updateDepartment, isPending: isUpdating } = useUpdateDepartmentMutation();
 
+    const { data: companyRes } = useCompaniesQuery("page=1&size=200", openModal);
+    const companyOptions = useMemo<ICompanySelect[]>(
+        () => (companyRes?.result ?? []).map((item) => ({
+            label: item.name,
+            value: item.id ?? 0,
+            key: item.id,
+        })),
+        [companyRes]
+    );
+
     /* ================= PREFILL / RESET ================= */
     useEffect(() => {
         if (!openModal) return;
@@ -76,15 +86,10 @@ const ModalDepartment = ({
     };
 
     /* ================= FETCH COMPANY ================= */
-    async function fetchCompanyList(_name: string): Promise<ICompanySelect[]> {
-        const res = await callFetchCompany(`page=1&size=50`);
-        if (res?.data?.result) {
-            return res.data.result.map((item: any) => ({
-                label: item.name,
-                value: item.id,
-            }));
-        }
-        return [];
+    async function fetchCompanyList(input: string): Promise<ICompanySelect[]> {
+        return companyOptions.filter((item) =>
+            !input || item.label?.toLowerCase().includes(input.toLowerCase())
+        );
     }
 
     /* ================= SUBMIT ================= */

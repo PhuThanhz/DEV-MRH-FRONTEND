@@ -1,6 +1,7 @@
 // src/pages/admin/department/department-job-title/department.job-title.tab.tsx
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Button,
     Popconfirm,
@@ -13,6 +14,8 @@ import {
     PlusOutlined,
     DeleteOutlined,
     CheckCircleOutlined,
+    IdcardOutlined,
+    SearchOutlined,
 } from "@ant-design/icons";
 import type { ProColumns } from "@ant-design/pro-components";
 
@@ -20,14 +23,13 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import DataTable from "@/components/common/data-table";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import { notify } from "@/components/common/notification/notify";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 
 import {
-    callFetchCompanyJobTitlesOfDepartment,
-    callDeleteDepartmentJobTitle,
-    callRestoreDepartmentJobTitle,
-} from "@/config/api";
+    useDepartmentJobTitlesQuery,
+    useDeleteDepartmentJobTitleMutation,
+    useRestoreDepartmentJobTitleMutation,
+} from "@/hooks/useDepartmentJobTitles";
 
 import type { IDepartmentJobTitle } from "@/types/backend";
 
@@ -47,18 +49,18 @@ interface IProps {
 
 const styles: Record<string, React.CSSProperties> = {
     assignButton: {
-        borderRadius: 8,
-        height: 32,
-        paddingLeft: 14,
-        paddingRight: 14,
-        fontWeight: 500,
+        borderRadius: 10,
+        height: 38,
+        paddingLeft: 16,
+        paddingRight: 16,
+        fontWeight: 600,
         fontSize: 13,
-        background: "linear-gradient(135deg, #eb2f96 0%, #c41d7f 100%)",
-        borderColor: "transparent",
-        boxShadow: "0 2px 8px rgba(196,29,127,0.25)",
-        display: "flex",
+        background: "#e9557a",
+        borderColor: "#e9557a",
+        boxShadow: "0 8px 20px -12px rgba(190, 24, 93, 0.72)",
+        display: "inline-flex",
         alignItems: "center",
-        gap: 4,
+        gap: 6,
     },
     actionBtn: {
         borderRadius: 6,
@@ -84,10 +86,15 @@ const DepartmentJobTitleTab = ({
     companyId,
     departmentName
 }: IProps) => {
-    const [data, setData] = useState<IDepartmentJobTitle[]>([]);
-    const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
     const [openDrawer, setOpenDrawer] = useState(false);
     const [searchText, setSearchText] = useState("");
+
+    const handleRefetch = () => {
+        if (departmentId) {
+            queryClient.invalidateQueries({ queryKey: ["department-job-titles", departmentId] });
+        }
+    };
 
     const [openSalary, setOpenSalary] = useState(false);
     const [selectedSalary, setSelectedSalary] = useState<{
@@ -101,63 +108,41 @@ const DepartmentJobTitleTab = ({
         jobTitleName: string;
     } | null>(null);
 
-    const fetchData = async () => {
-        if (!departmentId) return;
-        setLoading(true);
-        try {
-            const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
-            const list = (res?.data ?? [])
-                .filter((x: any) => x.source === "DEPARTMENT")
-                .map((x: any) => ({
-                    ...x,
-                    jobTitle: {
-                        ...x.jobTitle,
-                        nameEn: x.jobTitle?.nameEn || "",
-                    },
-                    active: true,
-                }));
+    const { data: rawList = [], isLoading: loading } = useDepartmentJobTitlesQuery(departmentId);
 
-            const sorted = [...list].sort((a: any, b: any) => {
-                const orderA = a.jobTitle?.bandOrder ?? 999;
-                const orderB = b.jobTitle?.bandOrder ?? 999;
-                if (orderA !== orderB) return orderA - orderB;
-                return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
-            });
+    const data = useMemo(() => {
+        const list = rawList.map((x: any) => ({
+            ...x,
+            jobTitle: {
+                ...x.jobTitle,
+                nameEn: x.jobTitle?.nameEn || "",
+            },
+            active: true,
+        }));
 
-            setData(sorted);
-        } catch {
-            notify.error("Không thể tải danh sách chức danh trong phòng ban");
-        } finally {
-            setLoading(false);
-        }
-    };
+        return [...list].sort((a: any, b: any) => {
+            const orderA = a.jobTitle?.bandOrder ?? 999;
+            const orderB = b.jobTitle?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
+        });
+    }, [rawList]);
 
-    useEffect(() => {
-        if (departmentId) fetchData();
-    }, [departmentId]);
+    const deleteMutation = useDeleteDepartmentJobTitleMutation();
+    const restoreMutation = useRestoreDepartmentJobTitleMutation();
 
     const filteredData = data.filter((row) =>
         row.jobTitle?.nameVi?.toLowerCase().includes(searchText.toLowerCase()) ?? false
     );
 
-    const handleDeactivate = async (id: number) => {
-        try {
-            await callDeleteDepartmentJobTitle(id);
-            notify.deleted("Đã hủy gán chức danh khỏi phòng ban");
-            fetchData();
-        } catch {
-            notify.error("Không thể hủy gán chức danh này");
-        }
+    const handleDeactivate = (id: number) => {
+        if (!departmentId) return;
+        deleteMutation.mutate({ id, departmentId });
     };
 
-    const handleRestore = async (id: number) => {
-        try {
-            await callRestoreDepartmentJobTitle(id);
-            notify.success("Đã khôi phục chức danh vào phòng ban");
-            fetchData();
-        } catch {
-            notify.error("Không thể khôi phục chức danh");
-        }
+    const handleRestore = (id: number) => {
+        if (!departmentId) return;
+        restoreMutation.mutate({ id, departmentId });
     };
 
     const columns: ProColumns<IDepartmentJobTitle>[] = [
@@ -277,29 +262,71 @@ const DepartmentJobTitleTab = ({
     return (
         <PageContainer
             title={departmentName ? `Chức danh phòng ban: ${departmentName}` : "Chức danh phòng ban"}
+            extra={
+                <div className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-rose-100 bg-rose-50/70 px-2.5 text-xs font-semibold text-rose-600">
+                    <span className="tabular-nums">{data.length}</span>
+                    <span className="font-medium text-rose-500">chức danh</span>
+                </div>
+            }
             fullHeight
-            contentClassName="px-4 py-3 flex-1 min-h-0 overflow-auto"
+            contentClassName="px-4 pb-5 pt-4 sm:px-5 flex-1 min-h-0 overflow-auto"
         >
-            <div className="dept-job-title-table">
+            <section className="dept-job-title-table flex min-h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_16px_45px_-35px_rgba(71,85,105,0.5)]">
                 <style>{`
                     .dept-job-title-table .ant-table-sticky-holder {
                         top: 0px !important;
                     }
+
+                    .dept-job-title-table .ant-pro-card,
+                    .dept-job-title-table .ant-pro-table {
+                        border: 0 !important;
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                    }
+
+                    .dept-job-title-table .ant-table-container {
+                        border-inline-start: 0 !important;
+                        border-radius: 0 !important;
+                    }
+
+                    .dept-job-title-table .ant-table-thead > tr > th {
+                        background: #f8fafc !important;
+                        border-color: #e9edf3 !important;
+                        color: #334155 !important;
+                        font-size: 12px !important;
+                        font-weight: 650 !important;
+                        letter-spacing: 0.01em;
+                        padding-block: 12px !important;
+                    }
+
+                    .dept-job-title-table .ant-table-placeholder > td {
+                        height: clamp(360px, calc(100dvh - 330px), 680px);
+                        background:
+                            radial-gradient(circle at 50% 40%, rgba(251, 207, 232, 0.22), transparent 28%),
+                            #ffffff !important;
+                        border-bottom: 0 !important;
+                    }
+
+                    .dept-job-title-table .ant-empty-normal {
+                        margin-block: 0 !important;
+                    }
                 `}</style>
 
-                <SearchFilter
-                    searchPlaceholder="Tìm chức danh..."
-                    showFilterButton={false}
-                    showResetButton={false}
-                    addLabel="Gán chức danh"
-                    guideSearchId="department-job-title-search-input"
-                    guideAddId="department-job-title-assign-button"
-                    onSearch={(val) => setSearchText(val)}
-                    onAddClick={() => setOpenDrawer(true)}
-                    addPermission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}
-                />
+                <header className="border-b border-slate-100 bg-white px-4 py-4 sm:px-5">
+                    <SearchFilter
+                        searchPlaceholder="Tìm theo tên chức danh..."
+                        showFilterButton={false}
+                        showResetButton={false}
+                        addLabel="Gán chức danh"
+                        guideSearchId="department-job-title-search-input"
+                        guideAddId="department-job-title-assign-button"
+                        onSearch={(val) => setSearchText(val)}
+                        onAddClick={() => setOpenDrawer(true)}
+                        addPermission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}
+                    />
+                </header>
 
-                <div data-guide-id="department-job-title-table">
+                <div className="flex-1" data-guide-id="department-job-title-table">
                     <DataTable<IDepartmentJobTitle>
                         rowKey="id"
                         loading={loading}
@@ -315,13 +342,30 @@ const DepartmentJobTitleTab = ({
                         locale={{
                             emptyText: (
                                 <Empty
-                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                    description={
-                                        searchText
-                                            ? "Không tìm thấy chức danh phù hợp"
-                                            : "Chưa có chức danh nào được gán"
+                                    image={
+                                        <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+                                            <div className="absolute inset-0 rounded-[26px] bg-rose-50/80 ring-1 ring-rose-100" />
+                                            <div className="absolute -right-1 top-1 h-5 w-5 rounded-full border-4 border-white bg-amber-300 shadow-sm" />
+                                            <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[23px] text-rose-500 shadow-[0_10px_25px_-15px_rgba(190,24,93,0.75)] ring-1 ring-rose-100">
+                                                {searchText ? <SearchOutlined /> : <IdcardOutlined />}
+                                            </div>
+                                        </div>
                                     }
-                                    style={{ padding: "48px 0" }}
+                                    description={
+                                        <div className="mx-auto max-w-md px-5 text-center">
+                                            <p className="mb-1 text-[15px] font-semibold text-slate-800">
+                                                {searchText
+                                                    ? "Không tìm thấy chức danh phù hợp"
+                                                    : "Phòng ban chưa có chức danh"}
+                                            </p>
+                                            <p className="m-0 text-[13px] leading-5 text-slate-500">
+                                                {searchText
+                                                    ? "Hãy thử một từ khóa ngắn hơn hoặc kiểm tra lại tên chức danh."
+                                                    : "Gán chức danh để bắt đầu thiết lập bậc lương, tiêu chí đánh giá và cơ cấu nhân sự cho phòng ban này."}
+                                            </p>
+                                        </div>
+                                    }
+                                    style={{ padding: "36px 0 44px" }}
                                 >
                                     {!searchText && (
                                         <Access permission={ALL_PERMISSIONS.DEPARTMENT_JOB_TITLES.CREATE}>
@@ -333,7 +377,7 @@ const DepartmentJobTitleTab = ({
                                                 disabled={!departmentId}
                                                 style={styles.assignButton}
                                             >
-                                                Gán chức danh ngay
+                                                Gán chức danh đầu tiên
                                             </Button>
                                         </Access>
                                     )}
@@ -342,7 +386,7 @@ const DepartmentJobTitleTab = ({
                         }}
                     />
                 </div>
-            </div>
+            </section>
 
             {/* Drawer Gán chức danh */}
             {openDrawer && departmentId && (
@@ -350,11 +394,8 @@ const DepartmentJobTitleTab = ({
                     open={openDrawer}
                     onClose={() => setOpenDrawer(false)}
                     departmentId={departmentId}
-                    departmentName={departmentName}          // ← Thêm dòng này
-                    onSuccess={() => {
-                        fetchData();
-                        // Không cần setOpenDrawer(false) nữa vì Drawer đã tự đóng
-                    }}
+                    departmentName={departmentName}
+                    onSuccess={handleRefetch}
                 />
             )}
 
@@ -368,7 +409,7 @@ const DepartmentJobTitleTab = ({
                     }}
                     departmentJobTitleId={selectedSalary.departmentJobTitleId}
                     jobTitleName={selectedSalary.jobTitleName}
-                    onSuccess={fetchData}
+                    onSuccess={handleRefetch}
                 />
             )}
 
@@ -383,7 +424,7 @@ const DepartmentJobTitleTab = ({
                     ownerLevel="DEPARTMENT"
                     ownerJobTitleId={selectedPerformance.departmentJobTitleId}
                     ownerJobTitleName={selectedPerformance.jobTitleName}
-                    onSuccess={fetchData}
+                    onSuccess={handleRefetch}
                 />
             )}
         </PageContainer>

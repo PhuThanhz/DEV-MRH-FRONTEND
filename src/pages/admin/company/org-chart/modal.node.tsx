@@ -359,7 +359,8 @@ const SingleNodeForm = ({ form, nodes, jdOptions, jobTitleOptions, isEditing, no
     const hasSmartOptions = jobTitleOptions.length > 0 && !isEditing && !isDepartment;
 
     const smartOptions = useMemo(
-        () => jobTitleOptions.map((option) => ({
+        () => jobTitleOptions.map((option, idx) => ({
+            key: `${option.value ?? 'val'}-${option.source ?? 'src'}-${idx}-${option.title}`,
             value: option.title,
             label: <JobTitleOptionView option={option} />,
             option,

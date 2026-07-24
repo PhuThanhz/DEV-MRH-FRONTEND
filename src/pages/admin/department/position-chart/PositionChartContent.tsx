@@ -1,9 +1,8 @@
-// src/pages/admin/department/position-chart/PositionChartModal.tsx
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Table, Spin, Empty, Tag, Input } from "antd";
 import { TeamOutlined, CalendarOutlined, BankOutlined, SearchOutlined, CloseOutlined } from "@ant-design/icons";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
-import { callFetchCompanyJobTitlesOfDepartment } from "@/config/api";
+import { useCompanyJobTitlesOfDepartmentQuery } from "@/hooks/useDepartmentJobTitles";
 import type { IDepartmentJobTitle } from "@/types/backend";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
@@ -34,42 +33,27 @@ const PositionChartContent: React.FC<PositionChartContentProps> = ({
     departmentName = "",
     companyName = "",
 }) => {
-    const [data, setData] = useState<IDepartmentJobTitle[]>([]);
-    const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState("");
     const isMobile = useIsMobile();
 
-    useEffect(() => {
-        if (!open || !departmentId) return;
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const res = await callFetchCompanyJobTitlesOfDepartment(departmentId);
-                const list = (res?.data ?? [])
-                    .filter((x: any) => x.source === "DEPARTMENT")
-                    .map((x: any) => ({
-                        ...x,
-                        jobTitle: {
-                            ...x.jobTitle,
-                            nameEn: x.jobTitle?.nameEn || "",
-                            positionCode: x.jobTitle?.positionCode || "",
-                        },
-                    }));
-                const sorted = [...list].sort((a, b) => {
-                    const orderA = a.jobTitle?.bandOrder ?? 999;
-                    const orderB = b.jobTitle?.bandOrder ?? 999;
-                    if (orderA !== orderB) return orderA - orderB;
-                    return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
-                });
-                setData(sorted);
-            } catch (err) {
-                console.error("Lỗi tải bản đồ chức danh:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [open, departmentId]);
+    const { data: rawList = [], isLoading: loading } = useCompanyJobTitlesOfDepartmentQuery(open ? departmentId : undefined);
+
+    const data = useMemo(() => {
+        const list = rawList.map((x: any) => ({
+            ...x,
+            jobTitle: {
+                ...x.jobTitle,
+                nameEn: x.jobTitle?.nameEn || "",
+                positionCode: x.jobTitle?.positionCode || "",
+            },
+        }));
+        return [...list].sort((a: any, b: any) => {
+            const orderA = a.jobTitle?.bandOrder ?? 999;
+            const orderB = b.jobTitle?.bandOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.jobTitle?.levelNumber ?? 0) - (b.jobTitle?.levelNumber ?? 0);
+        });
+    }, [rawList]);
 
     const today = new Date();
     const formattedDate = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;

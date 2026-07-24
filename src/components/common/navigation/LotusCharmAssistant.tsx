@@ -230,7 +230,7 @@ const LotusCharmAssistant = () => {
                     justifyContent: "center",
                     boxShadow: "0 14px 28px rgba(232,99,122,0.24)",
                     cursor: "pointer",
-                    zIndex: 900,
+                    zIndex: 1200,
                 }}
             >
                 <ArrowUpOutlined style={{ fontSize: 19 }} />
@@ -265,7 +265,7 @@ const LotusCharmAssistant = () => {
                 position: "fixed",
                 bottom: -5,
                 right: 15,
-                zIndex: open ? 1000 : 900,
+                zIndex: open ? 1201 : 1200,
                 pointerEvents: "none",
                 display: "flex",
                 flexDirection: "column",
