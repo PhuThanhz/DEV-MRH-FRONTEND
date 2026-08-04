@@ -1,6 +1,6 @@
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
-import type { IJobDescription, IJDFlowLog } from "@/types/backend";
+import type { IJobDescription, IJDFlowLog, RequirementCategory } from "@/types/backend";
 
 type EnrichedJD = IJobDescription & {
     companyName?: string;
@@ -10,11 +10,6 @@ type EnrichedJD = IJobDescription & {
 
 const fmt = (v?: string | null) => v ?? "";
 const fmtDate = (v?: string | null) => v ? dayjs(v).format("DD/MM/YYYY") : "";
-
-const toLines = (val?: string): string[] => {
-    if (!val) return [];
-    return val.split(/\n|•/).map(x => x.trim().replace(/^-\s*/, "")).filter(Boolean);
-};
 
 const BD_THIN = { style: "thin", color: { rgb: "BFBFBF" } };
 const BD_MED = { style: "medium", color: { rgb: "595959" } };
@@ -211,11 +206,11 @@ export const exportJdToExcel = async (jd: EnrichedJD, _logs: IJDFlowLog[] = []) 
         rh(ws, r, 20); r++;
     } else {
         tasks.forEach((task, i) => {
-            const lines = toLines(task.content);
+            const subItems = (task.items ?? []).slice().sort((a, b) => a.orderNo - b.orderNo);
             const titleLine = `${i + 1}. ${task.title ?? ""}`;
-            const bodyLines = lines.map(l => `- ${l}`).join("\n");
+            const bodyLines = subItems.map((it, subIdx) => `${i + 1}.${subIdx + 1} ${it.content}`).join("\n");
             const content = bodyLines ? `${titleLine}\n${bodyLines}` : titleLine;
-            const hpt = Math.max(36, (lines.length + 1) * 15);
+            const hpt = Math.max(36, (subItems.length + 1) * 15);
             merge(ws, r, 0, r, 6);
             cell(ws, r, 0, content, F.black_10, FILL_WHITE, AL.lt, BD_ALL);
             fillRange(ws, r, 1, 6, FILL_WHITE, BD_ALL);
@@ -233,19 +228,23 @@ export const exportJdToExcel = async (jd: EnrichedJD, _logs: IJDFlowLog[] = []) 
     fillRange(ws, r, 1, 6, FILL_LIGHT, BD_OUTER);
     rh(ws, r, 22); r++;
 
-    const req = jd.requirements;
-    const groups: [string, string | undefined][] = [
-        ["Kiến thức", req?.knowledge],
-        ["Kinh nghiệm", req?.experience],
-        ["Kỹ năng", req?.skills],
-        ["Phẩm chất", req?.qualities],
-        ["Yêu cầu khác", req?.otherRequirements],
+    const reqItems = jd.requirements?.items ?? [];
+    const byCategory = (category: RequirementCategory) =>
+        reqItems.filter(it => it.category === category).slice().sort((a, b) => a.orderNo - b.orderNo);
+
+    const groups: [string, ReturnType<typeof byCategory>][] = [
+        ["Kiến thức", byCategory("KNOWLEDGE")],
+        ["Kinh nghiệm", byCategory("EXPERIENCE")],
+        ["Kỹ năng", byCategory("SKILLS")],
+        ["Phẩm chất", byCategory("QUALITIES")],
+        ["Yêu cầu khác", byCategory("OTHER")],
     ];
 
-    groups.forEach(([label, val]) => {
-        const lines = toLines(val);
-        const content = lines.length ? lines.map(l => `- ${l}`).join("\n") : "—";
-        const hpt = Math.max(28, lines.length * 16);
+    groups.forEach(([label, items], groupIdx) => {
+        const content = items.length
+            ? items.map((it, idx) => `${groupIdx + 1}.${idx + 1} ${it.content}`).join("\n")
+            : "—";
+        const hpt = Math.max(28, items.length * 16);
 
         // Label header — full width, nền light
         merge(ws, r, 0, r, 6);

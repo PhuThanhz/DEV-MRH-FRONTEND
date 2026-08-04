@@ -220,6 +220,7 @@ export interface IDepartment {
         id: number;
         name: string;
     };
+    companyName?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: string;
@@ -1134,11 +1135,7 @@ export interface IJobDescription {
     /* ===== requirement ===== */
 
     requirements?: {
-        knowledge?: string
-        experience?: string
-        skills?: string
-        qualities?: string
-        otherRequirements?: string
+        items?: IJobDescriptionRequirementItem[]
     }
 
     /* ===== tasks ===== */
@@ -1147,7 +1144,7 @@ export interface IJobDescription {
         id?: number
         orderNo: number
         title: string
-        content: string
+        items?: IJobDescriptionTaskItem[]
     }[]
 
     /* ===== org chart positions ===== */
@@ -1164,6 +1161,21 @@ export interface IJobDescription {
     createdBy?: string
     updatedBy?: string
     publishDirectly?: boolean
+}
+
+export interface IJobDescriptionTaskItem {
+    id?: number
+    orderNo: number
+    content: string
+}
+
+export type RequirementCategory = "KNOWLEDGE" | "EXPERIENCE" | "SKILLS" | "QUALITIES" | "OTHER"
+
+export interface IJobDescriptionRequirementItem {
+    id?: number
+    category: RequirementCategory
+    orderNo: number
+    content: string
 }
 // types/job-title.ts
 
@@ -1629,6 +1641,8 @@ export interface IEmployee {
     active: boolean;
     directManagerId?: string;
     directManagerName?: string;
+    directManager?: IUser;
+    indirectManager?: IUser;
 
     createdAt?: string;
     updatedAt?: string;
@@ -2164,6 +2178,7 @@ export interface IDocumentFolder {
     folderName: string;
     parentId?: number | null;
     ownerId?: string;
+    documentCategoryId?: number | null;
     documentCount?: number;
     children?: IDocumentFolder[];
     createdAt?: string;
@@ -2489,3 +2504,298 @@ export interface IBatchApproveResponse {
         reason: string;
     }[];
 }
+
+/* ===================== TASK MANAGEMENT MODULE ===================== */
+
+export type TaskStatusType = 'TODO' | 'IN_PROGRESS' | 'PENDING_REVIEW' | 'COMPLETED' | 'REWORK' | 'CANCELLED';
+export type TaskPriorityType = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type TaskParticipantRoleType = 'CREATOR' | 'ASSIGNEE' | 'COLLABORATOR' | 'OBSERVER';
+
+export interface IResJobDescriptionTaskDTO {
+    id: number;
+    title: string;
+    orderNo?: number;
+    jobDescriptionId?: number;
+    jobDescriptionCode?: string;
+    items?: IJobDescriptionTaskItem[];
+}
+
+export interface ITaskParticipantDTO {
+    id: number;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userAvatar?: string;
+    role: TaskParticipantRoleType;
+}
+
+export interface IResTaskDTO {
+    id: number;
+    title: string;
+    description?: string;
+    status: TaskStatusType;
+    priority: TaskPriorityType;
+    startDate?: string;
+    dueDate?: string;
+    completedAt?: string;
+    isOnTime?: boolean;
+    overdue?: boolean;
+    estimatedHours?: number;
+    departmentId?: number;
+    departmentName?: string;
+    companyId?: number;
+    companyName?: string;
+    jobDescriptionTaskId?: number;
+    jobDescriptionTaskTitle?: string;
+    jobDescriptionTaskItemId?: number;
+    jobDescriptionTaskItemContent?: string;
+    creatorId?: string;
+    creatorName?: string;
+    creatorAvatar?: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    assigneeAvatar?: string;
+    collaboratorCount?: number;
+    observerCount?: number;
+    checklistDoneCount?: number;
+    checklistTotalCount?: number;
+    progress?: number;
+    latestResultSummary?: string;
+    reworkCount?: number;
+    reworkReason?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface IResTaskDetailDTO extends IResTaskDTO {
+    collaborators: ITaskParticipantDTO[];
+    observers: ITaskParticipantDTO[];
+    checklists: IResTaskChecklistDTO[];
+    comments: IResTaskCommentDTO[];
+    submissions: IResTaskSubmissionDTO[];
+    attachments: IResTaskAttachmentDTO[];
+    extensionRequests: IResTaskExtensionRequestDTO[];
+}
+
+export type TaskExtensionStatusType = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface IResTaskExtensionRequestDTO {
+    id: number;
+    taskId: number;
+    currentDueDate?: string;
+    requestedDueDate: string;
+    reason: string;
+    status: TaskExtensionStatusType;
+    requestedById?: string;
+    requestedByName?: string;
+    requestedByAvatar?: string;
+    requestedAt?: string;
+    decidedById?: string;
+    decidedByName?: string;
+    decidedAt?: string;
+    decisionNote?: string;
+}
+
+export interface IReqRequestTaskExtensionDTO {
+    requestedDueDate: string;
+    reason: string;
+}
+
+export interface IReqDecideTaskExtensionDTO {
+    decision: 'APPROVE' | 'REJECT';
+    decisionNote?: string;
+}
+
+export interface IReqCreateTaskDTO {
+    title: string;
+    description?: string;
+    priority?: TaskPriorityType;
+    startDate?: string;
+    dueDate?: string;
+    estimatedHours?: number;
+    assigneeId: string;
+    collaboratorIds?: string[];
+    observerIds?: string[];
+    jobDescriptionTaskId?: number;
+    jobDescriptionTaskItemId?: number;
+}
+
+export interface IReqUpdateTaskDTO {
+    title?: string;
+    description?: string;
+    priority?: TaskPriorityType;
+    startDate?: string;
+    dueDate?: string;
+    estimatedHours?: number;
+    assigneeId?: string;
+    collaboratorIds?: string[];
+    observerIds?: string[];
+    jobDescriptionTaskId?: number;
+    jobDescriptionTaskItemId?: number;
+}
+
+export interface IResTaskChecklistDTO {
+    id: number;
+    taskId: number;
+    title: string;
+    isCompleted: boolean;
+    assignedUserId?: string;
+    assignedUserName?: string;
+    completedAt?: string;
+    completedBy?: string;
+    completedByName?: string;
+    sortOrder?: number;
+    createdAt?: string;
+}
+
+export interface IReqCreateTaskChecklistDTO {
+    title: string;
+    assignedUserId?: string;
+    sortOrder?: number;
+}
+
+export interface IReqUpdateTaskChecklistDTO {
+    title?: string;
+    assignedUserId?: string;
+    sortOrder?: number;
+    isCompleted?: boolean;
+}
+
+export interface IResTaskCommentDTO {
+    id: number;
+    taskId: number;
+    userId?: string;
+    userName?: string;
+    content: string;
+    type: 'COMMENT' | 'AUDIT_LOG';
+    attachmentUrl?: string;
+    createdAt?: string;
+}
+
+export interface IReqCreateTaskCommentDTO {
+    content: string;
+    attachmentUrl?: string;
+}
+
+export type TaskAttachmentCategoryType = 'GUIDANCE' | 'WORKING' | 'RESULT';
+
+export interface IResTaskAttachmentDTO {
+    id: number;
+    taskId: number;
+    fileName: string;
+    folder?: string;
+    fileSize?: number;
+    attachmentCategory: TaskAttachmentCategoryType;
+    isResultAttachment?: boolean;
+    submissionRound?: number;
+    uploadedById?: string;
+    uploadedByName?: string;
+    createdAt?: string;
+}
+
+export interface IReqRegisterTaskAttachmentDTO {
+    fileName: string;
+    folder?: string;
+    fileSize?: number;
+    attachmentCategory: Exclude<TaskAttachmentCategoryType, 'RESULT'>;
+}
+
+export interface IResTaskSubmissionDTO {
+    id: number;
+    taskId: number;
+    resultSummary: string;
+    deliverables?: string;
+    issues?: string;
+    nextSteps?: string;
+    submissionRound: number;
+    submittedBy?: string;
+    submittedByName?: string;
+    submittedAt?: string;
+    decision?: 'PENDING' | 'APPROVE' | 'REWORK';
+    decisionReason?: string;
+    decidedBy?: string;
+    decidedByName?: string;
+    decidedAt?: string;
+    attachments: IResTaskAttachmentDTO[];
+}
+
+export interface IReqSubmitResultDTO {
+    resultSummary: string;
+    deliverables?: string;
+    issues?: string;
+    nextSteps?: string;
+    attachments?: {
+        fileName: string;
+        folder?: string;
+        fileSize?: number;
+    }[];
+}
+
+export interface IReqApproveTaskDTO {
+    decision: 'APPROVE' | 'REWORK';
+    reworkReason?: string;
+}
+
+export interface IResApprovalDelegationDTO {
+    id: number;
+    module: string;
+    delegatorUserId: string;
+    delegatorName?: string;
+    delegateUserId: string;
+    delegateName?: string;
+    validFrom: string;
+    validTo: string;
+    status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+    reason?: string;
+    createdAt?: string;
+}
+
+export interface IReqCreateApprovalDelegationDTO {
+    module?: string;
+    delegateUserId: string;
+    validFrom?: string;
+    validTo: string;
+    reason?: string;
+}
+
+export interface IResTaskSummaryReportDTO {
+    totalTaskCount: number;
+    completedTaskCount: number;
+    onTimeTaskCount: number;
+    onTimePercentage: number;
+    departmentGroups: {
+        departmentId: number;
+        departmentName: string;
+        companyName?: string;
+        taskCount: number;
+        onTimeCount: number;
+        onTimePercentage: number;
+        employeeGroups: {
+            assigneeId?: string;
+            assigneeName: string;
+            assigneeAvatar?: string;
+            taskCount: number;
+            onTimeCount: number;
+            onTimePercentage: number;
+            tasks: IResTaskDTO[];
+        }[];
+    }[];
+}
+
+export interface IUnifiedCalendarEventDTO {
+    id: string | number;
+    module: string;
+    label?: string;
+    title: string;
+    description?: string;
+    eventDate: string;
+    dueDate?: string;
+    actionLink?: string;
+    colorCode?: string;
+    priority?: "URGENT" | "HIGH" | "MEDIUM" | "LOW" | string;
+    tagColor?: string;
+    tagLabel?: string;
+    targetId?: number;
+    targetUrl?: string;
+}
+

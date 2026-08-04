@@ -313,46 +313,31 @@ const variantConfig: Record<NotifyVariant, {
     icon: ReactNode;
     iconBg: string;
     iconColor: string;
-    surface: string;
-    border: string;
-    progress: string;
-    progressEnd: string;
+    iconBorder: string;
 }> = {
     success: {
         icon: <CheckCircleFilled />,
-        iconBg: "#dcfce7",
+        iconBg: "#ecfdf5",
         iconColor: "#059669",
-        surface: "#f0fdf4",
-        border: "#bbf7d0",
-        progress: "#10b981",
-        progressEnd: "#34d399",
+        iconBorder: "#a7f3d0",
     },
     error: {
         icon: <ExclamationCircleFilled />,
-        iconBg: "#fee2e2",
+        iconBg: "#fff1f2",
         iconColor: "#dc2626",
-        surface: "#fef2f2",
-        border: "#fecaca",
-        progress: "#ef4444",
-        progressEnd: "#fb7185",
+        iconBorder: "#fecdd3",
     },
     warning: {
         icon: <WarningFilled />,
-        iconBg: "#fef3c7",
+        iconBg: "#fffbeb",
         iconColor: "#b45309",
-        surface: "#fffbeb",
-        border: "#fde68a",
-        progress: "#d97706",
-        progressEnd: "#fbbf24",
+        iconBorder: "#fde68a",
     },
     info: {
         icon: <InfoCircleFilled />,
-        iconBg: "#dbeafe",
+        iconBg: "#eff6ff",
         iconColor: "#2563eb",
-        surface: "#eff6ff",
-        border: "#bfdbfe",
-        progress: "#2563eb",
-        progressEnd: "#60a5fa",
+        iconBorder: "#bfdbfe",
     },
 };
 
@@ -361,13 +346,11 @@ const renderToastCard = ({
     title,
     message,
     variant,
-    duration,
 }: {
     id: string;
     title: string;
     message: string;
     variant: NotifyVariant;
-    duration: number;
 }) => {
     const config = variantConfig[variant];
 
@@ -377,92 +360,69 @@ const renderToastCard = ({
             aria-live={variant === "error" || variant === "warning" ? "assertive" : "polite"}
             aria-atomic="true"
             style={{
-                width: "min(378px, calc(100vw - 24px))",
+                width: "min(400px, calc(100vw - 24px))",
                 position: "relative",
                 overflow: "hidden",
-                borderRadius: 14,
-                background: `linear-gradient(135deg, ${config.surface} 0%, #ffffff 48%)`,
-                border: `1px solid ${config.border}`,
-                boxShadow: "0 16px 40px rgba(15, 23, 42, 0.12), 0 3px 10px rgba(15, 23, 42, 0.06)",
-                padding: "11px 12px 13px",
+                borderRadius: 15,
+                background: "#ffffff",
+                border: "1px solid rgba(226, 232, 240, 0.92)",
+                boxShadow: "0 14px 34px rgba(15, 23, 42, 0.11), 0 3px 8px rgba(15, 23, 42, 0.05)",
+                padding: "18px 15px 18px 16px",
                 fontFamily: "var(--ant-font-family), Inter, -apple-system, BlinkMacSystemFont, sans-serif",
             }}
         >
-            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
                 <div
                     style={{
-                        width: 34,
-                        height: 34,
+                        width: 44,
+                        height: 44,
                         flex: "0 0 auto",
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 11,
+                        borderRadius: 13,
                         background: config.iconBg,
                         color: config.iconColor,
-                        fontSize: 17,
-                        boxShadow: `inset 0 0 0 1px ${config.border}`,
+                        fontSize: 21,
+                        boxShadow: `inset 0 0 0 1px ${config.iconBorder}`,
                     }}
                 >
                     {config.icon}
                 </div>
 
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ color: "#172033", fontSize: 13.5, fontWeight: 750, lineHeight: 1.35, letterSpacing: "-0.01em" }}>
-                                {title}
-                            </div>
-                            <div style={{ marginTop: 2, color: "#64748b", fontSize: 12.25, fontWeight: 500, lineHeight: 1.45 }}>
-                                {message}
-                            </div>
+                <div style={{ minWidth: 0, flex: 1, display: "flex", alignItems: "center", gap: 9 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ color: "#172033", fontSize: 15, fontWeight: 700, lineHeight: 1.35, letterSpacing: "-0.005em" }}>
+                            {title}
                         </div>
-
-                        <button
-                            type="button"
-                            className="lotus-toast-close"
-                            aria-label="Đóng thông báo"
-                            onClick={() => dismissToast(id)}
-                            style={{
-                                width: 28,
-                                height: 28,
-                                flex: "0 0 auto",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: 0,
-                                borderRadius: 9,
-                                background: "transparent",
-                                color: "#94a3b8",
-                                cursor: "pointer",
-                                padding: 0,
-                            }}
-                        >
-                            <CloseOutlined style={{ fontSize: 10.5 }} />
-                        </button>
+                        <div style={{ marginTop: 3, color: "#64748b", fontSize: 13.25, fontWeight: 500, lineHeight: 1.45 }}>
+                            {message}
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div
-                style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 2.5,
-                    background: "rgba(148, 163, 184, 0.12)",
-                }}
-            >
-                <div
-                    style={{
-                        height: "100%",
-                        width: "100%",
-                        transformOrigin: "left center",
-                        background: `linear-gradient(90deg, ${config.progress}, ${config.progressEnd})`,
-                        animation: `lotus-toast-progress ${duration}ms linear forwards`,
-                    }}
-                />
+                    <button
+                        type="button"
+                        className="lotus-toast-close"
+                        aria-label="Đóng thông báo"
+                        onClick={() => dismissToast(id)}
+                        style={{
+                            width: 30,
+                            height: 30,
+                            flex: "0 0 auto",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: 0,
+                            borderRadius: 9,
+                            background: "transparent",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            padding: 0,
+                        }}
+                    >
+                        <CloseOutlined style={{ fontSize: 12.5 }} />
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -484,7 +444,6 @@ const openToast = (variant: NotifyVariant, message: string, opts?: NotifyOptions
             title: copy.title,
             message: copy.description,
             variant: resolvedVariant,
-            duration,
         }),
         {
             id: toastId,
@@ -508,7 +467,7 @@ export const notify = {
             position: "top-right",
             removeDelay: TOAST_REMOVE_DELAY,
             style: {
-                width: "min(420px, calc(100vw - 32px))",
+                width: "min(400px, calc(100vw - 32px))",
                 borderRadius: 10,
                 background: "#ffffff",
                 color: "#0f172a",
@@ -533,7 +492,6 @@ export const notify = {
                 title: withoutTerminalPunctuation(cleanText(title)) || "Thông tin cập nhật",
                 message: asSentence(msg),
                 variant: "info",
-                duration,
             }),
             {
                 id: opts?.id ?? opts?.toastId,

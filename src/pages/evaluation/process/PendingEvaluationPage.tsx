@@ -15,8 +15,8 @@ import {
     useApprovalRecordsQuery,
     useBatchApproveRecordsMutation,
     useEvaluationRecordHistoryQuery,
+    useManagerSubmitMutation,
 } from "@/hooks/useEvaluations";
-import { callManagerSubmitRecord } from "@/config/api";
 import { useQueryClient } from "@tanstack/react-query";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import SearchFilter from "@/components/common/filter/SearchFilter";
@@ -31,16 +31,12 @@ import ManagerEvaluationDetailPage from "../manager/ManagerEvaluationDetailPage"
 import ApprovalDetailPage from "../approval/ApprovalDetailPage";
 import ActionButton from "@/components/common/ui/ActionButton";
 import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
+import { TABLE_STICKY } from "@/components/common/data-table/TableScrollbarController";
 
 type WorkView = "pending" | "history";
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
-    B: { color: "#1677ff", bg: "#e6f4ff", label: "Tốt" },
-    C: { color: "#d46b08", bg: "#fff7e6", label: "Khá" },
-    D: { color: "#cf1322", bg: "#fff1f0", label: "Trung bình" },
-    E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
 const getRecordDeadline = (record: any) => record.evalRole === "MANAGER"
     ? (record.effectiveManagerDeadline ?? record.managerDeadlineOverride ?? record.period?.managerDeadline)
@@ -98,6 +94,7 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     const managerHistoryQuery = useManagerRecordsQuery(true);
     const approvalHistoryQuery = useApprovalRecordsQuery(true);
     const batchApproveMutation = useBatchApproveRecordsMutation();
+    const managerSubmitMutation = useManagerSubmitMutation();
     const historyQuery = useEvaluationRecordHistoryQuery(historyRecord?.id || 0);
 
     const managerRaw = (workView === "pending" ? pendingManagerQuery.data : managerHistoryQuery.data) || [];
@@ -149,10 +146,10 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
         {
             key: "pending",
             label: (
-                <Badge 
-                    count={pendingWorkCount} 
-                    color={workView === "pending" ? "#e8637a" : "#e2e8f0"} 
-                    style={{ 
+                <Badge
+                    count={pendingWorkCount}
+                    color={workView === "pending" ? "#e8637a" : "#e2e8f0"}
+                    style={{
                         color: workView === "pending" ? "#ffffff" : "#475569",
                         fontWeight: 700,
                         fontSize: 10,
@@ -168,10 +165,10 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
         {
             key: "history",
             label: (
-                <Badge 
-                    count={processedWorkCount} 
-                    color={workView === "history" ? "#e8637a" : "#e2e8f0"} 
-                    style={{ 
+                <Badge
+                    count={processedWorkCount}
+                    color={workView === "history" ? "#e8637a" : "#e2e8f0"}
+                    style={{
                         color: workView === "history" ? "#ffffff" : "#475569",
                         fontWeight: 700,
                         fontSize: 10,
@@ -237,22 +234,15 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
     const handleBatchSubmit = async () => {
         if (selectedManagerRecords.length === 0) return;
         setBatchSubmitting(true);
-        let successCount = 0;
         const failed: string[] = [];
         for (const record of selectedManagerRecords) {
             try {
-                await callManagerSubmitRecord(record.id);
-                successCount++;
+                await managerSubmitMutation.mutateAsync(record.id);
             } catch (err: any) {
                 const name = record.employee?.fullName || record.employee?.username || record.id;
                 failed.push(`${name}: ${err?.response?.data?.message || "lỗi"}`);
             }
         }
-        qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
-        qc.invalidateQueries({ queryKey: ["manager-evaluation-records"] });
-        qc.invalidateQueries({ queryKey: ["all-evaluation-records"] });
-        qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
-        if (successCount > 0) notify.success(`Đã nộp ${successCount} bản đánh giá`);
         if (failed.length > 0) notify.warning(`${failed.length} bản chưa nộp: ${failed.join("; ")}`);
         clearProcessedSelection(selectedManagerRecords);
         setBatchSubmitting(false);
@@ -683,7 +673,7 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                 background: "#fff",
                 borderRadius: 8,
                 border: "1px solid #e2e8f0",
-                overflow: "hidden",
+                overflow: "clip",
             }}>
                 {workView === "pending" && selectedActionableCount > 0 && (
                     <div style={{ padding: "12px 20px", background: "#f8faff", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -711,6 +701,7 @@ const PendingEvaluationPage = ({ isTab }: IProps) => {
                 )}
 
                 <Table
+                    sticky={TABLE_STICKY}
                     rowSelection={workView === "pending" ? {
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),

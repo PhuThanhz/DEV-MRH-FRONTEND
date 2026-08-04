@@ -38,6 +38,15 @@ export const statusMeta: Record<AccountingDossierStatus, { label: string; color:
     ARCHIVED: { label: "Lưu trữ", color: "purple" },
 };
 
+/** Trạng thái kiểm tra từng chứng từ con — nguồn chung cho mọi trang (danh sách kế toán, hồ sơ, dossier). */
+export const checkStatusMeta: Record<string, { label: string; color: string }> = {
+    PENDING: { color: "default", label: "Chờ kiểm tra" },
+    VALID: { color: "success", label: "Hợp lệ" },
+    NEED_SUPPLEMENT: { color: "warning", label: "Cần bổ sung" },
+    INVALID: { color: "error", label: "Không hợp lệ" },
+    NOT_REQUIRED: { color: "blue", label: "Không yêu cầu" },
+};
+
 export const auditActionMeta: Record<string, { label: string; tone: string; icon: React.ReactNode }> = {
     CREATE_DOSSIER: { label: "Tạo bộ chứng từ", tone: "#1677ff", icon: <PlusOutlined /> },
     ADD_DOCUMENT_ITEM: { label: "Thêm chứng từ con", tone: "#1677ff", icon: <FileTextOutlined /> },

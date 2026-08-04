@@ -76,7 +76,11 @@ const ModalRole = (props: IProps) => {
     }, [listPermissions]);
 
     const submitRole = async (valuesForm: any) => {
-        const { description, active, name, permissions } = valuesForm;
+        const { description, active, name } = valuesForm;
+        // permissions không được đăng ký qua Form.Item name="permissions" (chỉ có
+        // noStyle/shouldUpdate để hiển thị), nên valuesForm.permissions luôn undefined -
+        // phải đọc thẳng từ form store bằng getFieldValue.
+        const permissions = form.getFieldValue('permissions');
         const checkedPermissions: { id: string }[] = [];
 
         if (permissions) {

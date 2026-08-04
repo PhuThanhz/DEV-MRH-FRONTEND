@@ -34,6 +34,7 @@ import {
 } from "@/hooks/useCompanies";
 import CompanyJobTitleTab from "./company-job-title/company-job-title.tab";
 import { Modal } from "antd";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -53,6 +54,7 @@ const CompanyPage = () => {
     const [dataInit, setDataInit] = useState<ICompany | null>(null);
     const [searchValue, setSearchValue] = useState("");
     const [openJobTitle, setOpenJobTitle] = useState(false);
+    const jobTitleModalWidth = useResponsiveModalWidth(800);
     const tableRef = useRef<ActionType>(null);
 
     const [query, setQuery] = useState(
@@ -353,7 +355,7 @@ const CompanyPage = () => {
                     open={openJobTitle}
                     onCancel={() => setOpenJobTitle(false)}
                     footer={null}
-                    width="80vw"
+                    width={jobTitleModalWidth}
                     destroyOnHidden
                 >
                     <CompanyJobTitleTab

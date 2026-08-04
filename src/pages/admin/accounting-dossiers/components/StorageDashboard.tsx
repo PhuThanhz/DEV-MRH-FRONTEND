@@ -35,6 +35,7 @@ import { ALL_PERMISSIONS } from "@/config/permissions";
 import { useNavigate } from "react-router-dom";
 import { saveAs } from "file-saver";
 import dayjs from "dayjs";
+import { TABLE_STICKY } from "@/components/common/data-table/TableScrollbarController";
 
 const { Title, Text } = Typography;
 
@@ -1256,6 +1257,7 @@ const StorageDashboard = () => {
                     styles={{ body: { padding: 0 } }}
                 >
                     <Table
+                        sticky={TABLE_STICKY}
                         columns={tableColumns}
                         dataSource={dossiersList}
                         rowKey="id"

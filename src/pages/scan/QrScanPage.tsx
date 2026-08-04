@@ -9,6 +9,7 @@ import {
 import axios from "@/config/axios-customize";
 import dayjs from "dayjs";
 import { useNavigate } from "react-router-dom";
+import { PROCEDURE_DOCUMENT_STATUS_META as STATUS_MAP } from "@/constants/statusMeta/procedureDocumentMeta";
 
 const { Title, Text } = Typography;
 const { useToken } = theme;
@@ -28,13 +29,6 @@ const C = {
 };
 
 const BOX = 220; // Hộp quét 220px rộng rãi, nhận diện siêu nhạy
-
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "warning" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "success" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "processing" },
-    TERMINATED: { label: "Hết hiệu lực", color: "error" },
-};
 
 const InfoRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => {
     const { token } = useToken();

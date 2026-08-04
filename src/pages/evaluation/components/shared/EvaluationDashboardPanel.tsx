@@ -7,6 +7,7 @@ import {
     TeamOutlined,
 } from "@ant-design/icons";
 import { useManagerDashboardQuery, useApproverDashboardQuery } from "@/hooks/useEvaluations";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
 
 interface KpiItem {
     label: string;
@@ -16,13 +17,7 @@ interface KpiItem {
     icon: React.ReactNode;
 }
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
-    B: { color: "#1677ff", bg: "#e6f4ff", label: "Tốt" },
-    C: { color: "#d46b08", bg: "#fff7e6", label: "Khá" },
-    D: { color: "#cf1322", bg: "#fff1f0", label: "Trung bình" },
-    E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
 const KpiCards = ({ items }: { items: KpiItem[] }) => (
     <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>

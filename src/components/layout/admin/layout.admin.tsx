@@ -25,6 +25,7 @@ const LayoutAdmin = () => {
     const [openScanner, setOpenScanner] = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
     const [showAssistant, setShowAssistant] = useState(false);
+    const [isEntrance, setIsEntrance] = useState(false);
     useTrackRecentQuickAccess();
 
     const { isAuthenticated, isLoading, user } = useAppSelector(
@@ -32,6 +33,18 @@ const LayoutAdmin = () => {
     );
 
     const roleName = user?.role?.name?.toUpperCase() || "";
+
+    useEffect(() => {
+        const justLoggedIn = sessionStorage.getItem("just_logged_in");
+        if (justLoggedIn === "true") {
+            setIsEntrance(true);
+            const timer = window.setTimeout(() => {
+                setIsEntrance(false);
+                sessionStorage.removeItem("just_logged_in");
+            }, 750);
+            return () => window.clearTimeout(timer);
+        }
+    }, []);
 
     useEffect(() => {
         setActiveMenu(location.pathname);
@@ -101,7 +114,14 @@ const LayoutAdmin = () => {
     return (
         <NotificationProvider>
             <LotusGuideProvider>
-                <Layout style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+                <Layout
+                    className={isEntrance ? "admin-layout-entrance" : ""}
+                    style={{
+                        minHeight: "100vh",
+                        background: "#f8f9fa",
+                        overflow: isEntrance ? "hidden" : "visible",
+                    }}
+                >
                     <SliderAdmin
                         collapsed={collapsed}
                         setCollapsed={setCollapsed}
@@ -124,7 +144,7 @@ const LayoutAdmin = () => {
                                 padding: "clamp(10px, 2vw, 16px)",
                                 paddingBottom: "120px",
                                 background: "transparent",
-                                minHeight: "calc(100vh - 64px)",
+                                minHeight: "calc(100vh - 56px)",
                             }}
                         >
                             <Outlet />
@@ -151,6 +171,37 @@ const LayoutAdmin = () => {
                         </Suspense>
                     )}
                 </Layout>
+
+                <style>{`
+                    /* STAGGERED ENTRANCE (STEP 1: SIDEBAR -> STEP 2: HEADER -> STEP 3: CONTENT) */
+                    .admin-layout-entrance .ant-layout-sider {
+                        animation: slideInLeft 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0ms forwards;
+                        will-change: transform, opacity;
+                    }
+                    .admin-layout-entrance header {
+                        animation: slideInDown 0.34s cubic-bezier(0.16, 1, 0.3, 1) 70ms forwards;
+                        animation-fill-mode: both;
+                        will-change: transform, opacity;
+                    }
+                    .admin-layout-entrance .ant-layout-content {
+                        animation: contentFadeUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) 140ms forwards;
+                        animation-fill-mode: both;
+                        will-change: transform, opacity;
+                    }
+
+                    @keyframes slideInLeft {
+                        0% { transform: translateX(-100%); opacity: 0; }
+                        100% { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideInDown {
+                        0% { transform: translateY(-100%); opacity: 0; }
+                        100% { transform: translateY(0); opacity: 1; }
+                    }
+                    @keyframes contentFadeUp {
+                        0% { transform: translateY(16px) scale(0.99); opacity: 0; }
+                        100% { transform: translateY(0) scale(1); opacity: 1; }
+                    }
+                `}</style>
             </LotusGuideProvider>
         </NotificationProvider>
     );

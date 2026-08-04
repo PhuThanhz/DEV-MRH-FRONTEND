@@ -7,18 +7,7 @@ import { useDossierByQrTokenQuery } from "@/hooks/useAccountingDossiers";
 import DossierDocumentList from "./components/DossierDocumentList";
 import type { IAccountingDossier } from "@/types/backend";
 import dayjs from "dayjs";
-
-const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
-    DRAFT: { color: "default", label: "Nháp" },
-    SUBMITTED: { color: "blue", label: "Chờ duyệt" },
-    IN_REVIEW: { color: "processing", label: "Đang duyệt" },
-    RETURN_REQUESTED: { color: "warning", label: "Yêu cầu hoàn trả" },
-    RETURNED: { color: "orange", label: "Đã hoàn trả" },
-    APPROVED: { color: "success", label: "Đã duyệt" },
-    REJECTED: { color: "error", label: "Đã từ chối" },
-    TERMINATED: { color: "error", label: "Đã chấm dứt" },
-    ARCHIVED: { color: "purple", label: "Đã lưu trữ" },
-};
+import { statusMeta as DOSSIER_STATUS_LABEL } from "./dossierMeta";
 
 const DossierQrDetail = () => {
     const { token } = useParams<{ token: string }>();

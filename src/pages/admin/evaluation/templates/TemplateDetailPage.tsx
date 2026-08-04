@@ -209,7 +209,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                         displayOrder: sec.displayOrder,
                     },
                 });
-            } catch (_) {}
+            } catch (_) { }
         });
         notify.success("Đã sắp xếp lại thứ tự phần.");
     };
@@ -533,7 +533,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
             weight: selectedParentCriteriaId ? 0 : newWeightDecimal, // convert percentage back to decimal
             displayOrder: values.displayOrder,
         };
-        
+
         if (selectedParentCriteriaId) {
             payload.parentCriteria = { id: selectedParentCriteriaId };
         }
@@ -636,25 +636,25 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
     const sumCriteriaWeights = activeCriteriaList.reduce((acc: number, c: any) => acc + (c.weight ?? 0), 0);
 
     const isSectionsWeightValid = Math.abs(sumSectionWeights - 1.0) < 0.0001;
-    const isCriteriaWeightValid = activeSection 
-        ? Math.abs(sumCriteriaWeights - activeSection.weight) < 0.0001 
+    const isCriteriaWeightValid = activeSection
+        ? Math.abs(sumCriteriaWeights - activeSection.weight) < 0.0001
         : false;
 
     // ── Derived status helpers ────────────────────────────────────────
-    const weightPct        = Math.round(sumSectionWeights * 100);
+    const weightPct = Math.round(sumSectionWeights * 100);
     const weightStatus: "ok" | "over" | "under" =
         isSectionsWeightValid ? "ok" : sumSectionWeights > 1 ? "over" : "under";
     const weightBarColor =
-        weightStatus === "ok"    ? "linear-gradient(90deg,#10b981,#34d399)" :
-        weightStatus === "over"  ? "linear-gradient(90deg,#ef4444,#f97316)" :
-                                   "linear-gradient(135deg,#e8637a 0%,#f97daa 100%)";
+        weightStatus === "ok" ? "linear-gradient(90deg,#10b981,#34d399)" :
+            weightStatus === "over" ? "linear-gradient(90deg,#ef4444,#f97316)" :
+                "linear-gradient(135deg,#e8637a 0%,#f97daa 100%)";
     const weightBorderColor =
-        weightStatus === "ok"   ? "#bbf7d0" :
-        weightStatus === "over" ? "#fecaca" : "rgba(232,99,122,.25)";
-    const weightChipBg    =
-        weightStatus === "ok"   ? { bg: "#dcfce7", color: "#15803d" } :
-        weightStatus === "over" ? { bg: "#fee2e2", color: "#b91c1c" } :
-                                  { bg: "#fff0f2", color: PINK };
+        weightStatus === "ok" ? "#bbf7d0" :
+            weightStatus === "over" ? "#fecaca" : "rgba(232,99,122,.25)";
+    const weightChipBg =
+        weightStatus === "ok" ? { bg: "#dcfce7", color: "#15803d" } :
+            weightStatus === "over" ? { bg: "#fee2e2", color: "#b91c1c" } :
+                { bg: "#fff0f2", color: PINK };
 
     const content = (
         <Spin spinning={loading}>
@@ -824,7 +824,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                     {weightPct}%
                                 </span>
                             </div>
-                            
+
                             {/* Section Pills */}
                             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 {sections.map(sec => (
@@ -842,7 +842,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                         {sec.code} <span style={{ opacity: sec.id === selectedSectionId ? 0.9 : 0.6, marginLeft: 4, fontSize: 12 }}>{Math.round((sec.weight ?? 0) * 100)}%</span>
                                     </button>
                                 ))}
-                                
+
                                 {/* Auto-distribute */}
                                 {template?.status === "DRAFT" && weightStatus !== "ok" && (
                                     <Tooltip title="Tự động chia đều 100% cho tất cả phần">
@@ -891,21 +891,21 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                         headerAction={(
                                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                                 {template?.status === "DRAFT" && (
-                                            <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_SECTION} hideChildren>
-                                                <Button
-                                                    type="primary"
-                                                    size="small"
-                                                    icon={<PlusOutlined />}
-                                                    onClick={handleAddSectionClick}
-                                                    className="hrm-add-btn"
-                                                    style={{
-                                                        borderRadius: 7, background: PINK, borderColor: PINK,
-                                                        fontWeight: 600, fontSize: 12, height: 30,
-                                                    }}
-                                                >
-                                                    Thêm phần
-                                                </Button>
-                                            </Access>
+                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_SECTION} hideChildren>
+                                                        <Button
+                                                            type="primary"
+                                                            size="small"
+                                                            icon={<PlusOutlined />}
+                                                            onClick={handleAddSectionClick}
+                                                            className="hrm-add-btn"
+                                                            style={{
+                                                                borderRadius: 7, background: PINK, borderColor: PINK,
+                                                                fontWeight: 600, fontSize: 12, height: 30,
+                                                            }}
+                                                        >
+                                                            Thêm phần
+                                                        </Button>
+                                                    </Access>
                                                 )}
                                                 <Tooltip title="Thu gọn">
                                                     <button className="hrm-panel-collapse-btn"
@@ -1014,7 +1014,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                 </div>
                             ) : (
                                 <Tooltip title="Mở rộng panel phần" placement="right">
-                                    <div 
+                                    <div
                                         onClick={() => setLeftPanelCollapsed(false)}
                                         style={{
                                             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -1111,7 +1111,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                     </div>
                                 ) : (
                                     <Tooltip title="Mở rộng panel tiêu chí" placement="left">
-                                        <div 
+                                        <div
                                             onClick={() => setRightPanelCollapsed(false)}
                                             style={{
                                                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
@@ -1147,346 +1147,348 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                                         padding: "12px 16px",
                                                     }}
                                                 >
-                                                {/* Header Row */}
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
-                                                        {/* Number badge */}
-                                                        <span style={{
-                                                            flexShrink: 0,
-                                                            color: "#0f172a",
-                                                            fontWeight: 800, fontSize: 16,
-                                                            fontFamily: "monospace",
-                                                        }}>
-                                                            {criteriaNo < 10 ? `0${criteriaNo}` : criteriaNo}.
-                                                        </span>
-                                                        <div style={{ fontWeight: 600, fontSize: 15, color: "#0f172a" }}>
-                                                            {crit.name}
-                                                        </div>
-                                                        {/* Inline Metadata */}
-                                                        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "#64748b", marginLeft: 4 }}>
-                                                            <span style={{ color: "#334155", fontWeight: 500 }}>
-                                                                Trọng số: {(crit.weight * 100).toFixed(0)}%
+                                                    {/* Header Row */}
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+                                                            {/* Number badge */}
+                                                            <span style={{
+                                                                flexShrink: 0,
+                                                                color: "#0f172a",
+                                                                fontWeight: 800, fontSize: 16,
+                                                                fontFamily: "monospace",
+                                                            }}>
+                                                                {criteriaNo < 10 ? `0${criteriaNo}` : criteriaNo}.
                                                             </span>
-                                                            <span style={{ color: "#e2e8f0" }}>•</span>
-                                                            {crit.subCriteria?.length > 0 ? (
-                                                                <span>{crit.subCriteria.length} mục con</span>
-                                                            ) : (
-                                                                <span style={{ 
-                                                                    padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                                                                    background: lvlOk ? "#dcfce7" : "#ffedd5",
-                                                                    color: lvlOk ? "#16a34a" : "#ea580c"
-                                                                }}>
-                                                                    {lvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                            <div style={{ fontWeight: 600, fontSize: 15, color: "#0f172a" }}>
+                                                                {crit.name}
+                                                            </div>
+                                                            {/* Inline Metadata */}
+                                                            <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "#64748b", marginLeft: 4 }}>
+                                                                <span style={{ color: "#334155", fontWeight: 500 }}>
+                                                                    Trọng số: {(crit.weight * 100).toFixed(0)}%
                                                                 </span>
-                                                            )}
+                                                                <span style={{ color: "#e2e8f0" }}>•</span>
+                                                                {crit.subCriteria?.length > 0 ? (
+                                                                    <span>{crit.subCriteria.length} mục con</span>
+                                                                ) : (
+                                                                    <span style={{
+                                                                        padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                                                                        background: lvlOk ? "#dcfce7" : "#ffedd5",
+                                                                        color: lvlOk ? "#16a34a" : "#ea580c"
+                                                                    }}>
+                                                                        {lvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                        {template?.status === "DRAFT" && (
-                                                            <Space size={8}>
-                                                            {(!crit.subCriteria || crit.subCriteria.length === 0) && !lvlOk && (
-                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
-                                                                    <div
-                                                                        onClick={() => handleConfigureLevels(crit)}
-                                                                        style={{ 
-                                                                            display: "flex", alignItems: "center", gap: 6,
-                                                                            padding: "4px 10px", borderRadius: 6, cursor: "pointer",
-                                                                            background: "#ffffff", border: "1px solid #e2e8f0",
-                                                                            color: "#475569", fontWeight: 600, fontSize: 13,
-                                                                            transition: "all 0.2s"
-                                                                        }}
-                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
-                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
-                                                                    >
-                                                                        <TrophyOutlined />
-                                                                        <span>Hoàn thiện</span>
-                                                                    </div>
-                                                                </Access>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                            {template?.status === "DRAFT" && (
+                                                                <Space size={8}>
+                                                                    {(!crit.subCriteria || crit.subCriteria.length === 0) && !lvlOk && (
+                                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                                            <div
+                                                                                onClick={() => handleConfigureLevels(crit)}
+                                                                                style={{
+                                                                                    display: "flex", alignItems: "center", gap: 6,
+                                                                                    padding: "4px 10px", borderRadius: 6, cursor: "pointer",
+                                                                                    background: "#ffffff", border: "1px solid #e2e8f0",
+                                                                                    color: "#475569", fontWeight: 600, fontSize: 13,
+                                                                                    transition: "all 0.2s"
+                                                                                }}
+                                                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                                                                                onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+                                                                            >
+                                                                                <TrophyOutlined />
+                                                                                <span>Hoàn thiện</span>
+                                                                            </div>
+                                                                        </Access>
+                                                                    )}
+                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                                        <div
+                                                                            onClick={() => handleEditCriteriaClick(crit)}
+                                                                            style={{
+                                                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                                                                                color: "#d97706", transition: "all 0.2s",
+                                                                                background: "transparent"
+                                                                            }}
+                                                                            onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+                                                                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                        >
+                                                                            <EditOutlined style={{ fontSize: 14 }} />
+                                                                        </div>
+                                                                    </Access>
+                                                                    <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
+                                                                        <Popconfirm
+                                                                            title="Xóa tiêu chí?"
+                                                                            okText="Xóa"
+                                                                            cancelText="Hủy"
+                                                                            onConfirm={() => crit.id && handleDeleteCriteria(crit.id)}
+                                                                        >
+                                                                            <div
+                                                                                style={{
+                                                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                    width: 28, height: 28, borderRadius: 6, cursor: "pointer",
+                                                                                    color: "#ef4444", transition: "all 0.2s",
+                                                                                    background: "transparent"
+                                                                                }}
+                                                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+                                                                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                            >
+                                                                                <DeleteOutlined style={{ fontSize: 14 }} />
+                                                                            </div>
+                                                                        </Popconfirm>
+                                                                    </Access>
+                                                                </Space>
                                                             )}
-                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                            {/* Collapse Toggle */}
+                                                            {crit.subCriteria?.length > 0 && (
                                                                 <div
-                                                                    onClick={() => handleEditCriteriaClick(crit)}
-                                                                    style={{ 
+                                                                    onClick={() => toggleCriteriaCollapse(crit.id)}
+                                                                    style={{
                                                                         display: "flex", alignItems: "center", justifyContent: "center",
                                                                         width: 28, height: 28, borderRadius: 6, cursor: "pointer",
-                                                                        color: "#d97706", transition: "all 0.2s",
-                                                                        background: "transparent"
+                                                                        color: "#64748b", transition: "all 0.2s",
+                                                                        border: "1px solid transparent", background: "transparent"
                                                                     }}
-                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
-                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.background = "#f1f5f9";
+                                                                        e.currentTarget.style.color = "#0f172a";
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.background = "transparent";
+                                                                        e.currentTarget.style.color = "#64748b";
+                                                                    }}
                                                                 >
-                                                                    <EditOutlined style={{ fontSize: 14 }} />
+                                                                    {collapsedCriteriaIds.includes(crit.id) ? <RightOutlined style={{ fontSize: 12 }} /> : <DownOutlined style={{ fontSize: 12 }} />}
                                                                 </div>
-                                                            </Access>
-                                                            <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
-                                                                <Popconfirm
-                                                                    title="Xóa tiêu chí?"
-                                                                    okText="Xóa"
-                                                                    cancelText="Hủy"
-                                                                    onConfirm={() => crit.id && handleDeleteCriteria(crit.id)}
-                                                                >
-                                                                    <div
-                                                                        style={{ 
-                                                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                                                            width: 28, height: 28, borderRadius: 6, cursor: "pointer",
-                                                                            color: "#ef4444", transition: "all 0.2s",
-                                                                            background: "transparent"
-                                                                        }}
-                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
-                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                                                    >
-                                                                        <DeleteOutlined style={{ fontSize: 14 }} />
-                                                                    </div>
-                                                                </Popconfirm>
-                                                            </Access>
-                                                            </Space>
-                                                        )}
-                                                        {/* Collapse Toggle */}
-                                                        {crit.subCriteria?.length > 0 && (
-                                                            <div 
-                                                                onClick={() => toggleCriteriaCollapse(crit.id)}
-                                                                style={{ 
-                                                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                                                    width: 28, height: 28, borderRadius: 6, cursor: "pointer",
-                                                                    color: "#64748b", transition: "all 0.2s",
-                                                                    border: "1px solid transparent", background: "transparent"
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = "#f1f5f9";
-                                                                    e.currentTarget.style.color = "#0f172a";
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.background = "transparent";
-                                                                    e.currentTarget.style.color = "#64748b";
-                                                                }}
-                                                            >
-                                                                {collapsedCriteriaIds.includes(crit.id) ? <RightOutlined style={{ fontSize: 12 }} /> : <DownOutlined style={{ fontSize: 12 }} />}
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {crit.description && (
+                                                        <div style={{ marginTop: 12, color: "#475569", fontSize: 13, lineHeight: "1.5", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                                            <AlignLeftOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
+                                                            <span>{crit.description}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {crit.measurementMethod && (
+                                                        <div style={{
+                                                            marginTop: crit.description ? 6 : 12,
+                                                            marginBottom: crit.subCriteria?.length ? 8 : 0,
+                                                            color: "#475569", fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", lineHeight: "1.5"
+                                                        }}>
+                                                            <InfoCircleOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
+                                                            <span>{crit.measurementMethod}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Levels Definition Panel */}
+                                                    {false && (!crit.subCriteria || crit.subCriteria.length === 0) && (
+                                                        <div style={{ background: "#f8fafc", padding: "16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                                                                <TrophyOutlined style={{ color: "#64748b", fontSize: 13 }} />
+                                                                <span style={{ fontWeight: 700, fontSize: 11, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                                                    Định nghĩa mức điểm đánh giá
+                                                                </span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </div>
 
-                                                {crit.description && (
-                                                    <div style={{ marginTop: 12, color: "#475569", fontSize: 13, lineHeight: "1.5", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                                                        <AlignLeftOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
-                                                        <span>{crit.description}</span>
-                                                    </div>
-                                                )}
-                                                
-                                                {crit.measurementMethod && (
-                                                    <div style={{ 
-                                                        marginTop: crit.description ? 6 : 12,
-                                                        marginBottom: crit.subCriteria?.length ? 8 : 0, 
-                                                        color: "#475569", fontSize: 13, display: "flex", gap: 8, alignItems: "flex-start", lineHeight: "1.5"
-                                                    }}>
-                                                        <InfoCircleOutlined style={{ marginTop: 3, fontSize: 13, opacity: 0.6 }} />
-                                                        <span>{crit.measurementMethod}</span>
-                                                    </div>
-                                                )}
+                                                            {crit.levels && crit.levels.length > 0 ? (
+                                                                <div style={{
+                                                                    display: "flex",
+                                                                    width: "100%",
+                                                                    border: "1px solid #e2e8f0",
+                                                                    borderRadius: 10,
+                                                                    background: "#ffffff",
+                                                                    overflow: "hidden",
+                                                                    boxShadow: "0 1px 2px rgba(0,0,0,0.01)"
+                                                                }}>
+                                                                    {[1, 2, 3, 4, 5].map((lvl, index) => {
+                                                                        const levelData = crit.levels?.find((l: any) => l.level === lvl);
+                                                                        return (
+                                                                            <div
+                                                                                key={lvl}
+                                                                                style={{
+                                                                                    flex: 1,
+                                                                                    padding: "16px",
+                                                                                    borderRight: index < 4 ? "1px solid #e2e8f0" : "none",
+                                                                                    display: "flex",
+                                                                                    flexDirection: "column",
+                                                                                    minHeight: 110,
+                                                                                    background: "#ffffff",
+                                                                                }}
+                                                                            >
+                                                                                <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9", paddingBottom: 8, marginBottom: 10 }}>
+                                                                                    <span style={{
+                                                                                        display: "inline-flex",
+                                                                                        alignItems: "center",
+                                                                                        justifyContent: "center",
+                                                                                        width: 20,
+                                                                                        height: 20,
+                                                                                        borderRadius: "50%",
+                                                                                        background: levelData?.description ? "#f1f5f9" : "#f8fafc",
+                                                                                        color: levelData?.description ? "#0f172a" : "#94a3b8",
+                                                                                        fontWeight: 700,
+                                                                                        fontSize: 11,
+                                                                                        border: "1px solid " + (levelData?.description ? "#cbd5e1" : "#e2e8f0")
+                                                                                    }}>{lvl}</span>
+                                                                                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>Mức {lvl}</span>
+                                                                                </div>
 
-                                                {/* Levels Definition Panel */}
-                                                {false && (!crit.subCriteria || crit.subCriteria.length === 0) && (
-                                                    <div style={{ background: "#f8fafc", padding: "16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                                                            <TrophyOutlined style={{ color: "#64748b", fontSize: 13 }} />
-                                                            <span style={{ fontWeight: 700, fontSize: 11, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                                                                Định nghĩa mức điểm đánh giá
-                                                            </span>
+                                                                                <Tooltip title={levelData?.description}>
+                                                                                    <span style={{
+                                                                                        fontSize: 12,
+                                                                                        color: levelData?.description ? "#334155" : "#94a3b8",
+                                                                                        lineHeight: 1.5,
+                                                                                        overflow: "hidden",
+                                                                                        textOverflow: "ellipsis",
+                                                                                        WebkitLineClamp: 3,
+                                                                                        display: "-webkit-box",
+                                                                                        WebkitBoxOrient: "vertical",
+                                                                                        fontStyle: levelData?.description ? "normal" : "italic"
+                                                                                    }}>
+                                                                                        {levelData?.description || "Chưa thiết lập"}
+                                                                                    </span>
+                                                                                </Tooltip>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{
+                                                                    border: "1px dashed #cbd5e1",
+                                                                    borderRadius: 8,
+                                                                    padding: "16px",
+                                                                    textAlign: "center",
+                                                                    background: "#ffffff",
+                                                                    color: "#64748b",
+                                                                    fontSize: 13
+                                                                }}>
+                                                                    <TrophyOutlined style={{ color: "#94a3b8", fontSize: 18, marginBottom: 6, display: "block" }} />
+                                                                    <span>Chưa thiết lập mô tả mức điểm cho tiêu chí này. Vui lòng bấm nút <Text strong style={{ color: "#334155" }}>"Mức điểm"</Text> phía trên để bổ sung.</span>
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                    )}
 
-                                                    {crit.levels && crit.levels.length > 0 ? (
-                                                        <div style={{
-                                                            display: "flex",
-                                                            width: "100%",
-                                                            border: "1px solid #e2e8f0",
-                                                            borderRadius: 10,
-                                                            background: "#ffffff",
-                                                            overflow: "hidden",
-                                                            boxShadow: "0 1px 2px rgba(0,0,0,0.01)"
-                                                        }}>
-                                                            {[1, 2, 3, 4, 5].map((lvl, index) => {
-                                                                const levelData = crit.levels?.find((l: any) => l.level === lvl);
-                                                                return (
-                                                                    <div
-                                                                        key={lvl}
-                                                                        style={{
-                                                                            flex: 1,
-                                                                            padding: "16px",
-                                                                            borderRight: index < 4 ? "1px solid #e2e8f0" : "none",
-                                                                            display: "flex",
-                                                                            flexDirection: "column",
-                                                                            minHeight: 110,
-                                                                            background: "#ffffff",
-                                                                        }}
-                                                                    >
-                                                                        <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9", paddingBottom: 8, marginBottom: 10 }}>
-                                                                            <span style={{
-                                                                                display: "inline-flex",
-                                                                                alignItems: "center",
-                                                                                justifyContent: "center",
-                                                                                width: 20,
-                                                                                height: 20,
-                                                                                borderRadius: "50%",
-                                                                                background: levelData?.description ? "#f1f5f9" : "#f8fafc",
-                                                                                color: levelData?.description ? "#0f172a" : "#94a3b8",
-                                                                                fontWeight: 700,
-                                                                                fontSize: 11,
-                                                                                border: "1px solid " + (levelData?.description ? "#cbd5e1" : "#e2e8f0")
-                                                                            }}>{lvl}</span>
-                                                                            <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 13 }}>Mức {lvl}</span>
+                                                    {/* Sub Criteria Render Loop */}
+                                                    {crit.subCriteria && crit.subCriteria.length > 0 && !collapsedCriteriaIds.includes(crit.id) && (
+                                                        <div style={{ marginTop: 16, borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
+                                                            <div style={{ width: "100%" }}>
+                                                                {crit.subCriteria.map((sub: any, subIndex: number) => {
+                                                                    const subNo = `${criteriaNo}.${subIndex + 1}`;
+                                                                    const isLast = subIndex === crit.subCriteria.length - 1;
+                                                                    const subLvlOk = (sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5;
+                                                                    return (
+                                                                        <div
+                                                                            key={sub.id}
+                                                                            style={{
+                                                                                background: "transparent",
+                                                                                borderBottom: isLast ? "none" : "1px solid #f8fafc",
+                                                                                padding: "12px 8px",
+                                                                                transition: "background 0.2s",
+                                                                            }}
+                                                                        >
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                                                                                <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                                                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: sub.measurementMethod ? 4 : 0 }}>
+                                                                                        <span style={{
+                                                                                            fontWeight: 800,
+                                                                                            fontSize: 14,
+                                                                                            color: "#0f172a",
+                                                                                            minWidth: 28,
+                                                                                            fontFamily: "monospace",
+                                                                                        }}>
+                                                                                            {subNo}
+                                                                                        </span>
+                                                                                        <span style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}>
+                                                                                            {sub.name}
+                                                                                        </span>
+                                                                                        <span style={{
+                                                                                            padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600, marginLeft: 4,
+                                                                                            background: subLvlOk ? "#dcfce7" : "#ffedd5",
+                                                                                            color: subLvlOk ? "#16a34a" : "#ea580c"
+                                                                                        }}>
+                                                                                            {subLvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    {sub.measurementMethod && (
+                                                                                        <div style={{ fontSize: 13, color: "#64748b", paddingLeft: 38, marginTop: 4, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                                                                                            <InfoCircleOutlined style={{ marginTop: 2, fontSize: 12, opacity: 0.7 }} />
+                                                                                            <span>{sub.measurementMethod}</span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {template?.status === "DRAFT" && (
+                                                                                    <div style={{ display: "flex", gap: 8, opacity: 0.8, transition: "opacity 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}>
+                                                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
+                                                                                            <div
+                                                                                                onClick={() => handleConfigureLevels(sub)}
+                                                                                                style={{
+                                                                                                    display: "flex", alignItems: "center", gap: 6,
+                                                                                                    padding: "2px 8px", borderRadius: 6, cursor: "pointer",
+                                                                                                    background: "#ffffff", border: "1px solid #e2e8f0",
+                                                                                                    color: "#475569", fontWeight: 600, fontSize: 12,
+                                                                                                    transition: "all 0.2s"
+                                                                                                }}
+                                                                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                                                                                                onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+                                                                                            >
+                                                                                                <TrophyOutlined style={{ fontSize: 13 }} />
+                                                                                                <span>Mức điểm</span>
+                                                                                            </div>
+                                                                                        </Access>
+                                                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
+                                                                                            <div
+                                                                                                onClick={() => handleEditCriteriaClick(sub, crit.id)}
+                                                                                                style={{
+                                                                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                                    width: 26, height: 26, borderRadius: 6, cursor: "pointer",
+                                                                                                    color: "#d97706", transition: "all 0.2s",
+                                                                                                    background: "transparent"
+                                                                                                }}
+                                                                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
+                                                                                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                                            >
+                                                                                                <EditOutlined style={{ fontSize: 13 }} />
+                                                                                            </div>
+                                                                                        </Access>
+                                                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
+                                                                                            <Popconfirm
+                                                                                                title="Bạn chắc chắn muốn xóa mục con này?"
+                                                                                                okText="Xóa"
+                                                                                                cancelText="Hủy"
+                                                                                                onConfirm={() => sub.id && handleDeleteCriteria(sub.id)}
+                                                                                            >
+                                                                                                <div
+                                                                                                    style={{
+                                                                                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                                                                                        width: 26, height: 26, borderRadius: 6, cursor: "pointer",
+                                                                                                        color: "#ef4444", transition: "all 0.2s",
+                                                                                                        background: "transparent"
+                                                                                                    }}
+                                                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+                                                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                                                                                >
+                                                                                                    <DeleteOutlined style={{ fontSize: 13 }} />
+                                                                                                </div>
+                                                                                            </Popconfirm>
+                                                                                        </Access>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-
-                                                                        <Tooltip title={levelData?.description}>
-                                                                            <span style={{
-                                                                                fontSize: 12,
-                                                                                color: levelData?.description ? "#334155" : "#94a3b8",
-                                                                                lineHeight: 1.5,
-                                                                                overflow: "hidden",
-                                                                                textOverflow: "ellipsis",
-                                                                                WebkitLineClamp: 3,
-                                                                                display: "-webkit-box",
-                                                                                WebkitBoxOrient: "vertical",
-                                                                                fontStyle: levelData?.description ? "normal" : "italic"
-                                                                            }}>
-                                                                                {levelData?.description || "Chưa thiết lập"}
-                                                                            </span>
-                                                                        </Tooltip>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    ) : (
-                                                        <div style={{
-                                                            border: "1px dashed #cbd5e1",
-                                                            borderRadius: 8,
-                                                            padding: "16px",
-                                                            textAlign: "center",
-                                                            background: "#ffffff",
-                                                            color: "#64748b",
-                                                            fontSize: 13
-                                                        }}>
-                                                            <TrophyOutlined style={{ color: "#94a3b8", fontSize: 18, marginBottom: 6, display: "block" }} />
-                                                            <span>Chưa thiết lập mô tả mức điểm cho tiêu chí này. Vui lòng bấm nút <Text strong style={{ color: "#334155" }}>"Mức điểm"</Text> phía trên để bổ sung.</span>
+                                                                    )
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
-                                                )}
-                                                
-                                                {/* Sub Criteria Render Loop */}
-                                                {crit.subCriteria && crit.subCriteria.length > 0 && !collapsedCriteriaIds.includes(crit.id) && (
-                                                    <div style={{ marginTop: 16, borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
-                                                        <div style={{ width: "100%" }}>
-                                                            {crit.subCriteria.map((sub: any, subIndex: number) => {
-                                                                const subNo = `${criteriaNo}.${subIndex + 1}`;
-                                                                const isLast = subIndex === crit.subCriteria.length - 1;
-                                                                const subLvlOk = (sub.levels?.filter((l: any) => l.description?.trim()).length ?? 0) >= 5;
-                                                                return (
-                                                                <div
-                                                                    key={sub.id}
-                                                                    style={{
-                                                                        background: "transparent",
-                                                                        borderBottom: isLast ? "none" : "1px solid #f8fafc",
-                                                                        padding: "12px 8px",
-                                                                        transition: "background 0.2s",
-                                                                    }}
-                                                                >
-                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                                                                        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                                                                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: sub.measurementMethod ? 4 : 0 }}>
-                                                                                <span style={{
-                                                                                    fontWeight: 800,
-                                                                                    fontSize: 14,
-                                                                                    color: "#0f172a",
-                                                                                    minWidth: 28,
-                                                                                    fontFamily: "monospace",
-                                                                                }}>
-                                                                                    {subNo}
-                                                                                </span>
-                                                                                <span style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}>
-                                                                                    {sub.name}
-                                                                                </span>
-                                                                                <span style={{ 
-                                                                                    padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600, marginLeft: 4,
-                                                                                    background: subLvlOk ? "#dcfce7" : "#ffedd5",
-                                                                                    color: subLvlOk ? "#16a34a" : "#ea580c"
-                                                                                }}>
-                                                                                    {subLvlOk ? "Đủ mức điểm" : "Thiếu mức điểm"}
-                                                                                </span>
-                                                                            </div>
-                                                                            {sub.measurementMethod && (
-                                                                                <div style={{ fontSize: 13, color: "#64748b", paddingLeft: 38, marginTop: 4, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                                                                                    <InfoCircleOutlined style={{ marginTop: 2, fontSize: 12, opacity: 0.7 }} />
-                                                                                    <span>{sub.measurementMethod}</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        
-                                                                        {template?.status === "DRAFT" && (
-                                                                            <div style={{ display: "flex", gap: 8, opacity: 0.8, transition: "opacity 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}>
-                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CREATE_LEVEL} hideChildren>
-                                                                                    <div
-                                                                                        onClick={() => handleConfigureLevels(sub)}
-                                                                                        style={{ 
-                                                                                            display: "flex", alignItems: "center", gap: 6,
-                                                                                            padding: "2px 8px", borderRadius: 6, cursor: "pointer",
-                                                                                            background: "#ffffff", border: "1px solid #e2e8f0",
-                                                                                            color: "#475569", fontWeight: 600, fontSize: 12,
-                                                                                            transition: "all 0.2s"
-                                                                                        }}
-                                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
-                                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
-                                                                                    >
-                                                                                        <TrophyOutlined style={{ fontSize: 13 }} />
-                                                                                        <span>Mức điểm</span>
-                                                                                    </div>
-                                                                                </Access>
-                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.UPDATE_CRITERIA} hideChildren>
-                                                                                    <div
-                                                                                        onClick={() => handleEditCriteriaClick(sub, crit.id)}
-                                                                                        style={{ 
-                                                                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                                                                            width: 26, height: 26, borderRadius: 6, cursor: "pointer",
-                                                                                            color: "#d97706", transition: "all 0.2s",
-                                                                                            background: "transparent"
-                                                                                        }}
-                                                                                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fef3c7"; }}
-                                                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                                                                    >
-                                                                                        <EditOutlined style={{ fontSize: 13 }} />
-                                                                                    </div>
-                                                                                </Access>
-                                                                                <Access permission={ALL_PERMISSIONS.EVALUATION.DELETE_CRITERIA} hideChildren>
-                                                                                    <Popconfirm
-                                                                                        title="Bạn chắc chắn muốn xóa mục con này?"
-                                                                                        okText="Xóa"
-                                                                                        cancelText="Hủy"
-                                                                                        onConfirm={() => sub.id && handleDeleteCriteria(sub.id)}
-                                                                                    >
-                                                                                        <div
-                                                                                            style={{ 
-                                                                                                display: "flex", alignItems: "center", justifyContent: "center",
-                                                                                                width: 26, height: 26, borderRadius: 6, cursor: "pointer",
-                                                                                                color: "#ef4444", transition: "all 0.2s",
-                                                                                                background: "transparent"
-                                                                                            }}
-                                                                                            onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
-                                                                                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                                                                                        >
-                                                                                            <DeleteOutlined style={{ fontSize: 13 }} />
-                                                                                        </div>
-                                                                                    </Popconfirm>
-                                                                                </Access>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            )})}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )})}
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1601,7 +1603,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                     >
                         <Input placeholder="Ví dụ: Năng suất công việc, Kỹ năng giao tiếp..." />
                     </Form.Item>
-                    
+
                     <Form.Item
                         name="description"
                         label="Nội dung / Mô tả chi tiết"
@@ -1618,7 +1620,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                             >
                                 <Input placeholder="Ví dụ: Dựa trên số lượng task hoàn thành đúng hạn..." />
                             </Form.Item>
-                            
+
                             <Form.Item
                                 name="weight"
                                 label="Trọng số tiêu chí (%)"
@@ -1827,7 +1829,7 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                             </div>
                         </div>
                     )}
-                    
+
                     <Form.Item
                         name="displayOrder"
                         label="Thứ tự hiển thị"
@@ -1886,17 +1888,17 @@ const TemplateDetailPage: React.FC<TemplateDetailPageProps> = ({ templateIdOverr
                                         rules={[{ required: true, message: `Vui lòng nhập mô tả` }]}
                                         style={{ marginBottom: 0 }}
                                     >
-                                        <Input.TextArea 
+                                        <Input.TextArea
                                             className="criteria-level-textarea"
-                                            autoSize={{ minRows: 3, maxRows: 8 }} 
-                                            placeholder={`Mô tả chi tiết chất lượng, năng lực để đạt được mức điểm ${lvl}...`} 
+                                            autoSize={{ minRows: 3, maxRows: 8 }}
+                                            placeholder={`Mô tả chi tiết chất lượng, năng lực để đạt được mức điểm ${lvl}...`}
                                         />
                                     </Form.Item>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    
+
                     <div className="levels-config-footer" style={{ padding: "16px 0 0", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
                         <Space>
                             <Button onClick={() => setIsLevelsModalOpen(false)} style={{ borderRadius: 6, fontWeight: 500 }}>Hủy</Button>

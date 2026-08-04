@@ -14,14 +14,7 @@ import {
 import type { IProcedureHistory } from "@/types/backend";
 import dayjs from "dayjs";
 import axios from "@/config/axios-customize";
-
-// ── Status map ────────────────────────────────────────────────────────────────
-const statusMap: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang xây dựng", color: "blue" },
-    NEED_UPDATE: { label: "Cần cập nhật", color: "purple" },
-    TERMINATED: { label: "Chấm dứt", color: "red" },
-};
+import { PROCEDURE_DOCUMENT_STATUS_META } from "@/constants/statusMeta/procedureDocumentMeta";
 
 // ── File helpers ──────────────────────────────────────────────────────────────
 const getExt = (fileName: string) =>
@@ -137,7 +130,7 @@ const InfoRow = ({
 interface IProps { h: IProcedureHistory }
 
 const HistoryItemProcedure = ({ h }: IProps) => {
-    const hStatus = statusMap[h.status ?? ""] ?? { label: h.status ?? "", color: "default" };
+    const hStatus = PROCEDURE_DOCUMENT_STATUS_META[h.status ?? ""] ?? { label: h.status ?? "", color: "default" };
 
     return (
         <div style={{

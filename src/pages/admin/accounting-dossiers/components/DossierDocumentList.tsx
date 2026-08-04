@@ -47,17 +47,12 @@ import {
 import { useBulkCheckDossierDocumentsMutation } from "@/hooks/useAccountingDossiers";
 import { callFetchAccountingDocumentCategoryActive, callUploadSingleFile } from "@/config/api";
 import FileSection from "../../procedures/components/file-section.procedure";
+import { downloadFile } from "@/config/file-utils";
 import ActionButton from "@/components/common/ui/ActionButton";
+import { useResponsiveModalWidth } from "@/utils/responsive";
+import { checkStatusMeta as CHECK_STATUS_MAP } from "../dossierMeta";
 
 const { Text } = Typography;
-
-const CHECK_STATUS_MAP: Record<string, { color: string; label: string }> = {
-    PENDING: { color: "default", label: "Chờ kiểm tra" },
-    VALID: { color: "success", label: "Hợp lệ" },
-    NEED_SUPPLEMENT: { color: "warning", label: "Cần bổ sung" },
-    INVALID: { color: "error", label: "Không hợp lệ" },
-    NOT_REQUIRED: { color: "blue", label: "Không yêu cầu" },
-};
 
 const DOCUMENT_TYPE_OPTIONS = [
     { value: "PDF", label: "PDF" },
@@ -137,6 +132,8 @@ const DossierDocumentList: React.FC<Props> = ({
     const [reviewingDoc, setReviewingDoc] = useState<IAccountingDossierDocument | null>(null);
     const [categories, setCategories] = useState<IAccountingDocumentCategory[]>([]);
     const [loadingCats, setLoadingCats] = useState(false);
+    const docModalWidth = useResponsiveModalWidth(560);
+    const reviewModalWidth = useResponsiveModalWidth(600);
 
     const { data: docs = [], isFetching } = useDossierDocumentsQuery(dossier.id);
     const sortedDocs = useMemo(() => [...docs].sort((a, b) => {
@@ -837,7 +834,7 @@ const DossierDocumentList: React.FC<Props> = ({
                 onOk={handleSubmitDocument}
                 confirmLoading={addMutation.isPending || updateMutation.isPending}
                 destroyOnHidden
-                width={560}
+                width={docModalWidth}
             >
                 <Form
                     form={documentForm}
@@ -994,7 +991,7 @@ const DossierDocumentList: React.FC<Props> = ({
                 onOk={handleSubmitReview}
                 confirmLoading={checkMutation.isPending}
                 destroyOnHidden
-                width={600}
+                width={reviewModalWidth}
             >
                 <Form form={reviewForm} layout="vertical" className="mt-4">
                     <Form.Item

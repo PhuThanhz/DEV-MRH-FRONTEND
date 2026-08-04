@@ -412,6 +412,12 @@ const ModuleApi = (props: IProps) => {
   const [activeDomain, setActiveDomain] = useState<string>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [grantedFilter, setGrantedFilter] = useState<'ALL' | 'GRANTED' | 'UNGRANTED'>('ALL');
+  // form.getFieldValue('permissions') không kích hoạt re-render khi toggle chỉ gọi
+  // setFieldsValue, nên visibleModules/totalStats bên dưới bị stale sau khi bật/tắt
+  // quyền - dùng useWatch để buộc ModuleApi render lại theo đúng dữ liệu quyền.
+  // preserve: true bắt buộc phải có vì "permissions" không gắn với Form.Item name
+  // nào (chỉ setFieldsValue trực tiếp) - mặc định useWatch chỉ đọc field đã đăng ký.
+  const permissionsWatch = Form.useWatch('permissions', { form, preserve: true });
 
   // Merge child modules into parent modules
   const mergedPermissions = useMemo(() => {
@@ -593,7 +599,7 @@ const ModuleApi = (props: IProps) => {
     });
 
     return result;
-  }, [mergedPermissions, activeDomain, deferredSearchText, methodFilter, grantedFilter, form]);
+  }, [mergedPermissions, activeDomain, deferredSearchText, methodFilter, grantedFilter, form, permissionsWatch]);
 
   // Auto expand matching modules when filter changes
   useEffect(() => {
@@ -615,7 +621,7 @@ const ModuleApi = (props: IProps) => {
       });
     });
     return { granted, total };
-  }, [listPermissions, form]);
+  }, [listPermissions, form, permissionsWatch]);
 
   // Reset all filters
   const handleResetFilters = () => {

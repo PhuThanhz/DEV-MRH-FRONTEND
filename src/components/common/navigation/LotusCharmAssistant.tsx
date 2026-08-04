@@ -13,7 +13,7 @@ import useGuidePermission from "@/hooks/useGuidePermission";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
-import { getModalWidth } from "@/utils/responsive";
+import { getModalWidth, useResponsiveModalWidth } from "@/utils/responsive";
 import { resolveNotificationActionLink } from "@/components/common/notification/notificationNavigation";
 
 dayjs.extend(relativeTime);
@@ -72,6 +72,7 @@ const LotusCharmAssistant = () => {
     const [isMinimized, setIsMinimized] = useState(false);
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<"notifications" | "shortcuts" | "help">("notifications");
     const [guideSearchQuery, setGuideSearchQuery] = useState("");
     const [activeGuideModule, setActiveGuideModule] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ const LotusCharmAssistant = () => {
     const firstName = user?.name?.trim() ? user.name.trim().split(" ").pop() : "bạn";
 
     const { hasPermission, canStartGuide } = useGuidePermission();
+    const feedbackModalWidth = useResponsiveModalWidth(700);
 
     const DEPARTMENT_MODULES_RAW = React.useMemo(() => departmentId ? [
         { label: "Sơ đồ tổ chức", path: `/admin/departments/${departmentId}/org-chart`, icon: <ClusterOutlined />, requiredPermission: ALL_PERMISSIONS.DEPARTMENTS.GET_PAGINATE },
@@ -290,15 +292,15 @@ const LotusCharmAssistant = () => {
                 <div
                     style={{
                         position: "absolute",
-                        bottom: 132,
-                        right: 22,
-                        width: 318,
+                        bottom: "calc(100% + 10px)",
+                        right: 10,
+                        width: 325,
                         maxWidth: "calc(100vw - 28px)",
-                        maxHeight: "min(560px, calc(100vh - 168px))",
+                        maxHeight: 400,
                         background: "#fff",
                         border: "1px solid #e5e7eb",
-                        borderRadius: 16,
-                        boxShadow: "0 12px 34px rgba(15,23,42,0.14), 0 4px 14px rgba(232,99,122,0.10)",
+                        borderRadius: 20,
+                        boxShadow: "0 14px 36px rgba(15,23,42,0.14), 0 4px 16px rgba(232,99,122,0.12)",
                         transformOrigin: "bottom right",
                         animation: "scaleIn 0.18s ease-out forwards",
                         display: "flex",
@@ -336,14 +338,14 @@ const LotusCharmAssistant = () => {
 
                     {/* Premium Header & Search Combined */}
                     <div style={{
-                        padding: "14px 16px",
+                        padding: "12px 14px 10px",
                         borderBottom: "1px solid #f3f4f6",
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
                         background: "#fff"
                     }}>
-                        <SearchOutlined style={{ fontSize: 18, color: ACCENT }} />
+                        <SearchOutlined style={{ fontSize: 17, color: ACCENT }} />
                         <Input
                             className="glass-input"
                             placeholder="Bạn cần tìm gì hôm nay?"
@@ -355,8 +357,8 @@ const LotusCharmAssistant = () => {
                         />
                         <div
                             style={{
-                                width: 28,
-                                height: 28,
+                                width: 26,
+                                height: 26,
                                 borderRadius: "50%",
                                 background: "#f3f4f6",
                                 display: "flex",
@@ -378,25 +380,110 @@ const LotusCharmAssistant = () => {
                                 e.currentTarget.style.transform = "scale(1)";
                             }}
                         >
-                            <CloseOutlined style={{ fontSize: 12, color: "#666" }} />
+                            <CloseOutlined style={{ fontSize: 11, color: "#666" }} />
                         </div>
                     </div>
 
-                    <div style={{ padding: "14px 8px 14px 14px", flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-                        {/* Search Results */}
+                    {/* Segmented Control Tabs (Only when not searching) */}
+                    {searchValue.trim() === "" && (
+                        <div style={{
+                            display: "flex",
+                            background: "#f8fafc",
+                            padding: "3px",
+                            borderRadius: 12,
+                            margin: "8px 12px 0 12px",
+                            border: "1px solid #f1f5f9"
+                        }}>
+                            <button
+                                onClick={() => setActiveTab("notifications")}
+                                style={{
+                                    flex: 1,
+                                    padding: "5px 6px",
+                                    borderRadius: 9,
+                                    border: 0,
+                                    background: activeTab === "notifications" ? "#fff" : "transparent",
+                                    color: activeTab === "notifications" ? ACCENT : "#64748b",
+                                    fontWeight: activeTab === "notifications" ? 700 : 500,
+                                    fontSize: 12,
+                                    cursor: "pointer",
+                                    boxShadow: activeTab === "notifications" ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                                    transition: "all 0.2s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 4
+                                }}
+                            >
+                                <span>Thông báo</span>
+                                {unreadCount > 0 && (
+                                    <span style={{
+                                        background: ACCENT,
+                                        color: "#fff",
+                                        fontSize: 10,
+                                        fontWeight: 800,
+                                        padding: "0 5px",
+                                        borderRadius: 99,
+                                        lineHeight: "14px",
+                                        height: 14,
+                                    }}>
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("shortcuts")}
+                                style={{
+                                    flex: 1,
+                                    padding: "5px 6px",
+                                    borderRadius: 9,
+                                    border: 0,
+                                    background: activeTab === "shortcuts" ? "#fff" : "transparent",
+                                    color: activeTab === "shortcuts" ? ACCENT : "#64748b",
+                                    fontWeight: activeTab === "shortcuts" ? 700 : 500,
+                                    fontSize: 12,
+                                    cursor: "pointer",
+                                    boxShadow: activeTab === "shortcuts" ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                                    transition: "all 0.2s ease"
+                                }}
+                            >
+                                Lối tắt
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("help")}
+                                style={{
+                                    flex: 1,
+                                    padding: "5px 6px",
+                                    borderRadius: 9,
+                                    border: 0,
+                                    background: activeTab === "help" ? "#fff" : "transparent",
+                                    color: activeTab === "help" ? ACCENT : "#64748b",
+                                    fontWeight: activeTab === "help" ? 700 : 500,
+                                    fontSize: 12,
+                                    cursor: "pointer",
+                                    boxShadow: activeTab === "help" ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
+                                    transition: "all 0.2s ease"
+                                }}
+                            >
+                                Trợ giúp
+                            </button>
+                        </div>
+                    )}
+
+                    <div style={{ padding: "10px 12px", flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+                        {/* Search Results Mode */}
                         {searchValue.trim() !== "" && (
-                            <div style={{ paddingRight: 8 }}>
+                            <div>
                                 <div style={{
                                     fontSize: 11,
                                     fontWeight: 700,
                                     color: "#a0a0a0",
-                                    padding: "0 8px 12px",
+                                    padding: "0 4px 8px",
                                     textTransform: "uppercase",
                                     letterSpacing: 1.2
                                 }}>
                                     KẾT QUẢ TÌM KIẾM ({filteredModules.length})
                                 </div>
-                                <div style={{ maxHeight: 280, overflowY: "auto", paddingRight: 4 }}>
+                                <div style={{ maxHeight: 250, overflowY: "auto" }}>
                                     {filteredModules.map((action, index) => (
                                         <div
                                             key={index}
@@ -404,15 +491,15 @@ const LotusCharmAssistant = () => {
                                             style={{
                                                 display: "flex",
                                                 alignItems: "center",
-                                                gap: 14,
-                                                padding: "12px 16px",
-                                                fontSize: 14,
+                                                gap: 10,
+                                                padding: "8px 10px",
+                                                fontSize: 13,
                                                 cursor: "pointer",
                                                 color: "#333",
                                                 fontWeight: 500,
-                                                borderRadius: 12,
+                                                borderRadius: 10,
                                                 transition: "all 0.2s ease",
-                                                marginBottom: 4
+                                                marginBottom: 3
                                             }}
                                             onMouseEnter={(e) => {
                                                 (e.currentTarget as HTMLDivElement).style.background = "rgba(0,0,0,0.04)";
@@ -423,11 +510,11 @@ const LotusCharmAssistant = () => {
                                         >
                                             <div style={{
                                                 color: ACCENT,
-                                                fontSize: 18,
-                                                width: 36,
-                                                height: 36,
+                                                fontSize: 15,
+                                                width: 30,
+                                                height: 30,
                                                 background: "rgba(232,99,122,0.1)",
-                                                borderRadius: 10,
+                                                borderRadius: 8,
                                                 display: "flex",
                                                 alignItems: "center",
                                                 justifyContent: "center"
@@ -438,7 +525,7 @@ const LotusCharmAssistant = () => {
                                         </div>
                                     ))}
                                     {filteredModules.length === 0 && (
-                                        <div style={{ textAlign: "center", padding: "40px 0", color: "#a0a0a0", fontSize: 14 }}>
+                                        <div style={{ textAlign: "center", padding: "30px 0", color: "#a0a0a0", fontSize: 13 }}>
                                             Không tìm thấy kết quả phù hợp.
                                         </div>
                                     )}
@@ -446,262 +533,249 @@ const LotusCharmAssistant = () => {
                             </div>
                         )}
 
-                        {/* Quick Access */}
-                        {searchValue.trim() === "" && !departmentId && (
-                            <div style={{ paddingRight: 8, marginBottom: 14 }}>
-                                <div style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: "#a0a0a0",
-                                    padding: "0 8px 10px",
-                                    textTransform: "uppercase",
-                                    letterSpacing: 1.2,
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                }}>
-                                    <span>ĐIỀU HƯỚNG NHANH</span>
-                                    <span style={{ color: "#cbd5e1", fontSize: 10 }}>Cmd/Ctrl K</span>
-                                </div>
-                                {quickShortcutItems.length > 0 ? (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                                        {quickShortcutItems.map((item) => (
+                        {/* TAB 1: NOTIFICATIONS */}
+                        {searchValue.trim() === "" && activeTab === "notifications" && (
+                            <div>
+                                <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                                    {notifications.length > 0 ? (
+                                        notifications.slice(0, 6).map((noti: any) => (
                                             <div
-                                                key={item.id}
-                                                onClick={() => handleNavigate(item.path)}
+                                                key={noti.id}
+                                                onClick={() => handleReadNotification(noti)}
                                                 style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 10,
                                                     padding: "8px 10px",
                                                     borderRadius: 12,
+                                                    display: "flex",
+                                                    gap: 10,
                                                     cursor: "pointer",
                                                     transition: "all 0.2s ease",
+                                                    background: noti.isRead ? "transparent" : "rgba(232,99,122,0.05)",
+                                                    marginBottom: 3,
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    (e.currentTarget as HTMLDivElement).style.background = "rgba(232,99,122,0.06)";
+                                                    (e.currentTarget as HTMLDivElement).style.background = noti.isRead ? "rgba(0,0,0,0.03)" : "rgba(232,99,122,0.08)";
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                                                    (e.currentTarget as HTMLDivElement).style.background = noti.isRead ? "transparent" : "rgba(232,99,122,0.05)";
                                                 }}
                                             >
-                                                <div style={{
-                                                    width: 30,
-                                                    height: 30,
-                                                    borderRadius: 10,
-                                                    background: "rgba(232,99,122,0.09)",
-                                                    color: ACCENT,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    fontSize: 15,
-                                                }}>
-                                                    {item.icon}
+                                                <div style={{ marginTop: 2, flexShrink: 0 }}>
+                                                    <Badge dot={!noti.isRead} color={ACCENT} offset={[-2, 2]}>
+                                                        <div style={{
+                                                            width: 32,
+                                                            height: 32,
+                                                            borderRadius: "50%",
+                                                            background: noti.isRead ? "rgba(0,0,0,0.04)" : "rgba(232,99,122,0.1)",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            color: noti.isRead ? "#888" : ACCENT,
+                                                            fontSize: 14
+                                                        }}>
+                                                            <BellOutlined />
+                                                        </div>
+                                                    </Badge>
                                                 </div>
                                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1f2937", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                        {item.title}
+                                                    <div style={{
+                                                        fontSize: 13,
+                                                        color: noti.isRead ? "#4b5563" : "#1f2937",
+                                                        fontWeight: noti.isRead ? 400 : 600,
+                                                        lineHeight: 1.35,
+                                                        display: "-webkit-box",
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: "vertical",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        wordBreak: "break-word"
+                                                    }}>
+                                                        {noti.subtitle || noti.title || "Thông báo hệ thống"}
                                                     </div>
-                                                    <div style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 1 }}>
-                                                        {item.module}
+                                                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, fontWeight: 500 }}>
+                                                        {dayjs(noti.createdAt || new Date()).fromNow()}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    aria-label={isFavorite(item.id) ? "Bỏ ghim nhanh" : "Ghim nhanh"}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        toggleFavorite(item);
-                                                    }}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ textAlign: "center", padding: "35px 0", color: "#94a3b8", fontSize: 13 }}>
+                                            <BellOutlined style={{ fontSize: 24, color: "#cbd5e1", marginBottom: 6, display: "block" }} />
+                                            Bạn chưa có thông báo mới nào.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 2: SHORTCUTS */}
+                        {searchValue.trim() === "" && activeTab === "shortcuts" && (
+                            <div>
+                                {departmentId && (
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", padding: "0 4px 6px", textTransform: "uppercase", letterSpacing: 1 }}>
+                                            PHÒNG BAN
+                                        </div>
+                                        {DEPARTMENT_MODULES.map((action, index) => {
+                                            const basePath = action.path.split('?')[0];
+                                            const query = action.path.split('?')[1] || '';
+                                            const isActive = location.pathname === basePath && location.search.replace('?', '') === query;
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => handleNavigate(action.path)}
                                                     style={{
-                                                        width: 28,
-                                                        height: 28,
-                                                        border: 0,
-                                                        borderRadius: "50%",
-                                                        background: isFavorite(item.id) ? "rgba(232,99,122,0.10)" : "transparent",
-                                                        color: isFavorite(item.id) ? ACCENT : "#cbd5e1",
-                                                        cursor: "pointer",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        padding: "6px 10px",
+                                                        fontSize: 12,
+                                                        cursor: isActive ? "default" : "pointer",
+                                                        color: isActive ? ACCENT : "#334155",
+                                                        fontWeight: isActive ? 600 : 500,
+                                                        borderRadius: 8,
+                                                        background: isActive ? "rgba(232,99,122,0.08)" : "transparent",
+                                                        marginBottom: 2
                                                     }}
                                                 >
-                                                    {isFavorite(item.id) ? <StarFilled /> : <StarOutlined />}
-                                                </button>
-                                            </div>
-                                        ))}
+                                                    <div style={{ color: isActive ? ACCENT : "#64748b", fontSize: 13 }}>{action.icon}</div>
+                                                    {action.label}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                ) : (
-                                    <div style={{
-                                        padding: "12px",
-                                        borderRadius: 14,
-                                        background: "#f8fafc",
-                                        border: "1px solid #edf2f7",
-                                        color: "#64748b",
-                                        fontSize: 12,
-                                        lineHeight: 1.5,
-                                    }}>
-                                        Gõ để tìm nhanh hoặc dùng Cmd/Ctrl + K. Mục vừa mở sẽ tự hiện ở đây.
+                                )}
+
+                                {!departmentId && (
+                                    <div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", padding: "0 4px 6px", textTransform: "uppercase", letterSpacing: 1, display: "flex", justifyContent: "space-between" }}>
+                                            <span>TRUY CẬP NHANH</span>
+                                            <span>Cmd/Ctrl K</span>
+                                        </div>
+                                        {quickShortcutItems.length > 0 ? (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                {quickShortcutItems.map((item) => (
+                                                    <div
+                                                        key={item.id}
+                                                        onClick={() => handleNavigate(item.path)}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            padding: "7px 9px",
+                                                            borderRadius: 10,
+                                                            cursor: "pointer",
+                                                            transition: "all 0.2s ease",
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.background = "rgba(232,99,122,0.06)";
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: 28,
+                                                            height: 28,
+                                                            borderRadius: 8,
+                                                            background: "rgba(232,99,122,0.09)",
+                                                            color: ACCENT,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontSize: 14,
+                                                        }}>
+                                                            {item.icon}
+                                                        </div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontSize: 12, fontWeight: 700, color: "#1f2937", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                {item.title}
+                                                            </div>
+                                                            <div style={{ fontSize: 10, color: "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                {item.module}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            aria-label={isFavorite(item.id) ? "Bỏ ghim nhanh" : "Ghim nhanh"}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                toggleFavorite(item);
+                                                            }}
+                                                            style={{
+                                                                width: 24,
+                                                                height: 24,
+                                                                border: 0,
+                                                                borderRadius: "50%",
+                                                                background: isFavorite(item.id) ? "rgba(232,99,122,0.10)" : "transparent",
+                                                                color: isFavorite(item.id) ? ACCENT : "#cbd5e1",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            {isFavorite(item.id) ? <StarFilled style={{ fontSize: 12 }} /> : <StarOutlined style={{ fontSize: 12 }} />}
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div style={{ padding: "10px", borderRadius: 10, background: "#f8fafc", color: "#64748b", fontSize: 12 }}>
+                                                Dùng Cmd/Ctrl + K hoặc gõ vào ô tìm kiếm để truy cập nhanh.
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Department Navigation (if in department) */}
-                        {searchValue.trim() === "" && departmentId && (
-                            <div style={{ paddingRight: 8, marginBottom: 24 }}>
-                                <div style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: "#a0a0a0",
-                                    padding: "0 8px 12px",
-                                    textTransform: "uppercase",
-                                    letterSpacing: 1.2
-                                }}>
-                                    CHUYỂN TRANG PHÒNG BAN
-                                </div>
-                                <div style={{ paddingRight: 4 }}>
-                                    {DEPARTMENT_MODULES.map((action, index) => {
-                                        const basePath = action.path.split('?')[0];
-                                        const query = action.path.split('?')[1] || '';
-                                        const isActive = location.pathname === basePath && location.search.replace('?', '') === query;
-                                        return (
-                                            <div
-                                                key={index}
-                                                onClick={() => handleNavigate(action.path)}
-                                                style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 10,
-                                                    padding: "8px 12px",
-                                                    fontSize: 13,
-                                                    cursor: isActive ? "default" : "pointer",
-                                                    color: isActive ? ACCENT : "#333",
-                                                    fontWeight: isActive ? 600 : 500,
-                                                    borderRadius: 8,
-                                                    background: isActive ? "rgba(232,99,122,0.08)" : "transparent",
-                                                    transition: "all 0.2s ease",
-                                                    marginBottom: 2
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "rgba(0,0,0,0.03)";
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent";
-                                                }}
-                                            >
-                                                <div style={{
-                                                    color: isActive ? ACCENT : "#666",
-                                                    fontSize: 14,
-                                                    width: 26,
-                                                    height: 26,
-                                                    background: isActive ? "transparent" : "rgba(0,0,0,0.03)",
-                                                    borderRadius: 6,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center"
-                                                }}>
-                                                    {action.icon}
-                                                </div>
-                                                {action.label}
-                                                {isActive && <div style={{ marginLeft: "auto", fontSize: 10 }}>◀</div>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Notifications */}
-                        {searchValue.trim() === "" && notifications.length > 0 && (
-                            <div style={{ paddingRight: 8 }}>
-                                <div style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: "#a0a0a0",
-                                    padding: "0 8px 12px",
-                                    textTransform: "uppercase",
-                                    letterSpacing: 1.2,
-                                    display: "flex",
-                                    justifyContent: "space-between"
-                                }}>
-                                    <span>THÔNG BÁO GẦN ĐÂY</span>
-                                    {unreadCount > 0 && (
-                                        <span style={{ color: ACCENT }}>{unreadCount} MỚI</span>
-                                    )}
-                                </div>
-                                <div style={{ maxHeight: 180, overflowY: "auto", paddingRight: 4 }}>
-                                    {notifications.slice(0, 8).map((noti: any) => (
-                                        <div
-                                            key={noti.id}
-                                            onClick={() => handleReadNotification(noti)}
-                                            style={{
-                                                padding: "12px 16px",
-                                                borderRadius: 16,
-                                                display: "flex",
-                                                gap: 14,
-                                                cursor: "pointer",
-                                                transition: "all 0.2s ease",
-                                                background: noti.isRead ? "transparent" : "rgba(232,99,122,0.05)",
-                                                marginBottom: 4,
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.background = noti.isRead ? "rgba(0,0,0,0.03)" : "rgba(232,99,122,0.08)";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.background = noti.isRead ? "transparent" : "rgba(232,99,122,0.05)";
-                                            }}
-                                        >
-                                            <div style={{ marginTop: 2 }}>
-                                                <Badge dot={!noti.isRead} color={ACCENT} offset={[-4, 4]}>
-                                                    <div style={{
-                                                        width: 40,
-                                                        height: 40,
-                                                        borderRadius: "50%",
-                                                        background: noti.isRead ? "rgba(0,0,0,0.04)" : "rgba(232,99,122,0.1)",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "center",
-                                                        color: noti.isRead ? "#888" : ACCENT,
-                                                        fontSize: 16
-                                                    }}>
-                                                        <BellOutlined />
-                                                    </div>
-                                                </Badge>
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{
-                                                    fontSize: 14,
-                                                    color: noti.isRead ? "#555" : "#222",
-                                                    fontWeight: noti.isRead ? 400 : 600,
-                                                    lineHeight: 1.4,
-                                                    letterSpacing: 0.2
-                                                }}>
-                                                    {noti.subtitle || noti.title || "Thông báo hệ thống"}
-                                                </div>
-                                                <div style={{ fontSize: 12, color: "#a0a0a0", marginTop: 4, fontWeight: 500 }}>
-                                                    {dayjs(noti.createdAt || new Date()).fromNow()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Hỗ trợ & Feedback */}
-                        {searchValue.trim() === "" && (
-                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(0,0,0,0.06)", display: "flex", gap: 10 }}>
+                        {/* TAB 3: HELP */}
+                        {searchValue.trim() === "" && activeTab === "help" && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                                 <div
                                     onClick={() => { setIsGuideOpen(true); setOpen(false); }}
-                                    style={{ flex: 1, padding: "10px", textAlign: "center", background: "rgba(232,99,122,0.05)", borderRadius: 12, cursor: "pointer", color: ACCENT, fontWeight: 600, fontSize: 13, transition: "all 0.2s" }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.1)"}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.05)"}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        padding: "10px 12px",
+                                        background: "rgba(232,99,122,0.06)",
+                                        borderRadius: 12,
+                                        cursor: "pointer",
+                                        color: ACCENT,
+                                        fontWeight: 600,
+                                        fontSize: 13,
+                                        transition: "all 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.12)"}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.06)"}
                                 >
-                                    Hướng dẫn
+                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📖</div>
+                                    <div>
+                                        <div>Hướng dẫn sử dụng</div>
+                                        <div style={{ fontSize: 11, color: "#64748b", fontWeight: 400, marginTop: 1 }}>Xem quy trình & thao tác mẫu</div>
+                                    </div>
                                 </div>
+
                                 <div
                                     onClick={() => { setIsFeedbackOpen(true); setOpen(false); }}
-                                    style={{ flex: 1, padding: "10px", textAlign: "center", background: "rgba(232,99,122,0.05)", borderRadius: 12, cursor: "pointer", color: ACCENT, fontWeight: 600, fontSize: 13, transition: "all 0.2s" }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.1)"}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.05)"}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 10,
+                                        padding: "10px 12px",
+                                        background: "rgba(232,99,122,0.06)",
+                                        borderRadius: 12,
+                                        cursor: "pointer",
+                                        color: ACCENT,
+                                        fontWeight: 600,
+                                        fontSize: 13,
+                                        transition: "all 0.2s"
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.12)"}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = "rgba(232,99,122,0.06)"}
                                 >
-                                    Góp ý
+                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>💬</div>
+                                    <div>
+                                        <div>Gửi góp ý hệ thống</div>
+                                        <div style={{ fontSize: 11, color: "#64748b", fontWeight: 400, marginTop: 1 }}>Đóng góp ý kiến cải tiến</div>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -714,7 +788,7 @@ const LotusCharmAssistant = () => {
                 data-guide-id="lotus-assistant-entry"
                 style={{
                     position: "relative",
-                    width: 138,
+                    width: "clamp(105px, 8.5vw, 140px)",
                     height: "auto",
                     borderRadius: 0,
                     background: "transparent",
@@ -737,8 +811,8 @@ const LotusCharmAssistant = () => {
                     <div
                         style={{
                             position: "absolute",
-                            top: -24,
-                            right: 22,
+                            top: -22,
+                            right: 18,
                             display: "flex",
                             alignItems: "center",
                             padding: 4,
@@ -782,8 +856,8 @@ const LotusCharmAssistant = () => {
                     <div
                         style={{
                             position: "absolute",
-                            right: 130, // Đặt bên trái linh vật
-                            bottom: 60, // Căn ngang mặt linh vật
+                            right: "calc(100% + 8px)", // Đặt ngay bên trái linh vật
+                            bottom: "45%", // Căn giữa mặt linh vật
                             padding: "8px 16px",
                             background: unreadCount > 0 ? "#ff4d4f" : "#fff",
                             color: unreadCount > 0 ? "#fff" : "#333",
@@ -817,15 +891,13 @@ const LotusCharmAssistant = () => {
                     </div>
                 )}
 
-                <Badge count={unreadCount} offset={[-24, 18]} size="small" color={ACCENT}>
+                <Badge count={unreadCount} offset={[-16, 14]} size="small" color={ACCENT}>
                     <img
                         src="/logo/logolinhvat.webp"
                         alt="Trợ lý Lotus-chan"
                         draggable={false}
-                        width={138}
-                        height={138}
                         style={{
-                            width: 138,
+                            width: "clamp(105px, 8.5vw, 140px)",
                             height: "auto",
                             display: "block",
                             position: "relative",
@@ -847,7 +919,7 @@ const LotusCharmAssistant = () => {
                 open={isFeedbackOpen}
                 onCancel={() => setIsFeedbackOpen(false)}
                 footer={null}
-                width={700}
+                width={feedbackModalWidth}
                 style={{ top: 20 }}
                 styles={{
                     content: { padding: 0, borderRadius: 12, overflow: "hidden" },

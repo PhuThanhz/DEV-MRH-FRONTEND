@@ -45,6 +45,9 @@ export const PATHS = {
         ACCOUNTING_DOCUMENT_CATEGORY: "/admin/accounting-document-categories",
         ACCOUNTING_WORKFLOW_TEMPLATES: "/admin/accounting-workflow-templates",
         ACCOUNTING_DELEGATIONS: "/admin/accounting-delegations",
+        TASKS: "/admin/tasks",
+        TASK_SUMMARY_REPORT: "/admin/tasks/summary-report",
+        MY_UNIFIED_CALENDAR: "/admin/calendar/my-actions",
 
         // EVALUATION (HQCV)
         EVALUATION_TEMPLATES: "/admin/evaluation/templates",

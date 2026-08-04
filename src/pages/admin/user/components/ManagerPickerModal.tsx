@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Modal, Input, Table, Select, Button, Space, Tag, Typography } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
-import { callFetchUsersCrossCompany } from "@/config/api";
 import { useCompaniesQuery } from "@/hooks/useCompanies";
+import { useUsersCrossCompanyQuery } from "@/hooks/useUsers";
 import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
 
 const { Text } = Typography;
@@ -29,41 +29,24 @@ const PAGE_SIZE = 10;
 const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, onSelect, title, description }) => {
     const [search, setSearch] = useState("");
     const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [users, setUsers] = useState<any[]>([]);
     const [page, setPage] = useState(1);
-    const [total, setTotal] = useState(0);
 
     const { data: companiesData } = useCompaniesQuery("page=1&size=100&sort=name,asc", open);
     const companies = companiesData?.result ?? [];
 
-    // Fetch users
-    const loadUsers = async () => {
-        setLoading(true);
-        try {
-            let query = `page=${page}&size=${PAGE_SIZE}`;
-            if (search.trim()) {
-                query += `&search=${encodeURIComponent(search.trim())}`;
-            }
-            if (selectedCompanyId) {
-                query += `&companyId=${selectedCompanyId}`;
-            }
-
-            const res = await callFetchUsersCrossCompany(query);
-            setUsers(res?.data?.result ?? []);
-            setTotal(res?.data?.meta?.total ?? 0);
-        } catch (err) {
-            console.error("ManagerPickerModal - Failed to fetch managers:", err);
-        } finally {
-            setLoading(false);
+    const usersQueryString = useMemo(() => {
+        let query = `page=${page}&size=${PAGE_SIZE}`;
+        if (search.trim()) {
+            query += `&search=${encodeURIComponent(search.trim())}`;
         }
-    };
-
-    useEffect(() => {
-        if (open) {
-            loadUsers();
+        if (selectedCompanyId) {
+            query += `&companyId=${selectedCompanyId}`;
         }
-    }, [open, page, search, selectedCompanyId]);
+        return query;
+    }, [page, search, selectedCompanyId]);
+    const usersQuery = useUsersCrossCompanyQuery(usersQueryString, open);
+    const users = usersQuery.data?.result ?? [];
+    const total = usersQuery.data?.meta?.total ?? 0;
 
     const handleSelect = (record: any) => {
         onSelect({
@@ -134,8 +117,8 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
             width: 100,
             align: "center" as const,
             render: (_: any, record: any) => (
-                <Button 
-                    type="primary" 
+                <Button
+                    type="primary"
                     size="small"
                     style={{ background: "#e8356d", borderColor: "#e8356d" }}
                     onClick={(e) => {
@@ -214,7 +197,7 @@ const ManagerPickerModal: React.FC<ManagerPickerModalProps> = ({ open, onClose, 
                     dataSource={users}
                     columns={columns}
                     rowKey="id"
-                    loading={loading}
+                    loading={usersQuery.isFetching}
                     onRow={(record) => ({
                         onClick: () => handleSelect(record),
                         style: { cursor: "pointer" }

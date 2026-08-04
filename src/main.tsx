@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import '@ant-design/v5-patch-for-react-19';
 import App from './App';
 import "./styles/tailwind.css";
+import "./theme/theme.css";
 import { Provider } from 'react-redux';
 import { store } from '@/redux/store';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -21,7 +22,17 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <ConfigProvider locale={viVN}>
+        <ConfigProvider
+          locale={viVN}
+          theme={{
+            token: {
+              colorPrimary: "#e8637a",
+              colorPrimaryHover: "#d94c66",
+              colorLink: "#e8637a",
+              colorLinkHover: "#d94c66",
+            },
+          }}
+        >
           <AntdApp>
             <App />
             <ToastProvider />

@@ -44,6 +44,8 @@ import ViewDetailDocument from "./view.document";
 
 import TabBar from "@/components/common/tabs/TabBar";
 import { getModalWidth } from "@/utils/responsive";
+import StatusTag from "@/components/common/tag/StatusTag";
+import { PROCEDURE_DOCUMENT_STATUS_META } from "@/constants/statusMeta/procedureDocumentMeta";
 
 // Các biểu mẫu này chỉ cần tải khi người dùng thực sự mở thao tác tương ứng.
 const ModalDocument = lazy(() => import("./modal.document"));
@@ -51,20 +53,6 @@ const ModalDocumentShareToken = lazy(() => import("./ModalDocumentShareToken"));
 const ModalAddShortcut = lazy(() => import("./ModalAddShortcut"));
 
 type TabType = "ALL" | "COMPANY" | "DEPARTMENT" | "CONFIDENTIAL";
-
-const STATUS_COLOR: Record<string, string> = {
-    NEED_CREATE: "default",
-    IN_PROGRESS: "processing",
-    NEED_UPDATE: "warning",
-    TERMINATED: "error",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-    NEED_CREATE: "Cần tạo",
-    IN_PROGRESS: "Đang hiệu lực",
-    NEED_UPDATE: "Cần cập nhật",
-    TERMINATED: "Đã huỷ",
-};
 
 const PROCEDURE_TYPE_META: Record<string, { label: string; color: string }> = {
     COMPANY: { label: "Cấp công ty", color: "geekblue" },
@@ -356,9 +344,7 @@ const DocumentPage = () => {
             align: "center",
             render: (_, record) =>
                 record.status ? (
-                    <Tag color={STATUS_COLOR[record.status] || "default"}>
-                        {STATUS_LABEL[record.status] || record.status}
-                    </Tag>
+                    <StatusTag value={record.status} meta={PROCEDURE_DOCUMENT_STATUS_META} />
                 ) : "—",
         },
         {

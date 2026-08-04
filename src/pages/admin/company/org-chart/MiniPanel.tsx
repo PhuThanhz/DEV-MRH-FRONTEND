@@ -120,7 +120,7 @@ const EmptyState = ({ text, isMobile, fontSize }: { text: string; isMobile: bool
     </div>
 );
 
-const MiniPanel = ({ nodeId, nodes, edges, onClose, isMobile = false, isTablet = false, isSmallLaptop = false }: Props) => {
+const MiniPanel = memo(({ nodeId, nodes, edges, onClose, isMobile = false, isTablet = false, isSmallLaptop = false }: Props) => {
     const [searchText, setSearchText] = useState("");
 
     const PANEL_W = isMobile ? 320 : isTablet || isSmallLaptop ? 360 : 400;
@@ -316,6 +316,6 @@ const MiniPanel = ({ nodeId, nodes, edges, onClose, isMobile = false, isTablet =
             </div>
         </div>
     );
-};
+});
 
 export default MiniPanel;

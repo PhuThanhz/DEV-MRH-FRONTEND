@@ -1,0 +1,67 @@
+/* Shared scrollbar visuals for every Ant Design Table and ProTable. */
+:root {
+    --lotus-table-scrollbar-size: 5px;
+    --lotus-table-scrollbar-color: #d9e1eb;
+    --lotus-table-scrollbar-hover-color: #aebaca;
+}
+
+.ant-table-wrapper .ant-table-sticky-scroll {
+    background: transparent !important;
+    border-top-color: transparent !important;
+    box-shadow: none;
+    opacity: 0 !important;
+    pointer-events: none;
+    transition: opacity 180ms ease !important;
+}
+
+.lotus-page-scrolled .ant-table-wrapper .ant-table-sticky-scroll {
+    opacity: 0.62 !important;
+    pointer-events: auto;
+}
+
+.lotus-page-scrolled .ant-table-wrapper .ant-table-sticky-scroll:hover {
+    opacity: 0.9 !important;
+}
+
+.ant-table-wrapper .ant-table-sticky-scroll-bar {
+    bottom: 2px !important;
+    height: var(--lotus-table-scrollbar-size) !important;
+    min-height: var(--lotus-table-scrollbar-size);
+    background: var(--lotus-table-scrollbar-color) !important;
+    cursor: grab;
+}
+
+.ant-table-wrapper .ant-table-sticky-scroll-bar:hover,
+.ant-table-wrapper .ant-table-sticky-scroll-bar-active {
+    background: var(--lotus-table-scrollbar-hover-color) !important;
+    cursor: grabbing;
+}
+
+.ant-table-wrapper .ant-table-content,
+.ant-table-wrapper .ant-table-body {
+    scrollbar-color: var(--lotus-table-scrollbar-color) transparent !important;
+    scrollbar-width: thin !important;
+}
+
+.ant-table-wrapper .ant-table-content::-webkit-scrollbar,
+.ant-table-wrapper .ant-table-body::-webkit-scrollbar {
+    width: var(--lotus-table-scrollbar-size) !important;
+    height: var(--lotus-table-scrollbar-size) !important;
+}
+
+.ant-table-wrapper .ant-table-content::-webkit-scrollbar-track,
+.ant-table-wrapper .ant-table-body::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.ant-table-wrapper .ant-table-content::-webkit-scrollbar-thumb,
+.ant-table-wrapper .ant-table-body::-webkit-scrollbar-thumb {
+    background: var(--lotus-table-scrollbar-color) !important;
+    border: 0 !important;
+    border-radius: 9999px !important;
+}
+
+.ant-table-wrapper .ant-table-content::-webkit-scrollbar-thumb:hover,
+.ant-table-wrapper .ant-table-body::-webkit-scrollbar-thumb:hover {
+    background: var(--lotus-table-scrollbar-hover-color) !important;
+}

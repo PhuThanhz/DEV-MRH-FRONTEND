@@ -97,6 +97,29 @@ export const ALL_PERMISSIONS = {
         ACTIVATE: { method: "POST", apiPath: "/api/v1/accounting-approval-delegations/{id}/activate", module: "ACCOUNTING_DELEGATIONS" },
         REVOKE: { method: "POST", apiPath: "/api/v1/accounting-approval-delegations/{id}/revoke", module: "ACCOUNTING_DELEGATIONS" },
     },
+    /* ===================== TASKS ===================== */
+    TASKS: {
+        GET_PAGINATE:          { method: "GET",    apiPath: "/api/v1/tasks",                         module: "TASKS" },
+        GET_CALENDAR:          { method: "GET",    apiPath: "/api/v1/tasks/calendar",                module: "TASKS" },
+        CREATE:                { method: "POST",   apiPath: "/api/v1/tasks",                         module: "TASKS" },
+        GET_BY_ID:             { method: "GET",    apiPath: "/api/v1/tasks/{id}",                    module: "TASKS" },
+        UPDATE:                { method: "PUT",    apiPath: "/api/v1/tasks/{id}",                    module: "TASKS" },
+        UPDATE_STATUS:         { method: "PATCH",  apiPath: "/api/v1/tasks/{id}/status",             module: "TASKS" },
+        CANCEL:                { method: "PATCH",  apiPath: "/api/v1/tasks/{id}/cancel",             module: "TASKS" },
+        DELETE:                { method: "DELETE", apiPath: "/api/v1/tasks/{id}",                    module: "TASKS" },
+        SUBMIT_RESULT:         { method: "POST",   apiPath: "/api/v1/tasks/{id}/submit-result",      module: "TASKS" },
+        APPROVE:               { method: "POST",   apiPath: "/api/v1/tasks/{id}/approve",            module: "TASKS" },
+        REQUEST_EXTENSION:     { method: "POST",   apiPath: "/api/v1/tasks/{id}/extension-requests", module: "TASKS" },
+        DECIDE_EXTENSION:      { method: "POST",   apiPath: "/api/v1/tasks/{id}/extension-requests/{extensionId}/decide", module: "TASKS" },
+        GET_SUMMARY_REPORT:    { method: "GET",    apiPath: "/api/v1/tasks/summary-report",          module: "TASKS" },
+        EXPORT_SUMMARY_REPORT: { method: "GET",    apiPath: "/api/v1/tasks/summary-report/export",  module: "TASKS" },
+    },
+    APPROVAL_DELEGATIONS: {
+        GET_MINE: { method: "GET",  apiPath: "/api/v1/approval-delegations/mine",        module: "APPROVAL_DELEGATIONS" },
+        GET_DELEGATED_TO_ME: { method: "GET", apiPath: "/api/v1/approval-delegations/delegated-to-me", module: "APPROVAL_DELEGATIONS" },
+        CREATE:   { method: "POST", apiPath: "/api/v1/approval-delegations",          module: "APPROVAL_DELEGATIONS" },
+        REVOKE:   { method: "POST", apiPath: "/api/v1/approval-delegations/{id}/revoke", module: "APPROVAL_DELEGATIONS" },
+    },
     /* ===================== ACCOUNTING DOCUMENT CATEGORIES ===================== */
     ACCOUNTING_DOCUMENT_CATEGORIES: {
         GET_PAGINATE: { method: "GET", apiPath: "/api/v1/accounting-document-categories", module: "ACCOUNTING_DOCUMENT_CATEGORIES" },
@@ -1368,6 +1391,9 @@ export const ALL_PERMISSIONS = {
         UPDATE: { method: "PUT", apiPath: "/api/v1/folders/{id}", module: "DOCUMENT_FOLDERS" },
         DELETE: { method: "DELETE", apiPath: "/api/v1/folders/{id}", module: "DOCUMENT_FOLDERS" },
         GET_TREE: { method: "GET", apiPath: "/api/v1/folders/tree", module: "DOCUMENT_FOLDERS" },
+    },
+    CALENDAR: {
+        GET_MY_ACTIONS: { method: "GET", apiPath: "/api/v1/calendar/my-actions", module: "CALENDAR" },
     },
 };
 export const ALL_MODULES = {

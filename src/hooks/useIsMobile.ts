@@ -28,6 +28,12 @@ const getBreakpointState = (): BreakpointState => {
     };
 };
 
+const sameBreakpointState = (a: BreakpointState, b: BreakpointState) =>
+    a.isMobile === b.isMobile &&
+    a.isTablet === b.isTablet &&
+    a.isSmallLaptop === b.isSmallLaptop &&
+    a.isDesktop === b.isDesktop;
+
 export function useBreakpoint(): BreakpointState {
     const [state, setState] = useState<BreakpointState>(() => getBreakpointState());
 
@@ -37,7 +43,16 @@ export function useBreakpoint(): BreakpointState {
         const mobileQuery = window.matchMedia(`(max-width: ${RESPONSIVE_BREAKPOINTS.mobile - 1}px)`);
         const desktopQuery = window.matchMedia(`(min-width: ${RESPONSIVE_BREAKPOINTS.desktop}px)`);
         const wideDesktopQuery = window.matchMedia(`(min-width: ${RESPONSIVE_BREAKPOINTS.wideDesktop}px)`);
-        const update = () => setState(getBreakpointState());
+
+        let rafId: number | null = null;
+        const update = () => {
+            if (rafId !== null) return;
+            rafId = window.requestAnimationFrame(() => {
+                rafId = null;
+                const next = getBreakpointState();
+                setState((prev) => (sameBreakpointState(prev, next) ? prev : next));
+            });
+        };
 
         update();
         mobileQuery.addEventListener("change", update);
@@ -46,6 +61,7 @@ export function useBreakpoint(): BreakpointState {
         window.addEventListener("resize", update);
 
         return () => {
+            if (rafId !== null) window.cancelAnimationFrame(rafId);
             mobileQuery.removeEventListener("change", update);
             desktopQuery.removeEventListener("change", update);
             wideDesktopQuery.removeEventListener("change", update);

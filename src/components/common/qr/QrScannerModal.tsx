@@ -13,6 +13,7 @@ import ViewProcedure from "@/pages/admin/procedures/view.procedure";
 import ViewDetailDocument from "@/pages/admin/document/view.document";
 import { getModalWidth } from "@/utils/responsive";
 import type { IDocument } from "@/types/backend";
+import { PROCEDURE_DOCUMENT_STATUS_META as STATUS_MAP } from "@/constants/statusMeta/procedureDocumentMeta";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -36,12 +37,6 @@ interface IProps {
     onClose: () => void;
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "warning" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "success" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "processing" },
-    TERMINATED: { label: "Hết hiệu lực", color: "error" },
-};
 
 const ScanOverlay = () => (
     <div style={{

@@ -10,6 +10,7 @@ import { callFetchUsersByCompany, callFetchUsersCrossCompany } from "@/config/ap
 import { useCompaniesQuery } from "@/hooks/useCompanies";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { useSectionsByDepartmentQuery } from "@/hooks/useSections";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 export interface UserOption {
     value: string;
@@ -141,6 +142,7 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
     confirmText,
     hasDirectManager,
 }) => {
+    const modalWidth = useResponsiveModalWidth(840);
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 300);
     const [allUsers, setAllUsers] = useState<UserOption[]>([]);
@@ -446,7 +448,7 @@ export const UserPickerModal: React.FC<UserPickerModalProps> = ({
             open={open}
             onCancel={onClose}
             footer={null}
-            width={840}
+            width={modalWidth}
             centered
             destroyOnHidden
             zIndex={1300}

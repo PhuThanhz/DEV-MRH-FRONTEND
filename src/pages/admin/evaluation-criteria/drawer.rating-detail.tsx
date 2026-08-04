@@ -1,4 +1,5 @@
 import { Drawer, Descriptions } from "antd";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -7,6 +8,7 @@ interface IProps {
 }
 
 const DrawerRatingDetail = ({ open, onClose, grade }: IProps) => {
+    const drawerWidth = useResponsiveModalWidth(550);
     if (!grade) return null;
 
     return (
@@ -14,7 +16,7 @@ const DrawerRatingDetail = ({ open, onClose, grade }: IProps) => {
             title={`Tiêu chí – Bậc ${grade.gradeLevel}`}
             open={open}
             onClose={onClose}
-            width="55vw"
+            width={drawerWidth}
         >
             <Descriptions bordered column={1}>
                 <Descriptions.Item label="A">

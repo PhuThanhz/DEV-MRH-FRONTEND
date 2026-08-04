@@ -14,6 +14,7 @@ import {
 import type {
     IJobDescription, ICompany, IDepartment,
     IDepartmentJobTitle, IOrgChart, IOrgNode,
+    IJobDescriptionRequirementItem, RequirementCategory,
 } from "@/types/backend";
 import {
     useCreateJobDescriptionMutation,
@@ -47,8 +48,6 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-const { TextArea } = Input;
-
 const ACCENT = "#e8637a";
 
 const MODAL_TABS = [
@@ -60,6 +59,77 @@ const MODAL_TABS = [
 
 const NODE_W = 190;
 const NODE_H = 80;
+
+const byRequirementCategory = (
+    items: IJobDescriptionRequirementItem[] | undefined,
+    category: RequirementCategory,
+): { content: string }[] => {
+    const filtered = (items ?? [])
+        .filter((item) => item.category === category)
+        .slice()
+        .sort((a, b) => a.orderNo - b.orderNo)
+        .map((item) => ({ content: item.content }));
+    return filtered.length > 0 ? filtered : [{ content: "" }];
+};
+
+const toRequirementItems = (
+    rows: { content?: string }[] | undefined,
+    category: RequirementCategory,
+): { category: RequirementCategory; orderNo: number; content: string }[] => {
+    return (rows ?? [])
+        .filter((row) => row?.content?.trim())
+        .map((row, idx) => ({ category, orderNo: idx + 1, content: row.content as string }));
+};
+
+// ─── Danh sách mục con dạng 1.1, 1.2, 1.3 (dùng chung cho Nhiệm vụ + Yêu cầu vị trí) ──
+interface SubItemsFormListProps {
+    namePath: (string | number)[];
+    parentLabel: string;
+    accent: string;
+    placeholder?: string;
+    addLabel?: string;
+}
+
+const SubItemsFormList = ({ namePath, parentLabel, accent, placeholder, addLabel = "Thêm mục" }: SubItemsFormListProps) => {
+    return (
+        <Form.List name={namePath}>
+            {(fields, { add, remove }) => (
+                <div className="flex flex-col gap-2">
+                    {fields.map((field, idx) => (
+                        <div key={field.key} className="flex items-start gap-2">
+                            <span className="mt-2 shrink-0 text-xs font-semibold text-gray-400">
+                                {parentLabel}.{idx + 1}
+                            </span>
+                            <Form.Item
+                                {...field}
+                                name={[field.name, "content"]}
+                                rules={[{ required: true, message: "Nhập nội dung" }]}
+                                style={{ marginBottom: 0, flex: 1 }}
+                            >
+                                <Input.TextArea autoSize={{ minRows: 1, maxRows: 6 }} placeholder={placeholder} />
+                            </Form.Item>
+                            <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => remove(field.name)}
+                                className="mt-0.5 shrink-0"
+                            />
+                        </div>
+                    ))}
+                    <Button
+                        type="dashed"
+                        icon={<PlusOutlined />}
+                        onClick={() => add({ content: "" })}
+                        style={{ borderColor: accent, color: accent, width: "fit-content" }}
+                    >
+                        {addLabel}
+                    </Button>
+                </div>
+            )}
+        </Form.List>
+    );
+};
 // ─── TaskItem (collapsible) ───────────────────────────────────────────────────
 interface TaskItemProps {
     name: number;
@@ -120,16 +190,13 @@ const TaskItem = ({ name, restField, index, canRemove, onRemove, accent }: TaskI
                     >
                         <Input placeholder="VD: Lập kế hoạch hàng tuần" />
                     </Form.Item>
-                    <Form.Item
-                        {...restField}
-                        name={[name, "content"]}
-                        label="Nội dung"
-                        rules={[{ required: true, message: "Nhập nội dung" }]}
-                        style={{ marginBottom: 12 }}
-                    >
-                        <Input.TextArea
-                            autoSize={{ minRows: 2, maxRows: 10 }}
-                            placeholder="Mô tả chi tiết nhiệm vụ..."
+                    <Form.Item label="Nội dung chi tiết" style={{ marginBottom: 12 }}>
+                        <SubItemsFormList
+                            namePath={[name, "items"]}
+                            parentLabel={String(index + 1)}
+                            accent={accent}
+                            placeholder="Nhập nội dung mục con..."
+                            addLabel="Thêm mục con"
                         />
                     </Form.Item>
                     </div>
@@ -432,14 +499,17 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
             companyId: fullJd.companyId,
             departmentId: fullJd.departmentId,
             departmentJobTitleId: fullJd.departmentJobTitleId,
-            knowledge: fullJd.requirements?.knowledge ?? null,
-            experience: fullJd.requirements?.experience ?? null,
-            skills: fullJd.requirements?.skills ?? null,
-            qualities: fullJd.requirements?.qualities ?? null,
-            otherRequirements: fullJd.requirements?.otherRequirements ?? null,
+            knowledgeItems: byRequirementCategory(fullJd.requirements?.items, "KNOWLEDGE"),
+            experienceItems: byRequirementCategory(fullJd.requirements?.items, "EXPERIENCE"),
+            skillsItems: byRequirementCategory(fullJd.requirements?.items, "SKILLS"),
+            qualitiesItems: byRequirementCategory(fullJd.requirements?.items, "QUALITIES"),
+            otherItems: byRequirementCategory(fullJd.requirements?.items, "OTHER"),
             tasks: fullJd.tasks?.length
-                ? fullJd.tasks
-                : [{ orderNo: 1, title: "", content: "" }],
+                ? fullJd.tasks.map((t) => ({
+                    ...t,
+                    items: t.items?.length ? t.items : [{ content: "" }],
+                }))
+                : [{ orderNo: 1, title: "", items: [{ content: "" }] }],
         });
 
         if (fullJd.companyId) setSelectedCompanyId(fullJd.companyId);
@@ -472,7 +542,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
     useEffect(() => {
         if (!open || isEdit) return;
         form.setFieldsValue({
-            tasks: [{ orderNo: 1, title: "", content: "" }],
+            tasks: [{ orderNo: 1, title: "", items: [{ content: "" }] }],
         });
     }, [open, isEdit, form]);
 
@@ -526,14 +596,20 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                 departmentId: values.departmentId,
                 departmentJobTitleId: values.departmentJobTitleId,
                 requirements: {
-                    knowledge: values.knowledge ?? null,
-                    experience: values.experience ?? null,
-                    skills: values.skills ?? null,
-                    qualities: values.qualities ?? null,
-                    otherRequirements: values.otherRequirements ?? null,
+                    items: [
+                        ...toRequirementItems(values.knowledgeItems, "KNOWLEDGE"),
+                        ...toRequirementItems(values.experienceItems, "EXPERIENCE"),
+                        ...toRequirementItems(values.skillsItems, "SKILLS"),
+                        ...toRequirementItems(values.qualitiesItems, "QUALITIES"),
+                        ...toRequirementItems(values.otherItems, "OTHER"),
+                    ],
                 },
                 tasks: (values.tasks ?? []).map((t: any, idx: number) => ({
-                    ...t, orderNo: idx + 1,
+                    ...t,
+                    orderNo: idx + 1,
+                    items: (t.items ?? [])
+                        .filter((it: any) => it?.content?.trim())
+                        .map((it: any, itemIdx: number) => ({ orderNo: itemIdx + 1, content: it.content })),
                 })),
                 positions,
                 version: fullJd?.version, // ✅ Thêm version để hỗ trợ Optimistic Locking
@@ -1029,7 +1105,7 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                                                                 disabled={fields.length >= MAX_TASKS}
                                                                 onClick={() =>
                                                                     fields.length < MAX_TASKS &&
-                                                                    add({ orderNo: fields.length + 1, title: "", content: "" })
+                                                                    add({ orderNo: fields.length + 1, title: "", items: [{ content: "" }] })
                                                                 }
                                                                 style={{
                                                                     display: "inline-flex",
@@ -1100,24 +1176,23 @@ export default function ModalJobDescription({ open, onClose, editRecord }: Props
                             {/* ── TAB 4 ── */}
                             <div style={{ display: activeTab === "4" ? "block" : "none" }}>
                                 <div style={{ paddingTop: 8, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 16px" }}>
-                                    <Form.Item name="knowledge" label="Kiến thức">
-                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kiến thức..." />
+                                    <Form.Item label="1. Kiến thức">
+                                        <SubItemsFormList namePath={["knowledgeItems"]} parentLabel="1" accent={ACCENT} placeholder="Yêu cầu kiến thức..." />
                                     </Form.Item>
-                                    <Form.Item name="experience" label="Kinh nghiệm">
-                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kinh nghiệm..." />
+                                    <Form.Item label="2. Kinh nghiệm">
+                                        <SubItemsFormList namePath={["experienceItems"]} parentLabel="2" accent={ACCENT} placeholder="Yêu cầu kinh nghiệm..." />
                                     </Form.Item>
-                                    <Form.Item name="skills" label="Kỹ năng">
-                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Yêu cầu kỹ năng..." />
+                                    <Form.Item label="3. Kỹ năng">
+                                        <SubItemsFormList namePath={["skillsItems"]} parentLabel="3" accent={ACCENT} placeholder="Yêu cầu kỹ năng..." />
                                     </Form.Item>
-                                    <Form.Item name="qualities" label="Phẩm chất">
-                                        <TextArea autoSize={{ minRows: 4, maxRows: 12 }} placeholder="Phẩm chất cần có..." />
+                                    <Form.Item label="4. Phẩm chất">
+                                        <SubItemsFormList namePath={["qualitiesItems"]} parentLabel="4" accent={ACCENT} placeholder="Phẩm chất cần có..." />
                                     </Form.Item>
                                     <Form.Item
-                                        name="otherRequirements"
-                                        label="Yêu cầu khác"
+                                        label="5. Yêu cầu khác"
                                         style={{ gridColumn: isMobile ? "1" : "1 / -1" }}
                                     >
-                                        <TextArea autoSize={{ minRows: 3, maxRows: 12 }} placeholder="Các yêu cầu khác (nếu có)..." />
+                                        <SubItemsFormList namePath={["otherItems"]} parentLabel="5" accent={ACCENT} placeholder="Các yêu cầu khác (nếu có)..." />
                                     </Form.Item>
                                 </div>
                             </div>

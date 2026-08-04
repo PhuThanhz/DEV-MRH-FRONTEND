@@ -642,25 +642,36 @@ const ForgotPassword = () => {
         .back-link { padding: 0; border-radius: 0; color: #ad285b !important; background: transparent; font-size: 13px; }
         .form-footer { color: #b2abb0; font-size: 11px; margin-top: 32px; }
 
-        @media (min-width: 851px) and (max-width: 1024px) {
+        @media (min-width: 901px) and (max-width: 1024px) {
           .login-root { flex-direction: row; overflow: hidden; }
           .login-left { display: flex; }
-          .login-right { padding: clamp(32px, 6vw, 64px); align-items: center; justify-content: center; }
+          .login-right { padding: clamp(24px, 4vw, 64px); align-items: center; justify-content: center; }
           .mobile-banner { display: none; }
           .form-container { margin: 0; }
         }
 
-        @media (max-width: 850px) {
-          .mobile-banner { height: 290px; border-radius: 0 0 48px 48px; }
-          .form-container { width: min(395px, calc(100% - 40px)); margin: -70px auto 32px; padding: 38px 28px 30px; border-radius: 28px; }
+        @media (max-width: 900px) {
+          .mobile-banner { 
+            height: clamp(190px, 28dvh, 290px); 
+            min-height: 180px;
+            border-radius: 0 0 clamp(32px, 8vw, 48px) clamp(32px, 8vw, 48px); 
+          }
+          .form-container { 
+            width: min(92%, 420px); 
+            margin: clamp(-55px, -6dvh, -35px) auto clamp(24px, 4vh, 40px); 
+            padding: clamp(26px, 5.5vw, 38px) clamp(20px, 4.5vw, 30px) clamp(22px, 4.5vw, 30px); 
+            border-radius: clamp(18px, 4vw, 28px); 
+          }
           .form-container::before { display: none; }
-          .form-title { font-size: 32px; }
+          .form-title { font-size: clamp(24px, 6vw, 32px); }
         }
 
-        @media (max-width: 480px) {
-          .mobile-banner { height: 250px; border-radius: 0 0 40px 40px; }
-          .form-container { width: calc(100% - 32px); margin-top: -60px; padding: 32px 22px 26px; border-radius: 24px; }
+        @media (min-width: 901px) and (max-height: 700px) {
+          .login-right { padding: 16px; }
+          .form-container { width: min(92%, 390px); padding: 24px 30px 20px; }
+          .form-heading { margin-bottom: 16px; }
           .form-title { font-size: 28px; }
+          .login-input, .submit-btn { height: 44px !important; }
         }
       `}</style>
     </div>

@@ -8,6 +8,7 @@ export type ActionVariant =
     | "edit"
     | "settings"
     | "progress"
+    | "download"
     | "success"
     | "danger"
     | "default";
@@ -113,6 +114,18 @@ const ACTION_BUTTON_STYLES = `
         color: #0e7490 !important;
         background: #cffafe !important;
         border-color: #a5f3fc !important;
+    }
+
+    /* Download Action - Soft Rose Brand */
+    .app-action-button.is-download {
+        color: #be345d !important;
+        background: #fff1f5 !important;
+        border-color: #fce0e8 !important;
+    }
+    .app-action-button.is-download:hover {
+        color: #9f274b !important;
+        background: #ffe4ec !important;
+        border-color: #f8c8d7 !important;
     }
 
     /* Success Action - Soft Emerald Pastel */

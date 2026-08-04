@@ -24,6 +24,7 @@ import { useEmployeesQuery, useDeleteEmployeeMutation } from "@/hooks/useEmploye
 import ModalEmployee from "@/pages/admin/employees/modal.employee";
 import ViewDetailEmployee from "@/pages/admin/employees/view.employee";
 import ActionButton from "@/components/common/ui/ActionButton";
+import { getActiveStatusMeta } from "@/constants/statusMeta/activeStatusMeta";
 
 const getBackendData = <T,>(res: any): T => {
     return res?.data ?? res;
@@ -269,7 +270,7 @@ const EmployeePage = () => {
             dataIndex: "active",
             align: "center",
             render: (_, record) => {
-                const isActive = record.active;
+                const meta = getActiveStatusMeta(record.active);
                 return (
                     <Tag
                         style={{
@@ -279,12 +280,12 @@ const EmployeePage = () => {
                             fontWeight: 500,
                             height: 22,
                             lineHeight: "20px",
-                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
-                            background: isActive ? "#f6ffed" : "#fff2f0",
-                            color: isActive ? "#389e0d" : "#cf1322",
+                            border: `1px solid ${meta.border}`,
+                            background: meta.bg,
+                            color: meta.hex,
                         }}
                     >
-                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                        {meta.label}
                     </Tag>
                 );
             },
@@ -392,8 +393,8 @@ const EmployeePage = () => {
             key: "active",
             label: "Trạng thái",
             options: [
-                { label: "Đang hoạt động", value: true, color: "green" },
-                { label: "Ngừng hoạt động", value: false, color: "red" },
+                { label: getActiveStatusMeta(true).label, value: true, color: getActiveStatusMeta(true).color },
+                { label: getActiveStatusMeta(false).label, value: false, color: getActiveStatusMeta(false).color },
             ],
         },
     ], []);

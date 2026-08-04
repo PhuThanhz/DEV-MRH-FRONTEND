@@ -44,21 +44,21 @@ const ChipBar: React.FC<{
     <div style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 4,
-        padding: 4,
-        background: "#f1f5f9", // slate-100
-        borderRadius: 20,
+        gap: 3,
+        padding: 3,
+        background: "#f2f2f7",
+        borderRadius: 10,
         marginBottom: 20,
         flexWrap: "wrap",
-        border: "1px solid #e2e8f0", // slate-200
+        border: "1px solid #e2e8f0",
     }}>
         <style>{`
             .custom-chip-button:hover {
-                color: #534AB7 !important;
-                background: rgba(255, 255, 255, 0.4) !important;
+                color: #0f172a !important;
+                background: rgba(255, 255, 255, 0.72) !important;
             }
             .custom-chip-button:hover span {
-                color: #534AB7 !important;
+                color: #be123c !important;
             }
         `}</style>
         {items.map((item) => {
@@ -72,16 +72,16 @@ const ChipBar: React.FC<{
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 6,
-                        padding: "6px 16px",
-                        fontSize: 13,
-                        fontWeight: isActive ? 600 : 500,
-                        color: isActive ? "#534AB7" : "#475569", // slate-600 when inactive
+                        padding: "6px 14px",
+                        fontSize: 12.5,
+                        fontWeight: isActive ? 700 : 600,
+                        color: isActive ? "#0f172a" : "#64748b",
                         background: isActive ? "#ffffff" : "transparent",
                         border: "none",
-                        borderRadius: 16,
-                        boxShadow: isActive ? "0 2px 8px rgba(15, 23, 42, 0.08)" : "none",
+                        borderRadius: 8,
+                        boxShadow: isActive ? "0 1px 3px rgba(15, 23, 42, 0.08)" : "none",
                         cursor: "pointer",
-                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                        transition: "all 0.15s ease",
                         whiteSpace: "nowrap",
                         lineHeight: "20px",
                         outline: "none",
@@ -90,8 +90,8 @@ const ChipBar: React.FC<{
                     <span style={{
                         display: "inline-flex",
                         fontSize: 14,
-                        color: isActive ? "#534AB7" : "#64748b",
-                        transition: "color 0.2s ease",
+                        color: isActive ? "#be123c" : "#64748b",
+                        transition: "color 0.15s ease",
                     }}>
                         {item.icon}
                     </span>

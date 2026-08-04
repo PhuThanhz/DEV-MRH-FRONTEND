@@ -3,6 +3,9 @@ import { ProTable } from "@ant-design/pro-components";
 import vi_VN from "antd/locale/vi_VN";
 import { ConfigProvider } from "antd";
 import { TABLE_SCROLL_X } from "@/utils/responsive";
+import { TABLE_STICKY } from "./TableScrollbarController";
+
+const DATA_TABLE_STYLE = { width: "100%" } as const;
 
 const DataTable = <
     T extends Record<string, any>,
@@ -27,7 +30,7 @@ const DataTable = <
     dateFormatter = "string",
     rowSelection,
     onChange,
-    sticky = { offsetHeader: 64 },
+    sticky = TABLE_STICKY,
 }: ProTableProps<T, U, ValueType>) => {
     return (
         <ConfigProvider locale={vi_VN}>
@@ -60,8 +63,8 @@ const DataTable = <
                     sticky={sticky}
                     options={false}
                     size="small" // ✅ bảng gọn hơn → nhìn rộng hơn
-                    style={{ width: "100%" }} // ✅ full width
-                    className="custom-pro-table no-scrollbar"
+                    style={DATA_TABLE_STYLE} // ✅ full width
+                    className="custom-pro-table"
                 />
             </div>
         </ConfigProvider>

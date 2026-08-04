@@ -40,6 +40,7 @@ import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import ActionButton from "@/components/common/ui/ActionButton";
+import { getActiveStatusMeta } from "@/constants/statusMeta/activeStatusMeta";
 
 const DepartmentPage = () => {
     const navigate = useNavigate();
@@ -288,7 +289,7 @@ const DepartmentPage = () => {
             title: "Trạng thái",
             align: "center",
             render: (_, record) => {
-                const isActive = record.status === 1;
+                const meta = getActiveStatusMeta(record.status === 1);
                 return (
                     <Tag
                         style={{
@@ -298,12 +299,12 @@ const DepartmentPage = () => {
                             fontWeight: 500,
                             height: 22,
                             lineHeight: "20px",
-                            border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
-                            background: isActive ? "#f6ffed" : "#fff2f0",
-                            color: isActive ? "#389e0d" : "#cf1322",
+                            border: `1px solid ${meta.border}`,
+                            background: meta.bg,
+                            color: meta.hex,
                         }}
                     >
-                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                        {meta.label}
                     </Tag>
                 );
             },
@@ -403,8 +404,8 @@ const DepartmentPage = () => {
                                 key: "status",
                                 label: "Trạng thái",
                                 options: [
-                                    { label: "Hoạt động", value: 1, color: "green" },
-                                    { label: "Ngừng hoạt động", value: 0, color: "red" },
+                                    { label: getActiveStatusMeta(true).label, value: 1, color: getActiveStatusMeta(true).color },
+                                    { label: getActiveStatusMeta(false).label, value: 0, color: getActiveStatusMeta(false).color },
                                 ],
                             },
                         ]}

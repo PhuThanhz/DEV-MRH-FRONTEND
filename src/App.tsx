@@ -59,6 +59,9 @@ const AccountingDocumentPage = lazy(() => import("@/pages/admin/accounting"));
 const AccountingDocumentCategoryPage = lazy(() => import("@/pages/admin/accounting-document-category"));
 const WorkflowTemplatesPage = lazy(() => import("@/pages/admin/accounting-workflows"));
 const DelegationsPage = lazy(() => import("@/pages/admin/accounting-delegations"));
+const TaskPage = lazy(() => import("@/pages/admin/tasks"));
+const TaskSummaryReportPage = lazy(() => import("@/pages/admin/tasks/TaskSummaryReportPage"));
+const MyUnifiedCalendarPage = lazy(() => import("@/pages/admin/tasks/MyUnifiedCalendarPage"));
 const EvaluationProcessPage = lazy(() => import("@/pages/evaluation/process/EvaluationProcessPage"));
 const TemplatePage = lazy(() => import("@/pages/admin/evaluation/templates/TemplatePage"));
 const PeriodPage = lazy(() => import("@/pages/admin/evaluation/periods/PeriodPage"));
@@ -473,6 +476,52 @@ export default function App() {
             <ProtectedRoute>
               <Access permission={ALL_PERMISSIONS.ACCOUNTING_DELEGATIONS.VIEW}>
                 <DelegationsPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.TASKS,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.TASKS.GET_PAGINATE}>
+                <TaskPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "tasks/:id",
+          element: (
+            <ProtectedRoute>
+              <Navigate to="/admin/tasks" replace />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "tasks",
+          element: (
+            <ProtectedRoute>
+              <Navigate to="/admin/tasks" replace />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.TASK_SUMMARY_REPORT,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.TASKS.GET_SUMMARY_REPORT}>
+                <TaskSummaryReportPage />
+              </Access>
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: PATHS.ADMIN.MY_UNIFIED_CALENDAR,
+          element: (
+            <ProtectedRoute>
+              <Access permission={ALL_PERMISSIONS.CALENDAR.GET_MY_ACTIONS}>
+                <MyUnifiedCalendarPage />
               </Access>
             </ProtectedRoute>
           ),

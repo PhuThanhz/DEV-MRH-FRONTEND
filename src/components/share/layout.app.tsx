@@ -3,6 +3,7 @@ import { setRefreshTokenAction } from "@/redux/slice/accountSlide";
 import { notify } from "@/components/common/notification/notify";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import TableScrollbarController from "@/components/common/data-table/TableScrollbarController";
 
 interface IProps {
     children: React.ReactNode
@@ -26,6 +27,7 @@ const LayoutApp = (props: IProps) => {
 
     return (
         <>
+            <TableScrollbarController />
             {props.children}
         </>
     )

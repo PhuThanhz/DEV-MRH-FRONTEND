@@ -18,7 +18,7 @@ export type EvaluationStatus =
     | "OVERDUE_MANAGER"
     | "OVERDUE_APPROVAL";
 
-const STATUS_CONFIG: Record<
+export const EVALUATION_STATUS_CONFIG: Record<
     EvaluationStatus,
     { text: string; color: string; icon: React.ReactNode }
 > = {
@@ -39,10 +39,10 @@ interface EvaluationStatusTagProps {
 }
 
 const EvaluationStatusTag = ({ status }: EvaluationStatusTagProps) => {
-    const normalizedStatus = status && status in STATUS_CONFIG
+    const normalizedStatus = status && status in EVALUATION_STATUS_CONFIG
         ? status as EvaluationStatus
         : "NOT_STARTED";
-    const config = STATUS_CONFIG[normalizedStatus];
+    const config = EVALUATION_STATUS_CONFIG[normalizedStatus];
 
     return (
         <Tag

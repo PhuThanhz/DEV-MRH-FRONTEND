@@ -1,17 +1,17 @@
 import type { IUser } from "@/types/backend";
-import { Avatar, Modal, Typography, Tag } from "antd";
+import { Typography, Tag, Tabs } from "antd";
 import {
     UserOutlined, MailOutlined, SafetyOutlined, CalendarOutlined,
     PhoneOutlined, IdcardOutlined, ApartmentOutlined,
-    CheckCircleFilled, CloseCircleFilled, UserAddOutlined,
+    UserAddOutlined, InfoCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useUserPositionsQuery } from "@/hooks/useUserPositions";
 import { useUserByIdQuery } from "@/hooks/useUsers";
 import type { IUserPosition } from "@/types/backend";
-import { getModalWidth } from "@/utils/responsive";
 import { buildPublicFileUrl } from "@/config/file-utils";
-
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+import LotusProfileBanner from "@/components/common/banner/LotusProfileBanner";
 
 const { Text } = Typography;
 
@@ -23,13 +23,13 @@ interface IProps {
 }
 
 const ACCENT = "#f5317f";
-const BORDER = "#f0f0f0";
-const BORDER_MED = "#e5e7eb";
-const TEXT_MAIN = "#111827";
-const TEXT_LABEL = "#6b7280";
-const TEXT_MUTED = "#9ca3af";
+const BORDER = "#e2e8f0";
+const BORDER_MED = "#cbd5e1";
+const TEXT_MAIN = "#0f172a";
+const TEXT_LABEL = "#334155";
+const TEXT_MUTED = "#64748b";
 const BG_CARD = "#ffffff";
-const BG_SUBTLE = "#fafafa";
+const BG_SUBTLE = "#f8fafc";
 
 const sourceTagConfig: Record<string, { antColor: string; label: string }> = {
     COMPANY: { antColor: "blue", label: "Công ty" },
@@ -51,24 +51,23 @@ const InfoRow = ({
     noBorder?: boolean;
 }) => (
     <div style={{
-        display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "9px 0",
+        display: "flex", alignItems: "flex-start", gap: 12,
+        padding: "11px 0",
         borderBottom: noBorder ? "none" : `1px solid ${BORDER}`,
     }}>
         <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: BG_SUBTLE,
-            border: `1px solid ${BORDER_MED}`,
+            width: 32, height: 32, borderRadius: 8,
+            background: BG_SUBTLE, border: `1px solid ${BORDER_MED}`,
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0, marginTop: 1,
         }}>
-            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{icon}</span>
+            <span style={{ fontSize: 14, color: "#475569" }}>{icon}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2, letterSpacing: "0.02em" }}>
+            <Text style={{ fontSize: 12, color: "#475569", fontWeight: 600, display: "block", marginBottom: 2, letterSpacing: "0.01em" }}>
                 {label}
             </Text>
-            <Text style={{ fontSize: 13, color: TEXT_MAIN, fontWeight: highlight ? 600 : 400 }}>
+            <Text style={{ fontSize: 13, color: TEXT_MAIN, fontWeight: 600, wordBreak: "break-word" }}>
                 {value || "--"}
             </Text>
         </div>
@@ -76,14 +75,13 @@ const InfoRow = ({
 );
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, marginTop: 2 }}>
+    <div style={{ marginBottom: 14, marginTop: 2 }}>
         <Text style={{
-            fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-            textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
+            fontSize: 12, fontWeight: 800, color: "#1e293b",
+            textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
         }}>
             {children}
         </Text>
-        <div style={{ flex: 1, height: 1, background: BORDER }} />
     </div>
 );
 
@@ -100,16 +98,16 @@ const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; 
     <table style={{
         width: "100%", borderCollapse: "collapse",
         borderRadius: 12, overflow: "hidden",
-        border: `1.5px solid ${BORDER_MED}`,
+        border: `1px solid ${BORDER_MED}`,
     }}>
         <thead>
             <tr style={{ background: BG_SUBTLE }}>
                 {["Chức danh", "Mã bậc", "Cấp", "Công ty", "Phòng ban", "Bộ phận"].map(h => (
                     <th key={h} style={{
-                        padding: "10px 14px", textAlign: "left",
+                        padding: "11px 14px", textAlign: "left",
                         fontSize: 11, fontWeight: 700, color: TEXT_LABEL,
                         textTransform: "uppercase", letterSpacing: "0.05em",
-                        borderBottom: `1.5px solid ${BORDER_MED}`,
+                        borderBottom: `1px solid ${BORDER_MED}`,
                     }}>{h}</th>
                 ))}
             </tr>
@@ -117,21 +115,21 @@ const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; 
         <tbody>
             {isLoading ? (
                 <tr>
-                    <td colSpan={6} style={{ padding: "24px", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                    <td colSpan={6} style={{ padding: "28px", textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
                         Đang tải...
                     </td>
                 </tr>
             ) : positions.length === 0 ? (
                 <tr>
-                    <td colSpan={6} style={{ padding: "32px", textAlign: "center" }}>
+                    <td colSpan={6} style={{ padding: "36px", textAlign: "center" }}>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                             <div style={{
-                                width: 40, height: 40, borderRadius: 10,
+                                width: 44, height: 44, borderRadius: 12,
                                 background: BG_SUBTLE, display: "flex",
                                 alignItems: "center", justifyContent: "center",
                                 border: `1px solid ${BORDER_MED}`,
                             }}>
-                                <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
+                                <ApartmentOutlined style={{ fontSize: 20, color: "#cbd5e1" }} />
                             </div>
                             <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có chức danh nào</Text>
                         </div>
@@ -148,27 +146,27 @@ const PositionsTable = ({ positions, isLoading }: { positions: IUserPosition[]; 
                             background: "#fff",
                         }}
                     >
-                        <td style={{ padding: "11px 14px" }}>
+                        <td style={{ padding: "12px 14px" }}>
                             <Text strong style={{ fontSize: 13, color: TEXT_MAIN }}>
                                 {r.jobTitle?.nameVi ?? "--"}
                             </Text>
                         </td>
-                        <td style={{ padding: "11px 14px" }}>
+                        <td style={{ padding: "12px 14px" }}>
                             <SquareBadge label={r.jobTitle?.positionCode ?? "--"} antColor="purple" />
                         </td>
-                        <td style={{ padding: "11px 14px" }}>
+                        <td style={{ padding: "12px 14px" }}>
                             {cfg
                                 ? <SquareBadge label={cfg.label} antColor={cfg.antColor} />
                                 : <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>--</Text>
                             }
                         </td>
-                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_LABEL }}>
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: TEXT_LABEL }}>
                             {r.company?.name ?? "--"}
                         </td>
-                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: TEXT_MUTED }}>
                             {r.department?.name ?? "--"}
                         </td>
-                        <td style={{ padding: "11px 14px", fontSize: 13, color: TEXT_MUTED }}>
+                        <td style={{ padding: "12px 14px", fontSize: 13, color: TEXT_MUTED }}>
                             {r.section?.name ?? "--"}
                         </td>
                     </tr>
@@ -196,7 +194,7 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
                         alignItems: "center", justifyContent: "center",
                         border: `1px solid ${BORDER_MED}`,
                     }}>
-                        <ApartmentOutlined style={{ fontSize: 18, color: "#d1d5db" }} />
+                        <ApartmentOutlined style={{ fontSize: 18, color: "#cbd5e1" }} />
                     </div>
                     <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có chức danh nào</Text>
                 </div>
@@ -209,7 +207,7 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
                 const cfg = sourceTagConfig[r.source];
                 return (
                     <div key={r.id} style={{
-                        border: `1.5px solid ${BORDER_MED}`,
+                        border: `1px solid ${BORDER_MED}`,
                         borderRadius: 12,
                         padding: "12px 14px",
                         background: "#fff",
@@ -253,15 +251,12 @@ const PositionCards = ({ positions, isLoading }: { positions: IUserPosition[]; i
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
 
-    const modalWidth = getModalWidth(760);
     const userId = dataInit?.id ? String(dataInit.id) : undefined;
 
-    // ← THÊM: fetch GET /users/:id khi modal mở, chỉ fire khi open=true
     const { data: fullUser } = useUserByIdQuery(open ? userId : undefined);
 
-    // ← THÊM: ưu tiên dùng fullUser (đầy đủ data), fallback về dataInit
     const user = fullUser ?? dataInit;
-    const info = user?.userInfo; // ← đổi từ dataInit?.userInfo
+    const info = user?.userInfo;
 
     const { data: positions = [], isLoading } = useUserPositionsQuery(userId);
 
@@ -271,329 +266,255 @@ const ViewDetailUser = ({ open, onClose, dataInit, setDataInit }: IProps) => {
         ? buildPublicFileUrl(user.avatar, "avatar")
         : undefined;
 
-    const hrFields = [
+    const accountFields = [
+        { icon: <MailOutlined />, label: "Email tài khoản", value: user?.email, highlight: true },
+        {
+            icon: <SafetyOutlined />,
+            label: "Vai trò hệ thống",
+            value: user?.role?.name ? (
+                <Tag color="blue" style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>
+                    {user.role.name}
+                </Tag>
+            ) : "--",
+        },
+        {
+            icon: <UserOutlined />,
+            label: "Quản lý trực tiếp",
+            value: user?.directManager ? `${user.directManager.name} (${user.directManager.email})` : "--",
+        },
+        {
+            icon: <UserOutlined />,
+            label: "Quản lý gián tiếp",
+            value: user?.indirectManager ? `${user.indirectManager.name} (${user.indirectManager.email})` : "--",
+        },
+        {
+            icon: <UserAddOutlined />,
+            label: "Trạng thái tài khoản",
+            value: user?.active ? (
+                <Tag color="success" style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>
+                    Đang hoạt động
+                </Tag>
+            ) : (
+                <Tag color="error" style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>
+                    Vô hiệu hóa
+                </Tag>
+            ),
+        },
+    ];
+
+    const personnelFields = [
         { icon: <IdcardOutlined />, label: "Mã nhân viên", value: info?.employeeCode, highlight: true },
-        { icon: <PhoneOutlined />, label: "Số điện thoại", value: info?.phone },
-        { icon: <UserOutlined />, label: "Giới tính", value: genderLabel[info?.gender ?? ""] },
+        { icon: <PhoneOutlined />, label: "Số điện thoại", value: info?.phone || "--" },
+        { icon: <UserOutlined />, label: "Giới tính", value: genderLabel[info?.gender ?? ""] || "--" },
         {
             icon: <CalendarOutlined />, label: "Ngày sinh",
-            value: info?.dateOfBirth ? dayjs(info.dateOfBirth).format("DD/MM/YYYY") : undefined,
+            value: info?.dateOfBirth ? dayjs(info.dateOfBirth).format("DD/MM/YYYY") : "--",
         },
         {
             icon: <CalendarOutlined />, label: "Ngày vào làm",
-            value: info?.startDate ? dayjs(info.startDate).format("DD/MM/YYYY") : undefined,
+            value: info?.startDate ? dayjs(info.startDate).format("DD/MM/YYYY") : "--",
         },
         {
             icon: <CalendarOutlined />, label: "Ngày ký HĐ",
-            value: info?.contractSignDate ? dayjs(info.contractSignDate).format("DD/MM/YYYY") : undefined,
+            value: info?.contractSignDate ? dayjs(info.contractSignDate).format("DD/MM/YYYY") : "--",
         },
-    ].filter((f) => f.value && f.value !== "--");
+        {
+            icon: <CalendarOutlined />, label: "Hết hạn HĐ",
+            value: info?.contractExpireDate ? dayjs(info.contractExpireDate).format("DD/MM/YYYY") : "--",
+        },
+    ];
 
-    return (
-        <>
-            <style>{`
-                .detail-modal .ant-modal-content {
-                    border-radius: 20px !important;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.05) !important;
-                    overflow: hidden;
-                    padding: 0 !important;
-                }
-                .detail-modal .ant-modal-header {
-                    padding: 20px 24px 0 24px !important;
-                    border-bottom: none !important;
-                    background: #fff !important;
-                    margin-bottom: 0 !important;
-                }
-                .detail-modal .ant-modal-title {
-                    font-size: 16px !important;
-                    font-weight: 700 !important;
-                    color: ${TEXT_MAIN} !important;
-                    letter-spacing: -0.03em !important;
-                }
-                .detail-modal .ant-modal-body {
-                    padding: 20px 24px 24px !important;
-                    overflow-y: auto !important;
-                    max-height: 85vh !important;
-                }
-                .detail-modal .ant-modal-close {
-                    top: 12px !important; right: 20px !important;
-                    width: 30px !important; height: 30px !important;
-                    border-radius: 8px !important;
-                    background: #f7f7f8 !important;
-                    border: 1.5px solid #efefef !important;
-                    display: flex !important; align-items: center !important;
-                    justify-content: center !important; transition: all 0.2s !important;
-                }
-                .detail-modal .ant-modal-close:hover {
-                    background: #f0f0f0 !important; border-color: #e0e0e0 !important;
-                }
-                .detail-modal .ant-modal-close .ant-modal-close-x {
-                    width: 30px !important; height: 30px !important;
-                    line-height: 30px !important; font-size: 12px !important;
-                    color: #6b7280 !important;
-                }
-                .detail-pos-row:hover td { background: #fafafa !important; }
+    const tabItems = [
+        {
+            key: "overview",
+            label: (
+                <span style={{ fontSize: 13, fontWeight: 700, padding: "0 4px" }}>
+                    <InfoCircleOutlined style={{ marginRight: 6 }} />
+                    Thông tin tổng quan
+                </span>
+            ),
+            children: (
+                <div className="detail-two-col" style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr",
+                    gap: 16, alignItems: "start",
+                }}>
+                    {/* Account Box */}
+                    <div style={{
+                        background: BG_CARD, border: `1px solid ${BORDER_MED}`,
+                        borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}>
+                        <SectionTitle>Tài khoản & Phân quyền</SectionTitle>
+                        {accountFields.map((f, idx) => (
+                            <InfoRow
+                                key={f.label}
+                                icon={f.icon}
+                                label={f.label}
+                                value={f.value}
+                                highlight={f.highlight}
+                                noBorder={idx === accountFields.length - 1}
+                            />
+                        ))}
+                    </div>
 
-                /* Tablet */
-                @media (max-width: 768px) {
-                    .detail-modal .ant-modal-body { padding: 12px 14px 18px !important; }
-                    .detail-modal .ant-modal-header { padding: 16px 14px 0 !important; }
-                    .detail-two-col { grid-template-columns: 1fr !important; }
-                    .pos-table-wrap { display: none !important; }
-                    .pos-cards-wrap { display: block !important; }
-                }
-
-                /* Mobile */
-                @media (max-width: 480px) {
-                    .detail-modal .ant-modal-content { border-radius: 14px !important; }
-                    .detail-modal .ant-modal-body { padding: 10px 12px 16px !important; }
-                    .detail-profile-header {
-                        flex-direction: column !important;
-                        align-items: flex-start !important;
-                        gap: 10px !important;
-                        padding: 12px !important;
-                    }
-                    .detail-profile-header .ant-avatar {
-                        width: 56px !important;
-                        height: 56px !important;
-                        line-height: 56px !important;
-                        font-size: 22px !important;
-                    }
-                    .detail-profile-name { font-size: 15px !important; }
-                    .detail-profile-email { font-size: 12px !important; }
-                }
-                .pos-cards-wrap { display: none; }
-                .pos-table-wrap { display: block; }
-            `}</style>
-
-            <Modal
-                title={<span style={{ letterSpacing: "-0.03em" }}>Chi tiết người dùng</span>}
-                open={open}
-                onCancel={handleClose}
-                footer={null}
-                width={modalWidth}
-                centered
-                className="detail-modal"
-                styles={{
-                    mask: { backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.2)" },
-                }}
-            >
-                {/* ══ PROFILE HEADER ══════════════════════════════════════════ */}
-                <div
-                    className="detail-profile-header"
-                    style={{
-                        display: "flex", alignItems: "center", gap: 16,
-                        padding: "14px 18px",
-                        background: BG_SUBTLE,
-                        border: `1.5px solid ${BORDER_MED}`,
-                        borderRadius: 14,
-                        marginBottom: 16,
-                    }}
-                >
-                    <Avatar
-                        size={80}
-                        src={avatarSrc}
-                        onError={() => true}
-                        style={{
-                            border: "2px solid #e5e7eb",
-                            outline: "3px solid #fff",
-                            outlineOffset: "-1px",
-                            background: "#f3f4f6",
-                            color: "#9ca3af",
-                            flexShrink: 0,
-                        }}
-                    >
-                        {user?.name?.charAt(0)?.toUpperCase()}
-                    </Avatar>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 }}>
-                            <Text className="detail-profile-name" style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, letterSpacing: "-0.03em" }}>
-                                {user?.name || "--"}
-                            </Text>
-                            {user?.active ? (
-                                <Tag icon={<CheckCircleFilled />} color="success"
-                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
-                                    Hoạt động
-                                </Tag>
-                            ) : (
-                                <Tag icon={<CloseCircleFilled />} color="error"
-                                    style={{ borderRadius: 20, margin: 0, fontWeight: 600, fontSize: 11 }}>
-                                    Vô hiệu hóa
-                                </Tag>
-                            )}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <Text style={{ fontSize: 13, color: TEXT_LABEL }}>
-                                <MailOutlined style={{ marginRight: 5, color: TEXT_MUTED }} />
-                                {user?.email || "--"} {/* ← đổi */}
-                            </Text>
-                            {user?.role?.name && ( // ← đổi
-                                <Tag style={{
-                                    borderRadius: 20, margin: 0, fontWeight: 500, fontSize: 12,
-                                    background: "transparent", border: `1px solid ${BORDER_MED}`,
-                                    color: TEXT_LABEL,
-                                }}>
-                                    <SafetyOutlined style={{ marginRight: 4 }} />
-                                    {user.role.name}
-                                </Tag>
-                            )}
-                            {info?.employeeCode && (
-                                <Tag style={{
-                                    borderRadius: 20, margin: 0, fontSize: 12,
-                                    background: "transparent", border: `1px solid ${BORDER_MED}`,
-                                    color: TEXT_MUTED,
-                                }}>
-                                    <IdcardOutlined style={{ marginRight: 4 }} />
-                                    {info.employeeCode}
-                                </Tag>
-                            )}
-                        </div>
+                    {/* Personnel Box */}
+                    <div style={{
+                        background: BG_CARD, border: `1px solid ${BORDER_MED}`,
+                        borderRadius: 16, padding: "18px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}>
+                        <SectionTitle>Thông tin nhân sự</SectionTitle>
+                        {personnelFields.map((f, idx) => (
+                            <InfoRow
+                                key={f.label}
+                                icon={f.icon}
+                                label={f.label}
+                                value={f.value}
+                                highlight={f.highlight}
+                                noBorder={idx === personnelFields.length - 1}
+                            />
+                        ))}
                     </div>
                 </div>
-
-                {/* ══ TWO-COLUMN ══════════════════════════════════════════════ */}
-                <div
-                    className="detail-two-col"
-                    style={{
-                        display: "grid", gridTemplateColumns: "1fr 1fr",
-                        gap: 14, marginBottom: 16, alignItems: "start",
-                    }}
-                >
-                    {/* ── Tài khoản ── */}
-                    <div style={{
-                        background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
-                        borderRadius: 14, padding: "14px 16px",
-                    }}>
-                        <SectionTitle>Tài khoản</SectionTitle>
-                        <InfoRow icon={<MailOutlined />} label="Email" value={user?.email} highlight /> {/* ← đổi */}
-                        <InfoRow
-                            icon={<SafetyOutlined />}
-                            label="Vai trò"
-                            value={
-                                user?.role?.name // ← đổi
-                                    ? <Tag style={{ borderRadius: 6, margin: 0, fontWeight: 600, fontSize: 12 }}>{user.role.name}</Tag>
-                                    : "--"
-                            }
-                        />
-                        <InfoRow
-                            icon={<UserOutlined />}
-                            label="Quản lý trực tiếp"
-                            value={
-                                user?.directManager
-                                    ? `${user.directManager.name} (${user.directManager.email})`
-                                    : "--"
-                            }
-                        />
-                        <InfoRow
-                            icon={<UserOutlined />}
-                            label="Quản lý gián tiếp"
-                            value={
-                                user?.indirectManager
-                                    ? `${user.indirectManager.name} (${user.indirectManager.email})`
-                                    : "--"
-                            }
-                        />
-                        <div style={{
-                            display: "flex", alignItems: "flex-start", gap: 10,
-                            padding: "9px 0", borderBottom: `1px solid ${BORDER}`,
-                        }}>
-                            <div style={{
-                                width: 28, height: 28, borderRadius: 8,
-                                background: BG_SUBTLE, border: `1px solid ${BORDER_MED}`,
-                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
-                            }}>
-                                <UserAddOutlined style={{ fontSize: 12, color: TEXT_MUTED }} />
-                            </div>
-                            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                                <div>
-                                    <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người tạo</Text>
-                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{user?.createdBy || "--"}</Text> {/* ← đổi */}
-                                </div>
-                                <div style={{ width: 1, height: 28, background: BORDER, alignSelf: "center" }} />
-                                <div>
-                                    <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Người sửa</Text>
-                                    <Text style={{ fontSize: 13, color: TEXT_MAIN }}>{user?.updatedBy || "--"}</Text> {/* ← đổi */}
-                                </div>
-                            </div>
-                        </div>
-                        <div style={{ display: "flex", gap: 10, paddingTop: 10, flexWrap: "wrap" }}>
-                            <div style={{
-                                flex: 1, minWidth: 100, background: BG_SUBTLE, borderRadius: 8,
-                                padding: "7px 10px", border: `1px solid ${BORDER}`,
-                            }}>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày tạo</Text>
-                                <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
-                                    {user?.createdAt ? dayjs(user.createdAt).format("DD/MM/YYYY HH:mm") : "--"} {/* ← đổi */}
-                                </Text>
-                            </div>
-                            <div style={{
-                                flex: 1, minWidth: 100, background: BG_SUBTLE, borderRadius: 8,
-                                padding: "7px 10px", border: `1px solid ${BORDER}`,
-                            }}>
-                                <Text style={{ fontSize: 11, color: TEXT_MUTED, display: "block", marginBottom: 2 }}>Ngày sửa</Text>
-                                <Text style={{ fontSize: 12, color: TEXT_MAIN, fontWeight: 500 }}>
-                                    {user?.updatedAt ? dayjs(user.updatedAt).format("DD/MM/YYYY HH:mm") : "--"} {/* ← đổi */}
-                                </Text>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ── Nhân sự ── */}
-                    <div style={{
-                        background: BG_CARD, border: `1.5px solid ${BORDER_MED}`,
-                        borderRadius: 14, padding: "14px 16px",
-                    }}>
-                        <SectionTitle>Nhân sự</SectionTitle>
-                        {!info || hrFields.length === 0 ? (
-                            <div style={{ padding: "20px 0", textAlign: "center" }}>
-                                <Text style={{ color: TEXT_MUTED, fontSize: 13 }}>Chưa có thông tin nhân sự</Text>
-                            </div>
-                        ) : (
-                            hrFields.map((f, idx) => (
-                                <InfoRow
-                                    key={f.label}
-                                    icon={f.icon}
-                                    label={f.label}
-                                    value={f.value}
-                                    highlight={f.highlight}
-                                    noBorder={idx === hrFields.length - 1}
-                                />
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* ══ POSITIONS SECTION ════════════════════════════════════════ */}
-                <div>
+            ),
+        },
+        {
+            key: "positions",
+            label: (
+                <span style={{ fontSize: 13, fontWeight: 700, padding: "0 4px" }}>
+                    <ApartmentOutlined style={{ marginRight: 6 }} />
+                    Chức danh đang giữ ({positions.length})
+                </span>
+            ),
+            children: (
+                <div style={{
+                    background: BG_CARD, border: `1px solid ${BORDER_MED}`,
+                    borderRadius: 16, padding: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                }}>
                     <div style={{
                         display: "flex", alignItems: "center",
-                        justifyContent: "space-between", marginBottom: 10,
+                        justifyContent: "space-between", marginBottom: 14,
                     }}>
                         <Text style={{
-                            fontSize: 11, fontWeight: 700, color: TEXT_MUTED,
-                            textTransform: "uppercase", letterSpacing: "0.07em",
+                            fontSize: 12, fontWeight: 800, color: "#1e293b",
+                            textTransform: "uppercase", letterSpacing: "0.05em",
                         }}>
-                            <ApartmentOutlined style={{ marginRight: 6 }} />
-                            Chức danh đang giữ
+                            <ApartmentOutlined style={{ marginRight: 8, color: ACCENT }} />
+                            Danh sách chức danh tổ chức
                         </Text>
                         {positions.length > 0 && (
                             <Tag style={{
                                 borderRadius: 20, margin: 0, fontWeight: 700, fontSize: 11,
-                                background: "transparent", border: `1px solid ${ACCENT}`, color: ACCENT,
+                                background: "rgba(245, 49, 127, 0.08)", border: `1px solid ${ACCENT}`, color: ACCENT,
                             }}>
                                 {positions.length} chức danh
                             </Tag>
                         )}
                     </div>
-                    <div className="pos-table-wrap">
+                    <div className="pos-table-wrap" style={{ overflowX: "auto" }}>
                         <PositionsTable positions={positions} isLoading={isLoading} />
                     </div>
                     <div className="pos-cards-wrap">
                         <PositionCards positions={positions} isLoading={isLoading} />
                     </div>
                 </div>
-            </Modal>
-        </>
+            ),
+        },
+    ];
+
+    return (
+        <LotusDetailDrawer
+            open={open}
+            onClose={handleClose}
+        >
+            <style>{`
+                .detail-user-tabs .ant-tabs-nav {
+                    margin-bottom: 16px !important;
+                    background: #ffffff !important;
+                    padding: 0 16px !important;
+                    border-radius: 12px !important;
+                    border: 1px solid ${BORDER_MED} !important;
+                }
+                .detail-pos-row:hover td { background: #f8fafc !important; }
+                .pos-cards-wrap { display: none; }
+                .pos-table-wrap { display: block; }
+                @media (max-width: 768px) {
+                    .detail-two-col { grid-template-columns: 1fr !important; }
+                    .pos-table-wrap { display: none !important; }
+                    .pos-cards-wrap { display: block !important; }
+                }
+            `}</style>
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#f8fafc" }}>
+                {/* ── 1. HEADER BAR ── */}
+                <div style={{
+                    padding: "16px 24px",
+                    background: "#ffffff",
+                    borderBottom: `1px solid ${BORDER_MED}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{
+                            width: 40, height: 40, borderRadius: 10,
+                            background: "rgba(245, 49, 127, 0.08)",
+                            border: "1px solid rgba(245, 49, 127, 0.15)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            <UserOutlined style={{ fontSize: 20, color: ACCENT }} />
+                        </div>
+                        <div>
+                            <Text style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, display: "block", letterSpacing: "-0.02em" }}>
+                                Chi tiết người dùng
+                            </Text>
+                            <Text style={{ fontSize: 12, color: TEXT_LABEL, fontWeight: 500 }}>
+                                Hồ sơ nhân sự & phân quyền hệ thống HRM-LOTUS
+                            </Text>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── 2. SCROLLABLE BODY ── */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+                    {/* Shared Lotus Profile Hero Banner */}
+                    <LotusProfileBanner
+                        avatarSrc={avatarSrc}
+                        name={user?.name}
+                        subtitle="HỒ SƠ NGƯỜI DÙNG"
+                        email={user?.email}
+                        roleName={user?.role?.name}
+                        employeeCode={info?.employeeCode}
+                        active={user?.active}
+                        positionsCount={positions.length}
+                    />
+
+                    {/* Tabs Navigation & Content */}
+                    <Tabs
+                        className="detail-user-tabs"
+                        defaultActiveKey="overview"
+                        items={tabItems}
+                    />
+                </div>
+
+                {/* ── 3. FOOTER BAR ── */}
+                <div style={{
+                    padding: "12px 100px 12px 24px",
+                    background: "#ffffff",
+                    borderTop: `1px solid ${BORDER_MED}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    flexWrap: "wrap",
+                }}>
+                    <Text style={{ fontSize: 12, color: TEXT_LABEL, fontWeight: 500 }}>
+                        Tạo bởi: <strong style={{ color: TEXT_MAIN, fontWeight: 700 }}>{user?.createdBy || "--"}</strong>
+                        {user?.createdAt && ` (${dayjs(user.createdAt).format("DD/MM/YYYY HH:mm")})`}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: TEXT_LABEL, fontWeight: 500 }}>
+                        Cập nhật bởi: <strong style={{ color: TEXT_MAIN, fontWeight: 700 }}>{user?.updatedBy || "--"}</strong>
+                        {user?.updatedAt && ` (${dayjs(user.updatedAt).format("DD/MM/YYYY HH:mm")})`}
+                    </Text>
+                </div>
+            </div>
+        </LotusDetailDrawer>
     );
 };
 

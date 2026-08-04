@@ -33,8 +33,10 @@ import { PAGINATION_CONFIG } from "@/config/pagination";
 import { notify } from "@/components/common/notification/notify";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import dayjs from "dayjs";
 import ActionButton from "@/components/common/ui/ActionButton";
+import { ACCOUNTING_WORKFLOW_STATUS_META } from "@/constants/statusMeta/accountingWorkflowMeta";
 
 interface IWorkflowTemplate {
     id: number;
@@ -52,11 +54,7 @@ interface IWorkflowTemplate {
     steps: any[];
 }
 
-const STATUS_META = {
-    ACTIVE: { color: "success", label: "Đang dùng" },
-    INACTIVE: { color: "default", label: "Ngưng dùng" },
-    DRAFT: { color: "warning", label: "Nháp" },
-};
+const STATUS_META = ACCOUNTING_WORKFLOW_STATUS_META;
 
 const STRATEGY_LABEL: Record<string, string> = {
     REQUESTER_MANAGER: "Quản lý trực tiếp của người lập",
@@ -167,6 +165,8 @@ const WorkflowTemplatesPage = () => {
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [companyFilter, setCompanyFilter] = useState<number | null>(null);
     const [filterResetSignal, setFilterResetSignal] = useState(0);
+    const detailModalWidth = useResponsiveModalWidth(760);
+    const validationModalWidth = useResponsiveModalWidth(560);
 
     // Fetch lists
     const { data: templates = [], isFetching, refetch } = useFetchWorkflowTemplatesQuery();
@@ -613,11 +613,11 @@ const WorkflowTemplatesPage = () => {
                                 {
                                     key: "status",
                                     label: "Trạng thái",
-                                    options: [
-                                        { label: "Bản nháp", value: "DRAFT", color: "orange" },
-                                        { label: "Hoạt động", value: "ACTIVE", color: "green" },
-                                        { label: "Hết hiệu lực", value: "INACTIVE", color: "red" }
-                                    ]
+                                    options: (["DRAFT", "ACTIVE", "INACTIVE"] as const).map((value) => ({
+                                        label: STATUS_META[value].label,
+                                        value,
+                                        color: STATUS_META[value].color,
+                                    })),
                                 },
                                 {
                                     key: "companyId",
@@ -743,7 +743,7 @@ const WorkflowTemplatesPage = () => {
                         <Button onClick={() => setViewingRecord(null)}>Đóng</Button>
                     </Space>
                 }
-                width={760}
+                width={detailModalWidth}
             >
                 {viewingRecord && (
                     <div style={{ display: "grid", gap: 18 }}>
@@ -791,7 +791,7 @@ const WorkflowTemplatesPage = () => {
                 title={validationResult?.errors.length ? "Kết quả kiểm tra luồng duyệt" : "Luồng duyệt hợp lệ"}
                 footer={<Button onClick={() => setValidationResult(null)} style={{ borderColor: ACCENT_BORDER, color: ACCENT_HOVER }}>Đã hiểu</Button>}
                 centered
-                width={560}
+                width={validationModalWidth}
             >
                 {validationResult?.errors.length ? (
                     <div>

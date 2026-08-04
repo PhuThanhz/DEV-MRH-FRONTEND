@@ -1,6 +1,7 @@
 import { Modal, Tag, Typography, Space, Avatar } from "antd";
 import { StopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const ModalRejectReasonJd = ({ open, record, onClose }: Props) => {
+    const modalWidth = useResponsiveModalWidth(460);
     if (!record) return null;
 
     const initials = record.rejectorName
@@ -38,7 +40,7 @@ const ModalRejectReasonJd = ({ open, record, onClose }: Props) => {
             open={open}
             onCancel={onClose}
             footer={null}
-            width={460}
+            width={modalWidth}
             title={
                 <Space>
                     <StopOutlined style={{ color: "#ff4d4f" }} />

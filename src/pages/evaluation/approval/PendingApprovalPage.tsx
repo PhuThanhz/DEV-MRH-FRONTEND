@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Table, Tag, Button, Tooltip, Empty, Popconfirm, Tabs } from "antd";
+import { Table, Button, Tooltip, Empty, Popconfirm, Tabs } from "antd";
 import {
     FileTextOutlined,
     EyeOutlined,
     ClockCircleOutlined,
-    CheckCircleOutlined,
     SyncOutlined,
-    StopOutlined,
     TrophyOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -21,31 +19,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import ApprovalDetailPage from "./ApprovalDetailPage";
 import ConfirmModal from "@/components/common/modal/ConfirmModal";
 import { ApproverDashboardPanel } from "@/pages/evaluation/components/shared/EvaluationDashboardPanel";
+import EvaluationStatusTag from "@/pages/evaluation/components/EvaluationStatusTag";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
+import { TABLE_STICKY } from "@/components/common/data-table/TableScrollbarController";
 
-type RecordStatus =
-    | "NOT_STARTED"
-    | "EMPLOYEE_DRAFTING"
-    | "PENDING_MANAGER_REVIEW"
-    | "MANAGER_REVIEWING"
-    | "PENDING_APPROVAL"
-    | "COMPLETED";
-
-const STATUS_CONFIG: Record<RecordStatus, { text: string; color: string; icon: React.ReactNode; tagColor: string }> = {
-    NOT_STARTED: { text: "Chưa bắt đầu", color: "#8c8c8c", icon: <StopOutlined />, tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "Đang tự đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ Quản lý đánh giá", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "Quản lý đang đánh giá", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt kết quả", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
-    COMPLETED: { text: "Hoàn tất đánh giá", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
-};
-
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
-    B: { color: "#1677ff", bg: "#e6f4ff", label: "Tốt" },
-    C: { color: "#d46b08", bg: "#fff7e6", label: "Khá" },
-    D: { color: "#cf1322", bg: "#fff1f0", label: "Trung bình" },
-    E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
 interface IProps {
     isTab?: boolean;
@@ -155,7 +133,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
             key: "status",
             width: 170,
             align: "center" as const,
-            render: (val: RecordStatus, record: any) => {
+            render: (val: string, record: any) => {
                 const empDeadline = record.effectiveEmployeeDeadline ?? record.employeeDeadlineOverride ?? record.period?.employeeDeadline;
                 const isEmpPending = record.status === "EMPLOYEE_DRAFTING" || record.status === "REVISION_NEEDED";
                 const isEmpOverdue = isEmpPending && empDeadline && dayjs().isAfter(dayjs(empDeadline));
@@ -168,52 +146,10 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 const isAppPending = record.status === "PENDING_APPROVAL";
                 const isAppOverdue = isAppPending && appDeadline && dayjs().isAfter(dayjs(appDeadline));
 
-                if (isEmpOverdue) {
-                    return (
-                        <Tag
-                            color="error"
-                            icon={<ClockCircleOutlined />}
-                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                        >
-                            Quá hạn tự đánh giá
-                        </Tag>
-                    );
-                }
-
-                if (isMgrOverdue) {
-                    return (
-                        <Tag
-                            color="error"
-                            icon={<ClockCircleOutlined />}
-                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                        >
-                            Quá hạn chấm điểm
-                        </Tag>
-                    );
-                }
-
-                if (isAppOverdue) {
-                    return (
-                        <Tag
-                            color="error"
-                            icon={<ClockCircleOutlined />}
-                            style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                        >
-                            Quá hạn phê duyệt
-                        </Tag>
-                    );
-                }
-
-                const cfg = STATUS_CONFIG[val] ?? STATUS_CONFIG.NOT_STARTED;
-                return (
-                    <Tag
-                        color={cfg.tagColor}
-                        icon={cfg.icon}
-                        style={{ borderRadius: 20, fontWeight: 600, fontSize: 11, padding: "2px 10px" }}
-                    >
-                        {cfg.text}
-                    </Tag>
-                );
+                if (isEmpOverdue) return <EvaluationStatusTag status="OVERDUE_EMPLOYEE" />;
+                if (isMgrOverdue) return <EvaluationStatusTag status="OVERDUE_MANAGER" />;
+                if (isAppOverdue) return <EvaluationStatusTag status="OVERDUE_APPROVAL" />;
+                return <EvaluationStatusTag status={val} />;
             },
         },
         {
@@ -492,7 +428,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                 background: "#fff",
                 borderRadius: 8,
                 border: "1px solid #e2e8f0",
-                overflow: "hidden",
+                overflow: "clip",
             }}>
                 <Tabs
                     activeKey={activeTab}
@@ -580,6 +516,7 @@ const PendingApprovalPage = ({ isTab }: IProps) => {
                     </div>
                 )}
                 <Table
+                    sticky={TABLE_STICKY}
                     rowSelection={activeTab === "pending" ? {
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),

@@ -1,14 +1,15 @@
 import { Table } from "antd";
-import type { IJobDescription } from "@/types/backend";
+import type { IJobDescription, IJobDescriptionRequirementItem, RequirementCategory } from "@/types/backend";
 
 const ACCENT = "#e8637a";
 const ACCENT_LIGHT = "#fff0f3";
 const ACCENT_BORDER = "#ffd6dd";
 
-const toLines = (val?: string): string[] => {
-    if (!val) return [];
-    return val.split(/\n|•/).map((x) => x.trim().replace(/^-\s*/, "")).filter(Boolean);
-};
+const byCategory = (items: IJobDescriptionRequirementItem[] | undefined, category: RequirementCategory) =>
+    (items ?? [])
+        .filter((item) => item.category === category)
+        .slice()
+        .sort((a, b) => a.orderNo - b.orderNo);
 
 interface Props {
     requirements?: IJobDescription["requirements"];
@@ -16,12 +17,12 @@ interface Props {
 
 const Tab4Requirements = ({ requirements }: Props) => {
     const rows = [
-        { key: 1, title: "Kiến thức", lines: toLines(requirements?.knowledge) },
-        { key: 2, title: "Kinh nghiệm", lines: toLines(requirements?.experience) },
-        { key: 3, title: "Kỹ năng", lines: toLines(requirements?.skills) },
-        { key: 4, title: "Phẩm chất", lines: toLines(requirements?.qualities) },
-        { key: 5, title: "Yêu cầu khác", lines: toLines(requirements?.otherRequirements) },
-    ].filter((r) => r.lines.length > 0);
+        { key: 1, title: "Kiến thức", items: byCategory(requirements?.items, "KNOWLEDGE") },
+        { key: 2, title: "Kinh nghiệm", items: byCategory(requirements?.items, "EXPERIENCE") },
+        { key: 3, title: "Kỹ năng", items: byCategory(requirements?.items, "SKILLS") },
+        { key: 4, title: "Phẩm chất", items: byCategory(requirements?.items, "QUALITIES") },
+        { key: 5, title: "Yêu cầu khác", items: byCategory(requirements?.items, "OTHER") },
+    ].filter((r) => r.items.length > 0);
 
     const columns = [
         {
@@ -42,13 +43,15 @@ const Tab4Requirements = ({ requirements }: Props) => {
             ),
         },
         {
-            title: "Chi tiết", dataIndex: "lines",
-            render: (lines: string[]) => (
+            title: "Chi tiết", dataIndex: "items",
+            render: (items: IJobDescriptionRequirementItem[], row: { key: number }) => (
                 <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {lines.map((line, i) => (
-                        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13, color: "#374151", lineHeight: 1.6 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: ACCENT, flexShrink: 0, marginTop: 7 }} />
-                            <span>{line}</span>
+                    {items.map((item, i) => (
+                        <div key={item.id ?? i} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13, color: "#374151", lineHeight: 1.6 }}>
+                            <span style={{ flexShrink: 0, fontWeight: 600, color: ACCENT, minWidth: 28 }}>
+                                {row.key}.{i + 1}
+                            </span>
+                            <span>{item.content}</span>
                         </div>
                     ))}
                 </div>

@@ -55,8 +55,30 @@ import type {
     IResCommentDTO,
     IResTrainingPlanDTO,
     IEvaluationHistory,
-    IBatchApproveResponse
+    IBatchApproveResponse,
+    IResTaskDTO,
+    IResTaskDetailDTO,
+    IReqCreateTaskDTO,
+    IReqUpdateTaskDTO,
+    IResTaskChecklistDTO,
+    IReqCreateTaskChecklistDTO,
+    IReqUpdateTaskChecklistDTO,
+    IResTaskCommentDTO,
+    IReqCreateTaskCommentDTO,
+    IResTaskAttachmentDTO,
+    IReqRegisterTaskAttachmentDTO,
+    IReqSubmitResultDTO,
+    IReqApproveTaskDTO,
+    IResTaskExtensionRequestDTO,
+    IReqRequestTaskExtensionDTO,
+    IReqDecideTaskExtensionDTO,
+    IResApprovalDelegationDTO,
+    IReqCreateApprovalDelegationDTO,
+    IResTaskSummaryReportDTO,
+    IResJobDescriptionTaskDTO,
+    IUnifiedCalendarEventDTO,
 } from '@/types/backend';
+
 
 import axios from 'config/axios-customize';
 
@@ -2676,3 +2698,184 @@ export const callClaimAccountingDossier = (id: number) =>
 
 export const callScanSlaOverdue = () =>
     axios.post<IBackendRes<any>>(`/api/v1/accounting-approval-sla/scan-overdue`);
+
+/* ===================== TASK MANAGEMENT APIs ===================== */
+
+export const callFetchTasks = (query: string, tab?: string) => {
+    const tabParam = tab ? `&tab=${tab}` : '';
+    return axios.get<IBackendRes<IModelPaginate<IResTaskDTO>>>(`/api/v1/tasks?${query}${tabParam}`);
+};
+
+export const callFetchTaskCalendar = (
+    from: string,
+    to: string,
+    tab?: string,
+    filter?: string
+) => {
+    const params = new URLSearchParams({ from, to });
+    if (tab) params.set("tab", tab);
+    if (filter) params.set("filter", filter);
+    return axios.get<IBackendRes<IResTaskDTO[]>>(
+        `/api/v1/tasks/calendar?${params.toString()}`
+    );
+};
+
+export const callCreateTask = (data: IReqCreateTaskDTO) => {
+    return axios.post<IBackendRes<IResTaskDTO>>('/api/v1/tasks', data);
+};
+
+export const callFetchTaskById = (id: number) => {
+    return axios.get<IBackendRes<IResTaskDetailDTO>>(`/api/v1/tasks/${id}`);
+};
+
+export const callUpdateTask = (id: number, data: IReqUpdateTaskDTO) => {
+    return axios.put<IBackendRes<IResTaskDTO>>(`/api/v1/tasks/${id}`, data);
+};
+
+export const callUpdateTaskStatus = (id: number, status: string) => {
+    return axios.patch<IBackendRes<IResTaskDTO>>(`/api/v1/tasks/${id}/status`, { status });
+};
+
+export const callUpdateTaskDueDate = (id: number, dueDate: string | null) => {
+    return axios.patch<IBackendRes<IResTaskDTO>>(`/api/v1/tasks/${id}/due-date`, { dueDate });
+};
+
+export const callCancelTask = (id: number) => {
+    return axios.post<IBackendRes<void>>(`/api/v1/tasks/${id}/cancel`);
+};
+
+export const callDeleteTask = (id: number) => {
+    return axios.delete<IBackendRes<void>>(`/api/v1/tasks/${id}`);
+};
+
+export const callSubmitTaskResult = (id: number, data: IReqSubmitResultDTO) => {
+    return axios.post<IBackendRes<IResTaskDTO>>(`/api/v1/tasks/${id}/submit-result`, data);
+};
+
+export const callApproveTask = (id: number, data: IReqApproveTaskDTO) => {
+    return axios.post<IBackendRes<IResTaskDTO>>(`/api/v1/tasks/${id}/approve`, data);
+};
+
+export const callRequestTaskExtension = (id: number, data: IReqRequestTaskExtensionDTO) => {
+    return axios.post<IBackendRes<IResTaskExtensionRequestDTO>>(`/api/v1/tasks/${id}/extension-requests`, data);
+};
+
+export const callDecideTaskExtension = (id: number, extensionId: number, data: IReqDecideTaskExtensionDTO) => {
+    return axios.post<IBackendRes<IResTaskExtensionRequestDTO>>(`/api/v1/tasks/${id}/extension-requests/${extensionId}/decide`, data);
+};
+
+/* ===================== TASK CHECKLIST APIs ===================== */
+
+export const callFetchTaskChecklists = (taskId: number) => {
+    return axios.get<IBackendRes<IResTaskChecklistDTO[]>>(`/api/v1/tasks/${taskId}/checklists`);
+};
+
+export const callCreateTaskChecklist = (taskId: number, data: IReqCreateTaskChecklistDTO) => {
+    return axios.post<IBackendRes<IResTaskChecklistDTO>>(`/api/v1/tasks/${taskId}/checklists`, data);
+};
+
+export const callUpdateTaskChecklist = (taskId: number, checklistId: number, data: IReqUpdateTaskChecklistDTO) => {
+    return axios.put<IBackendRes<IResTaskChecklistDTO>>(`/api/v1/tasks/${taskId}/checklists/${checklistId}`, data);
+};
+
+export const callToggleTaskChecklist = (taskId: number, checklistId: number, isCompleted: boolean) => {
+    return axios.patch<IBackendRes<IResTaskChecklistDTO>>(`/api/v1/tasks/${taskId}/checklists/${checklistId}/toggle`, { isCompleted });
+};
+
+export const callDeleteTaskChecklist = (taskId: number, checklistId: number) => {
+    return axios.delete<IBackendRes<void>>(`/api/v1/tasks/${taskId}/checklists/${checklistId}`);
+};
+
+/* ===================== TASK COMMENT APIs ===================== */
+
+export const callFetchTaskComments = (taskId: number) => {
+    return axios.get<IBackendRes<IResTaskCommentDTO[]>>(`/api/v1/tasks/${taskId}/comments`);
+};
+
+export const callCreateTaskComment = (taskId: number, data: IReqCreateTaskCommentDTO) => {
+    return axios.post<IBackendRes<IResTaskCommentDTO>>(`/api/v1/tasks/${taskId}/comments`, data);
+};
+
+/* ===================== TASK ATTACHMENT APIs ===================== */
+
+export const callFetchTaskAttachments = (taskId: number) => {
+    return axios.get<IBackendRes<IResTaskAttachmentDTO[]>>(`/api/v1/tasks/${taskId}/attachments`);
+};
+
+export const callRegisterTaskAttachment = (taskId: number, data: IReqRegisterTaskAttachmentDTO) => {
+    return axios.post<IBackendRes<IResTaskAttachmentDTO>>(`/api/v1/tasks/${taskId}/attachments`, data);
+};
+
+/* ===================== JD TASK SUGGESTIONS ===================== */
+
+export const callFetchJdTasksByUser = (userId: string) => {
+    return axios.get<IBackendRes<IResJobDescriptionTaskDTO[]>>(`/api/v1/job-descriptions/by-user/${userId}`);
+};
+
+/* ===================== APPROVAL DELEGATION APIs ===================== */
+
+export const callCreateApprovalDelegation = (data: IReqCreateApprovalDelegationDTO) => {
+    return axios.post<IBackendRes<IResApprovalDelegationDTO>>('/api/v1/approval-delegations', data);
+};
+
+export const callFetchMyApprovalDelegations = () => {
+    return axios.get<IBackendRes<IResApprovalDelegationDTO[]>>('/api/v1/approval-delegations/mine');
+};
+
+export const callFetchDelegationsToMe = () => {
+    return axios.get<IBackendRes<IResApprovalDelegationDTO[]>>('/api/v1/approval-delegations/delegated-to-me');
+};
+
+export const callRevokeApprovalDelegation = (id: number) => {
+    return axios.post<IBackendRes<void>>(`/api/v1/approval-delegations/${id}/revoke`);
+};
+
+/* ===================== SUMMARY REPORT & MAPPING APIs ===================== */
+
+export interface ITaskSummaryReportFilters {
+    from?: string;
+    to?: string;
+    departmentId?: number;
+    companyId?: number;
+    assigneeId?: string;
+    priority?: string;
+    title?: string;
+    isOnTime?: boolean;
+    createdBy?: string;
+    isJdTask?: boolean;
+}
+
+const buildTaskSummaryReportParams = (filters: ITaskSummaryReportFilters) => {
+    const params = new URLSearchParams();
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+    if (filters.departmentId) params.append('departmentId', String(filters.departmentId));
+    if (filters.companyId) params.append('companyId', String(filters.companyId));
+    if (filters.assigneeId) params.append('assigneeId', String(filters.assigneeId));
+    if (filters.priority) params.append('priority', filters.priority);
+    if (filters.title) params.append('title', filters.title);
+    if (filters.isOnTime !== undefined) params.append('isOnTime', String(filters.isOnTime));
+    if (filters.createdBy) params.append('createdBy', filters.createdBy);
+    if (filters.isJdTask !== undefined) params.append('isJdTask', String(filters.isJdTask));
+    return params;
+};
+
+export const callFetchTaskSummaryReport = (filters: ITaskSummaryReportFilters) => {
+    const params = buildTaskSummaryReportParams(filters);
+    return axios.get<IBackendRes<IResTaskSummaryReportDTO>>(`/api/v1/tasks/summary-report?${params.toString()}`);
+};
+
+export const callExportTaskSummaryReport = (filters: ITaskSummaryReportFilters) => {
+    const params = buildTaskSummaryReportParams(filters);
+    return axios.get(`/api/v1/tasks/summary-report/export?${params.toString()}`, {
+        responseType: 'blob',
+    });
+};
+
+export const callFetchMyCalendarActions = (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    return axios.get<IBackendRes<IUnifiedCalendarEventDTO[]>>(`/api/v1/calendar/my-actions?${params.toString()}`);
+};
+

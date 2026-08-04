@@ -9,7 +9,9 @@ import type {
     IModelPaginate,
     IPeriodProgress,
     IManagerDashboard,
-    IApproverDashboard
+    IApproverDashboard,
+    IEvaluationTemplate,
+    IEvaluationPeriod,
 } from "@/types/backend";
 import {
     callFetchEvaluationRecordById,
@@ -60,8 +62,30 @@ import {
     callUpdateCriteriaLevel,
     callPublishEvaluationTemplate,
     callFetchEvaluationTemplates,
+    callFetchEvaluationPeriodById,
+    callFetchEvaluationGradeDistribution,
+    callCreateEvaluationTemplate,
+    callUpdateEvaluationTemplate,
+    callCreateEvaluationPeriod,
+    callUpdateEvaluationPeriod,
 } from "@/config/api";
 import { notify } from "@/components/common/notification/notify";
+
+type EvaluationTemplateMutationPayload = Pick<
+    IEvaluationTemplate,
+    "name" | "type" | "description" | "status"
+> & {
+    company: { id: number };
+    targetJobTitles?: { id: number }[];
+};
+
+type EvaluationPeriodMutationPayload = Pick<IEvaluationPeriod, "name" | "description"> & {
+    employeeStartDate?: string | null;
+    employeeDeadline?: string | null;
+    managerDeadline?: string | null;
+    approvalDeadline?: string | null;
+    company: { id: number };
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // QUERIES
@@ -227,6 +251,29 @@ export const useEvaluationPeriodsQuery = (query: string = "") => {
             const res = await callFetchEvaluationPeriods(query);
             return res?.data;
         },
+    });
+};
+
+export const useEvaluationPeriodDetailQuery = (periodId: number) => {
+    return useQuery({
+        queryKey: ["evaluation-period", periodId],
+        queryFn: async () => {
+            const res = await callFetchEvaluationPeriodById(periodId);
+            if (!res?.data) throw new Error("Không tải được thông tin kỳ đánh giá");
+            return res.data;
+        },
+        enabled: !!periodId,
+    });
+};
+
+export const useGradeDistributionQuery = (periodId: number) => {
+    return useQuery({
+        queryKey: ["evaluation-grade-distribution", periodId],
+        queryFn: async () => {
+            const res = await callFetchEvaluationGradeDistribution(periodId);
+            return res?.data || [];
+        },
+        enabled: !!periodId,
     });
 };
 
@@ -462,6 +509,43 @@ export const useEvaluationTemplatesQuery = (query: string = "page=1&size=100", e
     });
 };
 
+export const useCreateEvaluationTemplateMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: EvaluationTemplateMutationPayload) => {
+            const res = await callCreateEvaluationTemplate(data);
+            if (!res?.data) throw new Error(res?.message || "Không thể tạo mẫu đánh giá");
+            return res;
+        },
+        onSuccess: () => {
+            notify.success("Tạo mẫu đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-templates"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.response?.data?.message || error?.message || "Không thể tạo mẫu đánh giá");
+        },
+    });
+};
+
+export const useUpdateEvaluationTemplateMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (variables: { id: number; data: EvaluationTemplateMutationPayload }) => {
+            const res = await callUpdateEvaluationTemplate(variables.id, variables.data);
+            if (!res?.data) throw new Error(res?.message || "Không thể cập nhật mẫu đánh giá");
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.success("Cập nhật mẫu đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-templates"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-template", variables.id] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.response?.data?.message || error?.message || "Không thể cập nhật mẫu đánh giá");
+        },
+    });
+};
+
 export const useEmployeesInPeriodQuery = (periodId: number) => {
     return useQuery({
         queryKey: ["period-employees", periodId],
@@ -650,6 +734,43 @@ export const useActivateEvaluationPeriodMutation = () => {
         mutationFn: (id: number) => callActivateEvaluationPeriod(id),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
+        },
+    });
+};
+
+export const useCreateEvaluationPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: EvaluationPeriodMutationPayload) => {
+            const res = await callCreateEvaluationPeriod(data);
+            if (!res?.data) throw new Error(res?.message || "Không thể tạo kỳ đánh giá");
+            return res;
+        },
+        onSuccess: () => {
+            notify.success("Tạo kỳ đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.response?.data?.message || error?.message || "Không thể tạo kỳ đánh giá");
+        },
+    });
+};
+
+export const useUpdateEvaluationPeriodMutation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (variables: { id: number; data: EvaluationPeriodMutationPayload }) => {
+            const res = await callUpdateEvaluationPeriod(variables.id, variables.data);
+            if (!res?.data) throw new Error(res?.message || "Không thể cập nhật kỳ đánh giá");
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.success("Cập nhật kỳ đánh giá thành công");
+            qc.invalidateQueries({ queryKey: ["evaluation-periods"] });
+            qc.invalidateQueries({ queryKey: ["evaluation-period", variables.id] });
+        },
+        onError: (error: any) => {
+            notify.error(error?.response?.data?.message || error?.message || "Không thể cập nhật kỳ đánh giá");
         },
     });
 };

@@ -30,6 +30,7 @@ import {
     EyeOutlined,
     FileDoneOutlined,
     FileExcelOutlined,
+    FileTextOutlined,
     PlusOutlined,
     SearchOutlined,
     FolderOutlined,
@@ -50,6 +51,7 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import SearchFilter from "@/components/common/filter/SearchFilter";
 import DataTable from "@/components/common/data-table";
 import ActionButton from "@/components/common/ui/ActionButton";
+import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 
 import type { IAccountingDossier, IAccountingDossierDocument, IDocument, IDocumentFolder } from "@/types/backend";
 import useAccess from "@/hooks/useAccess";
@@ -58,6 +60,7 @@ import { getModalWidth } from "@/utils/responsive";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { PAGINATION_CONFIG } from "@/config/pagination";
 import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
+import { useUsersQuery } from "@/hooks/useUsers";
 import {
     useAccountingDocumentsQuery,
     useDeleteAccountingDocumentMutation,
@@ -72,6 +75,7 @@ import { useAccountingDossierByIdQuery } from "@/hooks/useAccountingDossiers";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import ViewDetailDocument from "../document/view.document";
 import DossierDocumentList from "../accounting-dossiers/components/DossierDocumentList";
+import { checkStatusMeta as CHECK_STATUS_LABEL, statusMeta as DOSSIER_STATUS_LABEL } from "../accounting-dossiers/dossierMeta";
 import {
     callFetchCompany,
     callExportAccountingDocuments,
@@ -127,18 +131,6 @@ const VALIDITY_OPTIONS = [
 
 const filterItemStyle = { minWidth: 0 };
 const getValidityLabel = (active?: boolean) => active ? "Còn hiệu lực" : "Đã hủy";
-const CHECK_STATUS_LABEL: Record<string, { color: string; label: string }> = {
-    PENDING: { color: "default", label: "Chờ kiểm tra" },
-    VALID: { color: "success", label: "Hợp lệ" },
-    NEED_SUPPLEMENT: { color: "warning", label: "Cần bổ sung" },
-    INVALID: { color: "error", label: "Không hợp lệ" },
-    NOT_REQUIRED: { color: "blue", label: "Không yêu cầu" },
-};
-
-const DOSSIER_STATUS_LABEL: Record<string, { color: string; label: string }> = {
-    APPROVED: { color: "success", label: "Đã duyệt" },
-    ARCHIVED: { color: "purple", label: "Đã lưu trữ" },
-};
 
 const buildDossierDocumentFileUrl = (fileName: string) =>
     `/api/v1/files/public?folder=documents&fileName=${encodeURIComponent(fileName)}`;
@@ -412,6 +404,9 @@ const AccountingDocumentPage = () => {
 
     const totalRows = totalDossierDocuments;
 
+    const { data: userData } = useUsersQuery("size=1000");
+    const users = userData?.result || [];
+
     const columns: ProColumns<AccountingListRow>[] = useMemo(() => [
         {
             title: "Bộ chứng từ",
@@ -469,7 +464,7 @@ const AccountingDocumentPage = () => {
             width: 140,
             align: "right",
             render: (_, entity) => (
-                <span style={{ fontWeight: 700, color: "#059669", fontSize: 13, whiteSpace: "nowrap" }}>
+                <span style={{ fontWeight: 600, color: "#1e293b", fontSize: 13, whiteSpace: "nowrap" }}>
                     {entity.amount != null ? `${new Intl.NumberFormat('vi-VN').format(entity.amount)} ${entity.currency || 'VND'}` : "---"}
                 </span>
             )
@@ -539,15 +534,21 @@ const AccountingDocumentPage = () => {
         {
             title: "Người tải lên",
             dataIndex: "createdBy",
-            width: 150,
-            render: (_, entity) => (
-                <Space>
-                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#e6f4ff", color: "#1677ff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 12 }}>
-                        {(entity.createdBy || "A")[0].toUpperCase()}
-                    </div>
-                    <span style={{ fontWeight: 500 }}>{entity.createdBy || "System"}</span>
-                </Space>
-            ),
+            width: 170,
+            render: (_, entity) => {
+                const u = users.find((item) => item.email === entity.createdBy || String(item.id) === String(entity.createdBy));
+                const displayName = u?.name || entity.createdBy || "System";
+                const initial = displayName.charAt(0).toUpperCase();
+
+                return (
+                    <Space size={8} align="center">
+                        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#e6f4ff", color: "#1677ff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 12 }}>
+                            {initial}
+                        </div>
+                        <span style={{ fontWeight: 500, fontSize: 13, color: "#334155" }}>{displayName}</span>
+                    </Space>
+                );
+            },
         },
         {
             title: "Ngày tạo",
@@ -574,7 +575,7 @@ const AccountingDocumentPage = () => {
         {
             title: "Hành động",
             align: "center",
-            width: 150,
+            width: 120,
             fixed: "right",
             hideInSearch: true,
             render: (dom, entity) => (
@@ -597,13 +598,29 @@ const AccountingDocumentPage = () => {
                             tooltip="Xem chi tiết chứng từ"
                             icon={<EyeOutlined />}
                             aria-label="Xem chi tiết chứng từ"
-                            onClick={() => setDetailDossierDocument(entity)}
+                            onClick={() => {
+                                setDataInit({
+                                    id: (entity as any).documentId || entity.id,
+                                    documentName: entity.documentName,
+                                    documentCode: entity.invoiceNumber || (entity.document as any)?.documentCode,
+                                    fileUrl: entity.fileUrl || (entity as any).fileUrls || (entity.document as any)?.fileUrl,
+                                    invoiceDate: entity.invoiceDate || entity.createdAt,
+                                    amount: entity.amount,
+                                    checkStatus: entity.checkStatus,
+                                    accountingCategory: entity.accountingCategory,
+                                    company: entity.company,
+                                    department: entity.department,
+                                    createdBy: entity.createdBy,
+                                    createdAt: entity.createdAt,
+                                } as any);
+                                setOpenViewModal(true);
+                            }}
                         />
                     )}
                 </Space>
             ),
         },
-    ], [canView]);
+    ], [canView, users]);
 
     const buildTreeData = (items?: IDocumentFolder[]): DataNode[] => {
         if (!items) return [];
@@ -1339,51 +1356,74 @@ const AccountingDocumentPage = () => {
                 </Form>
             </Modal>
 
-            <Modal
-                title={`Chi tiết bộ chứng từ: ${viewDossier?.dossierCode || ""}`}
+            {/* View Full Accounting Dossier Drawer */}
+            <LotusDetailDrawer
                 open={openDossierModal}
-                onCancel={() => {
+                onClose={() => {
                     setOpenDossierModal(false);
                     setViewDossierId(undefined);
                 }}
-                footer={null}
-                width={getModalWidth(1000)}
-                destroyOnHidden
+                destroyOnClose={true}
             >
-                <Spin spinning={isFetchingViewDossier}>
-                    {viewDossier ? (
-                        <Space direction="vertical" size={16} style={{ width: "100%", marginTop: 12 }}>
-                            <div style={{ background: "#f9fafb", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                                    <div>
-                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Nội dung</div>
-                                        <div style={{ fontWeight: 600 }}>{viewDossier.content}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Ngày lập</div>
-                                        <div style={{ fontWeight: 600 }}>{viewDossier.createdAt ? dayjs(viewDossier.createdAt).format("DD/MM/YYYY HH:mm") : "--"}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Người lập</div>
-                                        <div style={{ fontWeight: 600 }}>{viewDossier.createdBy || "--"}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ color: "#6b7280", fontSize: 12 }}>Trạng thái</div>
-                                        <div>
-                                            <Tag color={DOSSIER_STATUS_LABEL[viewDossier.status]?.color || "default"}>
-                                                {DOSSIER_STATUS_LABEL[viewDossier.status]?.label || viewDossier.status}
-                                            </Tag>
+                <div className="flex flex-col h-full bg-slate-50/50 rounded-t-3xl overflow-hidden">
+                    {/* Header */}
+                    <div className="px-7 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-semibold shadow-2xs">
+                                <FileDoneOutlined />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-base font-bold text-slate-800 m-0">Bộ chứng từ: {viewDossier?.dossierCode || `BCT-${viewDossierId}`}</h2>
+                                    {viewDossier?.status && (
+                                        <Tag color={DOSSIER_STATUS_LABEL[viewDossier.status]?.color || "default"}>
+                                            {DOSSIER_STATUS_LABEL[viewDossier.status]?.label || viewDossier.status}
+                                        </Tag>
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-500 m-0 mt-0.5">{viewDossier?.content || "Hồ sơ chứng từ kế toán đầy đủ"}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Content Body */}
+                    <div className="flex-1 overflow-y-auto px-7 py-6">
+                        <Spin spinning={isFetchingViewDossier}>
+                            {viewDossier ? (
+                                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                                    <div style={{ background: "#fff", padding: 16, borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                                            <div>
+                                                <div style={{ color: "#64748b", fontSize: 12 }}>Nội dung bộ chứng từ</div>
+                                                <div style={{ fontWeight: 600, fontSize: 13, marginTop: 2 }}>{viewDossier.content}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ color: "#64748b", fontSize: 12 }}>Ngày lập</div>
+                                                <div style={{ fontWeight: 600, fontSize: 13, marginTop: 2 }}>{viewDossier.createdAt ? dayjs(viewDossier.createdAt).format("DD/MM/YYYY HH:mm") : "--"}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ color: "#64748b", fontSize: 12 }}>Người lập</div>
+                                                <div style={{ fontWeight: 600, fontSize: 13, marginTop: 2 }}>{viewDossier.createdBy || "--"}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            <DossierDocumentList dossier={viewDossier} editable={false} reviewable={false} />
-                        </Space>
-                    ) : (
-                        <Empty description="Không tìm thấy dữ liệu bộ chứng từ" />
-                    )}
-                </Spin>
-            </Modal>
+                                    <DossierDocumentList dossier={viewDossier} editable={false} reviewable={false} />
+                                </Space>
+                            ) : (
+                                <Empty description="Không tìm thấy dữ liệu bộ chứng từ" />
+                            )}
+                        </Spin>
+                    </div>
+                </div>
+            </LotusDetailDrawer>
+
+            {/* View Single Document Detail Modal */}
+            <ViewDetailDocument
+                open={openViewModal}
+                onClose={() => setOpenViewModal(false)}
+                dataInit={dataInit}
+                setDataInit={setDataInit}
+            />
         </PageContainer>
     );
 };

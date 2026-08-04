@@ -37,25 +37,11 @@ import ModalJdFlow from "../modal.jd-flow";
 import ModalIssueJd from "./modal-issue-jd";
 import ModalRejectJd from "./modal-reject-jd";
 import ModalRejectReasonJd from "./modal-reject-reason-jd";
+import StatusTag from "@/components/common/tag/StatusTag";
+import { JOB_DESCRIPTION_STATUS_META } from "@/constants/statusMeta/jobDescriptionMeta";
 
 const ACCENT = "#e8637a";
 const ACCENT_HOVER = "#d4506a";
-
-const STATUS_COLOR: Record<string, string> = {
-    DRAFT: "default",
-    IN_REVIEW: "processing",
-    APPROVED: "warning",
-    REJECTED: "error",
-    PUBLISHED: "success",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-    DRAFT: "Nháp",
-    IN_REVIEW: "Đang duyệt",
-    APPROVED: "Đã duyệt",
-    REJECTED: "Từ chối",
-    PUBLISHED: "Đã ban hành",
-};
 
 const ActionBtn = ({
     children,
@@ -414,9 +400,7 @@ const JobDescriptionTable = ({
                 if (isRejected && record.rejectComment) {
                     return (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <Tag color={STATUS_COLOR[record.status]}>
-                                {STATUS_LABEL[record.status]}
-                            </Tag>
+                            <StatusTag value={record.status} meta={JOB_DESCRIPTION_STATUS_META} />
                             <span
                                 style={{
                                     fontSize: 11, fontWeight: 600, borderRadius: 4, padding: "1px 8px",
@@ -432,11 +416,7 @@ const JobDescriptionTable = ({
                         </div>
                     );
                 }
-                return (
-                    <Tag color={STATUS_COLOR[record.status] ?? "default"}>
-                        {STATUS_LABEL[record.status] ?? record.status}
-                    </Tag>
-                );
+                return <StatusTag value={record.status} meta={JOB_DESCRIPTION_STATUS_META} />;
             },
         },
         {
@@ -583,13 +563,12 @@ const JobDescriptionTable = ({
                         <AdvancedFilterSelect
                             resetSignal={resetSignal}
                             fields={[{
-                                key: "status", label: "Trạng thái", options: [
-                                    { label: "Nháp", value: "DRAFT", color: "default" },
-                                    { label: "Đang duyệt", value: "IN_REVIEW", color: "blue" },
-                                    { label: "Đã duyệt", value: "APPROVED", color: "gold" },
-                                    { label: "Từ chối", value: "REJECTED", color: "red" },
-                                    { label: "Đã ban hành", value: "PUBLISHED", color: "green" },
-                                ]
+                                key: "status", label: "Trạng thái",
+                                options: Object.entries(JOB_DESCRIPTION_STATUS_META).map(([value, meta]) => ({
+                                    label: meta.label,
+                                    value,
+                                    color: meta.color,
+                                })),
                             }]}
                             onChange={onFilterChange ?? (() => { })}
                         />

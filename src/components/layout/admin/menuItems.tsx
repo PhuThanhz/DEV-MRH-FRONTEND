@@ -12,9 +12,11 @@ import {
     FolderOpenOutlined,
     FileOutlined,
     QrcodeOutlined,
-    TrophyOutlined, CheckCircleOutlined, SettingOutlined,
     AccountBookOutlined,
     IdcardOutlined,
+    CheckSquareOutlined,
+    SettingOutlined,
+    CalendarOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Badge } from "antd";
@@ -60,7 +62,7 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                 minWidth: 18,
                 height: 18,
                 lineHeight: "18px",
-                backgroundColor: "#ef3f7b",
+                backgroundColor: "#e8637a",
                 boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.9)",
                 fontSize: 10,
                 fontWeight: 700,
@@ -122,6 +124,10 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
         checkPermission(ALL_PERMISSIONS.ACCOUNTING_DELEGATIONS.VIEW) ||
         checkPermission(ALL_PERMISSIONS.ACCOUNTING_DOSSIERS.GET_DASHBOARD_SUMMARY);
 
+    const hasTacVuGroup =
+        checkPermission(ALL_PERMISSIONS.TASKS.GET_PAGINATE) ||
+        checkPermission(ALL_PERMISSIONS.TASKS.GET_SUMMARY_REPORT);
+
     const hasEvaluationGroup =
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_TEMPLATES) ||
         checkPermission(ALL_PERMISSIONS.EVALUATION.GET_PERIODS) ||
@@ -142,6 +148,17 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                     label: <Link to="/admin">Tổng quan</Link>,
                     key: "/admin",
                     icon: <AppstoreOutlined />,
+                },
+            ]
+            : []),
+
+        // ===================== LỊCH CÔNG VIỆC CỦA TÔI =====================
+        ...(checkPermission(ALL_PERMISSIONS.CALENDAR.GET_MY_ACTIONS)
+            ? [
+                {
+                    label: <Link to="/admin/calendar/my-actions">Lịch Công Việc Của Tôi</Link>,
+                    key: "/admin/calendar/my-actions",
+                    icon: <CalendarOutlined />,
                 },
             ]
             : []),
@@ -278,6 +295,35 @@ export const generateMenuItems = (permissions: Permission[] | undefined, roleNam
                                 {
                                     label: <Link to="/admin/personal-drive">Kho lưu trữ cá nhân</Link>,
                                     key: "/admin/personal-drive",
+                                },
+                            ]
+                            : []),
+                    ],
+                },
+            ]
+            : []),
+
+        // ===================== QUẢN LÝ GIAO VIỆC & TÁC VỤ =====================
+        ...(hasTacVuGroup
+            ? [
+                {
+                    type: "subgroup",
+                    label: "Quản lý giao việc",
+                    icon: <CheckSquareOutlined />,
+                    children: [
+                        ...(checkPermission(ALL_PERMISSIONS.TASKS.GET_PAGINATE)
+                            ? [
+                                {
+                                    label: <Link to="/admin/tasks">Quản lý tác vụ</Link>,
+                                    key: "/admin/tasks",
+                                },
+                            ]
+                            : []),
+                        ...(checkPermission(ALL_PERMISSIONS.TASKS.GET_SUMMARY_REPORT)
+                            ? [
+                                {
+                                    label: <Link to="/admin/tasks/summary-report">Báo cáo tổng kết tác vụ</Link>,
+                                    key: "/admin/tasks/summary-report",
                                 },
                             ]
                             : []),

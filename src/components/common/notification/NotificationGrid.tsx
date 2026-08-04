@@ -15,7 +15,6 @@ import {
     DeleteOutlined,
     EyeOutlined,
     MoreOutlined,
-    NotificationOutlined,
     RightOutlined,
     SoundOutlined,
 } from "@ant-design/icons";
@@ -62,33 +61,9 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
         .map(module => ({ module, count: module.filterUnread(items) }));
     const systemModule = allowedModules.find(module => module.id === "system_alerts");
     const systemUnreadCount = systemModule?.filterUnread(items) ?? 0;
-
-    const moduleToneClasses: Record<string, { icon: string; glow: string }> = {
-        jd_approval: {
-            icon: "bg-blue-50 border-blue-100 text-blue-600",
-            glow: "hover:bg-blue-50/35 hover:border-blue-200 hover:shadow-[0_12px_28px_-20px_rgba(37,99,235,0.5)]",
-        },
-        evaluation: {
-            icon: "bg-emerald-50 border-emerald-100 text-emerald-600",
-            glow: "hover:bg-emerald-50/35 hover:border-emerald-200 hover:shadow-[0_12px_28px_-20px_rgba(5,150,105,0.5)]",
-        },
-        accounting_dossiers: {
-            icon: "bg-orange-50 border-orange-100 text-orange-600",
-            glow: "hover:bg-orange-50/35 hover:border-orange-200 hover:shadow-[0_12px_28px_-20px_rgba(234,88,12,0.45)]",
-        },
-        procedures: {
-            icon: "bg-violet-50 border-violet-100 text-violet-600",
-            glow: "hover:bg-violet-50/35 hover:border-violet-200 hover:shadow-[0_12px_28px_-20px_rgba(124,58,237,0.45)]",
-        },
-        career_paths: {
-            icon: "bg-cyan-50 border-cyan-100 text-cyan-600",
-            glow: "hover:bg-cyan-50/35 hover:border-cyan-200 hover:shadow-[0_12px_28px_-20px_rgba(8,145,178,0.45)]",
-        },
-        documents: {
-            icon: "bg-rose-50 border-rose-100 text-rose-600",
-            glow: "hover:bg-rose-50/35 hover:border-rose-200 hover:shadow-[0_12px_28px_-20px_rgba(225,29,72,0.4)]",
-        },
-    };
+    const actionableBusinessModules = businessModules.filter(({ count }) => count > 0);
+    const pendingActionCount = actionableBusinessModules.reduce((total, { count }) => total + count, 0) + systemUnreadCount;
+    const hasPendingActions = actionableBusinessModules.length > 0 || systemUnreadCount > 0;
 
     const handleActionClick = (action: any) => {
         setFilterModule(action.moduleKey);
@@ -252,68 +227,33 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
     }, [filteredItems, visibleCount]);
 
     return (
-        <div className="bg-white rounded-[22px] shadow-[0_24px_60px_-24px_rgba(71,85,105,0.28)] overflow-hidden flex flex-col border border-slate-200/80 fixed left-3 right-3 top-[70px] w-auto sm:relative sm:left-auto sm:right-auto sm:top-auto sm:w-[440px] max-h-[calc(100vh-96px)]">
-            <div className="px-4 pt-4 pb-0 flex flex-col gap-3 relative border-b border-slate-200 bg-white">
+        <div className="bg-white rounded-2xl shadow-[0_22px_52px_-24px_rgba(15,23,42,0.32)] overflow-hidden flex flex-col border border-slate-200/90 fixed left-3 right-3 top-[64px] w-auto sm:relative sm:left-auto sm:right-auto sm:top-auto sm:w-[400px] max-h-[calc(100vh-80px)]">
+            <div className="px-4 pt-3.5 pb-0 flex flex-col gap-2.5 relative border-b border-slate-200 bg-white">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 shadow-[0_6px_18px_-12px_rgba(225,29,72,0.8)]">
-                            <BellOutlined style={{ fontSize: "17px" }} />
-                        </div>
-                        <div className="min-w-0 flex items-center gap-2">
-                            <h3 className="text-[16px] font-bold m-0 tracking-tight text-slate-800 leading-tight">
-                                Thông báo
-                            </h3>
-                            {unreadCount > 0 && (
-                                <span className="h-5 px-2 rounded-md bg-rose-50 text-rose-600 border border-rose-100 text-[10.5px] font-bold flex items-center justify-center leading-none tabular-nums whitespace-nowrap">
-                                    {unreadCount > 99 ? "99+" : unreadCount} chưa đọc
-                                </span>
-                            )}
-                        </div>
+                    <div className="min-w-0 flex items-center gap-2">
+                        <h3 className="text-[16px] font-bold m-0 tracking-tight text-slate-800 leading-tight">
+                            Thông báo
+                        </h3>
+                        {unreadCount > 0 && (
+                            <span className="h-5 px-2 rounded-full bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-bold flex items-center justify-center leading-none tabular-nums whitespace-nowrap">
+                                {unreadCount > 99 ? "99+" : unreadCount} chưa đọc
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <Tooltip title="Tuỳ chọn thông báo" placement="bottom">
-                            <Dropdown
-                                trigger={["click"]}
-                                placement="bottomRight"
-                                menu={{
-                                    items: [
-                                        {
-                                            key: "read-all",
-                                            icon: <CheckOutlined />,
-                                            label: "Đánh dấu tất cả đã đọc",
-                                            disabled: unreadCount === 0 || !markAllRead,
-                                        },
-                                        {
-                                            key: "sound",
-                                            icon: <SoundOutlined />,
-                                            label: soundEnabled ? "Tắt âm thanh" : "Bật âm thanh",
-                                            disabled: !toggleSound,
-                                        },
-                                        { type: "divider" },
-                                        {
-                                            key: "center",
-                                            icon: <NotificationOutlined />,
-                                            label: "Mở trung tâm thông báo",
-                                        },
-                                    ],
-                                    onClick: ({ key, domEvent }) => {
-                                        domEvent.stopPropagation();
-                                        if (key === "read-all") handleMarkReadClick();
-                                        if (key === "sound") toggleSound?.();
-                                        if (key === "center") onOpenFullCenter();
-                                    },
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    aria-label="Tuỳ chọn thông báo"
-                                    onClick={(event) => event.stopPropagation()}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-700 border border-slate-200 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
-                                >
-                                    <MoreOutlined />
-                                </button>
-                            </Dropdown>
-                        </Tooltip>
+                        <button
+                            type="button"
+                            aria-pressed={soundEnabled}
+                            disabled={!toggleSound}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                toggleSound?.();
+                            }}
+                            className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 text-[10.5px] font-semibold transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:text-slate-300 disabled:cursor-not-allowed"
+                        >
+                            <SoundOutlined className="text-[12px]" />
+                            {soundEnabled ? "Tắt âm thanh" : "Bật âm thanh"}
+                        </button>
                         <Tooltip title="Đóng" placement="bottom">
                             <button
                                 type="button"
@@ -330,16 +270,16 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
                     </div>
                 </div>
 
-                <div className="bg-slate-100 p-1 rounded-lg flex relative z-10 mb-3 mt-1 border border-slate-200">
+                <div className="bg-slate-100/90 p-1 rounded-[10px] flex relative z-10 mb-3 border border-slate-200/80">
                     <button
                         onClick={() => handleBackToGrid()}
-                        className={`flex-1 py-2 px-3 text-[12.5px] rounded-md transition-colors z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 ${activeTab === 'grid' ? 'text-rose-600 bg-white border border-rose-100 font-semibold shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent border border-transparent font-medium'}`}
+                        className={`flex-1 py-1.5 px-3 text-[12px] rounded-md transition-colors z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 ${activeTab === 'grid' ? 'text-rose-600 bg-white border border-slate-200/80 font-semibold shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent border border-transparent font-medium'}`}
                     >
                         Cần xử lý
                     </button>
                     <button
                         onClick={() => setActiveTab('list')}
-                        className={`flex-1 py-2 px-3 text-[12.5px] rounded-md transition-colors z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 ${activeTab === 'list' ? 'text-rose-600 bg-white border border-rose-100 font-semibold shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent border border-transparent font-medium'}`}
+                        className={`flex-1 py-1.5 px-3 text-[12px] rounded-md transition-colors z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 ${activeTab === 'list' ? 'text-rose-600 bg-white border border-slate-200/80 font-semibold shadow-sm' : 'text-slate-500 hover:text-slate-700 bg-transparent border border-transparent font-medium'}`}
                     >
                         Lịch sử thông báo
                     </button>
@@ -348,63 +288,87 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
 
             <div className="bg-slate-50/35">
                 {activeTab === 'grid' ? (
-                    <div className="px-4 pt-3.5 pb-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                        <div className="mb-2.5">
-                            <p className="m-0 text-[12.5px] font-semibold text-slate-700">Công việc theo nghiệp vụ</p>
-                            <p className="m-0 mt-0.5 text-[11px] leading-relaxed text-slate-500">Chọn nhóm để xem thông báo liên quan.</p>
-                        </div>
-                        {businessModules.length > 0 ? (
-                            <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-2">
-                                {businessModules.map(({ module, count }) => {
-                                    const tone = moduleToneClasses[module.id] ?? moduleToneClasses.jd_approval;
-                                    return (
+                    <div className="px-4 py-3.5 max-h-[360px] overflow-y-auto custom-scrollbar">
+                        {isLoading ? (
+                            <div className="flex flex-col gap-2.5" aria-label="Đang tải thông báo">
+                                {[1, 2, 3].map((item) => (
+                                    <div key={item} className="h-[62px] rounded-xl border border-slate-200 bg-white p-3 flex items-center gap-3 animate-pulse">
+                                        <span className="w-9 h-9 rounded-lg bg-slate-100" />
+                                        <span className="flex-1 space-y-2">
+                                            <span className="block w-2/3 h-2.5 rounded bg-slate-200" />
+                                            <span className="block w-1/3 h-2 rounded bg-slate-100" />
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : hasPendingActions ? (
+                            <div>
+                                <div className="mb-2.5 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="m-0 text-[12.5px] font-semibold text-slate-700">Đang chờ bạn xử lý</p>
+                                        <p className="m-0 mt-0.5 text-[10.5px] text-slate-500">Chỉ hiển thị các nhóm đang có công việc mới.</p>
+                                    </div>
+                                    <span className="flex-shrink-0 rounded-full bg-rose-50 border border-rose-100 px-2 py-1 text-[10px] font-bold text-rose-600 tabular-nums">
+                                        {pendingActionCount > 99 ? "99+" : pendingActionCount} việc
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {actionableBusinessModules.map(({ module, count }) => (
                                         <button
                                             key={module.id}
                                             type="button"
-                                            className={`group relative min-h-[76px] px-3 py-2.5 flex items-center gap-2.5 rounded-[14px] bg-white border border-slate-200/90 text-left transition-all duration-200 hover:-translate-y-px cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200 ${tone.glow}`}
+                                            className="group w-full min-h-[60px] px-3 py-2.5 flex items-center gap-3 rounded-xl bg-white border border-slate-200 text-left transition-colors hover:bg-rose-50/30 hover:border-rose-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
                                             onClick={() => handleActionClick(module)}
                                         >
-                                            <span className={`relative w-10 h-10 flex-shrink-0 rounded-xl border flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.03] ${tone.icon}`}>
+                                            <span className="w-9 h-9 flex-shrink-0 rounded-[10px] border border-rose-100 bg-rose-50 text-rose-600 flex items-center justify-center">
                                                 {module.icon}
-                                                {count > 0 && (
-                                                    <span className="absolute -top-2 -right-2 min-w-[19px] h-[19px] px-1 rounded-full bg-rose-500 text-white ring-[3px] ring-white shadow-sm flex items-center justify-center text-[9.5px] font-bold leading-none tabular-nums">
-                                                        {count > 99 ? "99+" : count}
-                                                    </span>
-                                                )}
                                             </span>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block text-[11.5px] font-semibold text-slate-700 leading-snug text-pretty">{module.label}</span>
-                                                <span className={`block mt-1 text-[10px] font-medium ${count > 0 ? "text-rose-500" : "text-slate-400"}`}>
-                                                    {count > 0 ? `${count > 99 ? "99+" : count} chưa đọc` : "Không có tin mới"}
+                                                <span className="block text-[12.5px] font-semibold text-slate-700 leading-snug">{module.label}</span>
+                                                <span className="block mt-0.5 text-[10.5px] font-medium text-slate-500">
+                                                    {count > 99 ? "99+" : count} thông báo chưa đọc
                                                 </span>
                                             </span>
-                                            <RightOutlined className="text-[8px] text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-400" />
+                                            <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[9.5px] font-bold tabular-nums">
+                                                {count > 99 ? "99+" : count}
+                                            </span>
+                                            <RightOutlined className="text-[9px] text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-rose-400" />
                                         </button>
-                                    );
-                                })}
+                                    ))}
+                                    {systemModule && systemUnreadCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleActionClick(systemModule)}
+                                            className="group w-full min-h-[60px] px-3 py-2.5 flex items-center gap-3 rounded-xl bg-white border border-slate-200 text-left transition-colors hover:bg-slate-50 hover:border-slate-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                                        >
+                                            <span className="w-9 h-9 flex-shrink-0 rounded-[10px] bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center">
+                                                {systemModule.icon}
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block text-[12.5px] font-semibold text-slate-700">Thông báo hệ thống</span>
+                                                <span className="block mt-0.5 text-[10.5px] font-medium text-slate-500">{systemUnreadCount > 99 ? "99+" : systemUnreadCount} thông báo chưa đọc</span>
+                                            </span>
+                                            <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-slate-700 text-white flex items-center justify-center text-[9.5px] font-bold tabular-nums">{systemUnreadCount > 99 ? "99+" : systemUnreadCount}</span>
+                                            <RightOutlined className="text-slate-300 text-[9px] transition-transform group-hover:translate-x-0.5" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ) : (
-                            <div className="py-8 px-5 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                                <div className="w-9 h-9 mx-auto rounded-lg bg-white border border-slate-200 text-slate-400 flex items-center justify-center">
-                                    <BellOutlined style={{ fontSize: 15 }} />
+                            <div className="py-6 px-5 rounded-xl bg-white border border-slate-200 text-center">
+                                <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center">
+                                    <CheckOutlined style={{ fontSize: 16 }} />
                                 </div>
-                                <p className="m-0 mt-3 text-[13px] font-semibold text-slate-700">Không có thông báo mới</p>
-                                <p className="m-0 mt-1 text-[11.5px] text-slate-500">Các thông báo đã đọc vẫn có trong lịch sử.</p>
+                                <p className="m-0 mt-3 text-[13px] font-semibold text-slate-700">Bạn đã xử lý hết công việc</p>
+                                <p className="m-0 mt-1 text-[11px] leading-relaxed text-slate-500">Thông báo mới sẽ xuất hiện tại đây khi cần bạn xử lý.</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('list')}
+                                    className="mt-3 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-600 hover:bg-white hover:border-rose-200 hover:text-rose-600 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                                >
+                                    Xem lịch sử thông báo
+                                </button>
                             </div>
-                        )}
-                        {systemModule && systemUnreadCount > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => handleActionClick(systemModule)}
-                                className="mt-2.5 w-full min-h-[48px] px-3 flex items-center gap-3 rounded-xl bg-slate-50/80 border border-slate-200 text-left transition-all hover:bg-slate-100 hover:border-slate-300 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
-                            >
-                                <span className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 flex items-center justify-center">
-                                    {systemModule.icon}
-                                </span>
-                                <span className="flex-1 text-[12px] font-semibold text-slate-600">Thông báo hệ thống</span>
-                                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white ring-2 ring-white shadow-sm flex items-center justify-center text-[9.5px] font-bold tabular-nums">{systemUnreadCount > 99 ? "99+" : systemUnreadCount}</span>
-                                <RightOutlined className="text-slate-400 text-[10px]" />
-                            </button>
                         )}
                     </div>
                 ) : (
@@ -598,12 +562,23 @@ const NotificationGrid: React.FC<NotificationGridProps> = ({ items, onClose, mar
 
             {/* Footer */}
             {!isListEmpty && (
-                <div className="px-4 py-3 bg-white border-t border-slate-100">
+                <div className="px-4 py-2.5 bg-white border-t border-slate-100 flex items-center gap-2">
+                    {unreadCount > 0 && markAllRead && (
+                        <button
+                            type="button"
+                            onClick={handleMarkReadClick}
+                            className="h-8 px-2.5 text-[10.5px] font-semibold text-slate-500 hover:text-rose-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-rose-200"
+                        >
+                            <CheckOutlined className="text-[10px]" />
+                            Đánh dấu đã đọc
+                        </button>
+                    )}
                     <button
                         onClick={onOpenFullCenter}
-                        className="w-full py-2 bg-slate-50 border border-slate-200 rounded-[10px] text-[12px] font-semibold text-slate-600 hover:text-rose-600 hover:border-rose-100 hover:bg-rose-50/50 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-rose-200"
+                        className="ml-auto h-8 px-2.5 text-[11px] font-semibold text-slate-600 hover:text-rose-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-rose-200"
                     >
-                        Mở trung tâm thông báo
+                        Mở trung tâm
+                        <RightOutlined className="text-[9px]" />
                     </button>
                 </div>
             )}

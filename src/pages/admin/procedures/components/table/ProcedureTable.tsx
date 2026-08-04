@@ -11,6 +11,7 @@ import ViewProcedure from "../../view.procedure";
 import { useProcedureTable } from "./useProcedureTable";
 import { buildProcedureColumns } from "./procedureColumns";
 import ProcedureToolbar from "./ProcedureToolbar";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import type { IProcedure, ProcedureType } from "@/types/backend";
 
 // Các modal này có form, bảng lịch sử hoặc QR; không nên nằm trong bundle trang danh sách.
@@ -31,6 +32,7 @@ interface IProps {
 
 const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
     const ctx = useProcedureTable({ type, companyId, departmentId });
+    const qrModalWidth = useResponsiveModalWidth(420);
 
     const handleView = useCallback((record: IProcedure) => {
         ctx.setDataInit(record);
@@ -174,7 +176,7 @@ const ProcedureTable = ({ type, companyId, departmentId }: IProps) => {
                 onCancel={() => ctx.setOpenQrModal(false)}
                 footer={null}
                 closable={false}
-                width={420}
+                width={qrModalWidth}
                 centered
                 styles={{
                     content: { padding: 0, borderRadius: 28, overflow: "hidden" },

@@ -35,6 +35,7 @@ const LotusDetailDrawer = ({
             keyboard={keyboard}
             maskClosable={maskClosable}
             closable={false}
+            rootClassName="lotus-detail-drawer"
             styles={{
                 mask: { background: "rgba(15, 23, 42, 0.42)", backdropFilter: "blur(1px)" },
                 wrapper: {

@@ -19,16 +19,12 @@ import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { exportJdToExcel } from "../components/exportPublishedJd";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+import { JOB_DESCRIPTION_STATUS_META } from "@/constants/statusMeta/jobDescriptionMeta";
 
 const NODE_W = 200;
 const NODE_H = 120;
 
-const STATUS_MAP: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    DRAFT: { label: "Nháp", color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
-    IN_REVIEW: { label: "Đang duyệt", color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
-    ISSUED: { label: "Đã ban hành", color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
-    REJECTED: { label: "Từ chối", color: "#b91c1c", bg: "#fef2f2", border: "#fecaca" },
-};
+const DEFAULT_STATUS_INFO = { label: "", color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" };
 
 const BASE_TABS = [
     { key: "1", label: "Thông tin chung" },
@@ -90,7 +86,12 @@ export default function ViewJobDescription({ open, onClose, record }: Props) {
 
     const jd: EnrichedJD | null = (data as EnrichedJD) ?? record;
     const statusInfo = jd?.status
-        ? (STATUS_MAP[jd.status] ?? { label: jd.status, color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" })
+        ? (() => {
+              const meta = JOB_DESCRIPTION_STATUS_META[jd.status];
+              return meta
+                  ? { label: meta.label, color: meta.hex!, bg: meta.bg!, border: meta.border! }
+                  : { ...DEFAULT_STATUS_INFO, label: jd.status };
+          })()
         : null;
 
     useEffect(() => { if (open) setActiveTab("1"); }, [open]);

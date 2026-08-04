@@ -24,7 +24,8 @@ import PageContainer from "@/components/common/data-table/PageContainer";
 import AdvancedFilterSelect from "@/components/common/filter/AdvancedFilterSelect";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
-import EvaluationStatusTag, { type EvaluationStatus } from "../components/EvaluationStatusTag";
+import EvaluationStatusTag, { type EvaluationStatus, EVALUATION_STATUS_CONFIG } from "../components/EvaluationStatusTag";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
 import EvaluationHistoryDrawer from "../components/EvaluationHistoryDrawer";
 import DataTable from "@/components/common/data-table";
 import SearchFilter from "@/components/common/filter/SearchFilter";
@@ -33,13 +34,7 @@ import TabBar, { type TabItem } from "@/components/common/tabs/TabBar";
 
 const MyEvaluationDetailDrawer = lazy(() => import("./MyEvaluationDetailPage"));
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
-    B: { color: "#1677ff", bg: "#e6f4ff", label: "Tốt" },
-    C: { color: "#d46b08", bg: "#fff7e6", label: "Khá" },
-    D: { color: "#cf1322", bg: "#fff1f0", label: "Trung bình" },
-    E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
 const getNumericScore = (value: unknown) => {
     if (value === null || value === undefined || value === "") return null;
@@ -67,15 +62,9 @@ const isEmployeeActionable = (record: any) =>
 const isEmployeePending = (record: any) =>
     ["NOT_STARTED", "EMPLOYEE_DRAFTING", "REVISION_NEEDED"].includes(record.status);
 
-const STATUS_LABELS: Record<string, string> = {
-    NOT_STARTED: "Chưa bắt đầu",
-    EMPLOYEE_DRAFTING: "Đang tự đánh giá",
-    PENDING_MANAGER_REVIEW: "Chờ Quản lý đánh giá",
-    MANAGER_REVIEWING: "Quản lý đang đánh giá",
-    PENDING_APPROVAL: "Chờ phê duyệt kết quả",
-    REVISION_NEEDED: "Yêu cầu điều chỉnh",
-    COMPLETED: "Hoàn tất đánh giá",
-};
+const STATUS_LABELS: Record<string, string> = Object.fromEntries(
+    Object.entries(EVALUATION_STATUS_CONFIG).map(([key, meta]) => [key, meta.text])
+);
 
 interface IProps {
     isTab?: boolean;
@@ -475,10 +464,10 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
         {
             key: "EMPLOYEE_DRAFTING",
             label: (
-                <Badge 
-                    count={pending} 
-                    color={activeStatusTab === "EMPLOYEE_DRAFTING" ? "#e8637a" : "#e2e8f0"} 
-                    style={{ 
+                <Badge
+                    count={pending}
+                    color={activeStatusTab === "EMPLOYEE_DRAFTING" ? "#e8637a" : "#e2e8f0"}
+                    style={{
                         color: activeStatusTab === "EMPLOYEE_DRAFTING" ? "#ffffff" : "#475569",
                         fontWeight: 700,
                         fontSize: 10,
@@ -495,10 +484,10 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
         {
             key: "PROCESSING",
             label: (
-                <Badge 
-                    count={inProgress} 
-                    color={activeStatusTab === "PROCESSING" ? "#e8637a" : "#e2e8f0"} 
-                    style={{ 
+                <Badge
+                    count={inProgress}
+                    color={activeStatusTab === "PROCESSING" ? "#e8637a" : "#e2e8f0"}
+                    style={{
                         color: activeStatusTab === "PROCESSING" ? "#ffffff" : "#475569",
                         fontWeight: 700,
                         fontSize: 10,
@@ -515,10 +504,10 @@ const MyEvaluationPage = ({ isTab, viewMode = "mine" }: IProps) => {
         {
             key: "COMPLETED",
             label: (
-                <Badge 
-                    count={completed} 
-                    color={activeStatusTab === "COMPLETED" ? "#e8637a" : "#e2e8f0"} 
-                    style={{ 
+                <Badge
+                    count={completed}
+                    color={activeStatusTab === "COMPLETED" ? "#e8637a" : "#e2e8f0"}
+                    style={{
                         color: activeStatusTab === "COMPLETED" ? "#ffffff" : "#475569",
                         fontWeight: 700,
                         fontSize: 10,

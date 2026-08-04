@@ -46,8 +46,9 @@ import {
     useToggleAccountingDossierCategoryActiveMutation,
 } from "@/hooks/useAccountingDossiers";
 import { useAccountingDocumentCategoryActiveQuery } from "@/hooks/useAccountingDocumentCategories";
-import { getModalWidth } from "@/utils/responsive";
+import Access from "@/components/share/access";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
+import { getModalWidth, useResponsiveModalWidth } from "@/utils/responsive";
 import DataTable from "@/components/common/data-table";
 import { notify } from "@/components/common/notification/notify";
 import type { TemplateFormValues } from "../dossierUtils";
@@ -485,6 +486,7 @@ const DossierTemplateDrawer = ({
 };
 
 const TemplatePreviewModal = ({ record, onClose }: { record: IAccountingDossierCategory; onClose: () => void }) => {
+    const modalWidth = useResponsiveModalWidth(680);
     const documentCategories = record.documentCategories || [];
     const isActive = !!record.active;
     const scopeLabel = record.scope === "COMPANY" ? "Theo công ty" : "Toàn hệ thống";
@@ -493,7 +495,7 @@ const TemplatePreviewModal = ({ record, onClose }: { record: IAccountingDossierC
         <Modal
             open={true}
             onCancel={onClose}
-            width={680}
+            width={modalWidth}
             centered
             destroyOnClose
             styles={{

@@ -1,5 +1,6 @@
 import { Drawer, Form, Input, Button, Space, Spin } from "antd";
 import { useEffect } from "react";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -18,6 +19,7 @@ const DrawerSalaryGradePerformanceRating = ({
     gradeLevel,
     jobTitleName,
 }: IProps) => {
+    const drawerWidth = useResponsiveModalWidth(600);
     const [form] = Form.useForm();
 
     // FAKE: sau này gắn API getBySalaryGrade
@@ -42,7 +44,7 @@ const DrawerSalaryGradePerformanceRating = ({
             title={`Tiêu chí đánh giá – Bậc ${gradeLevel} – ${jobTitleName}`}
             open={open}
             onClose={onClose}
-            width="60vw"
+            width={drawerWidth}
             destroyOnHidden
             footer={
                 <div style={{ textAlign: "right" }}>

@@ -1,12 +1,14 @@
 import { Modal, Form, Input, Select, Button, ConfigProvider } from 'antd';
 import { useState, useEffect, useMemo } from 'react';
-import { callCreateEvaluationTemplate, callUpdateEvaluationTemplate } from '@/config/api';
 import { useCompaniesQuery } from '@/hooks/useCompanies';
 import { useCompanyJobTitlesQuery } from '@/hooks/useCompanyJobTitles';
+import {
+    useCreateEvaluationTemplateMutation,
+    useUpdateEvaluationTemplateMutation,
+} from '@/hooks/useEvaluations';
 import type { IEvaluationTemplate } from '@/types/backend';
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
-import { notify } from '@/components/common/notification/notify';
 import { getModalWidth } from '@/utils/responsive';
 
 interface IProps {
@@ -22,6 +24,8 @@ const TemplateModal = (props: IProps) => {
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
     const watchCompanyId = Form.useWatch('companyId', form);
+    const createTemplateMutation = useCreateEvaluationTemplateMutation();
+    const updateTemplateMutation = useUpdateEvaluationTemplateMutation();
 
     const { data: companiesData } = useCompaniesQuery("page=1&size=200&sort=name,asc", openModal);
     const companies = useMemo(() => {
@@ -56,7 +60,6 @@ const TemplateModal = (props: IProps) => {
         }
     }, [openModal, dataInit, form]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onFinish = async (values: any) => {
         setIsSubmit(true);
         try {
@@ -71,27 +74,18 @@ const TemplateModal = (props: IProps) => {
             };
 
             if (dataInit?.id) {
-                res = await callUpdateEvaluationTemplate(dataInit.id, payload);
-                if (res?.data) {
-                    notify.success('Cập nhật mẫu đánh giá thành công');
-                }
+                res = await updateTemplateMutation.mutateAsync({ id: dataInit.id, data: payload });
             } else {
-                res = await callCreateEvaluationTemplate(payload);
-                if (res?.data) {
-                    notify.success('Tạo mẫu đánh giá thành công');
-                }
+                res = await createTemplateMutation.mutateAsync(payload);
             }
 
             if (res?.data) {
                 setOpenModal(false);
                 if (setDataInit) setDataInit(null);
                 reloadTable();
-            } else {
-                notify.error('Không thể lưu mẫu đánh giá. Vui lòng thử lại.');
             }
-        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            const msg = error?.message || error?.response?.data?.message || 'Lỗi kết nối máy chủ';
-            notify.error(msg);
+        } catch {
+            return;
         } finally {
             setIsSubmit(false);
         }
@@ -138,12 +132,12 @@ const TemplateModal = (props: IProps) => {
             <Modal
                 title={
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingBottom: 6 }}>
-                        <span style={{ 
-                            fontSize: "10px", 
-                            textTransform: "uppercase", 
-                            letterSpacing: "0.15em", 
-                            color: "#94a3b8", 
-                            fontWeight: 600 
+                        <span style={{
+                            fontSize: "10px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.15em",
+                            color: "#94a3b8",
+                            fontWeight: 600
                         }}>
                             {dataInit ? "Cấu hình dữ liệu" : "Khởi tạo dữ liệu"}
                         </span>
@@ -154,14 +148,14 @@ const TemplateModal = (props: IProps) => {
                 }
                 open={openModal}
                 footer={[
-                    <Button 
-                        key="cancel" 
+                    <Button
+                        key="cancel"
                         onClick={() => {
                             setOpenModal(false);
                             if (setDataInit) setDataInit(null);
                         }}
-                        style={{ 
-                            borderRadius: 8, 
+                        style={{
+                            borderRadius: 8,
                             border: "1px solid #cbd5e1",
                             color: "#475569",
                             fontWeight: 500,
@@ -175,9 +169,9 @@ const TemplateModal = (props: IProps) => {
                         permission={dataInit?.id ? ALL_PERMISSIONS.EVALUATION.UPDATE_TEMPLATE : ALL_PERMISSIONS.EVALUATION.CREATE_TEMPLATE}
                         hideChildren
                     >
-                        <Button 
-                            type="primary" 
-                            onClick={() => form.submit()} 
+                        <Button
+                            type="primary"
+                            onClick={() => form.submit()}
                             loading={isSubmit}
                             style={{
                                 borderRadius: 8,
@@ -246,8 +240,8 @@ const TemplateModal = (props: IProps) => {
                             <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
                                 <span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Chức danh áp dụng (Tùy chọn)</span>
                                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', lineHeight: '1.4' }}>
-                                    {!watchCompanyId 
-                                        ? "Vui lòng chọn Công ty trước để tải danh sách chức danh" 
+                                    {!watchCompanyId
+                                        ? "Vui lòng chọn Công ty trước để tải danh sách chức danh"
                                         : "Để trống để áp dụng cho TẤT CẢ chức danh trong nhóm đối tượng trên."
                                     }
                                 </span>
@@ -266,9 +260,9 @@ const TemplateModal = (props: IProps) => {
                         />
                     </Form.Item>
 
-                    <Form.Item 
-                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Mô tả chi tiết</span>} 
-                        name="description" 
+                    <Form.Item
+                        label={<span style={{ fontWeight: 600, color: '#334155', fontSize: '13px' }}>Mô tả chi tiết</span>}
+                        name="description"
                         style={{ marginBottom: 0 }}
                     >
                         <Input.TextArea rows={3} placeholder="Mô tả ngắn gọn về mẫu..." style={{ borderRadius: 8 }} />

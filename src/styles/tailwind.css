@@ -1,15 +1,5 @@
 @import "tailwindcss";
 
-@keyframes lotus-toast-progress {
-    from {
-        transform: scaleX(1);
-    }
-
-    to {
-        transform: scaleX(0);
-    }
-}
-
 .lotus-toast-close {
     transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
@@ -92,6 +82,7 @@
     background-color: white;
 }
 
+
 .ant-menu-horizontal {
     border-bottom: unset !important;
 }
@@ -119,6 +110,51 @@
     overflow: hidden;
 }
 
+/* ===== QUY CHUẨN RESPONSIVE TỶ LỆ MÀN HÌNH FLUID SCALING (%) ===== */
+/* Đảm bảo khung chứa, bảng dữ liệu, Card & Drawer co giãn mượt mà theo % màn hình */
+.fluid-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding-inline: clamp(10px, 2vw, 24px);
+}
+
+.ant-table-wrapper {
+    width: 100%;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .ant-drawer-content-wrapper {
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    .admin-sider-drawer .ant-drawer-content-wrapper {
+        width: 280px !important;
+        max-width: 85vw !important;
+    }
+}
+
+/* LotusDetailDrawer chừa lề trái (40/48px) để lộ nút đóng nổi ra ngoài viền —
+   phải khớp đúng breakpoint 640px của useIsMobile(), không dùng chung mốc 768px ở trên */
+@media (max-width: 639px) {
+    .lotus-detail-drawer .ant-drawer-content-wrapper {
+        width: calc(100% - 40px) !important;
+        max-width: calc(100% - 40px) !important;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 768px) {
+    .lotus-detail-drawer .ant-drawer-content-wrapper {
+        width: calc(100% - 48px) !important;
+        max-width: calc(100% - 48px) !important;
+    }
+}
+
+.ant-card {
+    max-width: 100%;
+}
 
 .customize-form-item {
     .ant-form-item {
@@ -141,13 +177,13 @@
     font-size: 13px;
 }
 
-.custom-pro-table .ant-table-thead > tr > th {
+.custom-pro-table .ant-table-thead>tr>th {
     padding: 10px 12px !important;
     font-size: 12.5px !important;
     line-height: 18px !important;
 }
 
-.custom-pro-table .ant-table-tbody > tr > td {
+.custom-pro-table .ant-table-tbody>tr>td {
     padding: 9px 12px !important;
     line-height: 20px !important;
 }

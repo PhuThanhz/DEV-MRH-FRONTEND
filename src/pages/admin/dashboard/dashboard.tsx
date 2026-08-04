@@ -259,11 +259,11 @@ const S = `
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .db-mc-track {
-    flex: 1; min-width: 0; height: 22px;
-    background: #f5f5f5; border-radius: 6px; overflow: hidden;
+    flex: 1; min-width: 0; height: 10px;
+    background: #f5f5f5; border-radius: 99px; overflow: hidden;
   }
   .db-mc-bar {
-    height: 100%; border-radius: 6px;
+    height: 100%; border-radius: 99px;
     transition: width .5s ease; min-width: 2px;
   }
   .db-mc-count {
@@ -528,12 +528,15 @@ const DashboardPage = () => {
         return PRIORITIZED_KEYS.map(key => {
             const missing = missingCriteriaStats.find(s => s.key === key)?.count ?? 0;
             const done = totalDept - missing;
+            const pct = Math.round((done / totalDept) * 100);
+            // Dùng màu Xanh lá (#52c41a) chuẩn hoàn thành 100% đồng bộ với biểu đồ tròn & badge Hoàn chỉnh
+            const color = pct === 100 ? "#52c41a" : pct > 0 ? "#fa8c16" : "transparent";
             return {
                 key,
                 label: CRITERIA_MAP[key].label,
                 done,
-                pct: Math.round((done / totalDept) * 100),
-                color: THEME_PRESETS[key]?.primary ?? THEME_PRESETS.default.primary,
+                pct,
+                color,
                 onClick: () => navigate(`/admin/department-profiles?missing=${key}`),
             };
         });
@@ -715,10 +718,10 @@ const DashboardPage = () => {
 
             </div>
 
-            {/* Bottom row of bottom section: Missing Criteria Stats Card (spanning full width) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-
-                {/* Profile coverage – thanh ngang theo hạng mục */}
+            {/* Bottom Section: Profile Coverage Card */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, marginTop: 14 }}>
+                
+                {/* Độ phủ hồ sơ theo hạng mục */}
                 <div className="db-card">
                     <div className="db-card-head">
                         <span className="db-card-title">Độ phủ hồ sơ theo hạng mục</span>
@@ -726,35 +729,74 @@ const DashboardPage = () => {
                             {isLoadingComplete ? "—" : `${totalDept} phòng ban`}
                         </span>
                     </div>
-                    <div className="db-card-body">
+                    <div className="db-card-body" style={{ padding: "12px 16px" }}>
                         {isLoadingComplete ? (
-                            <Skeleton active paragraph={{ rows: 5 }} />
+                            <Skeleton active paragraph={{ rows: 6 }} />
                         ) : coverageStats.length === 0 || totalDept === 0 ? (
                             <div style={{ textAlign: "center", padding: "32px 0", color: "#bfbfbf", fontSize: 13 }}>
                                 Chưa có dữ liệu
                             </div>
                         ) : (
-                            <div className="db-mc-list">
-                                {coverageStats.map(stat => (
-                                    <div key={stat.key} className="db-mc-row" onClick={stat.onClick}>
-                                        <span className="db-mc-label" title={stat.label}>{stat.label}</span>
-                                        <div className="db-mc-track">
-                                            <div
-                                                className="db-mc-bar"
-                                                style={{ width: `${stat.pct}%`, background: stat.color }}
-                                            />
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {coverageStats.map(stat => {
+                                    const isFull = stat.pct === 100;
+                                    const isZero = stat.pct === 0;
+                                    return (
+                                        <div
+                                            key={stat.key}
+                                            onClick={stat.onClick}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "6px 10px",
+                                                borderRadius: 8,
+                                                background: "#fafafa",
+                                                cursor: "pointer",
+                                                transition: "all 0.15s ease",
+                                                border: "1px solid #f0f0f0"
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "#fff0f4";
+                                                e.currentTarget.style.borderColor = "#ffadd2";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "#fafafa";
+                                                e.currentTarget.style.borderColor = "#f0f0f0";
+                                            }}
+                                        >
+                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#262626" }}>
+                                                {stat.label}
+                                            </span>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <div style={{ width: 80, height: 5, background: "#e8e8e8", borderRadius: 99, overflow: "hidden" }}>
+                                                    <div style={{
+                                                        width: `${stat.pct}%`,
+                                                        height: "100%",
+                                                        background: isFull ? "#52c41a" : isZero ? "transparent" : "#fa8c16",
+                                                        borderRadius: 99
+                                                    }} />
+                                                </div>
+                                                <span style={{
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    padding: "1px 8px",
+                                                    borderRadius: 12,
+                                                    background: isFull ? "#f6ffed" : isZero ? "#fff1f0" : "#fff7e6",
+                                                    color: isFull ? "#389e0d" : isZero ? "#cf1322" : "#d46b08",
+                                                    border: `1px solid ${isFull ? "#b7eb8f" : isZero ? "#ffa39e" : "#ffd591"}`,
+                                                    whiteSpace: "nowrap"
+                                                }}>
+                                                    {stat.done}/{totalDept} ({stat.pct}%)
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="db-mc-count">
-                                            {stat.done}/{totalDept}
-                                            <span className="db-mc-unit"> ({stat.pct}%)</span>
-                                        </span>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
                 </div>
-
             </div>
         </PageContainer>
     );

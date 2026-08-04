@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { SearchOutlined, CloseOutlined } from "@ant-design/icons";
 import type { Node } from "reactflow";
 
@@ -18,7 +18,7 @@ interface Result {
     levelCode?: string;
 }
 
-const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false, isTablet = false }: Props) => {
+const SearchBar = memo(({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false, isTablet = false }: Props) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<Result[]>([]);
     const [open, setOpen] = useState(false);
@@ -37,24 +37,28 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
         const q = query.trim().toLowerCase();
         if (!q) { setResults([]); setOpen(false); return; }
 
-        const matched = nodes
-            .filter((n) => {
-                const title = (n.data.title as string ?? "").toLowerCase();
-                const holder = (n.data.holderName as string ?? "").toLowerCase();
-                const level = (n.data.levelCode as string ?? "").toLowerCase();
-                return title.includes(q) || holder.includes(q) || level.includes(q);
-            })
-            .slice(0, 8)
-            .map((n) => ({
-                id: n.id,
-                title: n.data.title as string,
-                holderName: n.data.holderName as string | undefined,
-                levelCode: n.data.levelCode as string | undefined,
-            }));
+        const timer = window.setTimeout(() => {
+            const matched = nodes
+                .filter((n) => {
+                    const title = (n.data.title as string ?? "").toLowerCase();
+                    const holder = (n.data.holderName as string ?? "").toLowerCase();
+                    const level = (n.data.levelCode as string ?? "").toLowerCase();
+                    return title.includes(q) || holder.includes(q) || level.includes(q);
+                })
+                .slice(0, 8)
+                .map((n) => ({
+                    id: n.id,
+                    title: n.data.title as string,
+                    holderName: n.data.holderName as string | undefined,
+                    levelCode: n.data.levelCode as string | undefined,
+                }));
 
-        setResults(matched);
-        setOpen(matched.length > 0);
-        setActiveIdx(-1);
+            setResults(matched);
+            setOpen(matched.length > 0);
+            setActiveIdx(-1);
+        }, 200);
+
+        return () => window.clearTimeout(timer);
     }, [query, nodes]);
 
     // ── Tính anchorPos từ DOM node của ReactFlow ──────────────────────────────
@@ -367,6 +371,6 @@ const SearchBar = ({ nodes, onSelect, onSelectWithPos, onClear, isMobile = false
             )}
         </div>
     );
-};
+});
 
 export default SearchBar;

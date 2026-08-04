@@ -2,30 +2,19 @@ import React from "react";
 import { useDossierDocumentsQuery } from "@/hooks/useDossierDocuments";
 import type { IAccountingDossier } from "@/types/backend";
 import dayjs from "dayjs";
+import { statusMeta, checkStatusMeta } from "../dossierMeta";
 
 interface DossierCoverSheetProps {
     dossier: IAccountingDossier;
 }
 
-const DOSSIER_STATUS_TEXT: Record<string, string> = {
-    DRAFT: "Nháp",
-    SUBMITTED: "Chờ duyệt",
-    IN_REVIEW: "Đang duyệt",
-    RETURN_REQUESTED: "Yêu cầu hoàn trả",
-    RETURNED: "Đã hoàn trả",
-    APPROVED: "Đã duyệt",
-    REJECTED: "Đã từ chối",
-    TERMINATED: "Đã chấm dứt",
-    ARCHIVED: "Đã lưu trữ",
-};
+const DOSSIER_STATUS_TEXT: Record<string, string> = Object.fromEntries(
+    Object.entries(statusMeta).map(([key, meta]) => [key, meta.label])
+);
 
-const CHECK_STATUS_TEXT: Record<string, string> = {
-    PENDING: "Chờ kiểm tra",
-    VALID: "Hợp lệ",
-    NEED_SUPPLEMENT: "Cần bổ sung",
-    INVALID: "Không hợp lệ",
-    NOT_REQUIRED: "Không yêu cầu",
-};
+const CHECK_STATUS_TEXT: Record<string, string> = Object.fromEntries(
+    Object.entries(checkStatusMeta).map(([key, meta]) => [key, meta.label])
+);
 
 const DossierCoverSheet: React.FC<DossierCoverSheetProps> = ({ dossier }) => {
     const { data: docs = [] } = useDossierDocumentsQuery(dossier.id);

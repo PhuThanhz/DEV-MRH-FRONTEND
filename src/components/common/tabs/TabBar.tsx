@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "antd";
 import Access from "@/components/share/access";
 
 type Permission = {
@@ -11,6 +12,8 @@ export type TabItem<T extends string = string> = {
     key: T;
     label: React.ReactNode;
     icon?: React.ReactNode;
+    /** Hiển thị badge số lượng bên phải label. Không hiện khi count = 0. */
+    count?: number;
     permission?: Permission;
     hidden?: boolean;
 };
@@ -71,11 +74,11 @@ function TabBar<T extends string>({ tabs, activeKey, onChange, variant = "defaul
                 background: rgba(255, 255, 255, 0.72) !important;
             }
             .tab-bar__item:focus-visible {
-                outline: 2px solid rgba(232, 53, 109, 0.28) !important;
-                outline-offset: 2px;
+                outline: 1.5px solid rgba(232, 53, 109, 0.2) !important;
+                outline-offset: 1px;
             }
             .tab-bar__item--subtle:focus-visible {
-                outline-color: rgba(71, 85, 105, 0.32) !important;
+                outline-color: rgba(71, 85, 105, 0.2) !important;
             }
             .tab-bar__item--line:not(.tab-bar__item--active):hover {
                 background: transparent !important;
@@ -119,6 +122,19 @@ function TabBar<T extends string>({ tabs, activeKey, onChange, variant = "defaul
                             >
                                 {tab.icon}
                                 {tab.label}
+                                {(tab.count ?? 0) > 0 && (
+                                    <Badge
+                                        count={tab.count}
+                                        overflowCount={99}
+                                        style={{
+                                            backgroundColor: "#ec4899",
+                                            color: "#ffffff",
+                                            boxShadow: "none",
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                        }}
+                                    />
+                                )}
                             </button>
                         );
 

@@ -11,6 +11,7 @@ import {
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import dayjs from "dayjs";
 import { notify } from "@/components/common/notification/notify";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import {
     useEvaluationRecordQuery,
     useEvaluationRecordHistoryQuery,
@@ -31,25 +32,16 @@ import { SharedCriteriaRow, SharedSubCriteriaRow } from "../components/shared/Ev
 import { formatWeight } from "../components/evaluationScoring";
 import { EvaluationProgressIndicator } from "../components/shared/EvaluationProgressIndicator";
 import "../components/shared/evaluation-shell.css";
+import { EVALUATION_STATUS_CONFIG } from "../components/EvaluationStatusTag";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
 
 type RecordStatus = "NOT_STARTED" | "EMPLOYEE_DRAFTING" | "PENDING_MANAGER_REVIEW" | "MANAGER_REVIEWING" | "PENDING_APPROVAL" | "COMPLETED";
 
-const STATUS_CONFIG: Record<RecordStatus, { text: string; tagColor: string }> = {
-    NOT_STARTED: { text: "Chưa bắt đầu", tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ quản lý chấm", tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "Quản lý đang chấm", tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt", tagColor: "cyan" },
-    COMPLETED: { text: "Hoàn tất", tagColor: "success" },
-};
+const STATUS_CONFIG: Record<string, { text: string; tagColor: string }> = Object.fromEntries(
+    Object.entries(EVALUATION_STATUS_CONFIG).map(([key, meta]) => [key, { text: meta.text, tagColor: meta.color }])
+);
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#15803d", bg: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", label: "Xuất sắc" },
-    B: { color: "#1d4ed8", bg: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", label: "Tốt" },
-    C: { color: "#b45309", bg: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", label: "Khá" },
-    D: { color: "#b91c1c", bg: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)", label: "Trung bình" },
-    E: { color: "#be123c", bg: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
 const SCORE_DESCRIPTIONS: Record<number, string> = {
     1: "Yếu",
@@ -136,6 +128,7 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
     const rejectMutation = useRejectRecordMutation();
 
     const [record, setRecord] = useState<any>(null);
+    const approveModalWidth = useResponsiveModalWidth(540);
     const [saving, setSaving] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [confirming, setConfirming] = useState(false);
@@ -986,7 +979,7 @@ const ApprovalDetailPage = ({ recordId, onClose }: ApprovalDetailPageProps) => {
                 open={approveModalOpen}
                 onCancel={() => setApproveModalOpen(false)}
                 footer={null}
-                width={540}
+                width={approveModalWidth}
                 centered
                 styles={{
                     body: {

@@ -13,6 +13,7 @@ const LOGIN_ERROR_COOLDOWN_MS = 3000;
 
 const LoginPage = () => {
   const [isSubmit, setIsSubmit] = useState(false);
+  const [isSuccessTransition, setIsSuccessTransition] = useState(false);
   const submitLockRef = useRef(false);
   const cooldownUntilRef = useRef(0);
   const unlockTimerRef = useRef<number | null>(null);
@@ -26,8 +27,8 @@ const LoginPage = () => {
     : "/admin";
 
   useEffect(() => {
-    if (isAuthenticated) navigate(postLoginPath, { replace: true });
-  }, [isAuthenticated, navigate, postLoginPath]);
+    if (isAuthenticated && !isSuccessTransition) navigate(postLoginPath, { replace: true });
+  }, [isAuthenticated, isSuccessTransition, navigate, postLoginPath]);
 
   useEffect(() => () => {
     if (unlockTimerRef.current !== null) {
@@ -45,12 +46,20 @@ const LoginPage = () => {
     try {
       const res = await callLogin(values.username, values.password);
       if (res?.data) {
-        localStorage.setItem("access_token", res.data.access_token);
-        dispatch(setUserLoginInfo(res.data.user));
+        const loginData = res.data;
+        localStorage.setItem("access_token", loginData.access_token);
+        sessionStorage.setItem("just_logged_in", "true");
+        setIsSuccessTransition(true);
+
         notify.success("Bạn đã đăng nhập vào Lotus HRM.", {
           id: "login-status",
           title: "Đăng nhập thành công",
         });
+
+        window.setTimeout(() => {
+          dispatch(setUserLoginInfo(loginData.user));
+          navigate(postLoginPath, { replace: true });
+        }, 420);
       } else {
         cooldownUntilRef.current = Date.now() + LOGIN_COOLDOWN_MS;
         notify.error("Không nhận được thông tin phiên đăng nhập. Vui lòng thử lại.", {
@@ -108,7 +117,7 @@ const LoginPage = () => {
   };
 
   return (
-    <main className="login-page">
+    <main className={`login-page ${isSuccessTransition ? "login-split-active" : ""}`}>
       <section className="login-panel">
         <div className="login-form-wrap">
           <header className="login-heading">
@@ -199,43 +208,121 @@ const LoginPage = () => {
           height: 100dvh;
           min-height: 0;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-columns: 50% 50%;
           overflow: hidden;
           color: var(--ink);
           background: #f8f7f5;
           font-family: "Avenir Next", "Segoe UI", sans-serif;
         }
         .login-page *, .login-page *::before, .login-page *::after { box-sizing: border-box; }
-        .login-panel { grid-column: 2; min-width: 0; height: 100%; min-height: 0; padding: clamp(32px, 6vw, 96px); display: flex; flex-direction: column; justify-content: space-between; overflow-y: auto; overscroll-behavior: contain; background-color: #fff8fb; background-image: radial-gradient(rgba(220,62,124,.08) .7px, transparent .7px); background-size: 11px 11px; }
-        .login-form-wrap { position: relative; width: min(100%, 414px); margin: auto; padding: 46px 42px 38px; border: 1px solid #f1dce5; border-radius: 22px; background: rgba(255,255,255,.94); box-shadow: 0 24px 60px rgba(141,32,76,.12); }
-        .login-form-wrap::before { content: ""; position: absolute; top: 0; left: 42px; width: 58px; height: 4px; border-radius: 0 0 4px 4px; background: var(--accent); }
-        .login-heading { margin-bottom: 32px; }
-        .login-heading h2 { margin: 0; color: #352530; font-family: Arial, "Helvetica Neue", sans-serif; font-size: clamp(32px, 3vw, 39px); line-height: 1.05; letter-spacing: -.04em; font-weight: 600; }
-        .login-heading p { margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-        .login-page .ant-form-item { margin-bottom: 20px; }
-        .login-page .ant-form-item-label { padding-bottom: 8px; }
+        
+        .login-panel { 
+          grid-column: 2; 
+          min-width: 0; 
+          height: 100%; 
+          min-height: 0; 
+          padding: clamp(20px, 4vw, 64px); 
+          display: flex; 
+          flex-direction: column; 
+          justify-content: center; 
+          align-items: center;
+          overflow-y: auto; 
+          overscroll-behavior: contain; 
+          background-color: #fff8fb; 
+          background-image: radial-gradient(rgba(220,62,124,.08) .7px, transparent .7px); 
+          background-size: 11px 11px; 
+        }
+        
+        .login-form-wrap { 
+          position: relative; 
+          width: min(90%, 420px); 
+          margin: auto; 
+          padding: clamp(28px, 4vh, 46px) clamp(24px, 3.5vw, 42px) clamp(24px, 3.5vh, 38px); 
+          border: 1px solid #f1dce5; 
+          border-radius: clamp(16px, 2vw, 24px); 
+          background: rgba(255,255,255,.95); 
+          box-shadow: 0 24px 60px rgba(141,32,76,.12); 
+        }
+        .login-form-wrap::before { 
+          content: ""; 
+          position: absolute; 
+          top: 0; 
+          left: clamp(24px, 3.5vw, 42px); 
+          width: 58px; 
+          height: 4px; 
+          border-radius: 0 0 4px 4px; 
+          background: var(--accent); 
+        }
+        
+        .login-heading { margin-bottom: clamp(20px, 3vh, 32px); }
+        .login-heading h2 { 
+          margin: 0; 
+          color: #352530; 
+          font-family: Arial, "Helvetica Neue", sans-serif; 
+          font-size: clamp(28px, 2.6vw, 38px); 
+          line-height: 1.1; 
+          letter-spacing: -.03em; 
+          font-weight: 600; 
+        }
+        .login-heading p { margin: 8px 0 0; color: var(--muted); font-size: clamp(12px, 1.1vw, 13.5px); line-height: 1.5; }
+        
+        .login-page .ant-form-item { margin-bottom: clamp(14px, 2.2vh, 20px); }
+        .login-page .ant-form-item-label { padding-bottom: 6px; }
         .login-page .ant-form-item-label > label { color: #504a50; font-size: 12px; font-weight: 700; }
-        .login-page .ant-input-affix-wrapper { height: 52px; padding-inline: 15px; border: 1px solid var(--line); border-radius: 10px; background: #fffafd; box-shadow: none; transition: border-color .2s, box-shadow .2s; }
+        
+        .login-page .ant-input-affix-wrapper { 
+          height: clamp(44px, 5dvh, 52px); 
+          padding-inline: 15px; 
+          border: 1px solid var(--line); 
+          border-radius: 10px; 
+          background: #fffafd; 
+          box-shadow: none; 
+          transition: border-color .2s, box-shadow .2s; 
+        }
         .login-page .ant-input-affix-wrapper:hover { border-color: #eab1c7; }
         .login-page .ant-input-affix-wrapper-focused { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(207,92,137,.12); }
         .login-page .ant-input-affix-wrapper .anticon { color: #aaa1a8; font-size: 15px; }
         .login-page .ant-input { font-size: 14px; background: transparent; }
         .login-page .ant-input::placeholder { color: #b3abb1; }
         .login-page .ant-form-item-explain, .login-page .ant-form-item-margin-offset { display: none; }
-        .login-actions { display: flex; justify-content: flex-end; margin: -3px 0 29px; }
-        .login-actions a, .account-activation a { color: var(--accent-deep); font-size: 13px; font-weight: 750; text-decoration: none; }
+        
+        .login-actions { display: flex; justify-content: flex-end; margin: -2px 0 clamp(16px, 2.5vh, 26px); }
+        .login-actions a, .account-activation a { color: var(--accent-deep); font-size: 13px; font-weight: 700; text-decoration: none; }
         .login-actions a:hover, .account-activation a:hover { color: #2e2993; }
+        
         .login-page .submit-item { margin: 0; }
-        .login-page .submit-item .ant-btn { height: 52px; border: 0; border-radius: 10px; background: var(--accent); font-family: inherit; font-size: 14px; font-weight: 700; box-shadow: 0 14px 24px rgba(174,40,91,.2); transition: transform .2s, background .2s, box-shadow .2s; }
+        .login-page .submit-item .ant-btn { 
+          height: clamp(44px, 5dvh, 52px); 
+          border: 0; 
+          border-radius: 10px; 
+          background: var(--accent); 
+          font-family: inherit; 
+          font-size: 14px; 
+          font-weight: 700; 
+          box-shadow: 0 14px 24px rgba(174,40,91,.2); 
+          transition: transform .2s, background .2s, box-shadow .2s; 
+        }
         .login-page .submit-item .ant-btn:hover { background: var(--accent-deep) !important; transform: translateY(-2px); box-shadow: 0 18px 30px rgba(98,93,231,.29); }
         .login-page .submit-item .ant-btn:active { transform: translateY(0); }
-        .account-activation { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 22px; color: #8f858b; font-family: Arial, "Helvetica Neue", sans-serif; font-size: 12px; font-weight: 400; letter-spacing: .005em; }
+        
+        .account-activation { 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 7px; 
+          margin-top: clamp(14px, 2.2vh, 22px); 
+          color: #8f858b; 
+          font-family: Arial, "Helvetica Neue", sans-serif; 
+          font-size: 12px; 
+          font-weight: 400; 
+          letter-spacing: .005em; 
+        }
         .account-activation a { color: var(--accent-deep); font-family: inherit; font-size: 12px; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(168,59,101,.35); text-underline-offset: 3px; }
-        .login-footer { color: #b2abb0; font-size: 11px; letter-spacing: .02em; text-align: center; margin-top: 32px; }
+        .login-footer { color: #b2abb0; font-size: 11px; letter-spacing: .02em; text-align: center; margin-top: clamp(18px, 3vh, 32px); }
 
         .login-brand {
           grid-column: 1; grid-row: 1; position: relative; isolation: isolate;
-          min-width: 0; height: 100%; min-height: 0; overflow: hidden; display: grid; place-items: center; padding: 48px;
+          min-width: 0; height: 100%; min-height: 0; overflow: hidden; display: grid; place-items: center; padding: clamp(24px, 4vw, 48px);
           background: #ad285b;
         }
         .login-brand::before {
@@ -258,14 +345,34 @@ const LoginPage = () => {
         }
         .geo-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
-        .brand-copy { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; width: min(60%, 385px); }
+        .brand-copy { 
+          position: relative; 
+          z-index: 1; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          justify-content: center; 
+          gap: clamp(14px, 2.5vh, 24px); 
+          width: min(65%, 385px); 
+        }
         .brand-copy::before, .brand-copy::after { display: none; }
-        .hero-logo-frame { position: relative; z-index: 1; display: grid; place-items: center; width: 67%; aspect-ratio: 1; padding: 13%; border-radius: 50%; background: #fff; box-shadow: 0 26px 55px rgba(92,15,46,.27), inset 0 0 0 12px #fce6ef; }
+        .hero-logo-frame { 
+          position: relative; 
+          z-index: 1; 
+          display: grid; 
+          place-items: center; 
+          width: 65%; 
+          aspect-ratio: 1; 
+          padding: 13%; 
+          border-radius: 50%; 
+          background: #fff; 
+          box-shadow: 0 26px 55px rgba(92,15,46,.27), inset 0 0 0 12px #fce6ef; 
+        }
         .hero-logo-frame img { width: 100%; height: 100%; object-fit: contain; }
         .brand-caption {
-          margin-top: 34px;
+          margin-top: clamp(12px, 2vh, 34px);
           font-family: Georgia, "Playfair Display", "Times New Roman", serif;
-          font-size: clamp(84px, 6vw, 120px);
+          font-size: clamp(60px, 6vw, 120px);
           font-weight: 900;
           line-height: .82;
           letter-spacing: .08em;
@@ -279,7 +386,8 @@ const LoginPage = () => {
         }
         .login-page *:focus-visible { outline: 3px solid rgba(207,92,137,.34); outline-offset: 3px; }
 
-        @media (max-width: 850px) and (orientation: portrait) {
+        /* ── RESPONSIVE FLUID SCALING (MOBILE / TABLET PORTRAIT) ── */
+        @media (max-width: 900px) {
           .login-page {
             display: flex;
             flex-direction: column;
@@ -290,99 +398,79 @@ const LoginPage = () => {
           }
           .login-brand {
             order: 1;
-            min-height: 290px;
-            padding: 32px;
-            border-radius: 0 0 48px 48px;
+            flex: 0 0 auto;
+            height: clamp(190px, 28dvh, 290px);
+            min-height: 180px;
+            padding: clamp(16px, 4vw, 32px);
+            border-radius: 0 0 clamp(32px, 8vw, 48px) clamp(32px, 8vw, 48px);
             box-shadow: 0 10px 30px rgba(173, 40, 91, 0.12);
           }
           .brand-copy {
-            width: 170px;
+            width: clamp(120px, 35vw, 170px);
+            gap: clamp(8px, 1.5vh, 16px);
+          }
+          .hero-logo-frame {
+            width: 100%;
+            padding: 12%;
+            box-shadow: 0 16px 36px rgba(92,15,46,.22), inset 0 0 0 8px #fce6ef;
           }
           .brand-caption {
             display: none;
           }
           .login-panel {
             order: 2;
-            flex: 1;
+            flex: 1 1 auto;
             height: auto;
             min-height: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding: 0 20px 40px;
-            margin-top: -70px;
+            padding: 0 clamp(16px, 4vw, 24px) clamp(24px, 4vh, 40px);
+            margin-top: clamp(-55px, -6dvh, -35px);
             z-index: 10;
             overflow: visible;
             background: transparent;
           }
           .login-form-wrap {
-            width: min(100%, 395px);
-            padding: 38px 28px 30px;
-            border-radius: 28px;
-            box-shadow: 0 20px 45px rgba(174, 40, 91, 0.08);
+            width: min(92%, 420px);
+            padding: clamp(26px, 5.5vw, 38px) clamp(20px, 4.5vw, 30px) clamp(22px, 4.5vw, 30px);
+            border-radius: clamp(18px, 4vw, 28px);
+            box-shadow: 0 18px 45px rgba(174, 40, 91, 0.1);
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
           }
           .login-form-wrap::before {
             display: none;
           }
           .login-heading {
-            margin-bottom: 28px;
+            margin-bottom: clamp(18px, 3.5vh, 28px);
           }
           .login-heading h2 {
-            font-size: 32px;
+            font-size: clamp(24px, 6vw, 32px);
           }
           .account-activation {
-            margin-top: 18px;
+            margin-top: clamp(14px, 2.5vh, 20px);
           }
         }
-        @media (max-width: 480px) and (orientation: portrait) {
-          .login-brand {
-            min-height: 250px;
-            border-radius: 0 0 40px 40px;
-          }
-          .brand-copy {
-            width: 140px;
-          }
+
+        /* ── SHORT SCREEN / LANDSCAPE LAPTOPS OPTIMIZATION ── */
+        @media (min-width: 901px) and (max-height: 700px) {
           .login-panel {
-            margin-top: -60px;
-            padding: 0 16px 30px;
+            padding: 16px;
           }
           .login-form-wrap {
-            padding: 32px 22px 26px;
-            border-radius: 24px;
+            width: min(92%, 390px);
+            padding: 24px 30px 20px;
+          }
+          .login-heading {
+            margin-bottom: 16px;
           }
           .login-heading h2 {
             font-size: 28px;
           }
-        }
-
-        @media (min-width: 851px) and (max-height: 680px),
-               (max-width: 850px) and (orientation: landscape) {
-          .login-panel {
-            padding: clamp(12px, 3dvh, 24px);
-          }
-          .login-form-wrap {
-            width: min(100%, 390px);
-            padding: clamp(20px, 4dvh, 30px) 32px clamp(18px, 3dvh, 24px);
-            border-radius: 18px;
-          }
-          .login-form-wrap::before {
-            left: 32px;
-          }
-          .login-heading {
-            margin-bottom: clamp(12px, 3dvh, 20px);
-          }
-          .login-heading h2 {
-            font-size: 30px;
-          }
-          .login-heading p {
-            margin-top: 6px;
-          }
           .login-page .ant-form-item {
-            margin-bottom: 11px;
-          }
-          .login-page .ant-form-item-label {
-            padding-bottom: 4px;
+            margin-bottom: 12px;
           }
           .login-page .ant-input-affix-wrapper,
           .login-page .submit-item .ant-btn {
@@ -397,22 +485,55 @@ const LoginPage = () => {
           .login-footer {
             margin-top: 14px;
           }
-          .login-brand {
-            padding: 24px;
+        }
+
+        /* ── ULTRA SILKY SMOOTH SPLIT DOOR REVEAL ── */
+        .login-split-active {
+          pointer-events: none;
+          background: linear-gradient(135deg, #fff5f8 0%, #f8f9fa 50%, #fbeff3 100%) !important;
+        }
+        .login-split-active .login-brand {
+          animation: splitLeft 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          will-change: transform;
+        }
+        .login-split-active .login-panel {
+          animation: splitRight 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          will-change: transform;
+        }
+        .login-split-active .login-form-wrap {
+          animation: fadeZoomOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          will-change: transform, opacity, filter;
+        }
+
+        @keyframes splitLeft {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
+        }
+        @keyframes splitRight {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes fadeZoomOut {
+          0% { transform: scale(1); opacity: 1; filter: blur(0px); }
+          100% { transform: scale(0.95); opacity: 0; filter: blur(4px); }
+        }
+
+        @media (max-width: 900px) {
+          .login-split-active .login-brand {
+            animation: splitUpMobile 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
-          .brand-copy {
-            width: min(56%, 280px);
-            gap: 12px;
+          .login-split-active .login-panel {
+            animation: splitDownMobile 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
-          .hero-logo-frame {
-            width: min(62%, 28dvh);
-            padding: 11%;
-            box-shadow: 0 20px 42px rgba(92,15,46,.25), inset 0 0 0 9px #fce6ef;
-          }
-          .brand-caption {
-            margin-top: 12px;
-            font-size: clamp(52px, 12dvh, 84px);
-          }
+        }
+
+        @keyframes splitUpMobile {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-100%); }
+        }
+        @keyframes splitDownMobile {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(100%); }
         }
       `}</style>
     </main>

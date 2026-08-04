@@ -8,26 +8,20 @@ import {
 } from "@ant-design/icons";
 import type { IDocument } from "@/types/backend";
 import dayjs from "dayjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { useDocumentByIdQuery, useMarkDocumentReadMutation } from "@/hooks/useDocuments";
 import { useAccountingDocumentByIdQuery, useAccountingDocumentAuditsQuery } from "@/hooks/useAccountingDocuments";
 import FileSection from "../procedures/components/file-section.procedure";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
+import { PROCEDURE_DOCUMENT_STATUS_META as STATUS_MAP } from "@/constants/statusMeta/procedureDocumentMeta";
 
 const { Text, Title } = Typography;
 
 const TAG_STYLE: React.CSSProperties = {
     borderRadius: 3, margin: 0, fontWeight: 600,
     fontSize: 11, lineHeight: "20px", padding: "0 8px",
-};
-
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần tạo", color: "orange" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "success" },
-    NEED_UPDATE: { label: "Cần cập nhật", color: "gold" },
-    TERMINATED: { label: "Đã huỷ", color: "error" },
 };
 
 const PROCEDURE_TYPE_LABEL: Record<string, string> = {
@@ -202,14 +196,28 @@ const ViewDetailDocument = ({ open, onClose, dataInit, setDataInit, isAccounting
         </div>
     ) : null;
 
+    const normalizedFileNames = useMemo(() => {
+        if (!data) return [];
+        const files: string[] = [];
+        if (Array.isArray(data.fileUrls)) {
+            files.push(...data.fileUrls.filter(Boolean));
+        } else if (typeof data.fileUrls === "string" && (data.fileUrls as string).trim()) {
+            files.push(...(data.fileUrls as string).split(",").map((s: string) => s.trim()).filter(Boolean));
+        }
+        if (typeof (data as any).fileUrl === "string" && (data as any).fileUrl.trim()) {
+            files.push(...(data as any).fileUrl.split(",").map((s: string) => s.trim()).filter(Boolean));
+        }
+        return Array.from(new Set(files));
+    }, [data]);
+
     const MainContent = (
         <div style={{ flex: 1, minWidth: 0 }}>
 
             {/* Tài liệu đính kèm */}
-            {(data?.fileUrls ?? []).length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                    <SectionHeading icon={<FileTextOutlined />} label="Tài liệu đính kèm" />
-                    <FileSection fileNames={data?.fileUrls} folder="documents" />
+            {normalizedFileNames.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                    <SectionHeading icon={<FileTextOutlined />} label={`Tài liệu đính kèm (${normalizedFileNames.length})`} />
+                    <FileSection fileNames={normalizedFileNames} folder="documents" />
                 </div>
             )}
 

@@ -26,10 +26,14 @@ import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
 import { useSectionsByDepartmentQuery } from "@/hooks/useSections";
 import PageContainer from "@/components/common/data-table/PageContainer";
 import ActionButton from "@/components/common/ui/ActionButton";
+import StatCard from "@/components/common/ui/StatCard";
 import Access from "@/components/share/access";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import dayjs from "dayjs";
 import { Pie, Column } from "@/components/common/chart/LazyChart";
+import { EVALUATION_STATUS_CONFIG } from "@/pages/evaluation/components/EvaluationStatusTag";
+import { EVALUATION_GRADE_META } from "@/constants/statusMeta/evaluationGradeMeta";
+import { TABLE_STICKY } from "@/components/common/data-table/TableScrollbarController";
 
 let XLSXStyle: any;
 const ensureXlsxStyle = async () => {
@@ -40,23 +44,9 @@ const ensureXlsxStyle = async () => {
     return XLSXStyle;
 };
 
-const GRADE_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-    A: { color: "#389e0d", bg: "#f6ffed", label: "Xuất sắc" },
-    B: { color: "#1677ff", bg: "#e6f4ff", label: "Tốt" },
-    C: { color: "#d46b08", bg: "#fff7e6", label: "Khá" },
-    D: { color: "#cf1322", bg: "#fff1f0", label: "Trung bình" },
-    E: { color: "#8c8c8c", bg: "#f5f5f5", label: "Yếu" },
-};
+const GRADE_CONFIG = EVALUATION_GRADE_META;
 
-const STATUS_CONFIG: Record<string, { text: string; color: string; icon: React.ReactNode; tagColor: string }> = {
-    NOT_STARTED: { text: "Chưa bắt đầu", color: "#8c8c8c", icon: <StopOutlined />, tagColor: "default" },
-    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", color: "#1677ff", icon: <SyncOutlined spin />, tagColor: "processing" },
-    PENDING_MANAGER_REVIEW: { text: "Chờ QL chấm", color: "#fa8c16", icon: <ClockCircleOutlined />, tagColor: "warning" },
-    MANAGER_REVIEWING: { text: "QL đang chấm", color: "#722ed1", icon: <SyncOutlined spin />, tagColor: "purple" },
-    PENDING_APPROVAL: { text: "Chờ phê duyệt", color: "#13c2c2", icon: <ClockCircleOutlined />, tagColor: "cyan" },
-    REVISION_NEEDED: { text: "Yêu cầu sửa đổi", color: "#f5222d", icon: <CloseCircleOutlined />, tagColor: "error" },
-    COMPLETED: { text: "Hoàn tất", color: "#52c41a", icon: <CheckCircleOutlined />, tagColor: "success" },
-};
+const STATUS_CONFIG: Record<string, { text: string; color: string; icon: React.ReactNode }> = EVALUATION_STATUS_CONFIG;
 
 const getChartDatum = (event: any) =>
     event?.data?.data ?? event?.data ?? event?.datum ?? event?.target?.__data__?.data ?? null;
@@ -930,23 +920,23 @@ const CompletedEvaluationsPage = () => {
                 );
 
                 if (isEmpOverdue) {
-                    return renderPillBadge("Trễ hạn tự đánh giá", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                    return renderPillBadge(EVALUATION_STATUS_CONFIG.OVERDUE_EMPLOYEE.text, <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
                 }
                 if (isMgrOverdue) {
-                    return renderPillBadge("Trễ hạn chấm điểm", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                    return renderPillBadge(EVALUATION_STATUS_CONFIG.OVERDUE_MANAGER.text, <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
                 }
                 if (isAppOverdue) {
-                    return renderPillBadge("Trễ hạn phê duyệt", <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
+                    return renderPillBadge(EVALUATION_STATUS_CONFIG.OVERDUE_APPROVAL.text, <ClockCircleOutlined />, "#fff1f2", "#fecdd3", "#dc2626");
                 }
 
                 const styleConfig: Record<string, { bg: string; border: string; color: string; text: string; icon: React.ReactNode }> = {
-                    NOT_STARTED: { text: "Chưa bắt đầu", bg: "#f8fafc", border: "#e2e8f0", color: "#64748b", icon: <StopOutlined /> },
-                    EMPLOYEE_DRAFTING: { text: "NV đang đánh giá", bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb", icon: <SyncOutlined spin /> },
-                    PENDING_MANAGER_REVIEW: { text: "Chờ QL chấm", bg: "#fffbeb", border: "#fef08a", color: "#d97706", icon: <ClockCircleOutlined /> },
-                    MANAGER_REVIEWING: { text: "QL đang chấm", bg: "#faf5ff", border: "#e9d5ff", color: "#9333ea", icon: <SyncOutlined spin /> },
-                    PENDING_APPROVAL: { text: "Chờ phê duyệt", bg: "#ecfeff", border: "#a5f3fc", color: "#0891b2", icon: <ClockCircleOutlined /> },
-                    REVISION_NEEDED: { text: "Yêu cầu sửa đổi", bg: "#fff1f2", border: "#fecdd3", color: "#e11d48", icon: <CloseCircleOutlined /> },
-                    COMPLETED: { text: "Hoàn tất", bg: "#f0fdf4", border: "#bbf7d0", color: "#16a34a", icon: <CheckCircleOutlined /> },
+                    NOT_STARTED: { text: EVALUATION_STATUS_CONFIG.NOT_STARTED.text, bg: "#f8fafc", border: "#e2e8f0", color: "#64748b", icon: <StopOutlined /> },
+                    EMPLOYEE_DRAFTING: { text: EVALUATION_STATUS_CONFIG.EMPLOYEE_DRAFTING.text, bg: "#eff6ff", border: "#bfdbfe", color: "#2563eb", icon: <SyncOutlined spin /> },
+                    PENDING_MANAGER_REVIEW: { text: EVALUATION_STATUS_CONFIG.PENDING_MANAGER_REVIEW.text, bg: "#fffbeb", border: "#fef08a", color: "#d97706", icon: <ClockCircleOutlined /> },
+                    MANAGER_REVIEWING: { text: EVALUATION_STATUS_CONFIG.MANAGER_REVIEWING.text, bg: "#faf5ff", border: "#e9d5ff", color: "#9333ea", icon: <SyncOutlined spin /> },
+                    PENDING_APPROVAL: { text: EVALUATION_STATUS_CONFIG.PENDING_APPROVAL.text, bg: "#ecfeff", border: "#a5f3fc", color: "#0891b2", icon: <ClockCircleOutlined /> },
+                    REVISION_NEEDED: { text: EVALUATION_STATUS_CONFIG.REVISION_NEEDED.text, bg: "#fff1f2", border: "#fecdd3", color: "#e11d48", icon: <CloseCircleOutlined /> },
+                    COMPLETED: { text: EVALUATION_STATUS_CONFIG.COMPLETED.text, bg: "#f0fdf4", border: "#bbf7d0", color: "#16a34a", icon: <CheckCircleOutlined /> },
                 };
 
                 const st = styleConfig[val] ?? styleConfig.NOT_STARTED;
@@ -1149,58 +1139,36 @@ const CompletedEvaluationsPage = () => {
             {/* KPI CARDS */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} md={6}>
-                    <Card className="kpi-card kpi-completion" variant="borderless" styles={{ body: { padding: "20px 24px" } }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <span className="kpi-title">Số bản hoàn tất</span>
-                                <span className="kpi-value">{completedRecordsCount}</span>
-                            </div>
-                            <div className="kpi-icon-wrapper">
-                                <CheckSquareOutlined />
-                            </div>
-                        </div>
-                    </Card>
+                    <StatCard
+                        title="Số bản hoàn tất"
+                        value={completedRecordsCount}
+                        variant="completion"
+                        icon={<CheckSquareOutlined />}
+                    />
                 </Col>
                 <Col xs={24} sm={12} md={6}>
-                    <Card className="kpi-card kpi-average" variant="borderless" styles={{ body: { padding: "20px 24px" } }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <span className="kpi-title">Điểm trung bình</span>
-                                <span className="kpi-value">{averageScore}</span>
-                            </div>
-                            <div className="kpi-icon-wrapper">
-                                <StarOutlined />
-                            </div>
-                        </div>
-                    </Card>
+                    <StatCard
+                        title="Điểm trung bình"
+                        value={averageScore}
+                        variant="average"
+                        icon={<StarOutlined />}
+                    />
                 </Col>
                 <Col xs={24} sm={12} md={6}>
-                    <Card className="kpi-card kpi-excellent" variant="borderless" styles={{ body: { padding: "20px 24px" } }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <span className="kpi-title">Tỷ lệ Xuất sắc</span>
-                                <span className="kpi-value">{excellentRate}%</span>
-                            </div>
-                            <div className="kpi-icon-wrapper">
-                                <TrophyOutlined />
-                            </div>
-                        </div>
-                    </Card>
+                    <StatCard
+                        title="Tỷ lệ Xuất sắc"
+                        value={`${excellentRate}%`}
+                        variant="excellent"
+                        icon={<TrophyOutlined />}
+                    />
                 </Col>
                 <Col xs={24} sm={12} md={6}>
-                    <Card className="kpi-card kpi-improvement" variant="borderless" styles={{ body: { padding: "20px 24px" } }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <span className="kpi-title">Cần cải thiện</span>
-                                <span className="kpi-value">
-                                    {completedWithScores.length > 0 ? (((completedWithScores.filter(r => r.finalGrade === 'D' || r.finalGrade === 'E').length) / completedWithScores.length) * 100).toFixed(1) : "0.0"}%
-                                </span>
-                            </div>
-                            <div className="kpi-icon-wrapper">
-                                <StopOutlined />
-                            </div>
-                        </div>
-                    </Card>
+                    <StatCard
+                        title="Cần cải thiện"
+                        value={`${completedWithScores.length > 0 ? (((completedWithScores.filter(r => r.finalGrade === 'D' || r.finalGrade === 'E').length) / completedWithScores.length) * 100).toFixed(1) : "0.0"}%`}
+                        variant="improvement"
+                        icon={<StopOutlined />}
+                    />
                 </Col>
             </Row>
 
@@ -1351,7 +1319,7 @@ const CompletedEvaluationsPage = () => {
                             <Tag
                                 closable
                                 onClose={() => setFilterStatus(undefined)}
-                                color={STATUS_CONFIG[filterStatus]?.tagColor}
+                                color={STATUS_CONFIG[filterStatus]?.color}
                                 style={{ marginBottom: 12, fontWeight: 600 }}
                             >
                                 Đang lọc: {STATUS_CONFIG[filterStatus]?.text || filterStatus}
@@ -1460,11 +1428,12 @@ const CompletedEvaluationsPage = () => {
             </Row>
 
             {/* DATA TABLE */}
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "clip", boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)" }}>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ fontWeight: 700, color: "#1e293b", fontSize: 16 }}>Danh sách Kết quả Đánh giá</div>
                 </div>
                 <Table
+                    sticky={TABLE_STICKY}
                     className="my-eval-table"
                     columns={columns}
                     dataSource={filteredRecords}

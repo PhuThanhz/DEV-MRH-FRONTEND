@@ -14,6 +14,9 @@ export default defineConfig({
       include: ['stream', 'crypto', 'util', 'buffer', 'vm'],
     }),
   ],
+  optimizeDeps: {
+    include: ['dagre', 'reactflow', '@xyflow/react', '@ant-design/icons', 'antd', '@fullcalendar/react', '@fullcalendar/core', '@fullcalendar/daygrid', '@fullcalendar/timegrid'],
+  },
   build: {
     modulePreload: {
       resolveDependencies(_, deps) {

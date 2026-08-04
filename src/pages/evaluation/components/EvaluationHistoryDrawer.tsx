@@ -14,6 +14,7 @@ import {
 import dayjs from "dayjs";
 import EvaluationStatusTag from "./EvaluationStatusTag";
 import type { IEvaluationHistory } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 interface EvaluationHistoryDrawerProps {
     open: boolean;
@@ -62,6 +63,7 @@ const EvaluationHistoryDrawer: React.FC<EvaluationHistoryDrawerProps> = ({
     historyData = [],
     loading = false,
 }) => {
+    const drawerWidth = useResponsiveModalWidth(540);
     const employeeName = record?.employee?.fullName || record?.employee?.username || "Nhân viên";
     const departmentName = record?.employee?.department?.departmentName || record?.departmentName || "";
     const periodName = record?.period?.periodName || record?.periodName || "";
@@ -71,7 +73,7 @@ const EvaluationHistoryDrawer: React.FC<EvaluationHistoryDrawerProps> = ({
         <Drawer
             open={open}
             onClose={onClose}
-            width={540}
+            width={drawerWidth}
             destroyOnClose
             styles={{
                 header: { padding: "16px 24px", borderBottom: "1px solid #f1f5f9" },

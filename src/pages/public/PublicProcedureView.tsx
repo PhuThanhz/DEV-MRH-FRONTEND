@@ -14,6 +14,7 @@ import {
     FileExcelOutlined, FileImageOutlined, FileOutlined, LockOutlined,
     PaperClipOutlined, TeamOutlined, SafetyCertificateOutlined,
 } from "@ant-design/icons";
+import { PROCEDURE_DOCUMENT_STATUS_META } from "@/constants/statusMeta/procedureDocumentMeta";
 
 const { Title, Text, Paragraph } = Typography;
 const { useToken } = theme;
@@ -24,12 +25,12 @@ const BRAND_SOFT = "#fdf2f8"; // Soft Rose Cream
 const BRAND_MID = "#fbcfe8";  // Rose Quartz Border Gray
 const BRAND_BLUE = "#3b82f6"; // Standard blue
 
-const STATUS_MAP: Record<string, { label: string; color: string; bg: string; text: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "#b45309", bg: "#fffbeb", text: "#92400e" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "#059669", bg: "#ecfdf5", text: "#065f46" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "#2563eb", bg: "#eff6ff", text: "#1e40af" },
-    TERMINATED: { label: "Hết hiệu lực", color: "#dc2626", bg: "#fef2f2", text: "#991b1b" },
-};
+const STATUS_MAP: Record<string, { label: string; color: string; bg: string; text: string }> = Object.fromEntries(
+    Object.entries(PROCEDURE_DOCUMENT_STATUS_META).map(([key, meta]) => [
+        key,
+        { label: meta.label, color: meta.hex!, bg: meta.bg!, text: meta.hex! },
+    ])
+);
 
 const EXT_ICON: Record<string, React.ReactNode> = {
     PDF: <FilePdfOutlined style={{ color: "#ef4444", fontSize: 22 }} />,

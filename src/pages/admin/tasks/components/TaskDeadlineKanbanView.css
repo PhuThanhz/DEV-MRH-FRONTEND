@@ -1,0 +1,232 @@
+.kanban-scroll-row {
+    scroll-snap-type: x proximity;
+}
+
+.kanban-scroll-row::-webkit-scrollbar {
+    height: 8px;
+}
+
+.kanban-scroll-row::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.kanban-scroll-row::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.kanban-scroll-row::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.kanban-column {
+    scroll-snap-align: start;
+}
+
+.kanban-task-card {
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
+}
+
+.kanban-task-card:hover {
+    transform: translateY(-3px);
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 12px 20px -8px rgba(15, 23, 42, 0.14), 0 4px 8px -4px rgba(15, 23, 42, 0.08) !important;
+}
+
+.deadline-task-card {
+    isolation: isolate;
+    min-height: 164px;
+    border-color: #e1e6ee !important;
+    background: #fff !important;
+}
+
+.deadline-task-card__accent {
+    position: absolute;
+    z-index: -1;
+    inset: 0 auto 0 0;
+    width: 3px;
+    opacity: 0.9;
+}
+
+.deadline-task-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.deadline-task-card__priority,
+.deadline-task-card__status {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    color: #667085;
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1;
+}
+
+.deadline-task-card__priority {
+    gap: 6px;
+    letter-spacing: 0.01em;
+}
+
+.deadline-task-card__priority i {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+}
+
+.deadline-task-card__status {
+    gap: 5px;
+    padding: 5px 7px;
+    border-radius: 6px;
+    color: #667085;
+    background: #f3f5f8;
+    white-space: nowrap;
+}
+
+.deadline-task-card__status[data-status="IN_PROGRESS"] {
+    color: #1768ac;
+    background: #edf6ff;
+}
+
+.deadline-task-card__status[data-status="PENDING_REVIEW"] {
+    color: #9a6700;
+    background: #fff7df;
+}
+
+.deadline-task-card__status[data-status="COMPLETED"] {
+    color: #16794a;
+    background: #edf9f2;
+}
+
+.deadline-task-card__status[data-status="REWORK"],
+.deadline-task-card__status[data-status="OVERDUE"] {
+    color: #c23b3b;
+    background: #fff0f0;
+}
+
+.deadline-task-card__status[data-status="CANCELLED"] {
+    color: #7a8495;
+    background: #eef1f5;
+}
+
+.deadline-task-card__status .anticon {
+    font-size: 11px;
+}
+
+.deadline-task-card__title {
+    display: -webkit-box !important;
+    overflow: hidden;
+    min-height: 40px;
+    color: #172033 !important;
+    font-size: 14px !important;
+    font-weight: 680 !important;
+    line-height: 1.42 !important;
+    letter-spacing: -0.012em;
+    text-wrap: pretty;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.deadline-task-card__context {
+    display: block !important;
+    margin-top: 5px;
+    color: #8a94a6 !important;
+    font-size: 10.5px !important;
+}
+
+.deadline-task-card__progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.deadline-task-card__progress .ant-typography {
+    color: #7a8495 !important;
+    font-size: 10.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.deadline-task-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #edf0f4;
+}
+
+.deadline-task-card__assignee {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 6px;
+}
+
+.deadline-task-card__assignee > .ant-typography {
+    overflow: hidden;
+    max-width: 82px;
+    color: #596579;
+    font-size: 10.5px;
+    font-weight: 550;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deadline-task-card__assignee .ant-avatar {
+    border-radius: 7px !important;
+}
+
+.deadline-task-card__date {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    color: #596579;
+    font-size: 10.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.deadline-task-card__date[data-state="overdue"] {
+    color: #c23b3b;
+}
+
+.deadline-task-card__date[data-state="today"] {
+    color: #16794a;
+}
+
+.deadline-task-card__date .anticon {
+    font-size: 11px;
+}
+
+.deadline-task-card:hover {
+    border-color: #c8d0dc !important;
+    box-shadow: 0 12px 24px -18px rgba(24, 34, 50, 0.55) !important;
+}
+
+.deadline-task-card:active {
+    transform: translateY(0) scale(0.99);
+}
+
+.deadline-task-card:focus-visible {
+    outline: 3px solid rgba(232, 53, 109, 0.16);
+    outline-offset: 2px;
+}
+
+.kanban-load-more {
+    transition: all 0.2s ease;
+}
+
+.kanban-load-more:hover {
+    background: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+}

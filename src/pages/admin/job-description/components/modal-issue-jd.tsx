@@ -1,6 +1,7 @@
 import { Modal, Typography, Space, Tag } from "antd";
 import { CheckCircleOutlined } from "@ant-design/icons";
 import type { IJdInbox } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const ModalIssueJd = ({ open, record, loading, onConfirm, onCancel }: Props) => {
+    const modalWidth = useResponsiveModalWidth(460);
     const code = (record as any)?.code ?? "";
 
     return (
@@ -29,7 +31,7 @@ const ModalIssueJd = ({ open, record, loading, onConfirm, onCancel }: Props) => 
             okButtonProps={{ loading, type: "primary" }}
             onOk={onConfirm}
             onCancel={onCancel}
-            width={460}
+            width={modalWidth}
             centered
             destroyOnHidden
             className="job-description-issue-modal"

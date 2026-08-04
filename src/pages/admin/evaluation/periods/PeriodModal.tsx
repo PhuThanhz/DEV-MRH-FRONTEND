@@ -2,10 +2,13 @@ import { Form, Input, DatePicker, Tooltip, Button, Select } from "antd";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import { callCreateEvaluationPeriod, callUpdateEvaluationPeriod } from "@/config/api";
 import type { IEvaluationPeriod } from "@/types/backend";
 import { notify } from "@/components/common/notification/notify";
 import { fetchPeriodCompanyOptions, PERIOD_COMPANY_OPTIONS_QUERY_KEY } from "@/hooks/useEvaluationPeriodReferenceData";
+import {
+    useCreateEvaluationPeriodMutation,
+    useUpdateEvaluationPeriodMutation,
+} from "@/hooks/useEvaluations";
 import Access from '@/components/share/access';
 import { ALL_PERMISSIONS } from '@/config/permissions';
 import {
@@ -76,6 +79,8 @@ const PeriodModal = (props: IProps) => {
     const { openModal, setOpenModal, reloadTable, dataInit, setDataInit, onCreated, onSaved } = props;
     const [form] = Form.useForm();
     const [isSubmit, setIsSubmit] = useState(false);
+    const createPeriodMutation = useCreateEvaluationPeriodMutation();
+    const updatePeriodMutation = useUpdateEvaluationPeriodMutation();
     const { data: companies = [], isFetching: isFetchingCompanies } = useQuery({
         queryKey: PERIOD_COMPANY_OPTIONS_QUERY_KEY,
         queryFn: fetchPeriodCompanyOptions,
@@ -106,11 +111,10 @@ const PeriodModal = (props: IProps) => {
         }
     }, [openModal, dataInit, form]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onFinish = async (values: any) => {
         const { employeeStartDate, employeeDeadline, managerDeadline, approvalDeadline } = values;
         const periodName = String(values.name ?? "").trim();
-        
+
         const now = dayjs();
         if (employeeStartDate?.isBefore(now, "minute")) {
             notify.warning("Ngày mở cổng không được nằm trong quá khứ.");
@@ -128,7 +132,7 @@ const PeriodModal = (props: IProps) => {
             notify.warning("Hạn quản lý gián tiếp duyệt không được nằm trong quá khứ.");
             return;
         }
-        
+
         if (employeeStartDate && employeeDeadline && !employeeStartDate.isBefore(employeeDeadline)) {
             notify.warning("Ngày mở cổng phải trước hạn nhân viên nộp.");
             return;
@@ -155,11 +159,9 @@ const PeriodModal = (props: IProps) => {
             };
             let res;
             if (dataInit?.id) {
-                res = await callUpdateEvaluationPeriod(dataInit.id, payload);
-                if (res?.data) notify.success("Cập nhật kỳ đánh giá thành công");
+                res = await updatePeriodMutation.mutateAsync({ id: dataInit.id, data: payload });
             } else {
-                res = await callCreateEvaluationPeriod(payload);
-                if (res?.data) notify.success("Tạo kỳ đánh giá thành công");
+                res = await createPeriodMutation.mutateAsync(payload);
             }
             if (res?.data) {
                 setOpenModal(false);
@@ -169,12 +171,9 @@ const PeriodModal = (props: IProps) => {
                 if (!dataInit?.id) {
                     onCreated?.(res.data);
                 }
-            } else {
-                notify.error("Không thể lưu kỳ đánh giá. Vui lòng thử lại.");
             }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            notify.error(error?.response?.data?.message || "Không thể kết nối máy chủ");
+        } catch {
+            return;
         } finally {
             setIsSubmit(false);
         }

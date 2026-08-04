@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal, Input, Typography, Space, Alert } from "antd";
 import { StopOutlined } from "@ant-design/icons";
 import type { IJdInbox } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, onCancel }: Props) => {
+    const modalWidth = useResponsiveModalWidth(480);
     const [reason, setReason] = useState("");
     const code = (record as any)?.code ?? "";
     const maxLength = 500;
@@ -55,7 +57,7 @@ const ModalRejectJd = ({ open, record, loading, isResubmit = false, onConfirm, o
             }}
             onOk={handleConfirm}
             onCancel={handleCancel}
-            width={480}
+            width={modalWidth}
             centered
             destroyOnHidden
             className="job-description-reject-modal"

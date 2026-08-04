@@ -62,7 +62,8 @@ import SearchFilter from "@/components/common/filter/SearchFilter";
 import TabBar from "@/components/common/tabs/TabBar";
 import ActionButton from "@/components/common/ui/ActionButton";
 import { useDepartmentsByCompanyQuery } from "@/hooks/useDepartments";
-import { getModalWidth, MODAL_BODY_SCROLL } from "@/utils/responsive";
+import { getModalWidth, MODAL_BODY_SCROLL, useResponsiveModalWidth } from "@/utils/responsive";
+import { TABLE_STICKY } from "@/components/common/data-table/TableScrollbarController";
 import Access from "@/components/share/access";
 import LotusDetailDrawer from "@/components/common/drawer/LotusDetailDrawer";
 import {
@@ -184,6 +185,10 @@ const AccountingDossierPage = () => {
     const [viewDossier, setViewDossier] = useState<IAccountingDossier | null>(null);
     const [qrDossier, setQrDossier] = useState<IAccountingDossier | null>(null);
     const [approvalHistoryOpen, setApprovalHistoryOpen] = useState(false);
+    const qrModalWidth = useResponsiveModalWidth(420);
+    const approvalHistoryModalWidth = useResponsiveModalWidth(860);
+    const submitModalWidth = useResponsiveModalWidth(640);
+    const logDrawerWidth = useResponsiveModalWidth(680);
     const [activeTabKey, setActiveTabKey] = useState<string>("ALL");
     const [storageStatusFilter, setStorageStatusFilter] = useState<string | undefined>();
     const [departmentFilter, setDepartmentFilter] = useState<number | undefined>();
@@ -1348,6 +1353,7 @@ const AccountingDossierPage = () => {
                 </div>
             )}
             <Table<IAccountingDossier>
+                sticky={TABLE_STICKY}
                 rowKey={(record) => String(record.id)}
                 columns={columns}
                 dataSource={rows}
@@ -1780,7 +1786,7 @@ const AccountingDossierPage = () => {
                 open={!!qrDossier}
                 onCancel={() => setQrDossier(null)}
                 footer={<Button onClick={() => setQrDossier(null)}>Đóng</Button>}
-                width={420}
+                width={qrModalWidth}
                 destroyOnHidden
             >
                 <Spin spinning={loadingQrDossier}>
@@ -1822,7 +1828,7 @@ const AccountingDossierPage = () => {
                         Đóng
                     </Button>,
                 ]}
-                width={860}
+                width={approvalHistoryModalWidth}
             >
                 <Table<IAccountingDossierApprovalStep>
                     rowKey="id"
@@ -2048,7 +2054,7 @@ const AccountingDossierPage = () => {
                         Xác nhận gửi duyệt
                     </Button>
                 ]}
-                width={640}
+                width={submitModalWidth}
                 styles={{ body: { paddingTop: 8 } }}
             >
                 {(() => {
@@ -2297,7 +2303,7 @@ const AccountingDossierPage = () => {
                 }
                 open={!!logDossier}
                 onClose={() => setLogDossier(null)}
-                width={680}
+                width={logDrawerWidth}
                 styles={{
                     body: {
                         background: "#f6f8fb",

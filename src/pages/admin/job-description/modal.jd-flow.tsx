@@ -17,6 +17,7 @@ import {
 } from "@/hooks/useJdFlow";
 
 import ModalRejectJd from "../job-description/components/modal-reject-jd";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 const getAvatarUrl = (avatar?: string) => {
     if (!avatar) return undefined;
@@ -199,6 +200,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
     const [nextUserId, setNextUserId] = useState<string | undefined>();
     const [nextIssuerId, setNextIssuerId] = useState<string | undefined>();
     const [openReject, setOpenReject] = useState(false);
+    const modalWidth = useResponsiveModalWidth(580);
 
     const submitMutation = useSubmitJdFlowMutation();
     const approveMutation = useApproveJdFlowMutation();
@@ -335,7 +337,7 @@ const ModalJdFlow = ({ open, onClose, record }: Props) => {
                 onCancel={onClose}
                 footer={null}
                 destroyOnHidden
-                width={580}
+                width={modalWidth}
                 className="job-description-approval-modal"
                 styles={{ body: { paddingTop: 4, paddingBottom: 4 } }}
             >

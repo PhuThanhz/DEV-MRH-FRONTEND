@@ -1,0 +1,6 @@
+:root {
+    --brand-primary: #e8637a;
+    --brand-primary-hover: #d94c66;
+    --brand-primary-light: #f7a8b8;
+    --brand-gradient: linear-gradient(135deg, #e8637a, #d94c66);
+}

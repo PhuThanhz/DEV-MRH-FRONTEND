@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Tooltip } from "antd";
-import { FileSearchOutlined, SearchOutlined, AppstoreAddOutlined } from "@ant-design/icons";
+import { FileSearchOutlined, CalendarOutlined, SearchOutlined, AppstoreAddOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/redux/hooks";
 import { ALL_PERMISSIONS } from "@/config/permissions";
@@ -100,29 +100,32 @@ const LotusChanRadial = () => {
                     </Tooltip>
                 )}
 
-                {/* Coming soon button 1 */}
-                <Tooltip title="Tìm kiếm chung" placement="left">
+                {/* Quick Calendar Button */}
+                <Tooltip title="Lịch Công Việc Của Tôi" placement="left">
                     <div
+                        onClick={() => {
+                            navigate("/admin/calendar/my-actions");
+                            setOpenRadial(false);
+                        }}
                         style={{
                             position: "absolute",
                             top: 0, left: 0,
                             transform: openRadial ? "translate(-95px, -95px)" : "translate(-50%, -50%)",
-                            width: 48, height: 48,
+                            width: 52, height: 52,
                             borderRadius: "50%",
-                            background: "rgba(255, 255, 255, 0.85)",
-                            backdropFilter: "blur(10px)",
-                            color: "#ec4899",
+                            background: "linear-gradient(135deg, #10b981, #059669)",
+                            color: "white",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 20, cursor: "pointer",
-                            boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
-                            opacity: openRadial ? 0.9 : 0,
+                            fontSize: 22, cursor: "pointer",
+                            boxShadow: "0 8px 20px rgba(16,185,129,0.4)",
+                            opacity: openRadial ? 1 : 0,
                             visibility: openRadial ? "visible" : "hidden",
                             transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s",
-                            border: "1px solid rgba(236,72,153,0.3)"
+                            border: "1px solid rgba(255,255,255,0.4)"
                         }}
                         className="radial-btn-secondary"
                     >
-                        <SearchOutlined />
+                        <CalendarOutlined />
                     </div>
                 </Tooltip>
 

@@ -18,6 +18,10 @@ import {
     callFetchFolderTree,
     callFetchFolderDocuments,
     callCreateDocumentShortcut,
+    callCreateFolder,
+    callUpdateFolder,
+    callDeleteFolder,
+    callDeleteDocumentShortcut,
 } from "@/config/api";
 import type {
     IDocument,
@@ -125,7 +129,8 @@ export const useCreateDocumentMutation = () => {
         },
         onSuccess: (res) => {
             notify.created(res?.message || "Tạo văn bản thành công");
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["folder-documents"], exact: false });
         },
         onError: (error: any) => {
             notify.error(error.message || "Không thể tạo văn bản");
@@ -144,7 +149,8 @@ export const useUpdateDocumentMutation = () => {
         },
         onSuccess: (res, variables) => {
             notify.updated(res?.message || "Cập nhật văn bản thành công");
-            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["folder-documents"], exact: false });
             queryClient.invalidateQueries({ queryKey: ["document", variables.id] });
         },
         onError: (error: any) => {
@@ -331,3 +337,88 @@ export const useCreateDocumentShortcutMutation = () => {
         },
     });
 };
+
+/* ===================== FOLDER CRUD MUTATIONS ===================== */
+export const useCreateFolderMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: { folderName: string; parentId?: number | null; ownerId?: string }) => {
+            const res = await callCreateFolder(data);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể tạo thư mục");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.created(res?.message || "Tạo thư mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["folder-tree"], exact: false });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Không thể tạo thư mục");
+        },
+    });
+};
+
+export const useUpdateFolderMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: { folderName: string; parentId?: number | null } }) => {
+            const res = await callUpdateFolder(id, data);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể cập nhật thư mục");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.updated(res?.message || "Đổi tên thư mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["folder-tree"], exact: false });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Không thể cập nhật thư mục");
+        },
+    });
+};
+
+export const useDeleteFolderMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: number) => {
+            const res = await callDeleteFolder(id);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể xóa thư mục");
+            }
+            return res;
+        },
+        onSuccess: (res) => {
+            notify.deleted(res?.message || "Xóa thư mục thành công");
+            queryClient.invalidateQueries({ queryKey: ["folder-tree"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["folder-documents"], exact: false });
+        },
+        onError: (error: any) => {
+            notify.error(error.message || "Không thể xóa thư mục");
+        },
+    });
+};
+
+export const useDeleteDocumentShortcutMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ documentId, folderId }: { documentId: number; folderId: number }) => {
+            const res = await callDeleteDocumentShortcut(documentId, folderId);
+            if (res?.statusCode && Number(res.statusCode) >= 400) {
+                throw new Error(res?.message || "Không thể xóa lối tắt");
+            }
+            return res;
+        },
+        onSuccess: (_, variables) => {
+            notify.deleted("Xóa lối tắt thành công");
+            queryClient.invalidateQueries({ queryKey: ["folder-documents", variables.folderId] });
+            queryClient.invalidateQueries({ queryKey: ["documents"], exact: false });
+        },
+        onError: (error: any) => {
+            const msg = error?.response?.data?.message || error?.message || "Không thể xóa lối tắt";
+            notify.error(msg);
+        },
+    });
+};
+

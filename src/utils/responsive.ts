@@ -3,6 +3,10 @@ import { useBreakpoint } from "@/hooks/useIsMobile";
 
 export const TABLE_SCROLL_X = { x: "max-content" } as const;
 
+/**
+ * Keep large page tables usable below the fixed 64px application header.
+ * Module scope keeps the object reference stable across table renders.
+ */
 export const MODAL_BODY_SCROLL: CSSProperties = {
     maxHeight: "80vh",
     overflowY: "auto",

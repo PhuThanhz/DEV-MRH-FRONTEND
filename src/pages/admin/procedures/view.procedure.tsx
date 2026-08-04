@@ -13,19 +13,13 @@ import { useState, useEffect } from "react";
 import { useProcedureHistoryQuery, useProcedureByIdQuery } from "@/hooks/useProcedure";
 import HistoryItemProcedure from "./components/history-item.procedure";
 import FileSection from "./components/file-section.procedure";
+import { PROCEDURE_DOCUMENT_STATUS_META as STATUS_MAP } from "@/constants/statusMeta/procedureDocumentMeta";
 
 const { Text, Title } = Typography;
 
 const TAG_STYLE: React.CSSProperties = {
     borderRadius: 3, margin: 0, fontWeight: 600,
     fontSize: 11, lineHeight: "20px", padding: "0 8px",
-};
-
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "success" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
-    TERMINATED: { label: "Hết hiệu lực", color: "error" },
 };
 
 const SectionHeading = ({ icon, label }: { icon: React.ReactNode; label: string }) => (

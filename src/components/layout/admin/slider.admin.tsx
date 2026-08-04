@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import useAccess from "@/hooks/useAccess";
 import { ALL_PERMISSIONS } from "@/config/permissions";
 import { callFetchEvaluationTaskCounts } from "@/config/api";
+import SidebarAccount from "./sidebar.account";
 
 const { Sider } = Layout;
 
@@ -79,7 +80,7 @@ const SliderAdmin: React.FC<IProps> = ({
         <div
             className="logo-container"
             style={{
-                height: 64,
+                height: 56,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -110,7 +111,7 @@ const SliderAdmin: React.FC<IProps> = ({
                             style={{
                                 fontSize: 18,
                                 fontWeight: 700,
-                                color: "#d63384",
+                                color: "#d94c66",
                                 letterSpacing: "0.5px",
                                 lineHeight: 1.2,
                             }}
@@ -121,7 +122,7 @@ const SliderAdmin: React.FC<IProps> = ({
                             style={{
                                 fontSize: 10,
                                 fontWeight: 500,
-                                color: "#f472b6",
+                                color: "#e8637a",
                                 letterSpacing: "0.3px",
                                 lineHeight: 1.2,
                             }}
@@ -136,7 +137,7 @@ const SliderAdmin: React.FC<IProps> = ({
                 style={{
                     position: "absolute",
                     inset: 0,
-                    background: "rgba(255, 105, 180, 0)",
+                    background: "rgba(232, 99, 122, 0)",
                     transition: "background 0.3s ease",
                     pointerEvents: "none",
                 }}
@@ -165,7 +166,7 @@ const SliderAdmin: React.FC<IProps> = ({
                             size="small"
                             checked={showScannerButton}
                             style={{
-                                backgroundColor: showScannerButton ? "#ec4899" : undefined,
+                                backgroundColor: showScannerButton ? "#e8637a" : undefined,
                                 minWidth: 32,
                                 pointerEvents: "none",
                             }}
@@ -221,9 +222,9 @@ const SliderAdmin: React.FC<IProps> = ({
                 style={{
                     width: 72,
                     height: 72,
-                    background: "#ec4899",
-                    borderColor: "#ec4899",
-                    boxShadow: "0 12px 32px rgba(255, 105, 180, 0.3)",
+                    background: "#e8637a",
+                    borderColor: "#e8637a",
+                    boxShadow: "0 12px 32px rgba(232, 99, 122, 0.3)",
                 }}
                 onClick={() => window.dispatchEvent(new CustomEvent("openScannerModal"))}
             />
@@ -231,36 +232,43 @@ const SliderAdmin: React.FC<IProps> = ({
     );
 
     const sharedStyles = `
+        .admin-sidebar .ant-layout-sider-children {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
         .sidebar-menu-pink .ant-menu-item:hover {
-            background-color: rgba(236, 72, 153, 0.08) !important;
+            background-color: rgba(232, 99, 122, 0.08) !important;
         }
 
         .sidebar-menu-pink .ant-menu-submenu-title:hover {
-            background-color: rgba(236, 72, 153, 0.08) !important;
+            background-color: rgba(232, 99, 122, 0.08) !important;
         }
 
         .sidebar-menu-pink .ant-menu-item-selected {
-            background-color: rgba(236, 72, 153, 0.12) !important;
-            color: #ec4899 !important;
+            background-color: rgba(232, 99, 122, 0.12) !important;
+            color: #e8637a !important;
             font-weight: 600;
         }
 
         .sidebar-menu-pink .ant-menu-item-selected::after {
-            border-right: 3px solid #ec4899 !important;
+            border-right: 3px solid #e8637a !important;
         }
 
         .sidebar-menu-pink .ant-menu-item-selected .ant-menu-item-icon {
-            color: #ec4899 !important;
+            color: #e8637a !important;
         }
 
         .sidebar-menu-pink .ant-menu-submenu-selected > .ant-menu-submenu-title {
-            color: #ec4899 !important;
+            color: #e8637a !important;
         }
 
         .ant-menu-submenu-popup .ant-menu-item-selected,
         .ant-menu-submenu-popup .ant-menu-item-selected a,
         .ant-menu-submenu-popup .ant-menu-item-selected span {
-            color: #ec4899 !important;
+            color: #e8637a !important;
         }
 
         .ant-menu-submenu-popup .ant-menu-item-selected {
@@ -270,16 +278,16 @@ const SliderAdmin: React.FC<IProps> = ({
         .ant-menu-submenu-popup .ant-menu-item:hover,
         .ant-menu-submenu-popup .ant-menu-item:hover a,
         .ant-menu-submenu-popup .ant-menu-item:hover span {
-            color: #ec4899 !important;
-            background-color: rgba(236, 72, 153, 0.06) !important;
+            color: #e8637a !important;
+            background-color: rgba(232, 99, 122, 0.06) !important;
         }
 
         .ant-menu-submenu-popup .ant-menu-item-selected::after {
-            border-right: 3px solid #ec4899 !important;
+            border-right: 3px solid #e8637a !important;
         }
 
         .logo-container:hover .logo-overlay {
-            background: rgba(236, 72, 153, 0.05) !important;
+            background: rgba(232, 99, 122, 0.05) !important;
         }
 
         .sidebar-menu-pink .ant-menu-item,
@@ -318,12 +326,13 @@ const SliderAdmin: React.FC<IProps> = ({
                     open={mobileOpen}
                     onClose={() => setMobileOpen(false)}
                     width={280}
+                    rootClassName="admin-sider-drawer"
                     styles={{ body: { padding: 0, background: "#fff" } }}
                     closeIcon={null}
                 >
                     <div
                         style={{
-                            height: 64,
+                            height: 56,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
@@ -345,10 +354,10 @@ const SliderAdmin: React.FC<IProps> = ({
                                 style={{ width: 40, height: "auto" }}
                             />
                             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <span style={{ fontSize: 16, fontWeight: 700, color: "#d63384" }}>
+                                <span style={{ fontSize: 16, fontWeight: 700, color: "#d94c66" }}>
                                     LOTUS HRM
                                 </span>
-                                <span style={{ fontSize: 9, fontWeight: 500, color: "#f472b6" }}>
+                                <span style={{ fontSize: 9, fontWeight: 500, color: "#e8637a" }}>
                                     Quản trị nhân sự
                                 </span>
                             </div>
@@ -358,7 +367,7 @@ const SliderAdmin: React.FC<IProps> = ({
                             type="text"
                             icon={<CloseOutlined />}
                             onClick={() => setMobileOpen(false)}
-                            style={{ color: "#d63384" }}
+                            style={{ color: "#d94c66" }}
                         />
 
                         <div
@@ -366,15 +375,18 @@ const SliderAdmin: React.FC<IProps> = ({
                             style={{
                                 position: "absolute",
                                 inset: 0,
-                                background: "rgba(255, 105, 180, 0)",
+                                background: "rgba(232, 99, 122, 0)",
                                 transition: "background 0.3s ease",
                                 pointerEvents: "none",
                             }}
                         />
                     </div>
 
-                    <div className="sidebar-scroll" style={{ overflowY: "auto", height: "calc(100% - 64px)" }}>
-                        {MenuList}
+                    <div style={{ height: "calc(100% - 56px)", display: "flex", flexDirection: "column", minHeight: 0 }}>
+                        <div className="sidebar-scroll" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                            {MenuList}
+                        </div>
+                        <SidebarAccount />
                     </div>
                 </Drawer>
 
@@ -388,6 +400,7 @@ const SliderAdmin: React.FC<IProps> = ({
     return (
         <>
             <Sider
+                className="admin-sidebar"
                 theme="light"
                 collapsible
                 collapsed={collapsed}
@@ -405,9 +418,11 @@ const SliderAdmin: React.FC<IProps> = ({
             >
                 {Logo}
 
-                <div className="sidebar-scroll" style={{ overflowY: "auto", height: "calc(100vh - 64px)" }}>
+                <div className="sidebar-scroll" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
                     {MenuList}
                 </div>
+
+                <SidebarAccount collapsed={collapsed} />
             </Sider>
 
             {ScannerButton}

@@ -1,5 +1,6 @@
 import { Drawer, Descriptions, Tag } from "antd";
 import type { IPermissionContentDetail } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -8,10 +9,12 @@ interface IProps {
 }
 
 const ViewPermissionContent = ({ open, setOpen, dataInit }: IProps) => {
+    const drawerWidth = useResponsiveModalWidth(500);
+
     return (
         <Drawer
             open={open}
-            width={500}
+            width={drawerWidth}
             title="Chi tiết nội dung quyền"
             onClose={() => setOpen(false)}
             destroyOnHidden

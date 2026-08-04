@@ -28,6 +28,8 @@ interface SearchFilterProps {
     showFilterButton?: boolean;
     showResetButton?: boolean;
     addPermission?: { method: string; apiPath: string; module: string };
+    /** Custom icon cho nút thêm mới, truyền null để ẩn icon */
+    addIcon?: React.ReactNode | null;
     /** Số filter đang active (để hiện badge trên nút Bộ lọc) */
     activeFilterCount?: number;
     /** Debounce delay khi gõ tìm kiếm (ms). Mặc định 400ms */
@@ -54,6 +56,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     showFilterButton = true,
     showResetButton = false,
     addPermission,
+    addIcon,
     activeFilterCount = 0,
     debounceMs = 400,
     guideSearchId,
@@ -124,7 +127,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     const AddBtn = React.isValidElement(addLabel) ? addLabel : (
         <Button
             data-guide-id={guideAddId}
-            icon={<PlusOutlined />}
+            icon={addIcon === null ? undefined : (addIcon ?? <PlusOutlined />)}
             onClick={onAddClick}
             style={{
                 height: BTN_H,

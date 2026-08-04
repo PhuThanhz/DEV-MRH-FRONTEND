@@ -24,6 +24,7 @@ import ModalUser from "@/pages/admin/user/modal.user";
 import ViewDetailUser from "@/pages/admin/user/view.user";
 import ActionButton from "@/components/common/ui/ActionButton";
 import { useAvatarSrc } from "@/hooks/useAvatarSrc";
+import { getActiveStatusMeta } from "@/constants/statusMeta/activeStatusMeta";
 
 type RoleOption = { label: string; value: string; color?: string };
 
@@ -183,17 +184,17 @@ const UserPage = () => {
             dataIndex: "active",
             align: "center",
             render: (_, record) => {
-                const isActive = record.active;
+                const meta = getActiveStatusMeta(record.active);
                 return (
                     <Tag style={{
                         borderRadius: 4, padding: "0px 8px",
                         fontSize: 12, fontWeight: 500,
                         height: 22, lineHeight: "20px",
-                        border: `1px solid ${isActive ? "#b7eb8f" : "#ffccc7"}`,
-                        background: isActive ? "#f6ffed" : "#fff2f0",
-                        color: isActive ? "#389e0d" : "#cf1322",
+                        border: `1px solid ${meta.border}`,
+                        background: meta.bg,
+                        color: meta.hex,
                     }}>
-                        {isActive ? "Hoạt động" : "Ngừng hoạt động"}
+                        {meta.label}
                     </Tag>
                 );
             },
@@ -285,8 +286,8 @@ const UserPage = () => {
                                 key: "active",
                                 label: "Trạng thái",
                                 options: [
-                                    { label: "Đang hoạt động", value: true, color: "green" },
-                                    { label: "Ngừng hoạt động", value: false, color: "red" },
+                                    { label: getActiveStatusMeta(true).label, value: true, color: getActiveStatusMeta(true).color },
+                                    { label: getActiveStatusMeta(false).label, value: false, color: getActiveStatusMeta(false).color },
                                 ],
                             },
                         ]}

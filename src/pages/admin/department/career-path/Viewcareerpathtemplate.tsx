@@ -1,6 +1,7 @@
 import { Modal } from "antd";
 import { useState } from "react";
 import type { ICareerPathTemplate, ICareerPathTemplateStep } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 interface IProps {
     open: boolean;
@@ -309,6 +310,7 @@ const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) =
 
 // ── Main component ────────────────────────────────────────────────
 const ViewCareerPathTemplate = ({ open, onClose, dataInit }: IProps) => {
+    const modalWidth = useResponsiveModalWidth(700);
     if (!dataInit) return null;
 
     const sortedSteps = [...(dataInit.steps ?? [])].sort((a, b) => a.stepOrder - b.stepOrder);
@@ -320,7 +322,7 @@ const ViewCareerPathTemplate = ({ open, onClose, dataInit }: IProps) => {
             open={open}
             onCancel={onClose}
             footer={null}
-            width={700}
+            width={modalWidth}
             destroyOnHidden
             styles={{
                 content: { padding: 0, borderRadius: 16, overflow: "hidden" },

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Table,
     Button,
@@ -31,12 +31,17 @@ import {
 import PageContainer from "@/components/common/data-table/PageContainer";
 import ActionButton from "@/components/common/ui/ActionButton";
 import { notify } from "@/components/common/notification/notify";
-import { usePeriodProgressQuery } from "@/hooks/useEvaluations";
-import { callFetchEvaluationGradeDistribution, callFetchEvaluationPeriodById, callExtendEvaluationRecordDeadline } from "@/config/api";
+import {
+    useEvaluationPeriodDetailQuery,
+    useExtendRecordDeadlineMutation,
+    useGradeDistributionQuery,
+    usePeriodProgressQuery,
+} from "@/hooks/useEvaluations";
 import dayjs from "dayjs";
 import MyEvaluationDetailPage from "../my-records/MyEvaluationDetailPage";
 import ManagerEvaluationDetailPage from "../manager/ManagerEvaluationDetailPage";
 import ApprovalDetailPage from "../approval/ApprovalDetailPage";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 
 
@@ -46,6 +51,7 @@ interface PeriodProgressDashboardProps {
 }
 
 const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ periodIdOverride, onClose }) => {
+    const modalWidth = useResponsiveModalWidth(880);
     const { periodId: routePeriodId } = useParams<{ periodId: string }>();
     const navigate = useNavigate();
     const qc = useQueryClient();
@@ -58,27 +64,10 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
     const [phaseCustomDeadlines, setPhaseCustomDeadlines] = useState<{ EMPLOYEE?: dayjs.Dayjs; MANAGER?: dayjs.Dayjs; APPROVAL?: dayjs.Dayjs }>({});
     const [extending, setExtending] = useState(false);
 
-    const { data: period, isLoading: isPeriodLoading } = useQuery({
-        queryKey: ["evaluation-period", periodId],
-        queryFn: async () => {
-            if (!periodId) return null;
-            const res = await callFetchEvaluationPeriodById(periodId);
-            return res?.data || null;
-        },
-        enabled: !!periodId
-    });
-
+    const { data: period, isLoading: isPeriodLoading } = useEvaluationPeriodDetailQuery(periodId);
     const { data: progressData, isLoading: isProgressLoading, error } = usePeriodProgressQuery(periodId);
-
-    const { data: gradeDistribution = [], isLoading: isGradeLoading } = useQuery({
-        queryKey: ["evaluation-grade-distribution", periodId],
-        queryFn: async () => {
-            if (!periodId) return [];
-            const res = await callFetchEvaluationGradeDistribution(periodId);
-            return res?.data || [];
-        },
-        enabled: !!periodId,
-    });
+    const { data: gradeDistribution = [], isLoading: isGradeLoading } = useGradeDistributionQuery(periodId);
+    const extendRecordDeadlineMutation = useExtendRecordDeadlineMutation();
 
     // Fix stuttering/flashing by checking initial loading without data only
     const isInitialLoading = (isPeriodLoading || isProgressLoading) && !progressData;
@@ -184,7 +173,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                 }
             }
 
-            await callExtendEvaluationRecordDeadline({
+            await extendRecordDeadlineMutation.mutateAsync({
                 recordIds: [extendRecord.recordId],
                 phase: activePhase,
                 deadline: mainDeadlineIso,
@@ -193,14 +182,13 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                 cascade: extendStrategy === "CASCADE",
             });
 
-            notify.success(`Gia hạn thời gian đánh giá thành công! Hệ thống đã tự động gửi thông báo tới ${extendRecord.employeeName || "nhân sự"}.`);
             setExtendRecord(null);
             qc.invalidateQueries({ queryKey: ["period-progress", periodId] });
             qc.invalidateQueries({ queryKey: ["evaluation-task-counts"] });
             qc.invalidateQueries({ queryKey: ["pending-manager-evaluation-records"] });
             qc.invalidateQueries({ queryKey: ["pending-approval-evaluation-records"] });
-        } catch (err: any) {
-            notify.error(err?.response?.data?.message || "Không thể gia hạn thời gian xử lý.");
+        } catch {
+            return;
         } finally {
             setExtending(false);
         }
@@ -1198,7 +1186,7 @@ const PeriodProgressDashboard: React.FC<PeriodProgressDashboardProps> = ({ perio
                     footer={null}
                     destroyOnClose
                     centered
-                    width={880}
+                    width={modalWidth}
                 >
                     {extendRecord && (
                         <div>

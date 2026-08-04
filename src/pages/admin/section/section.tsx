@@ -28,6 +28,7 @@ import Access from "@/components/share/access";
 import useAccess from "@/hooks/useAccess";
 import SectionJobTitleTab from "./tab.section-job-title";
 import { Modal } from "antd";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import ActionButton from "@/components/common/ui/ActionButton";
 
 const SectionPage = () => {
@@ -49,6 +50,7 @@ const SectionPage = () => {
     );
 
     const { data, isFetching, refetch } = useSectionsQuery(query);
+    const jobTitleModalWidth = useResponsiveModalWidth(800);
 
     const meta = data?.meta ?? {
         page: PAGINATION_CONFIG.DEFAULT_PAGE,
@@ -353,7 +355,7 @@ const SectionPage = () => {
                     open={openJobTitle}
                     onCancel={() => setOpenJobTitle(false)}
                     footer={null}
-                    width="80vw"
+                    width={jobTitleModalWidth}
                     destroyOnHidden
                 >
                     <SectionJobTitleTab

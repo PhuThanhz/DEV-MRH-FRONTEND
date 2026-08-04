@@ -47,72 +47,22 @@ const NotificationBell: React.FC<IProps> = ({ open: openProp, onOpenChange }) =>
                 )}
             >
                 <button
+                    type="button"
                     data-guide-id="notification-bell"
-                    style={{
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.1)",
-                        border: "1px solid rgba(255,255,255,0.25)",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.2)";
-                    }}
-                    onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
-                    }}
+                    aria-label={unreadCount > 0 ? `Thông báo, ${unreadCount} chưa đọc` : "Thông báo"}
+                    aria-expanded={open}
+                    className={`relative flex h-9 w-9 items-center justify-center rounded-full border text-white transition-colors duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-pink-600 ${open
+                        ? "border-white/60 bg-white/20"
+                        : "border-white/30 bg-white/10 hover:border-white/50 hover:bg-white/20"
+                        }`}
                 >
                     <BellOutlined style={{ color: "#fff", fontSize: 16 }} />
 
                     {unreadCount > 0 && (
-                        <>
-                            <span style={{
-                                position: "absolute",
-                                top: -4,
-                                right: -4,
-                                minWidth: 18,
-                                height: 18,
-                                padding: "0 4px",
-                                background: "#e11d48",
-                                color: "#fff",
-                                borderRadius: 99,
-                                fontSize: 10,
-                                fontWeight: 700,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "2px solid #fff",
-                                lineHeight: 1,
-                                zIndex: 1,
-                            }}>
-                                {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                            <span style={{
-                                position: "absolute",
-                                top: -4,
-                                right: -4,
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                background: "#e11d48",
-                                opacity: 0.35,
-                                animation: "bell-pulse 1.5s ease-out infinite",
-                            }} />
-                        </>
+                        <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-rose-600 px-1 text-[9px] font-bold leading-none text-white shadow-sm tabular-nums">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
                     )}
-
-                    <style>{`
-                    @keyframes bell-pulse {
-                        0%   { transform: scale(1);   opacity: 0.4; }
-                        100% { transform: scale(2.2); opacity: 0;   }
-                    }
-                `}</style>
                 </button>
             </Dropdown>
             <NotificationDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />

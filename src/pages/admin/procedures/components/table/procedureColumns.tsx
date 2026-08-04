@@ -8,13 +8,8 @@ import dayjs from "dayjs";
 
 import type { IProcedure, ProcedureType } from "@/types/backend";
 import ActionButton from "@/components/common/ui/ActionButton";
-
-export const statusMap: Record<string, { label: string; color: string }> = {
-    NEED_CREATE: { label: "Cần xây dựng mới", color: "orange" },
-    IN_PROGRESS: { label: "Đang hiệu lực", color: "green" },
-    NEED_UPDATE: { label: "Đang cập nhật", color: "gold" },
-    TERMINATED: { label: "Hết hiệu lực", color: "red" },
-};
+import StatusTag from "@/components/common/tag/StatusTag";
+import { PROCEDURE_DOCUMENT_STATUS_META } from "@/constants/statusMeta/procedureDocumentMeta";
 
 // Static style definitions to avoid object recreation on every render
 const AVATAR_STYLE: React.CSSProperties = {
@@ -181,10 +176,9 @@ export const buildProcedureColumns = ({
             dataIndex: "status",
             align: "center",
             width: 140,
-            render: (_, record) => {
-                const s = statusMap[record.status ?? ""] ?? { label: record.status, color: "default" };
-                return <Tag color={s.color}>{s.label}</Tag>;
-            },
+            render: (_, record) => (
+                <StatusTag value={record.status} meta={PROCEDURE_DOCUMENT_STATUS_META} />
+            ),
         },
         {
             title: "Năm KH",

@@ -18,6 +18,7 @@ import ObjectivesSection from "./ObjectivesSection";
 import TasksSection from "./TasksSection";
 import AuthoritiesSection from "./AuthoritiesSection";
 import type { IDepartmentMissionTree, IDepartmentMissionVersion } from "@/types/backend";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 
 const { Text } = Typography;
 
@@ -248,6 +249,11 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
 
         return events;
     }, [mission]);
+
+    const historyModalWidth = useResponsiveModalWidth(720);
+    const versionListModalWidth = useResponsiveModalWidth(720);
+    const previewVersionModalWidth = useResponsiveModalWidth(760);
+    const versionModalWidth = useResponsiveModalWidth(680);
 
     useEffect(() => {
         if (onDirtyChange) {
@@ -654,7 +660,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                 open={historyOpen}
                 onCancel={() => setHistoryOpen(false)}
                 footer={null}
-                width={720}
+                width={historyModalWidth}
                 styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
             >
                 <Space direction="vertical" size={16} className="w-full">
@@ -709,7 +715,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                 open={versionListOpen}
                 onCancel={() => setVersionListOpen(false)}
                 footer={null}
-                width={720}
+                width={versionListModalWidth}
                 styles={{ body: { maxHeight: "70vh", overflowY: "auto" } }}
             >
                 {versionHistory.length > 0 ? (
@@ -758,7 +764,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                 open={!!previewVersion}
                 onCancel={() => setPreviewVersion(null)}
                 footer={null}
-                width={760}
+                width={previewVersionModalWidth}
                 styles={{ body: { maxHeight: "72vh", overflowY: "auto" } }}
             >
                 {previewVersion?.snapshotJson && previewSnapshot ? (
@@ -807,7 +813,7 @@ const DepartmentMissionDetail: React.FC<DepartmentMissionDetailProps> = ({
                 cancelText="Huỷ"
                 confirmLoading={isPublishing}
                 onOk={handlePublish}
-                width={680}
+                width={versionModalWidth}
                 styles={{ body: { maxHeight: "72vh", overflowY: "auto" } }}
             >
                 <Space direction="vertical" size={16} className="w-full">

@@ -1,25 +1,25 @@
 import { Modal, Table, Form, Select, Button, Popconfirm, Tag, Empty, Tooltip, DatePicker, Input, InputNumber, Popover } from "antd";
-import { useState, useEffect, useMemo, useRef } from "react";
-import type { CSSProperties } from "react";
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import useAccess from "@/hooks/useAccess";
 import { useAppSelector } from "@/redux/hooks";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { notify } from "@/components/common/notification/notify";
+import { useResponsiveModalWidth } from "@/utils/responsive";
 import {
     PlusOutlined,
     DeleteOutlined,
     BookOutlined,
     TeamOutlined,
-    UserAddOutlined,
     CalendarOutlined,
     InfoCircleOutlined,
     UserOutlined,
     EditOutlined,
+    UserAddOutlined,
+    SearchOutlined,
     CheckOutlined,
     CheckCircleOutlined,
     PartitionOutlined,
-    SearchOutlined,
     RightOutlined,
 } from "@ant-design/icons";
 import {
@@ -67,7 +67,11 @@ const getRecordDeadlinePhase = (status?: string): DeadlinePhase => {
     return "EMPLOYEE";
 };
 
-const getRecordPhaseDeadline = (record: any, period: IEvaluationPeriod | null, phase = getRecordDeadlinePhase(record?.recordStatus)) => {
+const getRecordPhaseDeadline = (
+    record: any,
+    period: IEvaluationPeriod | null,
+    phase = getRecordDeadlinePhase(record?.recordStatus),
+) => {
     if (phase === "MANAGER") return record?.managerDeadlineOverride ?? period?.managerDeadline;
     if (phase === "APPROVAL") return record?.approvalDeadlineOverride ?? period?.approvalDeadline;
     return record?.employeeDeadlineOverride ?? period?.employeeDeadline;
@@ -118,7 +122,6 @@ const isRecordExtendable = (record: any, period: IEvaluationPeriod | null) => {
     return !["COMPLETED", "CANCELLED"].includes(record?.recordStatus || "");
 };
 
-// axios-customize unwraps failed responses to the backend error body.
 const getApiErrorMessage = (error: any, fallback: string) => {
     if (typeof error === "string") return error;
     const message = error?.message || error?.response?.data?.message;
@@ -127,6 +130,7 @@ const getApiErrorMessage = (error: any, fallback: string) => {
     if (detail) return Array.isArray(detail) ? detail.join(", ") : detail;
     return fallback;
 };
+
 const compactReason = (detail: string) => {
     if (detail.includes("Quản lý gián tiếp không thuộc công ty")) return "Quản lý gián tiếp không thuộc công ty của kỳ";
     if (detail.includes("Quản lý trực tiếp không thuộc công ty")) return "Quản lý trực tiếp không thuộc công ty của kỳ";
@@ -134,13 +138,16 @@ const compactReason = (detail: string) => {
     if (detail.includes("Thiếu QL gián tiếp")) return "Thiếu quản lý gián tiếp";
     return "Tuyến quản lý chưa hợp lệ";
 };
+
 const summarizeAssignmentIssues = (count: number, details: string[]) => {
     const reasons = Array.from(new Set(details.map(compactReason)));
     const suffix = reasons.length > 0 ? `: ${reasons.slice(0, 2).join("; ")}` : "";
     return `${count} nhân sự chưa thêm được${suffix}.`;
 };
+
 const FULL_WIDTH: CSSProperties = { width: "100%" };
 const NO_MARGIN: CSSProperties = { marginBottom: 0 };
+
 interface EmployeeTriggerProps {
     value?: string[];
     onChange?: (value: string[]) => void;
@@ -148,61 +155,50 @@ interface EmployeeTriggerProps {
     loading?: boolean;
 }
 
-const EmployeeTrigger: React.FC<EmployeeTriggerProps> = ({ value = [], onClick, loading = false }) => {
-    return (
-        <div
-            onClick={() => {
-                if (!loading) onClick();
-            }}
-            style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "10px 14px",
-                border: "1px solid #f9a8c6",
-                borderRadius: "10px",
-                background: "#fff7fb",
-                cursor: loading ? "wait" : "pointer",
-                minHeight: "44px",
-                transition: "all 0.2s ease-in-out",
-                opacity: loading ? 0.72 : 1,
-                boxShadow: "0 8px 18px -14px rgba(232, 53, 109, 0.45)",
-            }}
-            onMouseEnter={(e) => {
-                if (loading) return;
-                e.currentTarget.style.borderColor = "#f43f5e";
-                e.currentTarget.style.background = "#fff";
-                e.currentTarget.style.boxShadow = "0 2px 8px rgba(244, 63, 94, 0.08)";
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#f9a8c6";
-                e.currentTarget.style.background = "#fff7fb";
-                e.currentTarget.style.boxShadow = "0 8px 18px -14px rgba(232, 53, 109, 0.45)";
-            }}
-        >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <UserAddOutlined style={{ color: "#e8356d", fontSize: "15px" }} />
-                <span style={{ color: "#0f172a", fontSize: "13.5px", fontWeight: 700 }}>
-                    {loading
-                        ? "Đang thêm nhân sự..."
-                        : value.length
-                            ? `Đã chọn ${value.length} nhân sự`
-                            : "Chọn nhân sự áp dụng mẫu"}
-                </span>
-            </div>
-            <span style={{ color: "#e8356d", fontSize: "13px", fontWeight: 700 }}>Chọn & thêm</span>
+const EmployeeTrigger: React.FC<EmployeeTriggerProps> = ({ value = [], onClick, loading = false }) => (
+    <div
+        onClick={() => {
+            if (!loading) onClick();
+        }}
+        style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 14px",
+            border: "1px solid #f9a8c6",
+            borderRadius: "10px",
+            background: "#fff7fb",
+            cursor: loading ? "wait" : "pointer",
+            minHeight: "44px",
+            transition: "all 0.2s ease-in-out",
+            opacity: loading ? 0.72 : 1,
+            boxShadow: "0 8px 18px -14px rgba(232, 53, 109, 0.45)",
+        }}
+        onMouseEnter={(event) => {
+            if (loading) return;
+            event.currentTarget.style.borderColor = "#f43f5e";
+            event.currentTarget.style.background = "#fff";
+            event.currentTarget.style.boxShadow = "0 2px 8px rgba(244, 63, 94, 0.08)";
+        }}
+        onMouseLeave={(event) => {
+            event.currentTarget.style.borderColor = "#f9a8c6";
+            event.currentTarget.style.background = "#fff7fb";
+            event.currentTarget.style.boxShadow = "0 8px 18px -14px rgba(232, 53, 109, 0.45)";
+        }}
+    >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <UserAddOutlined style={{ color: "#e8356d", fontSize: "15px" }} />
+            <span style={{ color: "#0f172a", fontSize: "13.5px", fontWeight: 700 }}>
+                {loading
+                    ? "Đang thêm nhân sự..."
+                    : value.length
+                        ? `Đã chọn ${value.length} nhân sự`
+                        : "Chọn nhân sự áp dụng mẫu"}
+            </span>
         </div>
-    );
-};
-
-interface IProps {
-    open: boolean;
-    onClose: () => void;
-    period: IEvaluationPeriod | null;
-    readOnly?: boolean;
-    onActivate?: (periodId: number) => Promise<IEvaluationPeriod | void>;
-    onEditPeriod?: (period: IEvaluationPeriod) => void;
-}
+        <span style={{ color: "#e8356d", fontSize: "13px", fontWeight: 700 }}>Chọn & thêm</span>
+    </div>
+);
 
 interface DepartmentPickerProps {
     departments: any[];
@@ -213,127 +209,32 @@ interface DepartmentPickerProps {
     onTriggerClick?: () => void;
 }
 
-const DepartmentPicker: React.FC<DepartmentPickerProps> = ({ departments, value = [], onChange, disabled = false, emptyLabel = "Tất cả phòng ban", onTriggerClick }) => {
+const DepartmentPicker: React.FC<DepartmentPickerProps> = ({
+    departments,
+    value = [],
+    onChange,
+    disabled = false,
+    emptyLabel = "Tất cả phòng ban",
+    onTriggerClick,
+}) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [visible, setVisible] = useState(false);
 
-    const handleOpenChange = (openVal: boolean) => {
-        setVisible(openVal);
-        if (openVal && onTriggerClick) {
-            onTriggerClick();
-        }
-    };
-
-    // Filter departments based on search query
-    const filteredDepts = useMemo(() => {
+    const filteredDepartments = useMemo(() => {
         if (!searchQuery.trim()) return departments;
-        const q = searchQuery.toLowerCase();
-        return departments.filter(d => d.name?.toLowerCase().includes(q));
+        const query = searchQuery.toLowerCase();
+        return departments.filter(department => department.name?.toLowerCase().includes(query));
     }, [departments, searchQuery]);
 
-    const handleToggle = (id: number) => {
-        const index = value.indexOf(id);
-        if (index > -1) {
-            onChange(value.filter(v => v !== id));
-        } else {
-            onChange([...value, id]);
-        }
-    };
-
-    const handleSelectAll = () => {
-        onChange(departments.map(d => d.id));
-    };
-
-    const handleClearAll = () => {
-        onChange([]);
-    };
-
-    // Trigger text representation
     const triggerLabel = useMemo(() => {
         if (value.length === 0) return emptyLabel;
         if (value.length === departments.length) return "Tất cả phòng ban";
         if (value.length === 1) {
-            const found = departments.find(d => d.id === value[0]);
-            return found ? found.name : `Đã chọn 1 phòng ban`;
+            const found = departments.find(department => department.id === value[0]);
+            return found ? found.name : "Đã chọn 1 phòng ban";
         }
         return `Đã chọn ${value.length} phòng ban`;
-    }, [value, departments, emptyLabel]);
-
-    const popoverContent = (
-        <div style={{ width: 280, display: "flex", flexDirection: "column", gap: 8 }}>
-            <Input
-                placeholder="Tìm kiếm phòng ban..."
-                prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                size="small"
-                allowClear
-                style={{ borderRadius: 6 }}
-            />
-            
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 4px", borderBottom: "1px solid #f1f5f9", paddingBottom: 6 }}>
-                <span 
-                    onClick={handleSelectAll} 
-                    style={{ fontSize: 11, color: "#e8356d", cursor: "pointer", fontWeight: 500 }}
-                >
-                    Chọn tất cả
-                </span>
-                <span 
-                    onClick={handleClearAll} 
-                    style={{ fontSize: 11, color: "#64748b", cursor: "pointer", fontWeight: 500 }}
-                >
-                    Bỏ chọn tất cả
-                </span>
-            </div>
-
-            <div className="custom-scrollbar" style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
-                {filteredDepts.length === 0 ? (
-                    <div style={{ padding: "12px", textAlign: "center", color: "#94a3b8", fontSize: 12 }}>
-                        Không tìm thấy phòng ban
-                    </div>
-                ) : (
-                    filteredDepts.map(d => {
-                        const isSelected = value.includes(d.id);
-                        return (
-                            <div
-                                key={d.id}
-                                onClick={() => handleToggle(d.id)}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    padding: "6px 8px",
-                                    borderRadius: 6,
-                                    cursor: "pointer",
-                                    background: isSelected ? "#f8fafc" : "transparent",
-                                    transition: "all 0.15s ease"
-                                }}
-                                onMouseEnter={e => {
-                                    if (!isSelected) e.currentTarget.style.background = "#f1f5f9";
-                                }}
-                                onMouseLeave={e => {
-                                    if (!isSelected) e.currentTarget.style.background = "transparent";
-                                }}
-                            >
-                                <span style={{ 
-                                    fontSize: 12.5, 
-                                    color: isSelected ? "#0f172a" : "#334155",
-                                    fontWeight: isSelected ? 600 : 400,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    maxWidth: "85%"
-                                }}>
-                                    {d.name}
-                                </span>
-                                {isSelected && <CheckOutlined style={{ color: "#e8356d", fontSize: 11 }} />}
-                            </div>
-                        );
-                    })
-                )}
-            </div>
-        </div>
-    );
+    }, [departments, emptyLabel, value]);
 
     const triggerNode = (
         <div
@@ -348,31 +249,33 @@ const DepartmentPicker: React.FC<DepartmentPickerProps> = ({ departments, value 
                 cursor: disabled ? "not-allowed" : "pointer",
                 minHeight: "40px",
                 transition: "all 0.2s ease-in-out",
-                opacity: disabled ? 0.7 : 1
+                opacity: disabled ? 0.7 : 1,
             }}
-            onMouseEnter={(e) => {
+            onMouseEnter={(event) => {
                 if (!disabled) {
-                    e.currentTarget.style.borderColor = "#e8356d";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(232, 53, 109, 0.06)";
+                    event.currentTarget.style.borderColor = "#e8356d";
+                    event.currentTarget.style.boxShadow = "0 2px 8px rgba(232, 53, 109, 0.06)";
                 }
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={(event) => {
                 if (!disabled) {
-                    e.currentTarget.style.borderColor = "#e2e8f0";
-                    e.currentTarget.style.boxShadow = "none";
+                    event.currentTarget.style.borderColor = "#e2e8f0";
+                    event.currentTarget.style.boxShadow = "none";
                 }
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
                 <PartitionOutlined style={{ color: value.length ? "#e8356d" : "#94a3b8", fontSize: "14px" }} />
-                <span style={{ 
-                    color: value.length ? "#0f172a" : "#64748b", 
-                    fontSize: "13px", 
-                    fontWeight: value.length ? 600 : 400,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis"
-                }}>
+                <span
+                    style={{
+                        color: value.length ? "#0f172a" : "#64748b",
+                        fontSize: "13px",
+                        fontWeight: value.length ? 600 : 400,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                    }}
+                >
                     {triggerLabel}
                 </span>
             </div>
@@ -384,10 +287,89 @@ const DepartmentPicker: React.FC<DepartmentPickerProps> = ({ departments, value 
 
     return (
         <Popover
-            content={popoverContent}
+            content={(
+                <div style={{ width: 280, display: "flex", flexDirection: "column", gap: 8 }}>
+                    <Input
+                        placeholder="Tìm kiếm phòng ban..."
+                        prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+                        value={searchQuery}
+                        onChange={event => setSearchQuery(event.target.value)}
+                        size="small"
+                        allowClear
+                        style={{ borderRadius: 6 }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 4px 6px", borderBottom: "1px solid #f1f5f9" }}>
+                        <span
+                            onClick={() => onChange(departments.map(department => department.id))}
+                            style={{ fontSize: 11, color: "#e8356d", cursor: "pointer", fontWeight: 500 }}
+                        >
+                            Chọn tất cả
+                        </span>
+                        <span
+                            onClick={() => onChange([])}
+                            style={{ fontSize: 11, color: "#64748b", cursor: "pointer", fontWeight: 500 }}
+                        >
+                            Bỏ chọn tất cả
+                        </span>
+                    </div>
+                    <div className="custom-scrollbar" style={{ maxHeight: 220, overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
+                        {filteredDepartments.length === 0 ? (
+                            <div style={{ padding: "12px", textAlign: "center", color: "#94a3b8", fontSize: 12 }}>
+                                Không tìm thấy phòng ban
+                            </div>
+                        ) : filteredDepartments.map(department => {
+                            const isSelected = value.includes(department.id);
+                            return (
+                                <div
+                                    key={department.id}
+                                    onClick={() => {
+                                        onChange(isSelected
+                                            ? value.filter(selectedId => selectedId !== department.id)
+                                            : [...value, department.id]);
+                                    }}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "6px 8px",
+                                        borderRadius: 6,
+                                        cursor: "pointer",
+                                        background: isSelected ? "#f8fafc" : "transparent",
+                                        transition: "all 0.15s ease",
+                                    }}
+                                    onMouseEnter={event => {
+                                        if (!isSelected) event.currentTarget.style.background = "#f1f5f9";
+                                    }}
+                                    onMouseLeave={event => {
+                                        if (!isSelected) event.currentTarget.style.background = "transparent";
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: 12.5,
+                                            color: isSelected ? "#0f172a" : "#334155",
+                                            fontWeight: isSelected ? 600 : 400,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            maxWidth: "85%",
+                                        }}
+                                    >
+                                        {department.name}
+                                    </span>
+                                    {isSelected && <CheckOutlined style={{ color: "#e8356d", fontSize: 11 }} />}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             trigger="click"
             open={visible}
-            onOpenChange={handleOpenChange}
+            onOpenChange={(nextVisible) => {
+                setVisible(nextVisible);
+                if (nextVisible) onTriggerClick?.();
+            }}
             placement="bottomLeft"
             overlayStyle={{ padding: 0 }}
             overlayInnerStyle={{ borderRadius: 10, padding: 10, boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)" }}
@@ -396,6 +378,15 @@ const DepartmentPicker: React.FC<DepartmentPickerProps> = ({ departments, value 
         </Popover>
     );
 };
+
+interface IProps {
+    open: boolean;
+    onClose: () => void;
+    period: IEvaluationPeriod | null;
+    readOnly?: boolean;
+    onActivate?: (periodId: number) => Promise<IEvaluationPeriod | void>;
+    onEditPeriod?: (period: IEvaluationPeriod) => void;
+}
 
 const PeriodDetailDrawer = (props: IProps) => {
     const { open, onClose, period, readOnly = false, onActivate, onEditPeriod } = props;
@@ -468,6 +459,10 @@ const PeriodDetailDrawer = (props: IProps) => {
     const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
     const [reassigning, setReassigning] = useState(false);
     const periodId = period?.id || 0;
+
+    const scheduleModalWidth = useResponsiveModalWidth(640);
+    const extendModalWidth = useResponsiveModalWidth(940);
+    const reassignModalWidth = useResponsiveModalWidth(450);
     const { data: linkedTemplates = [], isLoading: loadingTemplates } = useTemplatesInPeriodQuery(periodId);
     const { data: linkedEmployees = [], isLoading: loadingEmployees } = useEmployeesInPeriodQuery(periodId);
 
@@ -686,7 +681,7 @@ const PeriodDetailDrawer = (props: IProps) => {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleAddTemplate = async (values: any) => {
         if (!period?.id) return;
         setSubmittingTemplate(true);
@@ -694,7 +689,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             await addTemplateMutation.mutateAsync({ periodId: period.id, templateId: values.templateId });
             templateForm.resetFields();
             setSelectedTemplateId(values.templateId);
-        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
             const msg = getApiErrorMessage(error, "Lỗi liên kết biểu mẫu");
             notify.error(msg);
         } finally {
@@ -769,7 +764,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                         },
                     });
                     successCount++;
-                } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                } catch (error: any) {
                     const empName = employeePool.find((u: any) => u.id === empId)?.name || empId;
                     failed.push(`${empName}: ${getApiErrorMessage(error, "lỗi")}`);
                 }
@@ -791,7 +786,7 @@ const PeriodDetailDrawer = (props: IProps) => {
         }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const handleAddEmployee = async (values: any) => {
         const employeeIds: string[] = Array.isArray(values.employeeId) ? values.employeeId : [values.employeeId];
         await assignEmployees(employeeIds.filter(Boolean));
@@ -862,10 +857,10 @@ const PeriodDetailDrawer = (props: IProps) => {
         const baseTargetDeadline = usePhaseCustom && selectedPhaseCustomDeadline
             ? selectedPhaseCustomDeadline
             : extendDeadlineMode === "CUSTOM" && firstCustomDeadline
-            ? firstCustomDeadline
-            : extendInputMode === "OFFSET"
-            ? getOffsetExtendDeadline(selectedEmployeeForExtend.currentDeadline, offsetDays, offsetHours)
-            : values.deadline;
+                ? firstCustomDeadline
+                : extendInputMode === "OFFSET"
+                    ? getOffsetExtendDeadline(selectedEmployeeForExtend.currentDeadline, offsetDays, offsetHours)
+                    : values.deadline;
         if (!baseTargetDeadline) {
             notify.warning("Vui lòng chọn hạn chót mới");
             return;
@@ -888,7 +883,7 @@ const PeriodDetailDrawer = (props: IProps) => {
                         return recordId ? { recordId: Number(recordId), deadline: picked.toISOString() } : null;
                     })
                     .filter(Boolean)
-            : undefined;
+                : undefined;
 
         const phaseDeadlinePayload = usePhaseCustom
             ? getEditableDeadlinePhases(selectedPhase)
@@ -917,10 +912,10 @@ const PeriodDetailDrawer = (props: IProps) => {
             setSelectedEmployeeForExtend(null);
             setExtendDeadlineMode("SHARED");
             setExtendInputMode("DATE");
-                setExtendStrategy("CASCADE");
-                setCustomExtendDeadlines({});
-                setPhaseCustomDeadlines({});
-                setSelectedRowKeys([]);
+            setExtendStrategy("CASCADE");
+            setCustomExtendDeadlines({});
+            setPhaseCustomDeadlines({});
+            setSelectedRowKeys([]);
         } catch (error: any) {
             const msg = getApiErrorMessage(error, "Lỗi gia hạn bản đánh giá");
             notify.error(msg);
@@ -933,7 +928,7 @@ const PeriodDetailDrawer = (props: IProps) => {
         const selectedRecords = employeesForSelectedTemplate.filter(e => selectedRowKeys.includes(e.id));
         const eligibleRecords = selectedRecords.filter(record => isRecordExtendable(record, period));
         const recordIds = eligibleRecords.map(e => e.recordId).filter(Boolean);
-        
+
         if (eligibleRecords.length !== selectedRecords.length || recordIds.length === 0) {
             notify.warning("Chỉ chọn các hồ sơ đang xử lý và chưa hoàn tất để gia hạn hàng loạt");
             return;
@@ -988,10 +983,10 @@ const PeriodDetailDrawer = (props: IProps) => {
             const results = await Promise.allSettled(
                 selectedRowKeys.map(id => cancelEmployeeMutation.mutateAsync({ id: Number(id), periodId: pId }))
             );
-            
+
             const rejected = results.filter((r) => r.status === 'rejected');
             if (rejected.length > 0) {
-                const errorMessages = rejected.map((r: any) => 
+                const errorMessages = rejected.map((r: any) =>
                     r.reason?.response?.data?.message || r.reason?.message || "Không xác định được nguyên nhân"
                 );
                 const uniqueErrors = Array.from(new Set(errorMessages));
@@ -1001,7 +996,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             }
 
             setSelectedRowKeys([]);
-        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
             notify.error("Không thể gỡ các nhân sự đã chọn. Vui lòng thử lại.", { id: "bulk-cancel" });
         }
     };
@@ -1017,7 +1012,7 @@ const PeriodDetailDrawer = (props: IProps) => {
     const handleBulkReassign = () => {
         const selectedRecords = employeesForSelectedTemplate.filter(e => selectedRowKeys.includes(e.id));
         const recordIds = selectedRecords.map(e => e.recordId).filter(Boolean);
-        
+
         if (recordIds.length === 0) {
             notify.warning("Không tìm thấy mã bản ghi hợp lệ.");
             return;
@@ -1119,7 +1114,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             key: "stt",
             width: 45,
             align: "center" as const,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             render: (_: any, __: any, index: number) => (
                 <span style={{ fontWeight: 600, color: "#64748b", fontSize: "12px" }}>{index + 1}</span>
             ),
@@ -1129,7 +1124,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             dataIndex: ["employee", "name"],
             key: "employeeName",
             width: 200,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             render: (val: string, record: any) =>
                 renderUserAvatar(
                     val || record.employee?.username,
@@ -1143,7 +1138,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             dataIndex: ["directManager", "name"],
             key: "directManagerName",
             width: 200,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             render: (val: string, record: any) => {
                 if (!record.directManager?.id) {
                     return <Tag color="warning" style={{ margin: 0, borderRadius: 4, fontWeight: 600 }}>Chưa gán</Tag>;
@@ -1168,7 +1163,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             dataIndex: ["indirectManager", "name"],
             key: "indirectManagerName",
             width: 210,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             render: (val: string, record: any) => {
                 if (!record.indirectManager?.id) {
                     return (
@@ -1293,7 +1288,7 @@ const PeriodDetailDrawer = (props: IProps) => {
             key: "action",
             align: "center" as const,
             width: 100,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             render: (_: any, record: any) => {
                 const isRecordActive = record?.status?.toUpperCase() === "ACTIVE";
                 const isPeriodClosed = period?.status?.toUpperCase() === "CLOSED";
@@ -1464,30 +1459,30 @@ const PeriodDetailDrawer = (props: IProps) => {
     const canShowActivateButton = !readOnly && period?.status === "DRAFT" && (isSuperAdmin || canActivatePeriod);
 
     return (
-    <>
-        <LotusDetailDrawer
-            open={open}
-            onClose={onClose}
-            destroyOnClose
-            keyboard={false}
-            maskClosable={false}
-            closeAriaLabel={readOnly ? "Đóng chi tiết kỳ đánh giá" : "Đóng thiết lập kỳ đánh giá"}
-        >
-            <div className="period-config-drawer">
-                <div className="period-config-title">
-                    <div className="period-config-title__icon"><TeamOutlined /></div>
-                    <div className="period-config-title__content">
-                        <div className="period-config-title__label">{readOnly ? "Chi tiết kỳ đánh giá" : "Cấu hình kỳ đánh giá"}</div>
-                        <div className="period-config-title__name">{period?.name}</div>
+        <>
+            <LotusDetailDrawer
+                open={open}
+                onClose={onClose}
+                destroyOnClose
+                keyboard={false}
+                maskClosable={false}
+                closeAriaLabel={readOnly ? "Đóng chi tiết kỳ đánh giá" : "Đóng thiết lập kỳ đánh giá"}
+            >
+                <div className="period-config-drawer">
+                    <div className="period-config-title">
+                        <div className="period-config-title__icon"><TeamOutlined /></div>
+                        <div className="period-config-title__content">
+                            <div className="period-config-title__label">{readOnly ? "Chi tiết kỳ đánh giá" : "Cấu hình kỳ đánh giá"}</div>
+                            <div className="period-config-title__name">{period?.name}</div>
+                        </div>
+                        <div className="period-config-title__meta">
+                            {period?.company?.name && <Tag style={{ margin: 0, borderRadius: 999, border: "1px solid #ffd3e0", background: "#fff0f5", color: "#e8356d", fontWeight: 600 }}>{period.company.name}</Tag>}
+                            <Tag color={period?.status === "DRAFT" ? "default" : period?.status === "ACTIVE" ? "processing" : "default"} style={{ margin: 0, borderRadius: 999 }}>
+                                {period?.status === "DRAFT" ? "Bản nháp" : period?.status === "ACTIVE" ? "Đang mở" : "Đã đóng"}
+                            </Tag>
+                        </div>
                     </div>
-                    <div className="period-config-title__meta">
-                        {period?.company?.name && <Tag style={{ margin: 0, borderRadius: 999, border: "1px solid #ffd3e0", background: "#fff0f5", color: "#e8356d", fontWeight: 600 }}>{period.company.name}</Tag>}
-                        <Tag color={period?.status === "DRAFT" ? "default" : period?.status === "ACTIVE" ? "processing" : "default"} style={{ margin: 0, borderRadius: 999 }}>
-                            {period?.status === "DRAFT" ? "Bản nháp" : period?.status === "ACTIVE" ? "Đang mở" : "Đã đóng"}
-                        </Tag>
-                    </div>
-                </div>
-            <style>{`
+                    <style>{`
                 /* Custom Select Dropdown options styling to match brand pink theme and Tailwind rounded style */
                 .ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
                     background-color: #f8fafc !important;
@@ -1879,1009 +1874,1009 @@ const PeriodDetailDrawer = (props: IProps) => {
                     .period-schedule-modal-stage__times { grid-template-columns: minmax(0, 1fr); }
                 }
             `}</style>
-            <section className="period-schedule-panel">
-                <div className="period-schedule-compact">
-                    <span className="period-schedule-compact__icon"><CalendarOutlined /></span>
-                    <div style={{ minWidth: 0 }}>
-                        <div className="period-schedule-compact__title">Lịch trình đánh giá</div>
-                        <div className="period-schedule-compact__range">
-                            {period?.employeeStartDate ? dayjs(period.employeeStartDate).format("DD/MM/YYYY HH:mm") : "Chưa có ngày mở"}
-                            {" "}
-                            →
-                            {" "}
-                            {period?.approvalDeadline ? dayjs(period.approvalDeadline).format("DD/MM/YYYY HH:mm") : "Chưa có hạn cuối"}
-                        </div>
-                    </div>
-                </div>
-                <div className="period-schedule-actions">
-                    {missingScheduleCount > 0 && (
-                        <Tag color="warning" style={{ margin: 0, borderRadius: 999 }}>
-                            Thiếu {missingScheduleCount} mốc
-                        </Tag>
-                    )}
-                    <button className="period-schedule-detail-trigger" type="button" onClick={() => setScheduleModalOpen(true)}>
-                        Xem lịch trình <RightOutlined style={{ fontSize: 10 }} />
-                    </button>
-                    {canShowEditScheduleButton && period && (
-                        <button className="period-schedule-detail-trigger" type="button" onClick={() => onEditPeriod(period)}>
-                            Chỉnh lịch <EditOutlined style={{ fontSize: 12 }} />
-                        </button>
-                    )}
-                    {canShowActivateButton && (
-                        <Popconfirm
-                            title="Kích hoạt kỳ đánh giá?"
-                            description="Hệ thống sẽ sinh phiếu đánh giá cho các nhân sự đã gán vào từng biểu mẫu."
-                            okText="Kích hoạt"
-                            cancelText="Hủy"
-                            onConfirm={handleActivatePeriodInDrawer}
-                        >
-                            <Button
-                                type="primary"
-                                icon={<CheckCircleOutlined />}
-                                loading={activatingPeriod}
-                                disabled={missingScheduleCount > 0 || totalActiveEmployeeCount === 0}
-                                className="template-add-btn"
-                                style={{ height: 38, borderRadius: 8, fontWeight: 750 }}
-                            >
-                                Kích hoạt kỳ
-                            </Button>
-                        </Popconfirm>
-                    )}
-                </div>
-            </section>
-            <div className="period-config-layout">
-                <aside className="period-config-sidebar">
-                    <div>
-                        <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                            <BookOutlined style={{ color: "#3b82f6", fontSize: "13px" }} />
-                            <span>Biểu mẫu đã gán ({linkedTemplates.length})</span>
-                        </div>
-
-                        {!readOnly && period?.status === "DRAFT" ? (
-                            <Form 
-                                form={templateForm} 
-                                layout="vertical" 
-                                onFinish={handleAddTemplate} 
-                                style={{ 
-                                    background: "#f8fafc", 
-                                    padding: "14px 16px", 
-                                    borderRadius: "12px", 
-                                    border: "1px solid #e2e8f0", 
-                                    marginBottom: "12px" 
-                                }}
-                            >
-                                <Form.Item
-                                    name="templateId"
-                                    rules={[{ required: true, message: "Hãy chọn mẫu!" }]}
-                                    style={{ marginBottom: 12 }}
-                                    label={<span style={{ fontWeight: 650, color: "#334155", fontSize: "12px" }}>Chọn mẫu đánh giá</span>}
-                                    className="custom-form-item"
-                                >
-                                    <Select
-                                        showSearch
-                                        placeholder={availableTemplateOptions.length > 0 ? "Chọn mẫu đánh giá..." : "Đã gán tất cả mẫu khả dụng"}
-                                        optionFilterProp="label"
-                                        options={availableTemplateOptions}
-                                        loading={loadingAssignmentReferenceData}
-                                        onFocus={() => { void loadAssignmentReferenceData(); }}
-                                        notFoundContent={loadingAssignmentReferenceData ? "Đang tải..." : "Không còn mẫu khả dụng"}
-                                        styles={{ popup: { root: { borderRadius: 8 } } }}
-                                        size="middle"
-                                        style={{ borderRadius: "8px" }}
-                                    />
-                                </Form.Item>
-
-                                <Access permission={ALL_PERMISSIONS.EVALUATION.ADD_TEMPLATE_TO_PERIOD} hideChildren>
-                                    <Button
-                                        type="primary"
-                                        htmlType="submit"
-                                        loading={submittingTemplate}
-                                        icon={<PlusOutlined />}
-                                        disabled={availableTemplateOptions.length === 0}
-                                        size="middle"
-                                        block
-                                        className="template-add-btn"
-                                        style={{ height: "36px", fontSize: "13px", borderRadius: "8px" }}
-                                    >
-                                        Gán mẫu vào kỳ
-                                    </Button>
-                                </Access>
-                            </Form>
-                        ) : (
-                            <SystemAlert
-                                variant="warning"
-                                compact
-                                description="Kỳ đã được kích hoạt. Không thể thay đổi biểu mẫu, nhưng vẫn có thể theo dõi và xử lý nhân sự theo quyền được cấp."
-                                style={{ marginBottom: 12 }}
-                            />
-                        )}
-
-                        {/* LIST CARDS */}
-                        <div 
-                            style={{ 
-                                maxHeight: "calc(65vh - 80px)", 
-                                overflowY: "auto", 
-                                display: "flex", 
-                                flexDirection: "column", 
-                                gap: "8px", 
-                                paddingRight: "6px" 
-                            }} 
-                            className="custom-scrollbar"
-                        >
-                            {linkedTemplates.map(t => {
-                                const isSelected = selectedTemplateId === t.template?.id;
-                                const isStaff = t.template?.type === "STAFF";
-                                const empCount = templateEmployeeCounts[t.template?.id ?? 0] || 0;
-
-                                return (
-                                    <div
-                                        key={t.id}
-                                        onClick={() => setSelectedTemplateId(t.template?.id)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === "Enter" || event.key === " ") {
-                                                event.preventDefault();
-                                                setSelectedTemplateId(t.template?.id);
-                                            }
-                                        }}
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-pressed={isSelected}
-                                        aria-label={`Chọn biểu mẫu ${t.template?.name || ""}`}
-                                        className="template-card"
-                                        style={{
-                                            padding: "12px 14px 12px 18px",
-                                            borderRadius: "10px",
-                                            border: "1px solid #e2e8f0",
-                                            background: "#ffffff",
-                                            cursor: "pointer",
-                                            position: "relative",
-                                            boxShadow: isSelected ? "0 4px 12px rgba(15, 23, 42, 0.03)" : "none",
-                                            overflow: "hidden"
-                                        }}
-                                    >
-                                        {isSelected && (
-                                            <div style={{
-                                                position: "absolute",
-                                                left: 0,
-                                                top: 0,
-                                                bottom: 0,
-                                                width: "4px",
-                                                background: "#e8356d",
-                                            }} />
-                                        )}
-                                        <div style={{ display: "flex", gap: "6px", alignItems: "flex-start", marginBottom: "8px" }}>
-                                            <BookOutlined style={{ color: isSelected ? "#e8356d" : "#64748b", fontSize: "14px", marginTop: "2px" }} />
-                                            <div style={{
-                                                fontWeight: 600,
-                                                color: isSelected ? "#9d174d" : "#1e293b",
-                                                fontSize: "13px",
-                                                lineHeight: "1.35",
-                                                flex: 1
-                                            }}>
-                                                {t.template?.name}
-                                            </div>
-                                            {!readOnly && period?.status === "DRAFT" && (
-                                                <Access permission={ALL_PERMISSIONS.EVALUATION.REMOVE_TEMPLATE_FROM_PERIOD} hideChildren>
-                                                    {empCount > 0 ? (
-                                                        <Tooltip title={`Gỡ ${empCount} nhân sự đang tham gia trước khi gỡ mẫu`}>
-                                                            <span onClick={(event) => event.stopPropagation()}>
-                                                                <Button
-                                                                    type="text"
-                                                                    icon={<DeleteOutlined />}
-                                                                    disabled
-                                                                    className="template-card__remove"
-                                                                    aria-label="Không thể gỡ mẫu vì còn nhân sự"
-                                                                />
-                                                            </span>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        <Popconfirm
-                                                            title="Gỡ mẫu khỏi kỳ đánh giá?"
-                                                            description="Chỉ gỡ liên kết trong kỳ này, mẫu gốc vẫn được giữ nguyên."
-                                                            okText="Gỡ mẫu"
-                                                            cancelText="Hủy"
-                                                            okButtonProps={{ danger: true }}
-                                                            onConfirm={() => t.template?.id && handleRemoveTemplate(t.template.id)}
-                                                        >
-                                                            <Tooltip title="Gỡ mẫu khỏi kỳ">
-                                                                <Button
-                                                                    type="text"
-                                                                    danger
-                                                                    icon={<DeleteOutlined />}
-                                                                    loading={removingTemplateId === t.template?.id}
-                                                                    className="template-card__remove"
-                                                                    aria-label={`Gỡ mẫu ${t.template?.name || ""}`}
-                                                                    onClick={(event) => event.stopPropagation()}
-                                                                />
-                                                            </Tooltip>
-                                                        </Popconfirm>
-                                                    )}
-                                                </Access>
-                                            )}
-                                        </div>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <Tag
-                                                style={{
-                                                    borderRadius: "6px",
-                                                    padding: "2px 8px",
-                                                    fontSize: "10.5px",
-                                                    fontWeight: 600,
-                                                    border: "none",
-                                                    background: "#f1f5f9",
-                                                    color: "#475569",
-                                                    margin: 0
-                                                }}
-                                            >
-                                                {isStaff ? "Nhân viên" : "Quản lý"}
-                                            </Tag>
-                                            <span style={{ fontSize: "11.5px", color: isSelected ? "#be185d" : "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                                <TeamOutlined style={{ fontSize: "12px" }} />
-                                                {empCount} nhân sự
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                            {linkedTemplates.length === 0 && (
-                                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có biểu mẫu" style={{ margin: "32px 0" }} />
-                            )}
-                        </div>
-                    </div>
-                </aside>
-
-                <main className="period-config-main">
-                    {!selectedTemplateId ? (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 450, height: "100%" }}>
-                            <Empty description="Chọn biểu mẫu ở cột bên trái để thiết lập danh sách nhân sự" />
-                        </div>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {/* Header chi tiết */}
-                            <div style={{
-                                borderBottom: "1px solid #e9eef5",
-                                padding: "0 0 14px",
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: "10px",
-                                boxShadow: "none"
-                            }}>
-                                <BookOutlined style={{ color: "#e11d72", fontSize: "18px", marginTop: 2 }} />
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.45px" }}>
-                                        Biểu mẫu đang chọn
-                                    </div>
-                                    <div style={{ fontSize: "15px", fontWeight: 760, color: "#172033", marginTop: "2px" }}>
-                                        {activeT?.template?.name}
-                                    </div>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                                        <Tag style={{ margin: 0, borderRadius: 999, border: "none", background: "#f1f5f9", color: "#475569" }}>{activeEmployeesForTemplate.length} nhân sự đang tham gia</Tag>
-                                        {missingDirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingDirectManagerCount} thiếu quản lý trực tiếp</Tag>}
-                                        {missingIndirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingIndirectManagerCount} thiếu quản lý gián tiếp</Tag>}
-                                    </div>
+                    <section className="period-schedule-panel">
+                        <div className="period-schedule-compact">
+                            <span className="period-schedule-compact__icon"><CalendarOutlined /></span>
+                            <div style={{ minWidth: 0 }}>
+                                <div className="period-schedule-compact__title">Lịch trình đánh giá</div>
+                                <div className="period-schedule-compact__range">
+                                    {period?.employeeStartDate ? dayjs(period.employeeStartDate).format("DD/MM/YYYY HH:mm") : "Chưa có ngày mở"}
+                                    {" "}
+                                    →
+                                    {" "}
+                                    {period?.approvalDeadline ? dayjs(period.approvalDeadline).format("DD/MM/YYYY HH:mm") : "Chưa có hạn cuối"}
                                 </div>
                             </div>
-
-                            {(missingDirectManagerCount > 0 || missingIndirectManagerCount > 0) && (
-                                <SystemAlert
-                                    variant="warning"
-                                    compact
-                                    description="Một số nhân sự chưa đủ tuyến quản lý. Hãy bổ sung hoặc điều chuyển người chấm/duyệt trước khi đến bước xử lý tương ứng."
-                                />
+                        </div>
+                        <div className="period-schedule-actions">
+                            {missingScheduleCount > 0 && (
+                                <Tag color="warning" style={{ margin: 0, borderRadius: 999 }}>
+                                    Thiếu {missingScheduleCount} mốc
+                                </Tag>
                             )}
-
-                            {/* Form gán nhân sự (nếu là Draft) */}
-                            {!readOnly && period?.status === "DRAFT" && (
-                                <div className="add-employee-panel">
-                                    <div className="add-employee-panel__head">
-                                        <span className="add-employee-panel__head-icon"><PartitionOutlined /></span>
-                                        <span>Chọn nhân sự áp dụng cho biểu mẫu</span>
-                                    </div>
-
-                                    <Form
-                                        form={employeeForm}
-                                        layout="vertical"
-                                        onFinish={handleAddEmployee}
-                                        className={!period?.company?.id ? "add-employee-panel__form--with-company" : undefined}
+                            <button className="period-schedule-detail-trigger" type="button" onClick={() => setScheduleModalOpen(true)}>
+                                Xem lịch trình <RightOutlined style={{ fontSize: 10 }} />
+                            </button>
+                            {canShowEditScheduleButton && period && (
+                                <button className="period-schedule-detail-trigger" type="button" onClick={() => onEditPeriod(period)}>
+                                    Chỉnh lịch <EditOutlined style={{ fontSize: 12 }} />
+                                </button>
+                            )}
+                            {canShowActivateButton && (
+                                <Popconfirm
+                                    title="Kích hoạt kỳ đánh giá?"
+                                    description="Hệ thống sẽ sinh phiếu đánh giá cho các nhân sự đã gán vào từng biểu mẫu."
+                                    okText="Kích hoạt"
+                                    cancelText="Hủy"
+                                    onConfirm={handleActivatePeriodInDrawer}
+                                >
+                                    <Button
+                                        type="primary"
+                                        icon={<CheckCircleOutlined />}
+                                        loading={activatingPeriod}
+                                        disabled={missingScheduleCount > 0 || totalActiveEmployeeCount === 0}
+                                        className="template-add-btn"
+                                        style={{ height: 38, borderRadius: 8, fontWeight: 750 }}
                                     >
-                                        {/* Bộ lọc phạm vi tìm kiếm (chỉ hiện ô chọn Công ty nếu chưa có companyId gắn với Kỳ) */}
-                                        {!period?.company?.id && (
-                                            <div className="add-employee-panel__filters">
-                                                <div className="add-employee-panel__filters-label" style={{ marginBottom: "6px" }}>Chọn Công ty</div>
-                                                <Select
-                                                    allowClear
-                                                    placeholder="Tất cả công ty"
-                                                    value={selectedCompanyId}
-                                                    onChange={handleCompanyFilterChange}
-                                                    onFocus={() => { void loadAssignmentReferenceData(); }}
-                                                    options={companyFilterOptions}
-                                                    styles={{ popup: { root: { borderRadius: 8 } } }}
-                                                    style={FULL_WIDTH}
-                                                />
-                                            </div>
-                                        )}
+                                        Kích hoạt kỳ
+                                    </Button>
+                                </Popconfirm>
+                            )}
+                        </div>
+                    </section>
+                    <div className="period-config-layout">
+                        <aside className="period-config-sidebar">
+                            <div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                                    <BookOutlined style={{ color: "#3b82f6", fontSize: "13px" }} />
+                                    <span>Biểu mẫu đã gán ({linkedTemplates.length})</span>
+                                </div>
 
-                                        <div className="add-employee-panel__scope">
-                                            <div>
-                                                <div className="add-employee-panel__field-label" style={{ marginBottom: 6 }}>Lọc theo phòng ban</div>
-                                                <DepartmentPicker
-                                                    departments={departments}
-                                                    value={selectedDepartmentIds}
-                                                    onChange={handleDepartmentFilterChange}
-                                                    disabled={!selectedCompanyId}
-                                                    emptyLabel="Chọn phòng ban để lọc nhân sự"
-                                                />
-                                            </div>
-                                        </div>
-
+                                {!readOnly && period?.status === "DRAFT" ? (
+                                    <Form
+                                        form={templateForm}
+                                        layout="vertical"
+                                        onFinish={handleAddTemplate}
+                                        style={{
+                                            background: "#f8fafc",
+                                            padding: "14px 16px",
+                                            borderRadius: "12px",
+                                            border: "1px solid #e2e8f0",
+                                            marginBottom: "12px"
+                                        }}
+                                    >
                                         <Form.Item
-                                            label={<span className="add-employee-panel__field-label">Nhân sự áp dụng</span>}
-                                            name="employeeId"
-                                            style={NO_MARGIN}
+                                            name="templateId"
+                                            rules={[{ required: true, message: "Hãy chọn mẫu!" }]}
+                                            style={{ marginBottom: 12 }}
+                                            label={<span style={{ fontWeight: 650, color: "#334155", fontSize: "12px" }}>Chọn mẫu đánh giá</span>}
+                                            className="custom-form-item"
                                         >
-                                            <EmployeeTrigger
-                                                onClick={() => setEmployeePickerOpen(true)}
-                                                loading={submittingEmployee}
+                                            <Select
+                                                showSearch
+                                                placeholder={availableTemplateOptions.length > 0 ? "Chọn mẫu đánh giá..." : "Đã gán tất cả mẫu khả dụng"}
+                                                optionFilterProp="label"
+                                                options={availableTemplateOptions}
+                                                loading={loadingAssignmentReferenceData}
+                                                onFocus={() => { void loadAssignmentReferenceData(); }}
+                                                notFoundContent={loadingAssignmentReferenceData ? "Đang tải..." : "Không còn mẫu khả dụng"}
+                                                styles={{ popup: { root: { borderRadius: 8 } } }}
+                                                size="middle"
+                                                style={{ borderRadius: "8px" }}
                                             />
                                         </Form.Item>
 
-                                        <div className="add-employee-panel__hint">
-                                            Chọn phòng ban để lọc danh sách, sau đó chọn đúng nhân sự cần áp dụng vào biểu mẫu đang chọn.
-                                        </div>
+                                        <Access permission={ALL_PERMISSIONS.EVALUATION.ADD_TEMPLATE_TO_PERIOD} hideChildren>
+                                            <Button
+                                                type="primary"
+                                                htmlType="submit"
+                                                loading={submittingTemplate}
+                                                icon={<PlusOutlined />}
+                                                disabled={availableTemplateOptions.length === 0}
+                                                size="middle"
+                                                block
+                                                className="template-add-btn"
+                                                style={{ height: "36px", fontSize: "13px", borderRadius: "8px" }}
+                                            >
+                                                Gán mẫu vào kỳ
+                                            </Button>
+                                        </Access>
                                     </Form>
-                                </div>
-                            )}
+                                ) : (
+                                    <SystemAlert
+                                        variant="warning"
+                                        compact
+                                        description="Kỳ đã được kích hoạt. Không thể thay đổi biểu mẫu, nhưng vẫn có thể theo dõi và xử lý nhân sự theo quyền được cấp."
+                                        style={{ marginBottom: 12 }}
+                                    />
+                                )}
 
-                            {!readOnly && selectedRowKeys.length > 0 && (
-                                <div style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    padding: "8px 16px",
-                                    background: "#fff1f7",
-                                    border: "1px solid #fbcfe0",
-                                    borderRadius: "6px",
-                                    marginBottom: "12px",
-                                }}>
-                                    <span style={{ fontSize: 13, fontWeight: 550, color: "#e11d72" }}>
-                                        Đang chọn {selectedRowKeys.length} nhân sự
-                                    </span>
-                                    <div style={{ display: "flex", gap: "8px" }}>
-                                        <Access permission={ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE} hideChildren>
-                                            <Button
-                                                type="primary"
-                                                size="small"
-                                                icon={<CalendarOutlined />}
-                                                onClick={handleBulkExtend}
-                                                className="bulk-action-pink"
-                                                style={{ borderRadius: "4px" }}
-                                            >
-                                                Gia hạn hàng loạt
-                                            </Button>
-                                        </Access>
-                                        <Access permission={ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR} hideChildren>
-                                            <Button
-                                                type="primary"
-                                                size="small"
-                                                icon={<TeamOutlined />}
-                                                onClick={handleBulkReassign}
-                                                style={{ borderRadius: "4px", backgroundColor: "#722ed1", borderColor: "#722ed1" }}
-                                            >
-                                                Điều chuyển hàng loạt
-                                            </Button>
-                                        </Access>
-                                        <Access permission={ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE} hideChildren>
-                                            <Popconfirm
-                                                title={`Gỡ ${selectedRowKeys.length} nhân viên đã chọn khỏi kỳ đánh giá?`}
-                                                onConfirm={handleBulkCancel}
-                                                okText="Đồng ý"
-                                                cancelText="Hủy"
-                                            >
-                                                <Button
-                                                    danger
-                                                    type="primary"
-                                                    size="small"
-                                                    icon={<DeleteOutlined />}
-                                                    style={{ borderRadius: "4px" }}
-                                                >
-                                                    Gỡ khỏi kỳ
-                                                </Button>
-                                            </Popconfirm>
-                                        </Access>
-                                    </div>
-                                </div>
-                            )}
+                                {/* LIST CARDS */}
+                                <div
+                                    style={{
+                                        maxHeight: "calc(65vh - 80px)",
+                                        overflowY: "auto",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "8px",
+                                        paddingRight: "6px"
+                                    }}
+                                    className="custom-scrollbar"
+                                >
+                                    {linkedTemplates.map(t => {
+                                        const isSelected = selectedTemplateId === t.template?.id;
+                                        const isStaff = t.template?.type === "STAFF";
+                                        const empCount = templateEmployeeCounts[t.template?.id ?? 0] || 0;
 
-                            {/* Bảng danh sách nhân sự */}
-                            <Table
-                                rowSelection={canManageEmployeeActions ? {
-                                    selectedRowKeys,
-                                    onChange: (newSelectedRowKeys: React.Key[]) => setSelectedRowKeys(newSelectedRowKeys),
-                                    getCheckboxProps: (record: any) => ({
-                                        disabled: !record.recordId || record.status !== "ACTIVE" || period?.status === "CLOSED",
-                                    }),
-                                } : undefined}
-                                columns={visibleEmployeeColumns}
-                                dataSource={activeEmployeesForTemplate}
-                                rowKey="id"
-                                loading={loadingEmployees}
-                                pagination={{ pageSize: 5, size: "small" }}
-                                size="small"
-                                tableLayout="fixed"
-                                style={{ 
-                                    background: "#ffffff", 
-                                    borderRadius: "8px", 
-                                    border: "1px solid rgba(226, 232, 240, 0.8)", 
-                                    overflow: "hidden",
-                                    boxShadow: "0 2px 4px -1px rgba(0, 0, 0, 0.01)"
-                                }}
-                                locale={{ emptyText: <Empty description="Chưa có nhân sự nào áp dụng biểu mẫu này" style={{ margin: "24px 0" }} /> }}
-                            />
-                        </div>
-                    )}
-                </main>
-            </div>
-            </div>
-        </LotusDetailDrawer>
-
-        <Modal
-            title={
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{
-                        width: 34,
-                        height: 34,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: 10,
-                        background: "#fff1f7",
-                        color: "#e8356d",
-                    }}>
-                        <CalendarOutlined />
-                    </span>
-                    <div>
-                        <div style={{ fontSize: 18, fontWeight: 850, color: "#172033", lineHeight: 1.2 }}>
-                            Lịch trình đánh giá
-                        </div>
-                        <div style={{ marginTop: 3, fontSize: 12, fontWeight: 650, color: "#64748b" }}>
-                            {period?.name || "Kỳ đánh giá"}
-                        </div>
-                    </div>
-                </div>
-            }
-            open={scheduleModalOpen}
-            onCancel={() => setScheduleModalOpen(false)}
-            footer={null}
-            centered
-            width={640}
-            destroyOnHidden
-        >
-            <div className="period-schedule-modal-list" style={{ marginTop: 18 }}>
-                {scheduleModalGroups.map(group => (
-                    <div className="period-schedule-modal-stage" key={group.key}>
-                        <span className="period-schedule-modal-stage__marker">{group.icon}</span>
-                        <div className="period-schedule-modal-stage__body">
-                            <div className="period-schedule-modal-stage__eyebrow">Giai đoạn {group.number}</div>
-                            <div className="period-schedule-modal-stage__title">{group.title}</div>
-                            <div className="period-schedule-modal-stage__times">
-                                {group.times.map(time => (
-                                    <div className="period-schedule-modal-time" key={time.label}>
-                                        <div className="period-schedule-modal-time__label">{time.label}</div>
-                                        <div className="period-schedule-modal-time__value">
-                                            {time.value ? dayjs(time.value).format("DD/MM/YYYY HH:mm") : "Chưa cấu hình"}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </Modal>
-
-        <Modal
-            title={null}
-            open={extendModalOpen}
-            onCancel={() => { setExtendModalOpen(false); setSelectedEmployeeForExtend(null); setExtendDeadlineMode("SHARED"); setExtendInputMode("DATE"); setExtendStrategy("CASCADE"); setCustomExtendDeadlines({}); setPhaseCustomDeadlines({}); }}
-            footer={null}
-            destroyOnHidden
-            centered
-            width={940}
-            style={{ top: 16 }}
-        >
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "2px 2px 14px", borderBottom: "1px solid #e2e8f0" }}>
-                <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 20, fontWeight: 850, lineHeight: 1.2, color: "#0f172a" }}>
-                        Gia hạn thời gian đánh giá
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 13, color: "#64748b" }}>
-                        Nhân viên: <strong style={{ color: "#1d4ed8" }}>{selectedEmployeeForExtend?.employee?.name || selectedEmployeeForExtend?.employee?.username}</strong>
-                        {selectedEmployeeForExtend?.isBulk && (
-                            <span style={{ marginLeft: 8, color: "#475569", fontWeight: 600 }}>
-                                • {extendPreview?.recordCount || 0} hồ sơ cùng bước
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.08fr) minmax(330px, 0.92fr)", gap: 16, marginTop: 14 }}>
-                <Form form={extendForm} layout="vertical" onFinish={handleExtendDeadlineSubmit}>
-                    <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 4px 14px -12px rgba(15,23,42,0.18)" }}>
-                        <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", background: "#fff5f8", borderLeft: "4px solid #e8356d", borderRadius: 10 }}>
-                                <div style={{ color: "#0f172a", fontSize: 13, fontWeight: 800, minWidth: 0 }}>
-                                    {selectedEmployeeForExtend?.phase ? DEADLINE_PHASE_LABELS[selectedEmployeeForExtend.phase as DeadlinePhase] : "—"}
-                                </div>
-                                <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-                                    Hạn: {formatDeadline(selectedEmployeeForExtend?.currentDeadline)}
-                                </div>
-                            </div>
-
-                            <div style={{ display: "grid", gap: 10 }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                                    {[
-                                        {
-                                            value: "CASCADE",
-                                            title: "Tịnh tiến mốc sau",
-                                            desc: "Gia hạn bước hiện tại, các mốc sau tự lùi theo đúng khoảng đó.",
-                                        },
-                                        {
-                                            value: "PHASE_CUSTOM",
-                                            title: "Chỉnh từng mốc",
-                                            desc: "Đặt hạn riêng cho QL trực tiếp và QL gián tiếp.",
-                                        },
-                                    ].map(option => {
-                                        const active = extendStrategy === option.value;
-                                        const disabled = Boolean(selectedEmployeeForExtend?.isBulk);
                                         return (
-                                            <button
-                                                key={option.value}
-                                                type="button"
-                                                disabled={disabled && option.value === "PHASE_CUSTOM"}
-                                                onClick={() => {
-                                                    if (disabled && option.value === "PHASE_CUSTOM") return;
-                                                    if (option.value === "PHASE_CUSTOM") {
-                                                        setExtendStrategy("PHASE_CUSTOM");
-                                                        extendForm.setFieldsValue({ cascade: false });
-                                                    } else {
-                                                        setExtendStrategy("CASCADE");
-                                                        setExtendInputMode("DATE");
-                                                        extendForm.setFieldsValue({ cascade: true });
+                                            <div
+                                                key={t.id}
+                                                onClick={() => setSelectedTemplateId(t.template?.id)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === "Enter" || event.key === " ") {
+                                                        event.preventDefault();
+                                                        setSelectedTemplateId(t.template?.id);
                                                     }
                                                 }}
+                                                role="button"
+                                                tabIndex={0}
+                                                aria-pressed={isSelected}
+                                                aria-label={`Chọn biểu mẫu ${t.template?.name || ""}`}
+                                                className="template-card"
                                                 style={{
-                                                    border: `1px solid ${active ? "#60a5fa" : "#e2e8f0"}`,
-                                                    background: active ? "#eff6ff" : "#ffffff",
-                                                    color: disabled && option.value === "PHASE_CUSTOM" ? "#94a3b8" : "#0f172a",
-                                                    borderRadius: 10,
-                                                    padding: "9px 10px",
-                                                    textAlign: "left",
-                                                    cursor: disabled && option.value === "PHASE_CUSTOM" ? "not-allowed" : "pointer",
-                                                    opacity: disabled && option.value === "PHASE_CUSTOM" ? 0.65 : 1,
+                                                    padding: "12px 14px 12px 18px",
+                                                    borderRadius: "10px",
+                                                    border: "1px solid #e2e8f0",
+                                                    background: "#ffffff",
+                                                    cursor: "pointer",
+                                                    position: "relative",
+                                                    boxShadow: isSelected ? "0 4px 12px rgba(15, 23, 42, 0.03)" : "none",
+                                                    overflow: "hidden"
                                                 }}
                                             >
-                                                <div style={{ fontSize: 13, fontWeight: 800, color: active ? "#1d4ed8" : "#334155" }}>{option.title}</div>
-                                                <div style={{ marginTop: 3, fontSize: 11, lineHeight: 1.3, color: "#64748b" }}>{option.desc}</div>
-                                            </button>
+                                                {isSelected && (
+                                                    <div style={{
+                                                        position: "absolute",
+                                                        left: 0,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: "4px",
+                                                        background: "#e8356d",
+                                                    }} />
+                                                )}
+                                                <div style={{ display: "flex", gap: "6px", alignItems: "flex-start", marginBottom: "8px" }}>
+                                                    <BookOutlined style={{ color: isSelected ? "#e8356d" : "#64748b", fontSize: "14px", marginTop: "2px" }} />
+                                                    <div style={{
+                                                        fontWeight: 600,
+                                                        color: isSelected ? "#9d174d" : "#1e293b",
+                                                        fontSize: "13px",
+                                                        lineHeight: "1.35",
+                                                        flex: 1
+                                                    }}>
+                                                        {t.template?.name}
+                                                    </div>
+                                                    {!readOnly && period?.status === "DRAFT" && (
+                                                        <Access permission={ALL_PERMISSIONS.EVALUATION.REMOVE_TEMPLATE_FROM_PERIOD} hideChildren>
+                                                            {empCount > 0 ? (
+                                                                <Tooltip title={`Gỡ ${empCount} nhân sự đang tham gia trước khi gỡ mẫu`}>
+                                                                    <span onClick={(event) => event.stopPropagation()}>
+                                                                        <Button
+                                                                            type="text"
+                                                                            icon={<DeleteOutlined />}
+                                                                            disabled
+                                                                            className="template-card__remove"
+                                                                            aria-label="Không thể gỡ mẫu vì còn nhân sự"
+                                                                        />
+                                                                    </span>
+                                                                </Tooltip>
+                                                            ) : (
+                                                                <Popconfirm
+                                                                    title="Gỡ mẫu khỏi kỳ đánh giá?"
+                                                                    description="Chỉ gỡ liên kết trong kỳ này, mẫu gốc vẫn được giữ nguyên."
+                                                                    okText="Gỡ mẫu"
+                                                                    cancelText="Hủy"
+                                                                    okButtonProps={{ danger: true }}
+                                                                    onConfirm={() => t.template?.id && handleRemoveTemplate(t.template.id)}
+                                                                >
+                                                                    <Tooltip title="Gỡ mẫu khỏi kỳ">
+                                                                        <Button
+                                                                            type="text"
+                                                                            danger
+                                                                            icon={<DeleteOutlined />}
+                                                                            loading={removingTemplateId === t.template?.id}
+                                                                            className="template-card__remove"
+                                                                            aria-label={`Gỡ mẫu ${t.template?.name || ""}`}
+                                                                            onClick={(event) => event.stopPropagation()}
+                                                                        />
+                                                                    </Tooltip>
+                                                                </Popconfirm>
+                                                            )}
+                                                        </Access>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <Tag
+                                                        style={{
+                                                            borderRadius: "6px",
+                                                            padding: "2px 8px",
+                                                            fontSize: "10.5px",
+                                                            fontWeight: 600,
+                                                            border: "none",
+                                                            background: "#f1f5f9",
+                                                            color: "#475569",
+                                                            margin: 0
+                                                        }}
+                                                    >
+                                                        {isStaff ? "Nhân viên" : "Quản lý"}
+                                                    </Tag>
+                                                    <span style={{ fontSize: "11.5px", color: isSelected ? "#be185d" : "#64748b", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                        <TeamOutlined style={{ fontSize: "12px" }} />
+                                                        {empCount} nhân sự
+                                                    </span>
+                                                </div>
+                                            </div>
                                         );
                                     })}
+
+                                    {linkedTemplates.length === 0 && (
+                                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có biểu mẫu" style={{ margin: "32px 0" }} />
+                                    )}
                                 </div>
-                                <Form.Item name="cascade" hidden initialValue={true}>
-                                    <Input />
-                                </Form.Item>
                             </div>
+                        </aside>
 
-                            {extendStrategy === "CASCADE" && extendInputMode === "DATE" && !(selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM") && (
-                                <Form.Item
-                                    name="deadline"
-                                    label={<span style={{ fontWeight: 700, color: "#334155" }}>Hạn mới của bước hiện tại</span>}
-                                    rules={[{ required: true, message: "Vui lòng chọn hạn chót mới!" }]}
-                                    extra={!selectedEmployeeForExtend?.isBulk ? "Mốc sau sẽ tự lùi theo đúng khoảng gia hạn của bước này." : "Hạn mới phải lớn hơn hạn hiện tại của từng hồ sơ."}
-                                >
-                                    <div style={{ display: "grid", gap: 8 }}>
-                                        <DatePicker
-                                            showTime
-                                            format="DD/MM/YYYY HH:mm"
-                                            style={{ width: "100%" }}
-                                            placeholder="Chọn hạn chót mới"
-                                            disabledDate={(date) => {
-                                                const min = selectedEmployeeForExtend?.currentDeadline ? dayjs(selectedEmployeeForExtend.currentDeadline) : dayjs();
-                                                return date.endOf("day").isBefore(min.startOf("day"));
-                                            }}
-                                        />
-                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                            {[1, 2, 3].map(days => (
-                                                <Button
-                                                    key={days}
-                                                    size="small"
-                                                    onClick={() => {
-                                                        const base = selectedEmployeeForExtend?.currentDeadline
-                                                            ? dayjs(selectedEmployeeForExtend.currentDeadline)
-                                                            : dayjs();
-                                                        extendForm.setFieldsValue({
-                                                            deadline: base.add(days, "day").second(0).millisecond(0),
-                                                        });
-                                                    }}
-                                                >
-                                                    +{days} ngày
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </Form.Item>
-                            )}
-
-                            {extendStrategy === "CASCADE" && extendInputMode === "OFFSET" && !(selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM") && (
-                                <div style={{ display: "grid", gap: 12 }}>
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                                        <Form.Item
-                                            name="offsetDays"
-                                            label={<span style={{ fontWeight: 700, color: "#334155" }}>Cộng thêm ngày</span>}
-                                            rules={[{ required: true, message: "Nhập số ngày" }]}
-                                        >
-                                            <InputNumber min={0} max={365} style={{ width: "100%" }} />
-                                        </Form.Item>
-                                        <Form.Item
-                                            name="offsetHours"
-                                            label={<span style={{ fontWeight: 700, color: "#334155" }}>Cộng thêm giờ</span>}
-                                        >
-                                            <InputNumber min={0} max={23} style={{ width: "100%" }} />
-                                        </Form.Item>
-                                    </div>
-                                    <div style={{ padding: "12px 14px", borderRadius: 12, border: "1px solid #dbeafe", background: "#eff6ff" }}>
-                                        <div style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>Hạn mới dự kiến</div>
-                                        <div style={{ marginTop: 6, fontSize: 15, fontWeight: 800, color: "#0f172a" }}>
-                                            {formatDeadline(getOffsetExtendDeadline(selectedEmployeeForExtend?.currentDeadline, Number(extendOffsetDays ?? 1), Number(extendOffsetHours ?? 0)).toISOString())}
-                                        </div>
-                                        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
-                                            Tăng thêm {formatDeadlineShift(selectedEmployeeForExtend?.currentDeadline, getOffsetExtendDeadline(selectedEmployeeForExtend?.currentDeadline, Number(extendOffsetDays ?? 1), Number(extendOffsetHours ?? 0)).toISOString())}
-                                        </div>
-                                    </div>
+                        <main className="period-config-main">
+                            {!selectedTemplateId ? (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 450, height: "100%" }}>
+                                    <Empty description="Chọn biểu mẫu ở cột bên trái để thiết lập danh sách nhân sự" />
                                 </div>
-                            )}
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    {/* Header chi tiết */}
+                                    <div style={{
+                                        borderBottom: "1px solid #e9eef5",
+                                        padding: "0 0 14px",
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        gap: "10px",
+                                        boxShadow: "none"
+                                    }}>
+                                        <BookOutlined style={{ color: "#e11d72", fontSize: "18px", marginTop: 2 }} />
+                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.45px" }}>
+                                                Biểu mẫu đang chọn
+                                            </div>
+                                            <div style={{ fontSize: "15px", fontWeight: 760, color: "#172033", marginTop: "2px" }}>
+                                                {activeT?.template?.name}
+                                            </div>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                                                <Tag style={{ margin: 0, borderRadius: 999, border: "none", background: "#f1f5f9", color: "#475569" }}>{activeEmployeesForTemplate.length} nhân sự đang tham gia</Tag>
+                                                {missingDirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingDirectManagerCount} thiếu quản lý trực tiếp</Tag>}
+                                                {missingIndirectManagerCount > 0 && <Tag color="warning" style={{ margin: 0, borderRadius: 4 }}>{missingIndirectManagerCount} thiếu quản lý gián tiếp</Tag>}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            {selectedEmployeeForExtend?.isBulk && (
-                                <div style={{ display: "grid", gap: 10 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>Phạm vi áp dụng</div>
-                                    <Select
-                                        value={extendDeadlineMode}
-                                        onChange={(value) => {
-                                            setExtendDeadlineMode(value);
-                                            if (value === "CUSTOM") setExtendInputMode("DATE");
+                                    {(missingDirectManagerCount > 0 || missingIndirectManagerCount > 0) && (
+                                        <SystemAlert
+                                            variant="warning"
+                                            compact
+                                            description="Một số nhân sự chưa đủ tuyến quản lý. Hãy bổ sung hoặc điều chuyển người chấm/duyệt trước khi đến bước xử lý tương ứng."
+                                        />
+                                    )}
+
+                                    {/* Form gán nhân sự (nếu là Draft) */}
+                                    {!readOnly && period?.status === "DRAFT" && (
+                                        <div className="add-employee-panel">
+                                            <div className="add-employee-panel__head">
+                                                <span className="add-employee-panel__head-icon"><PartitionOutlined /></span>
+                                                <span>Chọn nhân sự áp dụng cho biểu mẫu</span>
+                                            </div>
+
+                                            <Form
+                                                form={employeeForm}
+                                                layout="vertical"
+                                                onFinish={handleAddEmployee}
+                                                className={!period?.company?.id ? "add-employee-panel__form--with-company" : undefined}
+                                            >
+                                                {/* Bộ lọc phạm vi tìm kiếm (chỉ hiện ô chọn Công ty nếu chưa có companyId gắn với Kỳ) */}
+                                                {!period?.company?.id && (
+                                                    <div className="add-employee-panel__filters">
+                                                        <div className="add-employee-panel__filters-label" style={{ marginBottom: "6px" }}>Chọn Công ty</div>
+                                                        <Select
+                                                            allowClear
+                                                            placeholder="Tất cả công ty"
+                                                            value={selectedCompanyId}
+                                                            onChange={handleCompanyFilterChange}
+                                                            onFocus={() => { void loadAssignmentReferenceData(); }}
+                                                            options={companyFilterOptions}
+                                                            styles={{ popup: { root: { borderRadius: 8 } } }}
+                                                            style={FULL_WIDTH}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="add-employee-panel__scope">
+                                                    <div>
+                                                        <div className="add-employee-panel__field-label" style={{ marginBottom: 6 }}>Lọc theo phòng ban</div>
+                                                        <DepartmentPicker
+                                                            departments={departments}
+                                                            value={selectedDepartmentIds}
+                                                            onChange={handleDepartmentFilterChange}
+                                                            disabled={!selectedCompanyId}
+                                                            emptyLabel="Chọn phòng ban để lọc nhân sự"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <Form.Item
+                                                    label={<span className="add-employee-panel__field-label">Nhân sự áp dụng</span>}
+                                                    name="employeeId"
+                                                    style={NO_MARGIN}
+                                                >
+                                                    <EmployeeTrigger
+                                                        onClick={() => setEmployeePickerOpen(true)}
+                                                        loading={submittingEmployee}
+                                                    />
+                                                </Form.Item>
+
+                                                <div className="add-employee-panel__hint">
+                                                    Chọn phòng ban để lọc danh sách, sau đó chọn đúng nhân sự cần áp dụng vào biểu mẫu đang chọn.
+                                                </div>
+                                            </Form>
+                                        </div>
+                                    )}
+
+                                    {!readOnly && selectedRowKeys.length > 0 && (
+                                        <div style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "8px 16px",
+                                            background: "#fff1f7",
+                                            border: "1px solid #fbcfe0",
+                                            borderRadius: "6px",
+                                            marginBottom: "12px",
+                                        }}>
+                                            <span style={{ fontSize: 13, fontWeight: 550, color: "#e11d72" }}>
+                                                Đang chọn {selectedRowKeys.length} nhân sự
+                                            </span>
+                                            <div style={{ display: "flex", gap: "8px" }}>
+                                                <Access permission={ALL_PERMISSIONS.EVALUATION.EXTEND_RECORD_DEADLINE} hideChildren>
+                                                    <Button
+                                                        type="primary"
+                                                        size="small"
+                                                        icon={<CalendarOutlined />}
+                                                        onClick={handleBulkExtend}
+                                                        className="bulk-action-pink"
+                                                        style={{ borderRadius: "4px" }}
+                                                    >
+                                                        Gia hạn hàng loạt
+                                                    </Button>
+                                                </Access>
+                                                <Access permission={ALL_PERMISSIONS.EVALUATION.REASSIGN_EVALUATOR} hideChildren>
+                                                    <Button
+                                                        type="primary"
+                                                        size="small"
+                                                        icon={<TeamOutlined />}
+                                                        onClick={handleBulkReassign}
+                                                        style={{ borderRadius: "4px", backgroundColor: "#722ed1", borderColor: "#722ed1" }}
+                                                    >
+                                                        Điều chuyển hàng loạt
+                                                    </Button>
+                                                </Access>
+                                                <Access permission={ALL_PERMISSIONS.EVALUATION.CANCEL_PERIOD_EMPLOYEE} hideChildren>
+                                                    <Popconfirm
+                                                        title={`Gỡ ${selectedRowKeys.length} nhân viên đã chọn khỏi kỳ đánh giá?`}
+                                                        onConfirm={handleBulkCancel}
+                                                        okText="Đồng ý"
+                                                        cancelText="Hủy"
+                                                    >
+                                                        <Button
+                                                            danger
+                                                            type="primary"
+                                                            size="small"
+                                                            icon={<DeleteOutlined />}
+                                                            style={{ borderRadius: "4px" }}
+                                                        >
+                                                            Gỡ khỏi kỳ
+                                                        </Button>
+                                                    </Popconfirm>
+                                                </Access>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Bảng danh sách nhân sự */}
+                                    <Table
+                                        rowSelection={canManageEmployeeActions ? {
+                                            selectedRowKeys,
+                                            onChange: (newSelectedRowKeys: React.Key[]) => setSelectedRowKeys(newSelectedRowKeys),
+                                            getCheckboxProps: (record: any) => ({
+                                                disabled: !record.recordId || record.status !== "ACTIVE" || period?.status === "CLOSED",
+                                            }),
+                                        } : undefined}
+                                        columns={visibleEmployeeColumns}
+                                        dataSource={activeEmployeesForTemplate}
+                                        rowKey="id"
+                                        loading={loadingEmployees}
+                                        pagination={{ pageSize: 5, size: "small" }}
+                                        size="small"
+                                        tableLayout="fixed"
+                                        style={{
+                                            background: "#ffffff",
+                                            borderRadius: "8px",
+                                            border: "1px solid rgba(226, 232, 240, 0.8)",
+                                            overflow: "hidden",
+                                            boxShadow: "0 2px 4px -1px rgba(0, 0, 0, 0.01)"
                                         }}
-                                        options={[
-                                            { value: "SHARED", label: "Gia hạn đồng loạt" },
-                                            { value: "CUSTOM", label: "Tùy chỉnh theo hồ sơ" },
-                                        ]}
+                                        locale={{ emptyText: <Empty description="Chưa có nhân sự nào áp dụng biểu mẫu này" style={{ margin: "24px 0" }} /> }}
                                     />
                                 </div>
                             )}
+                        </main>
+                    </div>
+                </div>
+            </LotusDetailDrawer>
 
-                            {extendStrategy === "PHASE_CUSTOM" && !selectedEmployeeForExtend?.isBulk && (
-                                <div style={{ display: "grid", gap: 8, padding: 10, borderRadius: 12, border: "1px solid #dbeafe", background: "#f8fbff" }}>
-                                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>Hạn riêng từng mốc</div>
-                                    <div style={{ display: "grid", gap: 8 }}>
-                                        {getEditableDeadlinePhases(selectedEmployeeForExtend?.phase as DeadlinePhase).map((phaseKey, index) => {
-                                            const current = getRecordPhaseDeadline(selectedEmployeeForExtend, period, phaseKey);
-                                            const previousPhase = getEditableDeadlinePhases(selectedEmployeeForExtend?.phase as DeadlinePhase)[index - 1];
-                                            const quickBase = index === 0
-                                                ? (current ? dayjs(current) : dayjs())
-                                                : (phaseCustomDeadlines[previousPhase] ?? (previousPhase ? dayjs(getRecordPhaseDeadline(selectedEmployeeForExtend, period, previousPhase)) : dayjs()));
-                                            const picked = phaseCustomDeadlines[phaseKey] ?? (current ? dayjs(current) : null);
+            <Modal
+                title={
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{
+                            width: 34,
+                            height: 34,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 10,
+                            background: "#fff1f7",
+                            color: "#e8356d",
+                        }}>
+                            <CalendarOutlined />
+                        </span>
+                        <div>
+                            <div style={{ fontSize: 18, fontWeight: 850, color: "#172033", lineHeight: 1.2 }}>
+                                Lịch trình đánh giá
+                            </div>
+                            <div style={{ marginTop: 3, fontSize: 12, fontWeight: 650, color: "#64748b" }}>
+                                {period?.name || "Kỳ đánh giá"}
+                            </div>
+                        </div>
+                    </div>
+                }
+                open={scheduleModalOpen}
+                onCancel={() => setScheduleModalOpen(false)}
+                footer={null}
+                centered
+                width={scheduleModalWidth}
+                destroyOnHidden
+            >
+                <div className="period-schedule-modal-list" style={{ marginTop: 18 }}>
+                    {scheduleModalGroups.map(group => (
+                        <div className="period-schedule-modal-stage" key={group.key}>
+                            <span className="period-schedule-modal-stage__marker">{group.icon}</span>
+                            <div className="period-schedule-modal-stage__body">
+                                <div className="period-schedule-modal-stage__eyebrow">Giai đoạn {group.number}</div>
+                                <div className="period-schedule-modal-stage__title">{group.title}</div>
+                                <div className="period-schedule-modal-stage__times">
+                                    {group.times.map(time => (
+                                        <div className="period-schedule-modal-time" key={time.label}>
+                                            <div className="period-schedule-modal-time__label">{time.label}</div>
+                                            <div className="period-schedule-modal-time__value">
+                                                {time.value ? dayjs(time.value).format("DD/MM/YYYY HH:mm") : "Chưa cấu hình"}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Modal>
+
+            <Modal
+                title={null}
+                open={extendModalOpen}
+                onCancel={() => { setExtendModalOpen(false); setSelectedEmployeeForExtend(null); setExtendDeadlineMode("SHARED"); setExtendInputMode("DATE"); setExtendStrategy("CASCADE"); setCustomExtendDeadlines({}); setPhaseCustomDeadlines({}); }}
+                footer={null}
+                destroyOnHidden
+                centered
+                width={extendModalWidth}
+                style={{ top: 16 }}
+            >
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "2px 2px 14px", borderBottom: "1px solid #e2e8f0" }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 20, fontWeight: 850, lineHeight: 1.2, color: "#0f172a" }}>
+                            Gia hạn thời gian đánh giá
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 13, color: "#64748b" }}>
+                            Nhân viên: <strong style={{ color: "#1d4ed8" }}>{selectedEmployeeForExtend?.employee?.name || selectedEmployeeForExtend?.employee?.username}</strong>
+                            {selectedEmployeeForExtend?.isBulk && (
+                                <span style={{ marginLeft: 8, color: "#475569", fontWeight: 600 }}>
+                                    • {extendPreview?.recordCount || 0} hồ sơ cùng bước
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.08fr) minmax(330px, 0.92fr)", gap: 16, marginTop: 14 }}>
+                    <Form form={extendForm} layout="vertical" onFinish={handleExtendDeadlineSubmit}>
+                        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 4px 14px -12px rgba(15,23,42,0.18)" }}>
+                            <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", background: "#fff5f8", borderLeft: "4px solid #e8356d", borderRadius: 10 }}>
+                                    <div style={{ color: "#0f172a", fontSize: 13, fontWeight: 800, minWidth: 0 }}>
+                                        {selectedEmployeeForExtend?.phase ? DEADLINE_PHASE_LABELS[selectedEmployeeForExtend.phase as DeadlinePhase] : "—"}
+                                    </div>
+                                    <div style={{ color: "#475569", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                        Hạn: {formatDeadline(selectedEmployeeForExtend?.currentDeadline)}
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "grid", gap: 10 }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                                        {[
+                                            {
+                                                value: "CASCADE",
+                                                title: "Tịnh tiến mốc sau",
+                                                desc: "Gia hạn bước hiện tại, các mốc sau tự lùi theo đúng khoảng đó.",
+                                            },
+                                            {
+                                                value: "PHASE_CUSTOM",
+                                                title: "Chỉnh từng mốc",
+                                                desc: "Đặt hạn riêng cho QL trực tiếp và QL gián tiếp.",
+                                            },
+                                        ].map(option => {
+                                            const active = extendStrategy === option.value;
+                                            const disabled = Boolean(selectedEmployeeForExtend?.isBulk);
                                             return (
-                                                <div key={phaseKey} style={{ display: "grid", gap: 8, padding: "9px 10px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#ffffff" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                                                        <div style={{ minWidth: 0 }}>
-                                                            <div style={{ fontSize: 12.5, fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }}>
-                                                                {DEADLINE_PHASE_LABELS[phaseKey]}
+                                                <button
+                                                    key={option.value}
+                                                    type="button"
+                                                    disabled={disabled && option.value === "PHASE_CUSTOM"}
+                                                    onClick={() => {
+                                                        if (disabled && option.value === "PHASE_CUSTOM") return;
+                                                        if (option.value === "PHASE_CUSTOM") {
+                                                            setExtendStrategy("PHASE_CUSTOM");
+                                                            extendForm.setFieldsValue({ cascade: false });
+                                                        } else {
+                                                            setExtendStrategy("CASCADE");
+                                                            setExtendInputMode("DATE");
+                                                            extendForm.setFieldsValue({ cascade: true });
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        border: `1px solid ${active ? "#60a5fa" : "#e2e8f0"}`,
+                                                        background: active ? "#eff6ff" : "#ffffff",
+                                                        color: disabled && option.value === "PHASE_CUSTOM" ? "#94a3b8" : "#0f172a",
+                                                        borderRadius: 10,
+                                                        padding: "9px 10px",
+                                                        textAlign: "left",
+                                                        cursor: disabled && option.value === "PHASE_CUSTOM" ? "not-allowed" : "pointer",
+                                                        opacity: disabled && option.value === "PHASE_CUSTOM" ? 0.65 : 1,
+                                                    }}
+                                                >
+                                                    <div style={{ fontSize: 13, fontWeight: 800, color: active ? "#1d4ed8" : "#334155" }}>{option.title}</div>
+                                                    <div style={{ marginTop: 3, fontSize: 11, lineHeight: 1.3, color: "#64748b" }}>{option.desc}</div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <Form.Item name="cascade" hidden initialValue={true}>
+                                        <Input />
+                                    </Form.Item>
+                                </div>
+
+                                {extendStrategy === "CASCADE" && extendInputMode === "DATE" && !(selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM") && (
+                                    <Form.Item
+                                        name="deadline"
+                                        label={<span style={{ fontWeight: 700, color: "#334155" }}>Hạn mới của bước hiện tại</span>}
+                                        rules={[{ required: true, message: "Vui lòng chọn hạn chót mới!" }]}
+                                        extra={!selectedEmployeeForExtend?.isBulk ? "Mốc sau sẽ tự lùi theo đúng khoảng gia hạn của bước này." : "Hạn mới phải lớn hơn hạn hiện tại của từng hồ sơ."}
+                                    >
+                                        <div style={{ display: "grid", gap: 8 }}>
+                                            <DatePicker
+                                                showTime
+                                                format="DD/MM/YYYY HH:mm"
+                                                style={{ width: "100%" }}
+                                                placeholder="Chọn hạn chót mới"
+                                                disabledDate={(date) => {
+                                                    const min = selectedEmployeeForExtend?.currentDeadline ? dayjs(selectedEmployeeForExtend.currentDeadline) : dayjs();
+                                                    return date.endOf("day").isBefore(min.startOf("day"));
+                                                }}
+                                            />
+                                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                                {[1, 2, 3].map(days => (
+                                                    <Button
+                                                        key={days}
+                                                        size="small"
+                                                        onClick={() => {
+                                                            const base = selectedEmployeeForExtend?.currentDeadline
+                                                                ? dayjs(selectedEmployeeForExtend.currentDeadline)
+                                                                : dayjs();
+                                                            extendForm.setFieldsValue({
+                                                                deadline: base.add(days, "day").second(0).millisecond(0),
+                                                            });
+                                                        }}
+                                                    >
+                                                        +{days} ngày
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </Form.Item>
+                                )}
+
+                                {extendStrategy === "CASCADE" && extendInputMode === "OFFSET" && !(selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM") && (
+                                    <div style={{ display: "grid", gap: 12 }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                            <Form.Item
+                                                name="offsetDays"
+                                                label={<span style={{ fontWeight: 700, color: "#334155" }}>Cộng thêm ngày</span>}
+                                                rules={[{ required: true, message: "Nhập số ngày" }]}
+                                            >
+                                                <InputNumber min={0} max={365} style={{ width: "100%" }} />
+                                            </Form.Item>
+                                            <Form.Item
+                                                name="offsetHours"
+                                                label={<span style={{ fontWeight: 700, color: "#334155" }}>Cộng thêm giờ</span>}
+                                            >
+                                                <InputNumber min={0} max={23} style={{ width: "100%" }} />
+                                            </Form.Item>
+                                        </div>
+                                        <div style={{ padding: "12px 14px", borderRadius: 12, border: "1px solid #dbeafe", background: "#eff6ff" }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>Hạn mới dự kiến</div>
+                                            <div style={{ marginTop: 6, fontSize: 15, fontWeight: 800, color: "#0f172a" }}>
+                                                {formatDeadline(getOffsetExtendDeadline(selectedEmployeeForExtend?.currentDeadline, Number(extendOffsetDays ?? 1), Number(extendOffsetHours ?? 0)).toISOString())}
+                                            </div>
+                                            <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
+                                                Tăng thêm {formatDeadlineShift(selectedEmployeeForExtend?.currentDeadline, getOffsetExtendDeadline(selectedEmployeeForExtend?.currentDeadline, Number(extendOffsetDays ?? 1), Number(extendOffsetHours ?? 0)).toISOString())}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedEmployeeForExtend?.isBulk && (
+                                    <div style={{ display: "grid", gap: 10 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>Phạm vi áp dụng</div>
+                                        <Select
+                                            value={extendDeadlineMode}
+                                            onChange={(value) => {
+                                                setExtendDeadlineMode(value);
+                                                if (value === "CUSTOM") setExtendInputMode("DATE");
+                                            }}
+                                            options={[
+                                                { value: "SHARED", label: "Gia hạn đồng loạt" },
+                                                { value: "CUSTOM", label: "Tùy chỉnh theo hồ sơ" },
+                                            ]}
+                                        />
+                                    </div>
+                                )}
+
+                                {extendStrategy === "PHASE_CUSTOM" && !selectedEmployeeForExtend?.isBulk && (
+                                    <div style={{ display: "grid", gap: 8, padding: 10, borderRadius: 12, border: "1px solid #dbeafe", background: "#f8fbff" }}>
+                                        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>Hạn riêng từng mốc</div>
+                                        <div style={{ display: "grid", gap: 8 }}>
+                                            {getEditableDeadlinePhases(selectedEmployeeForExtend?.phase as DeadlinePhase).map((phaseKey, index) => {
+                                                const current = getRecordPhaseDeadline(selectedEmployeeForExtend, period, phaseKey);
+                                                const previousPhase = getEditableDeadlinePhases(selectedEmployeeForExtend?.phase as DeadlinePhase)[index - 1];
+                                                const quickBase = index === 0
+                                                    ? (current ? dayjs(current) : dayjs())
+                                                    : (phaseCustomDeadlines[previousPhase] ?? (previousPhase ? dayjs(getRecordPhaseDeadline(selectedEmployeeForExtend, period, previousPhase)) : dayjs()));
+                                                const picked = phaseCustomDeadlines[phaseKey] ?? (current ? dayjs(current) : null);
+                                                return (
+                                                    <div key={phaseKey} style={{ display: "grid", gap: 8, padding: "9px 10px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#ffffff" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                                                            <div style={{ minWidth: 0 }}>
+                                                                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }}>
+                                                                    {DEADLINE_PHASE_LABELS[phaseKey]}
+                                                                </div>
+                                                                <div style={{ marginTop: 3, fontSize: 11.5, color: "#64748b" }}>
+                                                                    Hiện tại: <strong style={{ color: "#334155" }}>{current ? dayjs(current).format("DD/MM HH:mm") : "—"}</strong>
+                                                                </div>
                                                             </div>
-                                                            <div style={{ marginTop: 3, fontSize: 11.5, color: "#64748b" }}>
-                                                                Hiện tại: <strong style={{ color: "#334155" }}>{current ? dayjs(current).format("DD/MM HH:mm") : "—"}</strong>
+                                                            <Tag color={index === 0 ? "blue" : "purple"} style={{ margin: 0, flexShrink: 0 }}>
+                                                                {index === 0 ? "Đang chỉnh" : "Sau"}
+                                                            </Tag>
+                                                        </div>
+                                                        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+                                                            <DatePicker
+                                                                showTime
+                                                                format="DD/MM/YYYY HH:mm"
+                                                                style={{ width: "100%" }}
+                                                                value={picked}
+                                                                onChange={(nextValue) => setPhaseCustomDeadlines(prev => ({ ...prev, [phaseKey]: nextValue }))}
+                                                                disabledDate={(date) => {
+                                                                    const min = index === 0
+                                                                        ? (current ? dayjs(current) : dayjs())
+                                                                        : (quickBase || dayjs());
+                                                                    return date.endOf("day").isBefore(min.startOf("day"));
+                                                                }}
+                                                            />
+                                                            <div style={{ display: "flex", gap: 4, flexWrap: "nowrap" }}>
+                                                                {[1, 2, 3].map(days => (
+                                                                    <Button
+                                                                        key={days}
+                                                                        size="small"
+                                                                        onClick={() => {
+                                                                            const base = quickBase || dayjs();
+                                                                            setPhaseCustomDeadlines(prev => ({
+                                                                                ...prev,
+                                                                                [phaseKey]: base.add(days, "day").second(0).millisecond(0),
+                                                                            }));
+                                                                        }}
+                                                                    >
+                                                                        +{days}
+                                                                    </Button>
+                                                                ))}
                                                             </div>
                                                         </div>
-                                                        <Tag color={index === 0 ? "blue" : "purple"} style={{ margin: 0, flexShrink: 0 }}>
-                                                            {index === 0 ? "Đang chỉnh" : "Sau"}
-                                                        </Tag>
                                                     </div>
-                                                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Form.Item
+                                name="reason"
+                                label={<span style={{ fontWeight: 700, color: "#334155" }}>Lý do gia hạn</span>}
+                                rules={[{ required: true, whitespace: true, message: "Vui lòng nhập lý do gia hạn!" }]}
+                                style={{ marginBottom: 0 }}
+                            >
+                                <Input.TextArea rows={3} placeholder="Nhập lý do gia hạn..." />
+                            </Form.Item>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
+                            <Button onClick={() => { setExtendModalOpen(false); setSelectedEmployeeForExtend(null); setExtendDeadlineMode("SHARED"); setExtendInputMode("DATE"); setExtendStrategy("CASCADE"); setCustomExtendDeadlines({}); setPhaseCustomDeadlines({}); }}>
+                                Hủy
+                            </Button>
+                            <Button type="primary" htmlType="submit" loading={extending}>
+                                Gia hạn
+                            </Button>
+                        </div>
+                    </Form>
+
+                    <aside style={{ display: "grid", gap: 10, alignContent: "start" }}>
+                        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 4px 14px -12px rgba(15,23,42,0.18)", alignSelf: "start" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>
+                                    Xem trước tác động
+                                </div>
+                                {selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM" ? (
+                                    <Tag color="gold" style={{ margin: 0 }}>Tùy chỉnh</Tag>
+                                ) : extendStrategy === "PHASE_CUSTOM" ? (
+                                    <Tag color="purple" style={{ margin: 0 }}>Chỉnh từng mốc</Tag>
+                                ) : (
+                                    <Tag color="green" style={{ margin: 0 }}>Tịnh tiến</Tag>
+                                )}
+                            </div>
+
+                            {selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM" ? (
+                                <div style={{ display: "grid", gap: 10 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
+                                        Hạn riêng cho từng hồ sơ
+                                    </div>
+                                    <div style={{ display: "grid", gap: 10, maxHeight: 420, overflowY: "auto", paddingRight: 4 }}>
+                                        {extendRecordRows.map((record: any) => {
+                                            const recordId = String(record.recordId ?? record.id);
+                                            const current = getRecordPhaseDeadline(record, period, selectedEmployeeForExtend.phase as DeadlinePhase);
+                                            const value = customExtendDeadlines[recordId] ?? (current ? dayjs(current) : null);
+                                            return (
+                                                <div key={recordId} style={{ padding: "12px 12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fafafa" }}>
+                                                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>{record.employee?.name || record.employee?.username || `Hồ sơ ${recordId}`}</div>
+                                                        <Tag color="blue" style={{ margin: 0 }}>Cá nhân</Tag>
+                                                    </div>
+                                                    <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
+                                                        Hạn hiện tại: <strong style={{ color: "#334155" }}>{formatDeadline(current)}</strong>
+                                                    </div>
+                                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginTop: 10 }}>
+                                                        {(["EMPLOYEE", "MANAGER", "APPROVAL"] as DeadlinePhase[]).map(phaseKey => {
+                                                            const phaseDeadline = getRecordPhaseDeadline(record, period, phaseKey);
+                                                            const hasOverride =
+                                                                (phaseKey === "EMPLOYEE" && !!record.employeeDeadlineOverride) ||
+                                                                (phaseKey === "MANAGER" && !!record.managerDeadlineOverride) ||
+                                                                (phaseKey === "APPROVAL" && !!record.approvalDeadlineOverride);
+                                                            return (
+                                                                <div key={phaseKey} style={{ padding: "7px 8px", borderRadius: 8, background: hasOverride ? "#eff6ff" : "#ffffff", border: `1px solid ${hasOverride ? "#bfdbfe" : "#e2e8f0"}` }}>
+                                                                    <div style={{ fontSize: 10, fontWeight: 800, color: hasOverride ? "#1d4ed8" : "#94a3b8" }}>
+                                                                        {phaseKey === "EMPLOYEE" ? "NV" : phaseKey === "MANAGER" ? "QL" : "Duyệt"}
+                                                                    </div>
+                                                                    <div style={{ marginTop: 3, fontSize: 10.5, fontWeight: 700, color: "#334155", whiteSpace: "nowrap" }}>
+                                                                        {phaseDeadline ? dayjs(phaseDeadline).format("DD/MM HH:mm") : "—"}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <div style={{ marginTop: 10 }}>
                                                         <DatePicker
                                                             showTime
                                                             format="DD/MM/YYYY HH:mm"
                                                             style={{ width: "100%" }}
-                                                            value={picked}
-                                                            onChange={(nextValue) => setPhaseCustomDeadlines(prev => ({ ...prev, [phaseKey]: nextValue }))}
+                                                            value={value}
+                                                            onChange={(nextValue) => {
+                                                                setCustomExtendDeadlines(prev => ({
+                                                                    ...prev,
+                                                                    [recordId]: nextValue,
+                                                                }));
+                                                            }}
                                                             disabledDate={(date) => {
-                                                                const min = index === 0
-                                                                    ? (current ? dayjs(current) : dayjs())
-                                                                    : (quickBase || dayjs());
+                                                                const min = current ? dayjs(current) : dayjs();
                                                                 return date.endOf("day").isBefore(min.startOf("day"));
                                                             }}
                                                         />
-                                                        <div style={{ display: "flex", gap: 4, flexWrap: "nowrap" }}>
-                                                            {[1, 2, 3].map(days => (
-                                                                <Button
-                                                                    key={days}
-                                                                    size="small"
-                                                                    onClick={() => {
-                                                                        const base = quickBase || dayjs();
-                                                                        setPhaseCustomDeadlines(prev => ({
-                                                                            ...prev,
-                                                                            [phaseKey]: base.add(days, "day").second(0).millisecond(0),
-                                                                        }));
-                                                                    }}
-                                                                >
-                                                                    +{days}
-                                                                </Button>
-                                                            ))}
-                                                        </div>
                                                     </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
+                                    <div style={{ padding: "12px 14px", borderRadius: 12, border: "1px solid #dbeafe", background: "#eff6ff", color: "#1d4ed8", fontSize: 12, lineHeight: 1.6 }}>
+                                        Mỗi hồ sơ có thể nhận một hạn riêng. Khi bật tịnh tiến, phần sau của từng hồ sơ sẽ đi theo độ lùi riêng của hồ sơ đó.
+                                    </div>
                                 </div>
+                            ) : (
+                                <>
+                                    <div style={{ display: "grid", gap: 8, marginBottom: 0 }}>
+                                        {extendPreview?.phaseRows.map((row) => (
+                                            <div key={row.phase} style={{ display: "grid", gap: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: row.cascadeState === "selected" ? "#eff6ff" : row.cascadeState === "cascade" ? "#f0fdf4" : "#ffffff" }}>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                                                        <div style={{ fontSize: 12.5, fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }}>{row.label}</div>
+                                                        <Tag color={row.cascadeState === "selected" ? "blue" : row.cascadeState === "cascade" ? "green" : row.cascadeState === "custom" ? "purple" : "default"} style={{ margin: 0, flexShrink: 0 }}>
+                                                            {row.cascadeState === "selected" ? (extendStrategy === "PHASE_CUSTOM" ? "Tùy chỉnh" : "Gia hạn") : row.cascadeState === "custom" ? "Tùy chỉnh" : row.cascadeState === "cascade" ? "Tịnh tiến" : "Giữ nguyên"}
+                                                        </Tag>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto", gap: 8, alignItems: "center", fontSize: 11.5, color: "#475569" }}>
+                                                    <strong style={{ color: "#334155", whiteSpace: "nowrap" }}>{row.current ? dayjs(row.current).format("DD/MM HH:mm") : "—"}</strong>
+                                                    <RightOutlined style={{ color: "#94a3b8", fontSize: 10 }} />
+                                                    <strong style={{ color: "#0f172a", whiteSpace: "nowrap" }}>{row.projected ? dayjs(row.projected).format("DD/MM HH:mm") : "—"}</strong>
+                                                    <span style={{ color: "#64748b", whiteSpace: "nowrap" }}>{formatDeadlineShift(row.current, row.projected)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {selectedEmployeeForExtend?.isBulk && extendPreview?.bulkRows?.length > 1 && (
+                                        <div style={{ paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
+                                            <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>
+                                                Tác động theo từng hồ sơ
+                                            </div>
+                                            <div style={{ display: "grid", gap: 10 }}>
+                                                {extendPreview?.bulkRows?.map((row: any) => (
+                                                    <div key={row.id} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fafafa" }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{row.name}</div>
+                                                            <Tag color={row.cascade ? "green" : "default"} style={{ margin: 0 }}>
+                                                                {row.cascade ? "Tịnh tiến" : "Giữ nguyên"}
+                                                            </Tag>
+                                                        </div>
+                                                        <div style={{ marginTop: 6, fontSize: 12, color: "#475569" }}>
+                                                            {formatDeadline(row.current)} → {formatDeadline(row.next)}
+                                                        </div>
+                                                        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
+                                                            {row.shift}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
-                        <Form.Item
-                            name="reason"
-                            label={<span style={{ fontWeight: 700, color: "#334155" }}>Lý do gia hạn</span>}
-                            rules={[{ required: true, whitespace: true, message: "Vui lòng nhập lý do gia hạn!" }]}
-                            style={{ marginBottom: 0 }}
-                        >
-                            <Input.TextArea rows={3} placeholder="Nhập lý do gia hạn..." />
-                        </Form.Item>
-                    </div>
+                        <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#475569", fontSize: 11.5, lineHeight: 1.5, alignSelf: "start" }}>
+                            Tịnh tiến luôn giữ đúng thứ tự luồng: quản lý trực tiếp xong mới tới quản lý gián tiếp. Chỉnh từng mốc dùng khi cần chia hạn riêng.
+                        </div>
+                    </aside>
+                </div>
+            </Modal>
 
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
-                        <Button onClick={() => { setExtendModalOpen(false); setSelectedEmployeeForExtend(null); setExtendDeadlineMode("SHARED"); setExtendInputMode("DATE"); setExtendStrategy("CASCADE"); setCustomExtendDeadlines({}); setPhaseCustomDeadlines({}); }}>
+            <Modal
+                title={
+                    <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "15px" }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+                            Điều chuyển người chấm/duyệt đánh giá
+                        </span>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                            Đối tượng: <strong style={{ color: "#722ed1" }}>{selectedEmployeeForReassign?.employee?.name || selectedEmployeeForReassign?.employee?.username}</strong>
+                        </div>
+                    </div>
+                }
+                open={reassignModalOpen && !managerPickerOpen}
+                onCancel={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); setManagerPickerOpen(false); }}
+                footer={null}
+                destroyOnHidden
+                centered
+                width={reassignModalWidth}
+            >
+                <Form form={reassignForm} layout="vertical" onFinish={handleReassignSubmit}>
+                    <Form.Item
+                        name="evaluatorRole"
+                        label={<span style={{ fontWeight: 600, color: "#475569" }}>Vai trò điều chuyển</span>}
+                        rules={[{ required: true, message: "Vui lòng chọn vai trò điều chuyển!" }]}
+                        initialValue="DIRECT_MANAGER"
+                    >
+                        <Select options={[
+                            { label: "Quản lý trực tiếp (DIRECT_MANAGER)", value: "DIRECT_MANAGER" },
+                            { label: "Quản lý gián tiếp / Người duyệt (INDIRECT_MANAGER)", value: "INDIRECT_MANAGER" },
+                        ]} />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="newEvaluatorUserId"
+                        label={<span style={{ fontWeight: 600, color: "#475569" }}>Người chấm/duyệt mới</span>}
+                        rules={[{ required: true, message: "Vui lòng chọn người chấm/duyệt mới!" }]}
+                    >
+                        <Input type="hidden" />
+                    </Form.Item>
+                    <Button
+                        onClick={() => setManagerPickerOpen(true)}
+                        style={{ width: "100%", height: 54, marginTop: -18, marginBottom: 18, padding: "7px 10px", display: "flex", alignItems: "center", textAlign: "left", borderColor: selectedReassignEvaluator ? "#f3a5bd" : "#d9d9d9" }}
+                    >
+                        <span style={{ width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#e8356d", background: "#fff0f5", borderRadius: 5 }}>
+                            <UserOutlined />
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, margin: "0 9px" }}>
+                            <span style={{ display: "block", color: "#1e293b", fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {selectedReassignEvaluator?.name || "Chọn người chấm/duyệt mới"}
+                            </span>
+                            <span style={{ display: "block", marginTop: 2, color: "#64748b", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {selectedReassignEvaluator
+                                    ? [selectedReassignEvaluator.jobTitle, selectedReassignEvaluator.positionLevel, selectedReassignEvaluator.departmentName, selectedReassignEvaluator.companyName].filter(Boolean).join(" · ") || selectedReassignEvaluator.email
+                                    : "Tìm theo mã NV, chức danh, cấp bậc và đơn vị"}
+                            </span>
+                        </span>
+                        <RightOutlined style={{ color: "#94a3b8", fontSize: 11 }} />
+                    </Button>
+
+                    <Form.Item
+                        name="reason"
+                        label={<span style={{ fontWeight: 600, color: "#475569" }}>Lý do điều chuyển</span>}
+                        style={{ marginBottom: 20 }}
+                    >
+                        <Input.TextArea rows={3} placeholder="Nhập lý do điều chuyển..." />
+                    </Form.Item>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                        <Button onClick={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); }}>
                             Hủy
                         </Button>
-                        <Button type="primary" htmlType="submit" loading={extending}>
-                            Gia hạn
+                        <Button type="primary" htmlType="submit" loading={reassigning}>
+                            Điều chuyển
                         </Button>
                     </div>
                 </Form>
+            </Modal>
 
-                <aside style={{ display: "grid", gap: 10, alignContent: "start" }}>
-                    <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, boxShadow: "0 4px 14px -12px rgba(15,23,42,0.18)", alignSelf: "start" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>
-                                Xem trước tác động
-                            </div>
-                            {selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM" ? (
-                                <Tag color="gold" style={{ margin: 0 }}>Tùy chỉnh</Tag>
-                            ) : extendStrategy === "PHASE_CUSTOM" ? (
-                                <Tag color="purple" style={{ margin: 0 }}>Chỉnh từng mốc</Tag>
-                            ) : (
-                                <Tag color="green" style={{ margin: 0 }}>Tịnh tiến</Tag>
-                            )}
-                        </div>
+            <ManagerPickerModal
+                open={managerPickerOpen}
+                onClose={() => setManagerPickerOpen(false)}
+                onSelect={handleSelectReassignEvaluator}
+                title="Chọn người chấm/duyệt mới"
+                description="Tìm và chọn nhân sự theo mã nhân viên, chức danh, cấp bậc và đơn vị"
+            />
 
-                        {selectedEmployeeForExtend?.isBulk && extendDeadlineMode === "CUSTOM" ? (
-                            <div style={{ display: "grid", gap: 10 }}>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
-                                    Hạn riêng cho từng hồ sơ
-                                </div>
-                                <div style={{ display: "grid", gap: 10, maxHeight: 420, overflowY: "auto", paddingRight: 4 }}>
-                                    {extendRecordRows.map((record: any) => {
-                                        const recordId = String(record.recordId ?? record.id);
-                                        const current = getRecordPhaseDeadline(record, period, selectedEmployeeForExtend.phase as DeadlinePhase);
-                                        const value = customExtendDeadlines[recordId] ?? (current ? dayjs(current) : null);
-                                        return (
-                                            <div key={recordId} style={{ padding: "12px 12px 14px", borderRadius: 12, border: "1px solid #e2e8f0", background: "#fafafa" }}>
-                                                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>{record.employee?.name || record.employee?.username || `Hồ sơ ${recordId}`}</div>
-                                                    <Tag color="blue" style={{ margin: 0 }}>Cá nhân</Tag>
-                                                </div>
-                                                <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
-                                                    Hạn hiện tại: <strong style={{ color: "#334155" }}>{formatDeadline(current)}</strong>
-                                                </div>
-                                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginTop: 10 }}>
-                                                    {(["EMPLOYEE", "MANAGER", "APPROVAL"] as DeadlinePhase[]).map(phaseKey => {
-                                                        const phaseDeadline = getRecordPhaseDeadline(record, period, phaseKey);
-                                                        const hasOverride =
-                                                            (phaseKey === "EMPLOYEE" && !!record.employeeDeadlineOverride) ||
-                                                            (phaseKey === "MANAGER" && !!record.managerDeadlineOverride) ||
-                                                            (phaseKey === "APPROVAL" && !!record.approvalDeadlineOverride);
-                                                        return (
-                                                            <div key={phaseKey} style={{ padding: "7px 8px", borderRadius: 8, background: hasOverride ? "#eff6ff" : "#ffffff", border: `1px solid ${hasOverride ? "#bfdbfe" : "#e2e8f0"}` }}>
-                                                                <div style={{ fontSize: 10, fontWeight: 800, color: hasOverride ? "#1d4ed8" : "#94a3b8" }}>
-                                                                    {phaseKey === "EMPLOYEE" ? "NV" : phaseKey === "MANAGER" ? "QL" : "Duyệt"}
-                                                                </div>
-                                                                <div style={{ marginTop: 3, fontSize: 10.5, fontWeight: 700, color: "#334155", whiteSpace: "nowrap" }}>
-                                                                    {phaseDeadline ? dayjs(phaseDeadline).format("DD/MM HH:mm") : "—"}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div style={{ marginTop: 10 }}>
-                                                    <DatePicker
-                                                        showTime
-                                                        format="DD/MM/YYYY HH:mm"
-                                                        style={{ width: "100%" }}
-                                                        value={value}
-                                                        onChange={(nextValue) => {
-                                                            setCustomExtendDeadlines(prev => ({
-                                                                ...prev,
-                                                                [recordId]: nextValue,
-                                                            }));
-                                                        }}
-                                                        disabledDate={(date) => {
-                                                            const min = current ? dayjs(current) : dayjs();
-                                                            return date.endOf("day").isBefore(min.startOf("day"));
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div style={{ padding: "12px 14px", borderRadius: 12, border: "1px solid #dbeafe", background: "#eff6ff", color: "#1d4ed8", fontSize: 12, lineHeight: 1.6 }}>
-                                    Mỗi hồ sơ có thể nhận một hạn riêng. Khi bật tịnh tiến, phần sau của từng hồ sơ sẽ đi theo độ lùi riêng của hồ sơ đó.
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div style={{ display: "grid", gap: 8, marginBottom: 0 }}>
-                                    {extendPreview?.phaseRows.map((row) => (
-                                        <div key={row.phase} style={{ display: "grid", gap: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: row.cascadeState === "selected" ? "#eff6ff" : row.cascadeState === "cascade" ? "#f0fdf4" : "#ffffff" }}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                                                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#0f172a", lineHeight: 1.25 }}>{row.label}</div>
-                                                    <Tag color={row.cascadeState === "selected" ? "blue" : row.cascadeState === "cascade" ? "green" : row.cascadeState === "custom" ? "purple" : "default"} style={{ margin: 0, flexShrink: 0 }}>
-                                                        {row.cascadeState === "selected" ? (extendStrategy === "PHASE_CUSTOM" ? "Tùy chỉnh" : "Gia hạn") : row.cascadeState === "custom" ? "Tùy chỉnh" : row.cascadeState === "cascade" ? "Tịnh tiến" : "Giữ nguyên"}
-                                                    </Tag>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto", gap: 8, alignItems: "center", fontSize: 11.5, color: "#475569" }}>
-                                                <strong style={{ color: "#334155", whiteSpace: "nowrap" }}>{row.current ? dayjs(row.current).format("DD/MM HH:mm") : "—"}</strong>
-                                                <RightOutlined style={{ color: "#94a3b8", fontSize: 10 }} />
-                                                <strong style={{ color: "#0f172a", whiteSpace: "nowrap" }}>{row.projected ? dayjs(row.projected).format("DD/MM HH:mm") : "—"}</strong>
-                                                <span style={{ color: "#64748b", whiteSpace: "nowrap" }}>{formatDeadlineShift(row.current, row.projected)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {selectedEmployeeForExtend?.isBulk && extendPreview?.bulkRows?.length > 1 && (
-                                    <div style={{ paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
-                                        <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>
-                                            Tác động theo từng hồ sơ
-                                        </div>
-                                        <div style={{ display: "grid", gap: 10 }}>
-                                            {extendPreview?.bulkRows?.map((row: any) => (
-                                                <div key={row.id} style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fafafa" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline" }}>
-                                                        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{row.name}</div>
-                                                        <Tag color={row.cascade ? "green" : "default"} style={{ margin: 0 }}>
-                                                            {row.cascade ? "Tịnh tiến" : "Giữ nguyên"}
-                                                        </Tag>
-                                                    </div>
-                                                    <div style={{ marginTop: 6, fontSize: 12, color: "#475569" }}>
-                                                        {formatDeadline(row.current)} → {formatDeadline(row.next)}
-                                                    </div>
-                                                    <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
-                                                        {row.shift}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-
-                    <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc", color: "#475569", fontSize: 11.5, lineHeight: 1.5, alignSelf: "start" }}>
-                        Tịnh tiến luôn giữ đúng thứ tự luồng: quản lý trực tiếp xong mới tới quản lý gián tiếp. Chỉnh từng mốc dùng khi cần chia hạn riêng.
-                    </div>
-                </aside>
-            </div>
-        </Modal>
-
-        <Modal
-            title={
-                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "15px" }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
-                        Điều chuyển người chấm/duyệt đánh giá
-                    </span>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                        Đối tượng: <strong style={{ color: "#722ed1" }}>{selectedEmployeeForReassign?.employee?.name || selectedEmployeeForReassign?.employee?.username}</strong>
-                    </div>
-                </div>
-            }
-            open={reassignModalOpen && !managerPickerOpen}
-            onCancel={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); setManagerPickerOpen(false); }}
-            footer={null}
-            destroyOnHidden
-            centered
-            width={450}
-        >
-            <Form form={reassignForm} layout="vertical" onFinish={handleReassignSubmit}>
-                <Form.Item
-                    name="evaluatorRole"
-                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Vai trò điều chuyển</span>}
-                    rules={[{ required: true, message: "Vui lòng chọn vai trò điều chuyển!" }]}
-                    initialValue="DIRECT_MANAGER"
-                >
-                    <Select options={[
-                        { label: "Quản lý trực tiếp (DIRECT_MANAGER)", value: "DIRECT_MANAGER" },
-                        { label: "Quản lý gián tiếp / Người duyệt (INDIRECT_MANAGER)", value: "INDIRECT_MANAGER" },
-                    ]} />
-                </Form.Item>
-
-                <Form.Item
-                    name="newEvaluatorUserId"
-                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Người chấm/duyệt mới</span>}
-                    rules={[{ required: true, message: "Vui lòng chọn người chấm/duyệt mới!" }]}
-                >
-                    <Input type="hidden" />
-                </Form.Item>
-                <Button
-                    onClick={() => setManagerPickerOpen(true)}
-                    style={{ width: "100%", height: 54, marginTop: -18, marginBottom: 18, padding: "7px 10px", display: "flex", alignItems: "center", textAlign: "left", borderColor: selectedReassignEvaluator ? "#f3a5bd" : "#d9d9d9" }}
-                >
-                    <span style={{ width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#e8356d", background: "#fff0f5", borderRadius: 5 }}>
-                        <UserOutlined />
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0, margin: "0 9px" }}>
-                        <span style={{ display: "block", color: "#1e293b", fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {selectedReassignEvaluator?.name || "Chọn người chấm/duyệt mới"}
-                        </span>
-                        <span style={{ display: "block", marginTop: 2, color: "#64748b", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {selectedReassignEvaluator
-                                ? [selectedReassignEvaluator.jobTitle, selectedReassignEvaluator.positionLevel, selectedReassignEvaluator.departmentName, selectedReassignEvaluator.companyName].filter(Boolean).join(" · ") || selectedReassignEvaluator.email
-                                : "Tìm theo mã NV, chức danh, cấp bậc và đơn vị"}
-                        </span>
-                    </span>
-                    <RightOutlined style={{ color: "#94a3b8", fontSize: 11 }} />
-                </Button>
-
-                <Form.Item
-                    name="reason"
-                    label={<span style={{ fontWeight: 600, color: "#475569" }}>Lý do điều chuyển</span>}
-                    style={{ marginBottom: 20 }}
-                >
-                    <Input.TextArea rows={3} placeholder="Nhập lý do điều chuyển..." />
-                </Form.Item>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                    <Button onClick={() => { setReassignModalOpen(false); setSelectedEmployeeForReassign(null); }}>
-                        Hủy
-                    </Button>
-                    <Button type="primary" htmlType="submit" loading={reassigning}>
-                        Điều chuyển
-                    </Button>
-                </div>
-            </Form>
-        </Modal>
-
-        <ManagerPickerModal
-            open={managerPickerOpen}
-            onClose={() => setManagerPickerOpen(false)}
-            onSelect={handleSelectReassignEvaluator}
-            title="Chọn người chấm/duyệt mới"
-            description="Tìm và chọn nhân sự theo mã nhân viên, chức danh, cấp bậc và đơn vị"
-        />
-
-        <UserPickerModal
-            open={employeePickerOpen}
-            onClose={() => setEmployeePickerOpen(false)}
-            companyId={period?.company?.id ?? selectedCompanyId}
-            selectedIds={selectedEmployeeIds || []}
-            onChange={handlePickerChange}
-            sourceUsers={pickerSourceUsers}
-            filterDepartmentIds={selectedDepartmentIds}
-            departmentOptions={departments.map(d => ({ label: d.name, value: d.id }))}
-            isCrossCompany={true}
-            title="Chọn nhân sự áp dụng mẫu"
-            confirmText="Thêm vào mẫu"
-            hasDirectManager={true}
-        />
-    </>
+            <UserPickerModal
+                open={employeePickerOpen}
+                onClose={() => setEmployeePickerOpen(false)}
+                companyId={period?.company?.id ?? selectedCompanyId}
+                selectedIds={selectedEmployeeIds || []}
+                onChange={handlePickerChange}
+                sourceUsers={pickerSourceUsers}
+                filterDepartmentIds={selectedDepartmentIds}
+                departmentOptions={departments.map(d => ({ label: d.name, value: d.id }))}
+                isCrossCompany={true}
+                title="Chọn nhân sự áp dụng mẫu"
+                confirmText="Thêm vào mẫu"
+                hasDirectManager={true}
+            />
+        </>
     );
 };
 

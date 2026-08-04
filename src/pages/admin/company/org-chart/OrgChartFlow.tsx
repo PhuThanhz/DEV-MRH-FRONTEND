@@ -129,6 +129,8 @@ const extractList = (res: any): any[] => {
 
 
 // ── Edge renderer ─────────────────────────────────────────────────────────────
+const EDGE_PATH_STYLE = { transition: "stroke 0.15s, stroke-width 0.15s, stroke-opacity 0.15s" };
+
 const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition }: EdgeProps) => {
     // Compute dynamic border radius proportional to the vertical gap
     const verticalGap = Math.abs(targetY - sourceY);
@@ -159,7 +161,7 @@ const OrgEdge = memo(({ id, sourceX, sourceY, sourcePosition, targetX, targetY, 
             strokeOpacity={strokeOpacity} strokeDasharray={strokeDasharray}
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ transition: "stroke 0.15s, stroke-width 0.15s, stroke-opacity 0.15s" }}
+            style={EDGE_PATH_STYLE}
         />
     );
 });
@@ -708,13 +710,15 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         scheduleFitView();
     }, [ownerType, highlightStore, canEdit, canDelete, canCreate, layoutNodeW, layoutNodeH, isMobile, isTablet, isSmallLaptop, scheduleFitView]);
 
-    const handleSearchSelect = (nodeId: string) => {
+    const handleSearchSelect = useCallback((nodeId: string) => {
         setSelectedNodeId(nodeId);
         const found = nodesRef.current.find((n) => n.id === nodeId);
         if (found) {
             fitView({ nodes: [found], padding: 0.35, duration: 500, maxZoom: 1.2 });
         }
-    };
+    }, [fitView]);
+
+    const handleClearSelection = useCallback(() => setSelectedNodeId(null), []);
 
     const handleNodeDragStop = useCallback((_: unknown, node: Node) => {
         setPendingSaves((prev) => { const next = new Map(prev); next.set(node.id, { x: node.position.x, y: node.position.y }); return next; });
@@ -942,7 +946,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         ? { borderColor: "#6366f1", color: "#6366f1", fontWeight: 600, fontSize: isMobile ? 12 : isSmallLaptop ? 13 : 14, background: "#eef2ff" }
         : { ...btnBase };
 
-    const handleMenuClick: MenuProps['onClick'] = (e) => {
+    const handleMenuClick: MenuProps['onClick'] = useCallback((e) => {
         if (e.key === "reload") handleResetPositions();
         else if (e.key === "layout") handleAutoLayout();
         else if (e.key === "overview") {
@@ -961,7 +965,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         else if (e.key === "viewMode") setViewMode((v) => (v === "full" ? "compact" : "full"));
         else if (e.key === "layoutDirection") setLayoutDirection((d) => (d === "TB" ? "LR" : "TB"));
         else if (e.key === "fullscreen") toggleFullscreen();
-    };
+    }, [handleResetPositions, handleAutoLayout, scheduleFitView, isDragLocked, toggleFullscreen]);
 
     const handleCloseWithAnimation = useCallback(() => {
         if (!onClose) return;
@@ -971,7 +975,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
         }, 350); // wait for animation
     }, [onClose]);
 
-    const settingMenu: MenuProps = {
+    const settingMenu: MenuProps = useMemo(() => ({
         items: [
             canEdit ? { key: "reload", icon: <ReloadOutlined />, label: "Hoàn tác" } : null,
             canEdit ? { key: "layout", icon: <ApartmentOutlined />, label: "Tự căn chỉnh" } : null,
@@ -982,7 +986,7 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
             { key: "fullscreen", icon: isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />, label: isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình" }
         ].filter(Boolean) as MenuProps['items'],
         onClick: handleMenuClick,
-    };
+    }), [canEdit, isDragLocked, viewMode, layoutDirection, isFullscreen, handleMenuClick]);
 
     const chartName = (chartTitle ?? "").replace(/^Sơ đồ tổ chức\s*[-—]\s*/i, "").trim();
 
@@ -1006,11 +1010,11 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     100% { opacity: 0; }
                 }
             `}</style>
-            <div style={{ 
-                position: "fixed", inset: 0, zIndex: 1099, 
-                background: "rgba(15, 23, 42, 0.45)", 
+            <div style={{
+                position: "fixed", inset: 0, zIndex: 1099,
+                background: "rgba(15, 23, 42, 0.45)",
                 backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)",
-                animation: isClosing ? "fadeOutBackdrop 0.4s ease-in forwards" : "fadeInBackdrop 0.4s ease-out" 
+                animation: isClosing ? "fadeOutBackdrop 0.4s ease-in forwards" : "fadeInBackdrop 0.4s ease-out"
             }} onClick={handleCloseWithAnimation} />
             <div
                 ref={containerRef}
@@ -1024,9 +1028,9 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     left: isNarrowViewport ? 0 : 48,
                     right: isNarrowViewport ? 0 : 16,
                     zIndex: 1100,
-                overflow: "visible",
-                animation: isClosing ? "slideDownOrgChart 0.4s cubic-bezier(0.4, 0, 1, 1) forwards" : "slideUpOrgChart 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
+                    overflow: "visible",
+                    animation: isClosing ? "slideDownOrgChart 0.4s cubic-bezier(0.4, 0, 1, 1) forwards" : "slideUpOrgChart 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
             >
                 {onClose && (
                     <DrawerCloseButton
@@ -1051,347 +1055,347 @@ const OrgChartInner = ({ ownerType, ownerId, chartTitle, onClose }: Props) => {
                     position: "relative",
                     zIndex: 2,
                 }}>
-            {/* ── Floating Toolbar ── */}
-            <div style={{
-                position: "absolute",
-                top: isNarrowViewport ? 10 : 12,
-                left: isMobile ? 8 : isTablet ? 24 : 12,
-                right: isNarrowViewport ? 10 : 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: 0,
-                background: "transparent",
-                zIndex: 20,
-                flexWrap: isNarrowViewport ? "wrap" : "nowrap",
-                gap: 12,
-                pointerEvents: "none",
-            }}>
-                {/* ── Title & Search ── */}
-                <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    flex: 1,
-                    minWidth: 0,
-                    position: "relative",
-                    pointerEvents: "auto",
-                }}>
-                    {/* Inner close button removed */}
-                    {chartTitle && (
+                    {/* ── Floating Toolbar ── */}
+                    <div style={{
+                        position: "absolute",
+                        top: isNarrowViewport ? 10 : 12,
+                        left: isMobile ? 8 : isTablet ? 24 : 12,
+                        right: isNarrowViewport ? 10 : 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: 0,
+                        background: "transparent",
+                        zIndex: 20,
+                        flexWrap: isNarrowViewport ? "wrap" : "nowrap",
+                        gap: 12,
+                        pointerEvents: "none",
+                    }}>
+                        {/* ── Title & Search ── */}
                         <div style={{
                             display: "flex",
                             alignItems: "center",
                             gap: 12,
-                            minHeight: isNarrowViewport ? 32 : 40,
-                            padding: isNarrowViewport ? "4px 12px" : "5px 16px",
-                            background: "rgba(255, 255, 255, 0.95)",
-                            border: "1px solid rgba(203, 213, 225, 0.75)",
-                            borderRadius: 20,
-                            boxShadow: "4px 4px 16px rgba(15, 23, 42, 0.06)",
-                            backdropFilter: "blur(10px)",
-                            zIndex: 2,
-                            maxWidth: "100%",
+                            flex: 1,
+                            minWidth: 0,
+                            position: "relative",
+                            pointerEvents: "auto",
                         }}>
-                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
-                                <span style={{
-                                    color: "#64748b",
-                                    fontSize: isNarrowViewport ? 8 : 9,
-                                    fontWeight: 600,
-                                    lineHeight: "11px",
-                                    textTransform: "uppercase",
+                            {/* Inner close button removed */}
+                            {chartTitle && (
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 12,
+                                    minHeight: isNarrowViewport ? 32 : 40,
+                                    padding: isNarrowViewport ? "4px 12px" : "5px 16px",
+                                    background: "rgba(255, 255, 255, 0.95)",
+                                    border: "1px solid rgba(203, 213, 225, 0.75)",
+                                    borderRadius: 20,
+                                    boxShadow: "4px 4px 16px rgba(15, 23, 42, 0.06)",
+                                    backdropFilter: "blur(10px)",
+                                    zIndex: 2,
+                                    maxWidth: "100%",
                                 }}>
-                                    Sơ đồ tổ chức
-                                </span>
-                                <span style={{
-                                    color: "#1e293b",
-                                    fontSize: isNarrowViewport ? 11 : 14,
-                                    fontWeight: 700,
-                                    lineHeight: isNarrowViewport ? "15px" : "19px",
-                                    overflow: "hidden",
-                                    display: "-webkit-box",
-                                    WebkitBoxOrient: "vertical",
-                                    WebkitLineClamp: 2,
-                                    overflowWrap: "anywhere",
-                                }}>
-                                    {chartName || chartTitle}
-                                </span>
-                            </div>
+                                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flexShrink: 0 }}>
+                                        <span style={{
+                                            color: "#64748b",
+                                            fontSize: isNarrowViewport ? 8 : 9,
+                                            fontWeight: 600,
+                                            lineHeight: "11px",
+                                            textTransform: "uppercase",
+                                        }}>
+                                            Sơ đồ tổ chức
+                                        </span>
+                                        <span style={{
+                                            color: "#1e293b",
+                                            fontSize: isNarrowViewport ? 11 : 14,
+                                            fontWeight: 700,
+                                            lineHeight: isNarrowViewport ? "15px" : "19px",
+                                            overflow: "hidden",
+                                            display: "-webkit-box",
+                                            WebkitBoxOrient: "vertical",
+                                            WebkitLineClamp: 2,
+                                            overflowWrap: "anywhere",
+                                        }}>
+                                            {chartName || chartTitle}
+                                        </span>
+                                    </div>
 
-                            <SearchBar
-                                nodes={panelNodes}
-                                onSelect={(id) => handleSearchSelect(id)}
-                                onClear={() => setSelectedNodeId(null)}
-                                isMobile={isMobile}
-                                isTablet={isTablet}
-                            />
+                                    <SearchBar
+                                        nodes={panelNodes}
+                                        onSelect={handleSearchSelect}
+                                        onClear={handleClearSelection}
+                                        isMobile={isMobile}
+                                        isTablet={isTablet}
+                                    />
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                {/* ── Toolbar (right) ── */}
-                {!selectedNodeId && <div style={{
-                    display: "flex",
-                    gap: isMobile ? 4 : isSmallLaptop ? 6 : 8,
-                    flexWrap: "nowrap",
-                    justifyContent: "flex-end",
-                    pointerEvents: "auto",
-                }}>
-                    <Tooltip title={isToolbarCollapsed ? "Hiện công cụ" : "Ẩn công cụ"}>
-                        <Button
-                            icon={isToolbarCollapsed ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                            onClick={() => setIsToolbarCollapsed((prev) => !prev)}
-                            size={isMobile ? "small" : "middle"}
-                            style={{
-                                ...btnBase,
-                                background: "rgba(255, 255, 255, 0.9)",
-                                boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)",
-                            }}
-                        >
-                            {isToolbarCollapsed || isCompactViewport ? "" : "Ẩn công cụ"}
-                        </Button>
-                    </Tooltip>
-                    {!isToolbarCollapsed && (
-                    <>
-                    {/* ── Lưu vị trí ── */}
-                    <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
-                        {pendingSaves.size > 0 && (
-                            isMobile ? (
-                                <Tooltip title={`Lưu vị trí (${pendingSaves.size})`}>
+                        {/* ── Toolbar (right) ── */}
+                        {!selectedNodeId && <div style={{
+                            display: "flex",
+                            gap: isMobile ? 4 : isSmallLaptop ? 6 : 8,
+                            flexWrap: "nowrap",
+                            justifyContent: "flex-end",
+                            pointerEvents: "auto",
+                        }}>
+                            <Tooltip title={isToolbarCollapsed ? "Hiện công cụ" : "Ẩn công cụ"}>
+                                <Button
+                                    icon={isToolbarCollapsed ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                                    onClick={() => setIsToolbarCollapsed((prev) => !prev)}
+                                    size={isMobile ? "small" : "middle"}
+                                    style={{
+                                        ...btnBase,
+                                        background: "rgba(255, 255, 255, 0.9)",
+                                        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)",
+                                    }}
+                                >
+                                    {isToolbarCollapsed || isCompactViewport ? "" : "Ẩn công cụ"}
+                                </Button>
+                            </Tooltip>
+                            {!isToolbarCollapsed && (
+                                <>
+                                    {/* ── Lưu vị trí ── */}
+                                    <Access permission={ALL_PERMISSIONS.ORG_NODES.UPDATE} hideChildren>
+                                        {pendingSaves.size > 0 && (
+                                            isMobile ? (
+                                                <Tooltip title={`Lưu vị trí (${pendingSaves.size})`}>
+                                                    <Button
+                                                        loading={isSaving}
+                                                        icon={<SaveOutlined />}
+                                                        onClick={handleSavePositions}
+                                                        size="small"
+                                                        style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
+                                                    />
+                                                </Tooltip>
+                                            ) : (
+                                                <Button
+                                                    loading={isSaving}
+                                                    onClick={handleSavePositions}
+                                                    style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
+                                                >
+                                                    {isCompactViewport ? `Lưu (${pendingSaves.size})` : `Lưu vị trí (${pendingSaves.size})`}
+                                                </Button>
+                                            )
+                                        )}
+                                    </Access>
+
+                                    {/* ── Tùy chỉnh (Gom các tính năng phụ) ── */}
+                                    <Dropdown
+                                        menu={settingMenu}
+                                        trigger={["click"]}
+                                        placement="bottomRight"
+                                        overlayStyle={{ zIndex: 1200 }}
+                                        popupRender={(menu) => (
+                                            <div data-guide-id="org-chart-settings-dropdown">
+                                                {menu}
+                                            </div>
+                                        )}
+                                    >
+                                        {isMobile ? (
+                                            <Tooltip title="Tùy chỉnh">
+                                                <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} size="small" style={btnBase} />
+                                            </Tooltip>
+                                        ) : (
+                                            <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} style={btnBase}>
+                                                {isCompactViewport ? "" : "Tùy chỉnh"}
+                                            </Button>
+                                        )}
+                                    </Dropdown>
+
+                                    {/* ── Thêm vị trí ── */}
+                                    <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
+                                        {isMobile ? (
+                                            <Tooltip title="Thêm vị trí">
+                                                <Button
+                                                    data-guide-id="org-chart-add-button"
+                                                    icon={<PlusOutlined />}
+                                                    onClick={() => handleOpenCreateRoot("position", "single")}
+                                                    size="small"
+                                                    style={{
+                                                        background: "#e8637a", borderColor: "#e8637a",
+                                                        color: "#fff", fontWeight: 600,
+                                                        boxShadow: "0 2px 8px rgba(232,99,122,.3)",
+                                                    }}
+                                                />
+                                            </Tooltip>
+                                        ) : (
+                                            <Button
+                                                data-guide-id="org-chart-add-button"
+                                                icon={<PlusOutlined />}
+                                                onClick={() => handleOpenCreateRoot("position", "single")}
+                                                style={{
+                                                    background: "#e8637a", borderColor: "#e8637a",
+                                                    color: "#fff", fontWeight: 600,
+                                                    boxShadow: "0 2px 8px rgba(232,99,122,.3)",
+                                                    fontSize: isCompactViewport ? 13 : 14,
+                                                }}
+                                            >
+                                                {isCompactViewport ? "Thêm" : "Thêm vị trí"}
+                                            </Button>
+                                        )}
+                                    </Access>
+                                </>
+                            )}
+                            {isMobile && onClose && (
+                                <Tooltip title="Thoát sơ đồ">
                                     <Button
-                                        loading={isSaving}
-                                        icon={<SaveOutlined />}
-                                        onClick={handleSavePositions}
+                                        aria-label="Thoát sơ đồ"
+                                        icon={<CloseOutlined />}
+                                        onClick={handleCloseWithAnimation}
                                         size="small"
-                                        style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
+                                        style={{
+                                            borderColor: "#fda4af",
+                                            background: "#fff1f5",
+                                            color: "#e11d48",
+                                            fontWeight: 700,
+                                        }}
                                     />
                                 </Tooltip>
-                            ) : (
-                                <Button
-                                    loading={isSaving}
-                                    onClick={handleSavePositions}
-                                    style={{ borderColor: "#faad14", color: "#faad14", fontWeight: 600 }}
-                                >
-                                    {isCompactViewport ? `Lưu (${pendingSaves.size})` : `Lưu vị trí (${pendingSaves.size})`}
-                                </Button>
-                            )
-                        )}
-                    </Access>
+                            )}
+                        </div>}
+                    </div>
 
-                    {/* ── Tùy chỉnh (Gom các tính năng phụ) ── */}
-                    <Dropdown
-                        menu={settingMenu}
-                        trigger={["click"]}
-                        placement="bottomRight"
-                        overlayStyle={{ zIndex: 1200 }}
-                        popupRender={(menu) => (
-                            <div data-guide-id="org-chart-settings-dropdown">
-                                {menu}
-                            </div>
-                        )}
-                    >
-                        {isMobile ? (
-                            <Tooltip title="Tùy chỉnh">
-                                <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} size="small" style={btnBase} />
-                            </Tooltip>
-                        ) : (
-                            <Button data-guide-id="org-chart-settings-button" icon={<SettingOutlined />} style={btnBase}>
-                                {isCompactViewport ? "" : "Tùy chỉnh"}
-                            </Button>
-                        )}
-                    </Dropdown>
-
-                    {/* ── Thêm vị trí ── */}
-                    <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
-                        {isMobile ? (
-                            <Tooltip title="Thêm vị trí">
-                                <Button
-                                    data-guide-id="org-chart-add-button"
-                                    icon={<PlusOutlined />}
-                                    onClick={() => handleOpenCreateRoot("position", "single")}
-                                    size="small"
-                                    style={{
-                                        background: "#e8637a", borderColor: "#e8637a",
-                                        color: "#fff", fontWeight: 600,
-                                        boxShadow: "0 2px 8px rgba(232,99,122,.3)",
-                                    }}
-                                />
-                            </Tooltip>
-                        ) : (
-                            <Button
-                                data-guide-id="org-chart-add-button"
-                                icon={<PlusOutlined />}
-                                onClick={() => handleOpenCreateRoot("position", "single")}
-                                style={{
-                                    background: "#e8637a", borderColor: "#e8637a",
-                                    color: "#fff", fontWeight: 600,
-                                    boxShadow: "0 2px 8px rgba(232,99,122,.3)",
-                                    fontSize: isCompactViewport ? 13 : 14,
-                                }}
-                            >
-                                {isCompactViewport ? "Thêm" : "Thêm vị trí"}
-                            </Button>
-                        )}
-                    </Access>
-                    </>
-                    )}
-                    {isMobile && onClose && (
-                        <Tooltip title="Thoát sơ đồ">
-                            <Button
-                                aria-label="Thoát sơ đồ"
-                                icon={<CloseOutlined />}
-                                onClick={handleCloseWithAnimation}
-                                size="small"
-                                style={{
-                                    borderColor: "#fda4af",
-                                    background: "#fff1f5",
-                                    color: "#e11d48",
-                                    fontWeight: 700,
-                                }}
-                            />
-                        </Tooltip>
-                    )}
-                </div>}
-            </div>
-
-            {/* ── React Flow Area ── */}
-            <div
-                ref={flowViewportRef}
-                style={{
-                    flex: 1,
-                    position: "relative",
-                    background: "#f6f8fb",
-                }}
-            >
-                <ReactFlow
-                nodes={nodes} edges={edges}
-                nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-                nodesDraggable={!isMobile && !isDragLocked}
-                nodesConnectable={!isMobile}
-                elementsSelectable
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeDragStop={handleNodeDragStop}
-                onConnect={handleConnect}
-                minZoom={0.15}
-                maxZoom={2}
-                fitView
-                fitViewOptions={{ padding: fitPadding, minZoom: fitMinZoom, maxZoom: 1.05 }}
-                defaultEdgeOptions={EDGE_DEFAULTS}
-                onPaneClick={() => setSelectedNodeId(null)}
-                onMoveStart={() => setSelectedNodeId(null)}
-            >
-                {!isMobile && !isSmallLaptop && (
-                    <MiniMap
-                        nodeColor="#fda4af"
-                        maskColor="rgba(0,0,0,0.04)"
-                        style={{ borderRadius: 8, bottom: 20 }}
-                    />
-                )}
-                <Controls
-                    showInteractive={false}
-                    style={{ bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 20 }}
-                />
-                <Background
-                    variant={BackgroundVariant.Dots}
-                    color={isFullscreen ? "#cbd5e1" : "#e2e8f0"}
-                    gap={22}
-                    size={isFullscreen ? 1.3 : 1}
-                />
-                
-                {/* ── MiniPanel ── */}
-                <MiniPanel
-                    nodeId={selectedNodeId}
-                    nodes={panelNodes}
-                    edges={panelEdges}
-                    isMobile={isMobile}
-                    isTablet={isTablet}
-                    isSmallLaptop={isSmallLaptop}
-                    onClose={() => setSelectedNodeId(null)}
-                />
-            </ReactFlow>
-            {nodes.length === 0 && (
-                <div
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "grid",
-                        placeItems: "center",
-                        padding: isNarrowViewport ? 20 : 32,
-                        pointerEvents: "none",
-                        zIndex: 3,
-                    }}
-                >
+                    {/* ── React Flow Area ── */}
                     <div
+                        ref={flowViewportRef}
                         style={{
-                            width: "min(100%, 360px)",
-                            padding: isNarrowViewport ? "20px" : "28px",
-                            borderRadius: 18,
-                            border: "1px solid rgba(203, 213, 225, 0.9)",
-                            background: "rgba(255, 255, 255, 0.94)",
-                            boxShadow: "0 18px 48px rgba(15, 23, 42, 0.12)",
-                            textAlign: "center",
-                            pointerEvents: "auto",
+                            flex: 1,
+                            position: "relative",
+                            background: "#f6f8fb",
                         }}
                     >
-                        <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
-                            Chưa có vị trí trong sơ đồ
-                        </div>
-                        <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px" }}>
-                            Thêm vị trí đầu tiên để bắt đầu xây dựng cấu trúc tổ chức.
-                        </p>
-                        <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
-                            <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={() => handleOpenCreateRoot("position", "single")}
-                                style={{ background: "#e8637a", borderColor: "#e8637a", fontWeight: 600 }}
+                        <ReactFlow
+                            nodes={nodes} edges={edges}
+                            nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+                            nodesDraggable={!isMobile && !isDragLocked}
+                            nodesConnectable={!isMobile}
+                            elementsSelectable
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onNodeDragStop={handleNodeDragStop}
+                            onConnect={handleConnect}
+                            minZoom={0.15}
+                            maxZoom={2}
+                            fitView
+                            fitViewOptions={{ padding: fitPadding, minZoom: fitMinZoom, maxZoom: 1.05 }}
+                            defaultEdgeOptions={EDGE_DEFAULTS}
+                            onPaneClick={() => setSelectedNodeId(null)}
+                            onMoveStart={() => setSelectedNodeId(null)}
+                        >
+                            {!isMobile && !isSmallLaptop && (
+                                <MiniMap
+                                    nodeColor="#fda4af"
+                                    maskColor="rgba(0,0,0,0.04)"
+                                    style={{ borderRadius: 8, bottom: 20 }}
+                                />
+                            )}
+                            <Controls
+                                showInteractive={false}
+                                style={{ bottom: isMobile ? 8 : 20, left: isMobile ? 8 : 20 }}
+                            />
+                            <Background
+                                variant={BackgroundVariant.Dots}
+                                color={isFullscreen ? "#cbd5e1" : "#e2e8f0"}
+                                gap={22}
+                                size={isFullscreen ? 1.3 : 1}
+                            />
+
+                            {/* ── MiniPanel ── */}
+                            <MiniPanel
+                                nodeId={selectedNodeId}
+                                nodes={panelNodes}
+                                edges={panelEdges}
+                                isMobile={isMobile}
+                                isTablet={isTablet}
+                                isSmallLaptop={isSmallLaptop}
+                                onClose={handleClearSelection}
+                            />
+                        </ReactFlow>
+                        {nodes.length === 0 && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    display: "grid",
+                                    placeItems: "center",
+                                    padding: isNarrowViewport ? 20 : 32,
+                                    pointerEvents: "none",
+                                    zIndex: 3,
+                                }}
                             >
-                                Thêm vị trí đầu tiên
-                            </Button>
-                        </Access>
+                                <div
+                                    style={{
+                                        width: "min(100%, 360px)",
+                                        padding: isNarrowViewport ? "20px" : "28px",
+                                        borderRadius: 18,
+                                        border: "1px solid rgba(203, 213, 225, 0.9)",
+                                        background: "rgba(255, 255, 255, 0.94)",
+                                        boxShadow: "0 18px 48px rgba(15, 23, 42, 0.12)",
+                                        textAlign: "center",
+                                        pointerEvents: "auto",
+                                    }}
+                                >
+                                    <div style={{ color: "#0f172a", fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+                                        Chưa có vị trí trong sơ đồ
+                                    </div>
+                                    <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px" }}>
+                                        Thêm vị trí đầu tiên để bắt đầu xây dựng cấu trúc tổ chức.
+                                    </p>
+                                    <Access permission={ALL_PERMISSIONS.ORG_NODES.CREATE} hideChildren>
+                                        <Button
+                                            type="primary"
+                                            icon={<PlusOutlined />}
+                                            onClick={() => handleOpenCreateRoot("position", "single")}
+                                            style={{ background: "#e8637a", borderColor: "#e8637a", fontWeight: 600 }}
+                                        >
+                                            Thêm vị trí đầu tiên
+                                        </Button>
+                                    </Access>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
-            </div>
-            </div> {/* ── End of Inner Content Container ── */}
+                </div> {/* ── End of Inner Content Container ── */}
 
-            {openModal && (
-                <ModalNode
-                    open={openModal} onClose={handleCloseModal}
-                    onSubmit={handleSubmit}
-                    onBulkSubmit={handleBulkSubmit}
-                    nodes={nodes} jdOptions={jdOptions}
-                    jobTitleOptions={jobTitleOptions}
-                    initialValues={editingNode ? {
-                        title: editingNode.data.title as string,
-                        levelCode: editingNode.data.levelCode as string,
-                        holderName: (editingNode.data.holderName as string) ?? "",
-                        isGoal: (editingNode.data.isGoal as boolean) ?? false,
-                        jobDescriptionId: (editingNode.data.jobDescriptionId as number) ?? null,
-                        nodeKind: !editingNode.data.levelCode ? "department" : "position",
-                        parentId: (() => {
-                            const pe = edges.find((e) => e.target === editingNode.id);
-                            return pe ? Number(pe.source) : null;
-                        })(),
-                    } : (prefilledParentId ? {
-                        title: "",
-                        levelCode: "",
-                        parentId: prefilledParentId,
-                        nodeKind: modalInitialNodeKind,
-                    } : undefined)}
-                    isEditing={!!editingNode}
-                    initialMode={modalInitialMode}
-                    initialNodeKind={modalInitialNodeKind}
+                {openModal && (
+                    <ModalNode
+                        open={openModal} onClose={handleCloseModal}
+                        onSubmit={handleSubmit}
+                        onBulkSubmit={handleBulkSubmit}
+                        nodes={nodes} jdOptions={jdOptions}
+                        jobTitleOptions={jobTitleOptions}
+                        initialValues={editingNode ? {
+                            title: editingNode.data.title as string,
+                            levelCode: editingNode.data.levelCode as string,
+                            holderName: (editingNode.data.holderName as string) ?? "",
+                            isGoal: (editingNode.data.isGoal as boolean) ?? false,
+                            jobDescriptionId: (editingNode.data.jobDescriptionId as number) ?? null,
+                            nodeKind: !editingNode.data.levelCode ? "department" : "position",
+                            parentId: (() => {
+                                const pe = edges.find((e) => e.target === editingNode.id);
+                                return pe ? Number(pe.source) : null;
+                            })(),
+                        } : (prefilledParentId ? {
+                            title: "",
+                            levelCode: "",
+                            parentId: prefilledParentId,
+                            nodeKind: modalInitialNodeKind,
+                        } : undefined)}
+                        isEditing={!!editingNode}
+                        initialMode={modalInitialMode}
+                        initialNodeKind={modalInitialNodeKind}
+                    />
+                )}
+
+                <ViewJobDescription
+                    open={jdOpen}
+                    onClose={() => { setJdOpen(false); setJdRecord(null); }}
+                    record={jdRecord}
                 />
-            )}
-
-            <ViewJobDescription
-                open={jdOpen}
-                onClose={() => { setJdOpen(false); setJdRecord(null); }}
-                record={jdRecord}
-            />
-        </div>
+            </div>
         </>
     );
 
